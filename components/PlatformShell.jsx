@@ -98,6 +98,50 @@ const MODULES = {
       { id: 5, title: "Tudor BB58 Bronze", sub: "2019 · No box", score: 4.1, label: "PASS", labelType: "red", tag: "Low Margin", arv: "$3,800", mao: "$3,100", ask: "$3,600", risk: "High", nextAction: "Pass.", riskFactors: ["Thin spread"] }
     ]
   }
+
+  ,
+  "trades": {
+    id: "trades",
+    label: "Trades",
+    abbr: "TR",
+    tagline: "Lead Conversion Engine",
+    accent: "#FF7A00",
+    accentRgb: "255,122,0",
+    metrics: [
+      { label: "Leads Today", value: "18" },
+      { label: "High Priority", value: "6" },
+      { label: "Avg Job Value", value: "$11.4K" },
+      { label: "Close Rate", value: "34%" }
+    ],
+    items: [
+      { id: 1, title: "Storm Damage Roof", sub: "KC", score: 9.3, label: "CALL NOW", labelType: "green" },
+      { id: 2, title: "AC Failure", sub: "OP", score: 8.7, label: "CALL NOW", labelType: "green" },
+      { id: 3, title: "Water Heater", sub: "KC", score: 8.1, label: "TODAY", labelType: "green" },
+      { id: 4, title: "Bath Remodel", sub: "LS", score: 7.1, label: "MONITOR", labelType: "amber" },
+      { id: 5, title: "General Quote", sub: "Independence", score: 4.2, label: "PASS", labelType: "red" }
+    ]
+  },
+  "watches": {
+    id: "watches",
+    label: "Watches",
+    abbr: "WM",
+    tagline: "Deal Engine",
+    accent: "#BF94FF",
+    accentRgb: "191,148,255",
+    metrics: [
+      { label: "Active Deals", value: "12" },
+      { label: "Avg Margin", value: "18%" },
+      { label: "High Conviction", value: "3" },
+      { label: "Avg Deal Value", value: "$9K" }
+    ],
+    items: [
+      { id: 1, title: "Rolex Submariner", sub: "2022", score: 9.4, label: "ACT NOW", labelType: "green" },
+      { id: 2, title: "Rolex GMT Pepsi", sub: "2021", score: 8.8, label: "STRONG", labelType: "green" },
+      { id: 3, title: "Omega Speedmaster", sub: "2023", score: 7.6, label: "MONITOR", labelType: "amber" },
+      { id: 4, title: "Cartier Santos", sub: "2020", score: 7.2, label: "MONITOR", labelType: "amber" },
+      { id: 5, title: "Tudor BB58", sub: "2019", score: 4.1, label: "PASS", labelType: "red" }
+    ]
+  }
 ;
 
 const NAV_ITEMS = [
