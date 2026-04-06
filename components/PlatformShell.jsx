@@ -74,7 +74,31 @@ const MODULES = {
       { id: 5, title: "SOXS", sub: "Direxion Semi Bear 3x · ETF", score: 5.8, label: "WATCH", labelType: "amber", tag: "Hedge", arv: "$12.40", mao: "Vol: 1.6x avg", ask: "RS: 61", risk: "V.High", nextAction: "Only as a short-duration hedge. Max 2% allocation if triggered", riskFactors: ["3x leverage — decay risk", "Intraday only or tight stops"] },
     ],
   },
-};
+}
+  ,
+  "watches": {
+    id: "watches",
+    label: "Watches",
+    abbr: "WM",
+    tagline: "Deal Acquisition Engine",
+    accent: "#BF94FF",
+    accentRgb: "191,148,255",
+    systemPrompt: `You are a precision watch market analyst. Evaluate buy/flip opportunities across Rolex, Omega, Cartier, Tudor.`,
+    metrics: [
+      { label: "Active Deals", value: "12" },
+      { label: "Avg Margin", value: "18.4%" },
+      { label: "High Conviction", value: "3" },
+      { label: "Avg Deal Value", value: "$9.2K" }
+    ],
+    items: [
+      { id: 1, title: "Rolex Submariner 124060", sub: "2022 · Full Set", score: 9.4, label: "ACT NOW", labelType: "green", tag: "Flip", arv: "$13,200", mao: "$10,800", ask: "$10,400", risk: "Low", nextAction: "Buy + list 48h.", riskFactors: ["Softening 60d"] },
+      { id: 2, title: "Rolex GMT 126710BLRO", sub: "2021 · Pepsi", score: 8.8, label: "STRONG", labelType: "green", tag: "Hold/Flip", arv: "$17,800", mao: "$14,200", ask: "$13,900", risk: "Low-Med", nextAction: "Hold 30d then list.", riskFactors: ["Condition verify"] },
+      { id: 3, title: "Omega Speedmaster 310.30", sub: "2023 · Unworn", score: 7.6, label: "MONITOR", labelType: "amber", tag: "Flip", arv: "$6,400", mao: "$5,100", ask: "$5,300", risk: "Medium", nextAction: "Counter $4.9K.", riskFactors: ["Demand plateau"] },
+      { id: 4, title: "Cartier Santos Medium", sub: "2020 · Box", score: 7.2, label: "MONITOR", labelType: "amber", tag: "Retail Arb", arv: "$8,900", mao: "$7,200", ask: "$7,600", risk: "Medium", nextAction: "Wait for $7.0K.", riskFactors: ["No papers"] },
+      { id: 5, title: "Tudor BB58 Bronze", sub: "2019 · No box", score: 4.1, label: "PASS", labelType: "red", tag: "Low Margin", arv: "$3,800", mao: "$3,100", ask: "$3,600", risk: "High", nextAction: "Pass.", riskFactors: ["Thin spread"] }
+    ]
+  }
+;
 
 const NAV_ITEMS = [
   { id: "dashboard", label: "Overview", icon: GridIcon },
