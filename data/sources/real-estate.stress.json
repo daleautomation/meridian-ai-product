@@ -1,0 +1,3202 @@
+[
+  {
+    "id": "stress-re-001",
+    "zip": "64108",
+    "title": "5425 Bellefontaine St",
+    "sub": "Kansas City, MO 64108",
+    "score": 5.3,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "BRRRR",
+    "arv": "$250K",
+    "mao": "$102K",
+    "ask": "$164K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 34% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Electrical panel update needed"
+    ]
+  },
+  {
+    "id": "stress-re-002",
+    "zip": "66209",
+    "title": "11960 Holmes Blvd",
+    "sub": "Leawood, KS 66209",
+    "score": 6.3,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "Flip",
+    "arv": "$559K",
+    "mao": "$346K",
+    "ask": "$372K",
+    "risk": "Low-Med",
+    "thesis": "Workable equity at 34% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Single-pane windows",
+      "Older HVAC system",
+      "Kitchen needs minor refresh"
+    ]
+  },
+  {
+    "id": "stress-re-003",
+    "zip": "66211",
+    "title": "10991 Locust Blvd",
+    "sub": "Overland Park, KS 66211",
+    "score": 4.7,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$422K",
+    "mao": "$262K",
+    "ask": "$316K",
+    "risk": "Low-Med",
+    "thesis": "Workable equity at 25% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Single-pane windows"
+    ]
+  },
+  {
+    "id": "stress-re-004",
+    "zip": "64109",
+    "title": "8064 Switzer St",
+    "sub": "Kansas City, MO 64109",
+    "score": 4,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$105K",
+    "mao": "$35K",
+    "ask": "$78K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 26% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Electrical panel update needed",
+      "Roof age 18+ years"
+    ]
+  },
+  {
+    "id": "stress-re-005",
+    "zip": "64111",
+    "title": "8158 Lee Rd",
+    "sub": "Kansas City, MO 64111",
+    "score": 3.7,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$301K",
+    "mao": "$149K",
+    "ask": "$228K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 24% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Electrical panel update needed",
+      "HVAC at end of life"
+    ]
+  },
+  {
+    "id": "stress-re-006",
+    "zip": "64127",
+    "title": "5673 Brookside Ln",
+    "sub": "Kansas City, MO 64127",
+    "score": 2.2,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$84K",
+    "mao": "$24K",
+    "ask": "$72K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 14% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Roof age 18+ years",
+      "HVAC at end of life"
+    ]
+  },
+  {
+    "id": "stress-re-007",
+    "zip": "64131",
+    "title": "1778 Cherry Blvd",
+    "sub": "Kansas City, MO 64131",
+    "score": 9,
+    "label": "ACT NOW",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$300K",
+    "mao": "$189K",
+    "ask": "$177K",
+    "risk": "Low",
+    "thesis": "Asking 41% below ARV with low execution risk — clean equity play in Kansas City.",
+    "nextAction": "Submit LOI at $177,000 immediately — well under MAO with low risk.",
+    "riskFactors": [
+      "Minor cosmetic updates needed"
+    ]
+  },
+  {
+    "id": "stress-re-008",
+    "zip": "64113",
+    "title": "8554 Cherry Pl",
+    "sub": "Kansas City, MO 64113",
+    "score": 5.2,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "BRRRR",
+    "arv": "$615K",
+    "mao": "$368K",
+    "ask": "$445K",
+    "risk": "Low-Med",
+    "thesis": "Workable equity at 28% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Driveway resurface needed",
+      "Single-pane windows",
+      "Kitchen needs minor refresh"
+    ]
+  },
+  {
+    "id": "stress-re-009",
+    "zip": "64127",
+    "title": "10697 Cherry Ln",
+    "sub": "Kansas City, MO 64127",
+    "score": 4.3,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$110K",
+    "mao": "$35K",
+    "ask": "$85K",
+    "risk": "Low-Med",
+    "thesis": "Margin is thin — asking is 23% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Single-pane windows",
+      "Older HVAC system",
+      "Kitchen needs minor refresh"
+    ]
+  },
+  {
+    "id": "stress-re-010",
+    "zip": "64131",
+    "title": "7190 Madison St",
+    "sub": "Kansas City, MO 64131",
+    "score": 3.3,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Rental",
+    "arv": "$283K",
+    "mao": "$168K",
+    "ask": "$223K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 21% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Roof age 18+ years",
+      "Bathroom modernization required",
+      "HVAC at end of life"
+    ]
+  },
+  {
+    "id": "stress-re-011",
+    "zip": "64127",
+    "title": "9363 Cedar Pl",
+    "sub": "Kansas City, MO 64127",
+    "score": 3.1,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Rental",
+    "arv": "$128K",
+    "mao": "$40K",
+    "ask": "$102K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 20% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Kitchen original — full update needed"
+    ]
+  },
+  {
+    "id": "stress-re-012",
+    "zip": "64127",
+    "title": "8708 Lincoln Rd",
+    "sub": "Kansas City, MO 64127",
+    "score": 7.4,
+    "label": "STRONG BUY",
+    "labelType": "green",
+    "tag": "Flip",
+    "arv": "$150K",
+    "mao": "$87K",
+    "ask": "$91K",
+    "risk": "Low-Med",
+    "thesis": "Asking 40% below ARV with low-med execution risk — clean equity play in Kansas City.",
+    "nextAction": "Engage seller. Verify comps and rehab estimate before LOI.",
+    "riskFactors": [
+      "Kitchen needs minor refresh",
+      "Older HVAC system"
+    ]
+  },
+  {
+    "id": "stress-re-013",
+    "zip": "64113",
+    "title": "11897 Cherry Ln",
+    "sub": "Kansas City, MO 64113",
+    "score": 6.2,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "BRRRR",
+    "arv": "$511K",
+    "mao": "$287K",
+    "ask": "$342K",
+    "risk": "Low-Med",
+    "thesis": "Workable equity at 33% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Single-pane windows",
+      "Kitchen needs minor refresh",
+      "Older HVAC system"
+    ]
+  },
+  {
+    "id": "stress-re-014",
+    "zip": "66209",
+    "title": "5131 Lincoln St",
+    "sub": "Leawood, KS 66209",
+    "score": 3.8,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Rental",
+    "arv": "$899K",
+    "mao": "$591K",
+    "ask": "$714K",
+    "risk": "Low-Med",
+    "thesis": "Margin is thin — asking is 21% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Older HVAC system",
+      "Single-pane windows"
+    ]
+  },
+  {
+    "id": "stress-re-015",
+    "zip": "64108",
+    "title": "8732 Charlotte St",
+    "sub": "Kansas City, MO 64108",
+    "score": 8.4,
+    "label": "STRONG BUY",
+    "labelType": "green",
+    "tag": "Flip",
+    "arv": "$413K",
+    "mao": "$272K",
+    "ask": "$256K",
+    "risk": "Low",
+    "thesis": "Asking 38% below ARV with low execution risk — clean equity play in Kansas City.",
+    "nextAction": "Engage seller. Verify comps and rehab estimate before LOI.",
+    "riskFactors": [
+      "Roof age 10-15 years"
+    ]
+  },
+  {
+    "id": "stress-re-016",
+    "zip": "66207",
+    "title": "4261 Switzer St",
+    "sub": "Leawood, KS 66207",
+    "score": 2.5,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$673K",
+    "mao": "$444K",
+    "ask": "$564K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 16% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Roof age 18+ years",
+      "Bathroom modernization required",
+      "HVAC at end of life"
+    ]
+  },
+  {
+    "id": "stress-re-017",
+    "zip": "64129",
+    "title": "6880 Walnut Ave",
+    "sub": "Kansas City, MO 64129",
+    "score": 8.1,
+    "label": "STRONG BUY",
+    "labelType": "green",
+    "tag": "BRRRR",
+    "arv": "$142K",
+    "mao": "$44K",
+    "ask": "$90K",
+    "risk": "Low",
+    "thesis": "Asking 37% below ARV with low execution risk — clean equity play in Kansas City.",
+    "nextAction": "Engage seller. Verify comps and rehab estimate before LOI.",
+    "riskFactors": [
+      "Driveway resurface needed",
+      "HVAC near end of life",
+      "Roof age 10-15 years"
+    ]
+  },
+  {
+    "id": "stress-re-018",
+    "zip": "66211",
+    "title": "2118 Nall Rd",
+    "sub": "Overland Park, KS 66211",
+    "score": 4.3,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$585K",
+    "mao": "$354K",
+    "ask": "$421K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 28% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Bathroom modernization required"
+    ]
+  },
+  {
+    "id": "stress-re-019",
+    "zip": "66211",
+    "title": "4523 Charlotte Pl",
+    "sub": "Overland Park, KS 66211",
+    "score": 9.5,
+    "label": "ACT NOW",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$463K",
+    "mao": "$290K",
+    "ask": "$263K",
+    "risk": "Low",
+    "thesis": "Asking 43% below ARV with low execution risk — clean equity play in Overland Park.",
+    "nextAction": "Submit LOI at $263,000 immediately — well under MAO with low risk.",
+    "riskFactors": [
+      "Roof age 10-15 years",
+      "Minor cosmetic updates needed",
+      "Driveway resurface needed"
+    ]
+  },
+  {
+    "id": "stress-re-020",
+    "zip": "64130",
+    "title": "6045 Bellefontaine Blvd",
+    "sub": "Kansas City, MO 64130",
+    "score": 3.9,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Rental",
+    "arv": "$138K",
+    "mao": "$78K",
+    "ask": "$109K",
+    "risk": "Low-Med",
+    "thesis": "Margin is thin — asking is 21% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Older HVAC system"
+    ]
+  },
+  {
+    "id": "stress-re-021",
+    "zip": "64132",
+    "title": "11445 Walnut Pl",
+    "sub": "Kansas City, MO 64132",
+    "score": 9.6,
+    "label": "ACT NOW",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$137K",
+    "mao": "$26K",
+    "ask": "$77K",
+    "risk": "Low",
+    "thesis": "Asking 44% below ARV with low execution risk — clean equity play in Kansas City.",
+    "nextAction": "Submit LOI at $77,000 immediately — well under MAO with low risk.",
+    "riskFactors": [
+      "Minor cosmetic updates needed"
+    ]
+  },
+  {
+    "id": "stress-re-022",
+    "zip": "64111",
+    "title": "11107 Cherry St",
+    "sub": "Kansas City, MO 64111",
+    "score": 8.5,
+    "label": "ACT NOW",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$437K",
+    "mao": "$247K",
+    "ask": "$229K",
+    "risk": "Low-Med",
+    "thesis": "Asking 48% below ARV with low-med execution risk — clean equity play in Kansas City.",
+    "nextAction": "Submit LOI at $229,000 immediately — well under MAO with low risk.",
+    "riskFactors": [
+      "Older HVAC system",
+      "Single-pane windows",
+      "Kitchen needs minor refresh"
+    ]
+  },
+  {
+    "id": "stress-re-023",
+    "zip": "66209",
+    "title": "11957 Nall Blvd",
+    "sub": "Leawood, KS 66209",
+    "score": 0,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$828K",
+    "mao": "$523K",
+    "ask": "$889K",
+    "risk": "Medium",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Bathroom modernization required"
+    ]
+  },
+  {
+    "id": "stress-re-024",
+    "zip": "64130",
+    "title": "1486 Metcalf Ter",
+    "sub": "Kansas City, MO 64130",
+    "score": 4.9,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$137K",
+    "mao": "$61K",
+    "ask": "$101K",
+    "risk": "Low-Med",
+    "thesis": "Workable equity at 27% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Single-pane windows"
+    ]
+  },
+  {
+    "id": "stress-re-025",
+    "zip": "64111",
+    "title": "6445 Mission Blvd",
+    "sub": "Kansas City, MO 64111",
+    "score": 6.4,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "BRRRR",
+    "arv": "$381K",
+    "mao": "$198K",
+    "ask": "$250K",
+    "risk": "Low-Med",
+    "thesis": "Workable equity at 34% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Older HVAC system"
+    ]
+  },
+  {
+    "id": "stress-re-026",
+    "zip": "64130",
+    "title": "4547 Forest Pl",
+    "sub": "Kansas City, MO 64130",
+    "score": 9.3,
+    "label": "ACT NOW",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$128K",
+    "mao": "$48K",
+    "ask": "$74K",
+    "risk": "Low",
+    "thesis": "Asking 42% below ARV with low execution risk — clean equity play in Kansas City.",
+    "nextAction": "Submit LOI at $74,000 immediately — well under MAO with low risk.",
+    "riskFactors": [
+      "Minor cosmetic updates needed"
+    ]
+  },
+  {
+    "id": "stress-re-027",
+    "zip": "66207",
+    "title": "8695 Mission St",
+    "sub": "Leawood, KS 66207",
+    "score": 0.4,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$550K",
+    "mao": "$360K",
+    "ask": "$522K",
+    "risk": "High",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Foundation crack noted",
+      "Major systems failing",
+      "Structural concerns flagged"
+    ]
+  },
+  {
+    "id": "stress-re-028",
+    "zip": "66206",
+    "title": "8750 Wabash Ter",
+    "sub": "Leawood, KS 66206",
+    "score": 9.4,
+    "label": "ACT NOW",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$594K",
+    "mao": "$380K",
+    "ask": "$339K",
+    "risk": "Low",
+    "thesis": "Asking 43% below ARV with low execution risk — clean equity play in Leawood.",
+    "nextAction": "Submit LOI at $339,000 immediately — well under MAO with low risk.",
+    "riskFactors": [
+      "Roof age 10-15 years",
+      "HVAC near end of life"
+    ]
+  },
+  {
+    "id": "stress-re-029",
+    "zip": "66207",
+    "title": "11492 Pflumm Blvd",
+    "sub": "Leawood, KS 66207",
+    "score": 3.7,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$548K",
+    "mao": "$321K",
+    "ask": "$417K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 24% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "HVAC at end of life"
+    ]
+  },
+  {
+    "id": "stress-re-030",
+    "zip": "64131",
+    "title": "9005 Ward Parkway Ave",
+    "sub": "Kansas City, MO 64131",
+    "score": 10,
+    "label": "ACT NOW",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$346K",
+    "mao": "$231K",
+    "ask": "$183K",
+    "risk": "Low",
+    "thesis": "Asking 47% below ARV with low execution risk — clean equity play in Kansas City.",
+    "nextAction": "Submit LOI at $183,000 immediately — well under MAO with low risk.",
+    "riskFactors": [
+      "Driveway resurface needed"
+    ]
+  },
+  {
+    "id": "stress-re-031",
+    "zip": "64111",
+    "title": "233 Broadway Ave",
+    "sub": "Kansas City, MO 64111",
+    "score": 8,
+    "label": "STRONG BUY",
+    "labelType": "green",
+    "tag": "BRRRR",
+    "arv": "$340K",
+    "mao": "$187K",
+    "ask": "$217K",
+    "risk": "Low",
+    "thesis": "Asking 36% below ARV with low execution risk — clean equity play in Kansas City.",
+    "nextAction": "Engage seller. Verify comps and rehab estimate before LOI.",
+    "riskFactors": [
+      "Driveway resurface needed",
+      "Roof age 10-15 years"
+    ]
+  },
+  {
+    "id": "stress-re-032",
+    "zip": "64132",
+    "title": "4722 Charlotte Ave",
+    "sub": "Kansas City, MO 64132",
+    "score": 9.1,
+    "label": "ACT NOW",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$209K",
+    "mao": "$72K",
+    "ask": "$123K",
+    "risk": "Low",
+    "thesis": "Asking 41% below ARV with low execution risk — clean equity play in Kansas City.",
+    "nextAction": "Submit LOI at $123,000 immediately — well under MAO with low risk.",
+    "riskFactors": [
+      "Minor cosmetic updates needed",
+      "Roof age 10-15 years"
+    ]
+  },
+  {
+    "id": "stress-re-033",
+    "zip": "64108",
+    "title": "3353 Ward Parkway Rd",
+    "sub": "Kansas City, MO 64108",
+    "score": 2.9,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Rental",
+    "arv": "$257K",
+    "mao": "$165K",
+    "ask": "$209K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 19% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Kitchen original — full update needed"
+    ]
+  },
+  {
+    "id": "stress-re-034",
+    "zip": "64108",
+    "title": "5790 Ward Parkway Pl",
+    "sub": "Kansas City, MO 64108",
+    "score": 4.8,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$290K",
+    "mao": "$189K",
+    "ask": "$200K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 31% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Kitchen original — full update needed",
+      "HVAC at end of life"
+    ]
+  },
+  {
+    "id": "stress-re-035",
+    "zip": "64111",
+    "title": "687 Mission Ter",
+    "sub": "Kansas City, MO 64111",
+    "score": 9.2,
+    "label": "ACT NOW",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$310K",
+    "mao": "$138K",
+    "ask": "$180K",
+    "risk": "Low",
+    "thesis": "Asking 42% below ARV with low execution risk — clean equity play in Kansas City.",
+    "nextAction": "Submit LOI at $180,000 immediately — well under MAO with low risk.",
+    "riskFactors": [
+      "Minor cosmetic updates needed",
+      "Driveway resurface needed"
+    ]
+  },
+  {
+    "id": "stress-re-036",
+    "zip": "66209",
+    "title": "3576 Oak Ter",
+    "sub": "Leawood, KS 66209",
+    "score": 4.4,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$605K",
+    "mao": "$353K",
+    "ask": "$433K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 28% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Roof age 18+ years",
+      "Kitchen original — full update needed",
+      "HVAC at end of life"
+    ]
+  },
+  {
+    "id": "stress-re-037",
+    "zip": "64109",
+    "title": "7512 Holmes Pl",
+    "sub": "Kansas City, MO 64109",
+    "score": 2.9,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Rental",
+    "arv": "$159K",
+    "mao": "$96K",
+    "ask": "$129K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 19% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Roof age 18+ years",
+      "Kitchen original — full update needed"
+    ]
+  },
+  {
+    "id": "stress-re-038",
+    "zip": "64109",
+    "title": "1852 Charlotte Pl",
+    "sub": "Kansas City, MO 64109",
+    "score": 0.4,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$112K",
+    "mao": "$38K",
+    "ask": "$107K",
+    "risk": "High",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Significant rehab budget required"
+    ]
+  },
+  {
+    "id": "stress-re-039",
+    "zip": "64127",
+    "title": "4282 Chestnut Pl",
+    "sub": "Kansas City, MO 64127",
+    "score": 3,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$87K",
+    "mao": "$8K",
+    "ask": "$70K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 19% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Bathroom modernization required",
+      "HVAC at end of life",
+      "Kitchen original — full update needed"
+    ]
+  },
+  {
+    "id": "stress-re-040",
+    "zip": "64114",
+    "title": "11809 Washington Pl",
+    "sub": "Kansas City, MO 64114",
+    "score": 0,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$349K",
+    "mao": "$231K",
+    "ask": "$355K",
+    "risk": "Medium",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "HVAC at end of life"
+    ]
+  },
+  {
+    "id": "stress-re-041",
+    "zip": "64108",
+    "title": "3457 Roe St",
+    "sub": "Kansas City, MO 64108",
+    "score": 4.7,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$261K",
+    "mao": "$148K",
+    "ask": "$182K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 30% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "HVAC at end of life"
+    ]
+  },
+  {
+    "id": "stress-re-042",
+    "zip": "64129",
+    "title": "2246 Lincoln Rd",
+    "sub": "Kansas City, MO 64129",
+    "score": 2.5,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$97K",
+    "mao": "$37K",
+    "ask": "$81K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 16% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Roof age 18+ years",
+      "HVAC at end of life",
+      "Kitchen original — full update needed"
+    ]
+  },
+  {
+    "id": "stress-re-043",
+    "zip": "64114",
+    "title": "483 Cedar Blvd",
+    "sub": "Kansas City, MO 64114",
+    "score": 5.3,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "BRRRR",
+    "arv": "$369K",
+    "mao": "$197K",
+    "ask": "$241K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 35% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Kitchen original — full update needed",
+      "Roof age 18+ years"
+    ]
+  },
+  {
+    "id": "stress-re-044",
+    "zip": "66209",
+    "title": "2231 Jefferson Blvd",
+    "sub": "Leawood, KS 66209",
+    "score": 8.8,
+    "label": "ACT NOW",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$565K",
+    "mao": "$384K",
+    "ask": "$339K",
+    "risk": "Low",
+    "thesis": "Asking 40% below ARV with low execution risk — clean equity play in Leawood.",
+    "nextAction": "Submit LOI at $339,000 immediately — well under MAO with low risk.",
+    "riskFactors": [
+      "Roof age 10-15 years",
+      "Minor cosmetic updates needed",
+      "Driveway resurface needed"
+    ]
+  },
+  {
+    "id": "stress-re-045",
+    "zip": "64111",
+    "title": "1663 Madison Rd",
+    "sub": "Kansas City, MO 64111",
+    "score": 0,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$428K",
+    "mao": "$256K",
+    "ask": "$454K",
+    "risk": "High",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Structural concerns flagged"
+    ]
+  },
+  {
+    "id": "stress-re-046",
+    "zip": "64108",
+    "title": "7359 Madison Ln",
+    "sub": "Kansas City, MO 64108",
+    "score": 0.6,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$283K",
+    "mao": "$188K",
+    "ask": "$264K",
+    "risk": "High",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Foundation crack noted"
+    ]
+  },
+  {
+    "id": "stress-re-047",
+    "zip": "66211",
+    "title": "9683 Pflumm Pl",
+    "sub": "Overland Park, KS 66211",
+    "score": 3,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$388K",
+    "mao": "$247K",
+    "ask": "$312K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 20% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Electrical panel update needed",
+      "Kitchen original — full update needed",
+      "Bathroom modernization required"
+    ]
+  },
+  {
+    "id": "stress-re-048",
+    "zip": "64113",
+    "title": "3525 Jefferson Ter",
+    "sub": "Kansas City, MO 64113",
+    "score": 3.9,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$424K",
+    "mao": "$264K",
+    "ask": "$318K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 25% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "HVAC at end of life",
+      "Electrical panel update needed"
+    ]
+  },
+  {
+    "id": "stress-re-049",
+    "zip": "66209",
+    "title": "454 Switzer Ter",
+    "sub": "Leawood, KS 66209",
+    "score": 3.5,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Rental",
+    "arv": "$675K",
+    "mao": "$433K",
+    "ask": "$523K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 23% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Roof age 18+ years"
+    ]
+  },
+  {
+    "id": "stress-re-050",
+    "zip": "64114",
+    "title": "6200 Roe Blvd",
+    "sub": "Kansas City, MO 64114",
+    "score": 1.9,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$490K",
+    "mao": "$299K",
+    "ask": "$431K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 12% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Roof age 18+ years",
+      "HVAC at end of life"
+    ]
+  },
+  {
+    "id": "stress-re-051",
+    "zip": "64114",
+    "title": "5404 Walnut Ter",
+    "sub": "Kansas City, MO 64114",
+    "score": 3.1,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$412K",
+    "mao": "$224K",
+    "ask": "$329K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 20% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "HVAC at end of life",
+      "Electrical panel update needed",
+      "Kitchen original — full update needed"
+    ]
+  },
+  {
+    "id": "stress-re-052",
+    "zip": "64132",
+    "title": "1078 Brookside Blvd",
+    "sub": "Kansas City, MO 64132",
+    "score": 4,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$217K",
+    "mao": "$138K",
+    "ask": "$160K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 26% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Bathroom modernization required"
+    ]
+  },
+  {
+    "id": "stress-re-053",
+    "zip": "66209",
+    "title": "5360 Switzer Ln",
+    "sub": "Leawood, KS 66209",
+    "score": 1.1,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$754K",
+    "mao": "$455K",
+    "ask": "$702K",
+    "risk": "Medium",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Electrical panel update needed",
+      "Roof age 18+ years",
+      "Bathroom modernization required"
+    ]
+  },
+  {
+    "id": "stress-re-054",
+    "zip": "66206",
+    "title": "4958 Mersington St",
+    "sub": "Leawood, KS 66206",
+    "score": 2.4,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$803K",
+    "mao": "$538K",
+    "ask": "$677K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 16% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "HVAC at end of life"
+    ]
+  },
+  {
+    "id": "stress-re-055",
+    "zip": "64132",
+    "title": "9138 Holmes Ter",
+    "sub": "Kansas City, MO 64132",
+    "score": 4.4,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$233K",
+    "mao": "$145K",
+    "ask": "$167K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 28% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "HVAC at end of life",
+      "Bathroom modernization required",
+      "Kitchen original — full update needed"
+    ]
+  },
+  {
+    "id": "stress-re-056",
+    "zip": "66209",
+    "title": "8762 Nall St",
+    "sub": "Leawood, KS 66209",
+    "score": 9.1,
+    "label": "ACT NOW",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$797K",
+    "mao": "$529K",
+    "ask": "$467K",
+    "risk": "Low",
+    "thesis": "Asking 41% below ARV with low execution risk — clean equity play in Leawood.",
+    "nextAction": "Submit LOI at $467,000 immediately — well under MAO with low risk.",
+    "riskFactors": [
+      "Driveway resurface needed",
+      "HVAC near end of life",
+      "Roof age 10-15 years"
+    ]
+  },
+  {
+    "id": "stress-re-057",
+    "zip": "66207",
+    "title": "563 Wabash Ter",
+    "sub": "Leawood, KS 66207",
+    "score": 5.3,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "Flip",
+    "arv": "$624K",
+    "mao": "$426K",
+    "ask": "$409K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 34% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "HVAC at end of life"
+    ]
+  },
+  {
+    "id": "stress-re-058",
+    "zip": "64132",
+    "title": "11117 Ward Parkway Ter",
+    "sub": "Kansas City, MO 64132",
+    "score": 2.3,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$207K",
+    "mao": "$88K",
+    "ask": "$182K",
+    "risk": "Low-Med",
+    "thesis": "Margin is thin — asking is 12% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Older HVAC system",
+      "Single-pane windows"
+    ]
+  },
+  {
+    "id": "stress-re-059",
+    "zip": "66207",
+    "title": "10430 Chestnut Pl",
+    "sub": "Leawood, KS 66207",
+    "score": 3,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$490K",
+    "mao": "$264K",
+    "ask": "$393K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 20% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Electrical panel update needed",
+      "Kitchen original — full update needed",
+      "Bathroom modernization required"
+    ]
+  },
+  {
+    "id": "stress-re-060",
+    "zip": "64127",
+    "title": "11165 Forest Pl",
+    "sub": "Kansas City, MO 64127",
+    "score": 3.2,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$129K",
+    "mao": "$31K",
+    "ask": "$107K",
+    "risk": "Low-Med",
+    "thesis": "Margin is thin — asking is 17% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Older HVAC system"
+    ]
+  },
+  {
+    "id": "stress-re-061",
+    "zip": "64130",
+    "title": "6759 Jefferson Ave",
+    "sub": "Kansas City, MO 64130",
+    "score": 8.8,
+    "label": "ACT NOW",
+    "labelType": "green",
+    "tag": "Flip",
+    "arv": "$153K",
+    "mao": "$74K",
+    "ask": "$92K",
+    "risk": "Low",
+    "thesis": "Asking 40% below ARV with low execution risk — clean equity play in Kansas City.",
+    "nextAction": "Submit LOI at $92,000 immediately — well under MAO with low risk.",
+    "riskFactors": [
+      "Driveway resurface needed",
+      "Minor cosmetic updates needed",
+      "Roof age 10-15 years"
+    ]
+  },
+  {
+    "id": "stress-re-062",
+    "zip": "64132",
+    "title": "1841 Lee Pl",
+    "sub": "Kansas City, MO 64132",
+    "score": 0.3,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Rental",
+    "arv": "$213K",
+    "mao": "$126K",
+    "ask": "$205K",
+    "risk": "High",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Foundation crack noted",
+      "Major systems failing",
+      "Basement water intrusion"
+    ]
+  },
+  {
+    "id": "stress-re-063",
+    "zip": "64111",
+    "title": "8209 Mersington Blvd",
+    "sub": "Kansas City, MO 64111",
+    "score": 1.9,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Rental",
+    "arv": "$361K",
+    "mao": "$212K",
+    "ask": "$324K",
+    "risk": "Low-Med",
+    "thesis": "Margin is thin — asking is 10% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Kitchen needs minor refresh",
+      "Older HVAC system"
+    ]
+  },
+  {
+    "id": "stress-re-064",
+    "zip": "64130",
+    "title": "2596 Wornall Rd",
+    "sub": "Kansas City, MO 64130",
+    "score": 0.1,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$169K",
+    "mao": "$65K",
+    "ask": "$168K",
+    "risk": "Medium",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Kitchen original — full update needed"
+    ]
+  },
+  {
+    "id": "stress-re-065",
+    "zip": "64111",
+    "title": "8763 Brookside Ln",
+    "sub": "Kansas City, MO 64111",
+    "score": 0,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Rental",
+    "arv": "$325K",
+    "mao": "$197K",
+    "ask": "$326K",
+    "risk": "High",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Major systems failing",
+      "Basement water intrusion"
+    ]
+  },
+  {
+    "id": "stress-re-066",
+    "zip": "66207",
+    "title": "3138 Pflumm Rd",
+    "sub": "Leawood, KS 66207",
+    "score": 0,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$520K",
+    "mao": "$294K",
+    "ask": "$549K",
+    "risk": "High",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Structural concerns flagged",
+      "Significant rehab budget required",
+      "Foundation crack noted"
+    ]
+  },
+  {
+    "id": "stress-re-067",
+    "zip": "66207",
+    "title": "3043 Prospect Ln",
+    "sub": "Leawood, KS 66207",
+    "score": 4.9,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$636K",
+    "mao": "$370K",
+    "ask": "$435K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 32% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Electrical panel update needed"
+    ]
+  },
+  {
+    "id": "stress-re-068",
+    "zip": "64109",
+    "title": "5560 Ward Parkway Blvd",
+    "sub": "Kansas City, MO 64109",
+    "score": 5.1,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "BRRRR",
+    "arv": "$146K",
+    "mao": "$39K",
+    "ask": "$98K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 33% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Electrical panel update needed"
+    ]
+  },
+  {
+    "id": "stress-re-069",
+    "zip": "64127",
+    "title": "8791 Walnut Rd",
+    "sub": "Kansas City, MO 64127",
+    "score": 1.7,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Rental",
+    "arv": "$100K",
+    "mao": "$60K",
+    "ask": "$89K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 11% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Kitchen original — full update needed",
+      "Bathroom modernization required"
+    ]
+  },
+  {
+    "id": "stress-re-070",
+    "zip": "64131",
+    "title": "1109 Antioch Pl",
+    "sub": "Kansas City, MO 64131",
+    "score": 8.5,
+    "label": "ACT NOW",
+    "labelType": "green",
+    "tag": "BRRRR",
+    "arv": "$360K",
+    "mao": "$188K",
+    "ask": "$221K",
+    "risk": "Low",
+    "thesis": "Asking 39% below ARV with low execution risk — clean equity play in Kansas City.",
+    "nextAction": "Submit LOI at $221,000 immediately — well under MAO with low risk.",
+    "riskFactors": [
+      "Driveway resurface needed"
+    ]
+  },
+  {
+    "id": "stress-re-071",
+    "zip": "66206",
+    "title": "5187 Wornall Ln",
+    "sub": "Leawood, KS 66206",
+    "score": 5,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "BRRRR",
+    "arv": "$541K",
+    "mao": "$301K",
+    "ask": "$396K",
+    "risk": "Low-Med",
+    "thesis": "Workable equity at 27% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Older HVAC system"
+    ]
+  },
+  {
+    "id": "stress-re-072",
+    "zip": "66209",
+    "title": "11950 Brookside Blvd",
+    "sub": "Leawood, KS 66209",
+    "score": 8.1,
+    "label": "STRONG BUY",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$845K",
+    "mao": "$574K",
+    "ask": "$477K",
+    "risk": "Low-Med",
+    "thesis": "Asking 44% below ARV with low-med execution risk — clean equity play in Leawood.",
+    "nextAction": "Engage seller. Verify comps and rehab estimate before LOI.",
+    "riskFactors": [
+      "Kitchen needs minor refresh",
+      "Older HVAC system"
+    ]
+  },
+  {
+    "id": "stress-re-073",
+    "zip": "66207",
+    "title": "10970 Metcalf Pl",
+    "sub": "Leawood, KS 66207",
+    "score": 0.7,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$557K",
+    "mao": "$321K",
+    "ask": "$512K",
+    "risk": "High",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Structural concerns flagged",
+      "Foundation crack noted"
+    ]
+  },
+  {
+    "id": "stress-re-074",
+    "zip": "64108",
+    "title": "3224 Lincoln Ter",
+    "sub": "Kansas City, MO 64108",
+    "score": 0,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Rental",
+    "arv": "$277K",
+    "mao": "$147K",
+    "ask": "$300K",
+    "risk": "High",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Structural concerns flagged",
+      "Basement water intrusion",
+      "Major systems failing"
+    ]
+  },
+  {
+    "id": "stress-re-075",
+    "zip": "64114",
+    "title": "2993 Washington Rd",
+    "sub": "Kansas City, MO 64114",
+    "score": 3.3,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Rental",
+    "arv": "$388K",
+    "mao": "$223K",
+    "ask": "$304K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 22% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Roof age 18+ years",
+      "HVAC at end of life",
+      "Kitchen original — full update needed"
+    ]
+  },
+  {
+    "id": "stress-re-076",
+    "zip": "64130",
+    "title": "8837 Forest Pl",
+    "sub": "Kansas City, MO 64130",
+    "score": 4.1,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Rental",
+    "arv": "$113K",
+    "mao": "$40K",
+    "ask": "$88K",
+    "risk": "Low-Med",
+    "thesis": "Margin is thin — asking is 22% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Driveway resurface needed"
+    ]
+  },
+  {
+    "id": "stress-re-077",
+    "zip": "66209",
+    "title": "995 Maple Ter",
+    "sub": "Leawood, KS 66209",
+    "score": 0,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$719K",
+    "mao": "$434K",
+    "ask": "$719K",
+    "risk": "Medium",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Kitchen original — full update needed",
+      "Bathroom modernization required",
+      "HVAC at end of life"
+    ]
+  },
+  {
+    "id": "stress-re-078",
+    "zip": "64129",
+    "title": "6028 Belleview Rd",
+    "sub": "Kansas City, MO 64129",
+    "score": 9,
+    "label": "ACT NOW",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$169K",
+    "mao": "$61K",
+    "ask": "$100K",
+    "risk": "Low",
+    "thesis": "Asking 41% below ARV with low execution risk — clean equity play in Kansas City.",
+    "nextAction": "Submit LOI at $100,000 immediately — well under MAO with low risk.",
+    "riskFactors": [
+      "Roof age 10-15 years"
+    ]
+  },
+  {
+    "id": "stress-re-079",
+    "zip": "66207",
+    "title": "9732 Antioch Pl",
+    "sub": "Leawood, KS 66207",
+    "score": 0,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$530K",
+    "mao": "$331K",
+    "ask": "$537K",
+    "risk": "Medium",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Kitchen original — full update needed",
+      "Bathroom modernization required",
+      "Roof age 18+ years"
+    ]
+  },
+  {
+    "id": "stress-re-080",
+    "zip": "64114",
+    "title": "11073 Antioch St",
+    "sub": "Kansas City, MO 64114",
+    "score": 5.3,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "Flip",
+    "arv": "$397K",
+    "mao": "$250K",
+    "ask": "$261K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 34% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Electrical panel update needed",
+      "HVAC at end of life"
+    ]
+  },
+  {
+    "id": "stress-re-081",
+    "zip": "64111",
+    "title": "1712 Holmes Ter",
+    "sub": "Kansas City, MO 64111",
+    "score": 5.3,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "BRRRR",
+    "arv": "$317K",
+    "mao": "$145K",
+    "ask": "$228K",
+    "risk": "Low-Med",
+    "thesis": "Workable equity at 28% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Driveway resurface needed"
+    ]
+  },
+  {
+    "id": "stress-re-082",
+    "zip": "66207",
+    "title": "10627 Belleview Rd",
+    "sub": "Leawood, KS 66207",
+    "score": 0,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$426K",
+    "mao": "$244K",
+    "ask": "$447K",
+    "risk": "Medium",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Roof age 18+ years",
+      "HVAC at end of life",
+      "Kitchen original — full update needed"
+    ]
+  },
+  {
+    "id": "stress-re-083",
+    "zip": "64108",
+    "title": "2990 Wabash Ln",
+    "sub": "Kansas City, MO 64108",
+    "score": 0.1,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$402K",
+    "mao": "$244K",
+    "ask": "$399K",
+    "risk": "High",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Major systems failing",
+      "Significant rehab budget required",
+      "Foundation crack noted"
+    ]
+  },
+  {
+    "id": "stress-re-084",
+    "zip": "66207",
+    "title": "7447 Cherry Blvd",
+    "sub": "Leawood, KS 66207",
+    "score": 4.7,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$715K",
+    "mao": "$424K",
+    "ask": "$499K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 30% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "HVAC at end of life",
+      "Roof age 18+ years",
+      "Roof age 18+ years"
+    ]
+  },
+  {
+    "id": "stress-re-085",
+    "zip": "66209",
+    "title": "4265 Brookside Ave",
+    "sub": "Leawood, KS 66209",
+    "score": 2.1,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Rental",
+    "arv": "$815K",
+    "mao": "$548K",
+    "ask": "$704K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 14% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "HVAC at end of life",
+      "Electrical panel update needed"
+    ]
+  },
+  {
+    "id": "stress-re-086",
+    "zip": "64132",
+    "title": "9049 Roe Ln",
+    "sub": "Kansas City, MO 64132",
+    "score": 4,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$132K",
+    "mao": "$47K",
+    "ask": "$98K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 26% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Electrical panel update needed",
+      "Roof age 18+ years"
+    ]
+  },
+  {
+    "id": "stress-re-087",
+    "zip": "64127",
+    "title": "9102 Lincoln Ave",
+    "sub": "Kansas City, MO 64127",
+    "score": 4.2,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$129K",
+    "mao": "$28K",
+    "ask": "$94K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 27% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "HVAC at end of life",
+      "Bathroom modernization required",
+      "Roof age 18+ years"
+    ]
+  },
+  {
+    "id": "stress-re-088",
+    "zip": "64131",
+    "title": "7332 Maple Ln",
+    "sub": "Kansas City, MO 64131",
+    "score": 5.3,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "BRRRR",
+    "arv": "$272K",
+    "mao": "$130K",
+    "ask": "$195K",
+    "risk": "Low-Med",
+    "thesis": "Workable equity at 28% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Older HVAC system",
+      "Single-pane windows",
+      "Driveway resurface needed"
+    ]
+  },
+  {
+    "id": "stress-re-089",
+    "zip": "64114",
+    "title": "4279 Holmes St",
+    "sub": "Kansas City, MO 64114",
+    "score": 3.9,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$343K",
+    "mao": "$210K",
+    "ask": "$256K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 25% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Electrical panel update needed",
+      "Bathroom modernization required"
+    ]
+  },
+  {
+    "id": "stress-re-090",
+    "zip": "64114",
+    "title": "6549 Chestnut St",
+    "sub": "Kansas City, MO 64114",
+    "score": 5.8,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "Flip",
+    "arv": "$471K",
+    "mao": "$284K",
+    "ask": "$326K",
+    "risk": "Low-Med",
+    "thesis": "Workable equity at 31% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Older HVAC system"
+    ]
+  },
+  {
+    "id": "stress-re-091",
+    "zip": "64108",
+    "title": "3569 Nall Ave",
+    "sub": "Kansas City, MO 64108",
+    "score": 7.9,
+    "label": "STRONG BUY",
+    "labelType": "green",
+    "tag": "BRRRR",
+    "arv": "$384K",
+    "mao": "$207K",
+    "ask": "$246K",
+    "risk": "Low",
+    "thesis": "Asking 36% below ARV with low execution risk — clean equity play in Kansas City.",
+    "nextAction": "Engage seller. Verify comps and rehab estimate before LOI.",
+    "riskFactors": [
+      "HVAC near end of life",
+      "Roof age 10-15 years"
+    ]
+  },
+  {
+    "id": "stress-re-092",
+    "zip": "64108",
+    "title": "2137 Prospect Ter",
+    "sub": "Kansas City, MO 64108",
+    "score": 10,
+    "label": "ACT NOW",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$371K",
+    "mao": "$205K",
+    "ask": "$200K",
+    "risk": "Low",
+    "thesis": "Asking 46% below ARV with low execution risk — clean equity play in Kansas City.",
+    "nextAction": "Submit LOI at $200,000 immediately — well under MAO with low risk.",
+    "riskFactors": [
+      "Driveway resurface needed",
+      "Roof age 10-15 years",
+      "Minor cosmetic updates needed"
+    ]
+  },
+  {
+    "id": "stress-re-093",
+    "zip": "66211",
+    "title": "6820 Holmes Ln",
+    "sub": "Overland Park, KS 66211",
+    "score": 1.7,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$534K",
+    "mao": "$356K",
+    "ask": "$474K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 11% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Roof age 18+ years"
+    ]
+  },
+  {
+    "id": "stress-re-094",
+    "zip": "64132",
+    "title": "7447 Roe Blvd",
+    "sub": "Kansas City, MO 64132",
+    "score": 4.9,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$155K",
+    "mao": "$29K",
+    "ask": "$106K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 32% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Kitchen original — full update needed"
+    ]
+  },
+  {
+    "id": "stress-re-095",
+    "zip": "64111",
+    "title": "9466 Madison St",
+    "sub": "Kansas City, MO 64111",
+    "score": 4.6,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$367K",
+    "mao": "$209K",
+    "ask": "$258K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 30% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Roof age 18+ years",
+      "Electrical panel update needed",
+      "Kitchen original — full update needed"
+    ]
+  },
+  {
+    "id": "stress-re-096",
+    "zip": "64127",
+    "title": "10258 Pine Ave",
+    "sub": "Kansas City, MO 64127",
+    "score": 0.8,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$146K",
+    "mao": "$46K",
+    "ask": "$138K",
+    "risk": "Medium",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Electrical panel update needed",
+      "Kitchen original — full update needed",
+      "HVAC at end of life"
+    ]
+  },
+  {
+    "id": "stress-re-097",
+    "zip": "64130",
+    "title": "6521 Elm Ln",
+    "sub": "Kansas City, MO 64130",
+    "score": 4.2,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$131K",
+    "mao": "$42K",
+    "ask": "$95K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 27% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Bathroom modernization required",
+      "HVAC at end of life"
+    ]
+  },
+  {
+    "id": "stress-re-098",
+    "zip": "66207",
+    "title": "7157 Mersington Ln",
+    "sub": "Leawood, KS 66207",
+    "score": 10,
+    "label": "ACT NOW",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$592K",
+    "mao": "$375K",
+    "ask": "$300K",
+    "risk": "Low",
+    "thesis": "Asking 49% below ARV with low execution risk — clean equity play in Leawood.",
+    "nextAction": "Submit LOI at $300,000 immediately — well under MAO with low risk.",
+    "riskFactors": [
+      "Minor cosmetic updates needed",
+      "HVAC near end of life"
+    ]
+  },
+  {
+    "id": "stress-re-099",
+    "zip": "64130",
+    "title": "5013 Brookside Rd",
+    "sub": "Kansas City, MO 64130",
+    "score": 5.1,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "Flip",
+    "arv": "$130K",
+    "mao": "$47K",
+    "ask": "$87K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 33% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Bathroom modernization required"
+    ]
+  },
+  {
+    "id": "stress-re-100",
+    "zip": "64111",
+    "title": "7225 Belleview St",
+    "sub": "Kansas City, MO 64111",
+    "score": 4.9,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$318K",
+    "mao": "$195K",
+    "ask": "$235K",
+    "risk": "Low-Med",
+    "thesis": "Workable equity at 26% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Single-pane windows",
+      "Kitchen needs minor refresh",
+      "Driveway resurface needed"
+    ]
+  },
+  {
+    "id": "stress-re-101",
+    "zip": "66209",
+    "title": "1923 Wornall Blvd",
+    "sub": "Leawood, KS 66209",
+    "score": 2,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$582K",
+    "mao": "$370K",
+    "ask": "$521K",
+    "risk": "Low-Med",
+    "thesis": "Margin is thin — asking is 10% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Kitchen needs minor refresh"
+    ]
+  },
+  {
+    "id": "stress-re-102",
+    "zip": "64113",
+    "title": "6012 Quivira St",
+    "sub": "Kansas City, MO 64113",
+    "score": 6,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "BRRRR",
+    "arv": "$464K",
+    "mao": "$250K",
+    "ask": "$316K",
+    "risk": "Low-Med",
+    "thesis": "Workable equity at 32% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Single-pane windows",
+      "Driveway resurface needed",
+      "Kitchen needs minor refresh"
+    ]
+  },
+  {
+    "id": "stress-re-103",
+    "zip": "64111",
+    "title": "5871 Cherry St",
+    "sub": "Kansas City, MO 64111",
+    "score": 8,
+    "label": "STRONG BUY",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$325K",
+    "mao": "$209K",
+    "ask": "$186K",
+    "risk": "Low-Med",
+    "thesis": "Asking 43% below ARV with low-med execution risk — clean equity play in Kansas City.",
+    "nextAction": "Engage seller. Verify comps and rehab estimate before LOI.",
+    "riskFactors": [
+      "Single-pane windows"
+    ]
+  },
+  {
+    "id": "stress-re-104",
+    "zip": "64113",
+    "title": "7838 Mersington Blvd",
+    "sub": "Kansas City, MO 64113",
+    "score": 2.5,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$669K",
+    "mao": "$437K",
+    "ask": "$561K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 16% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "HVAC at end of life"
+    ]
+  },
+  {
+    "id": "stress-re-105",
+    "zip": "64131",
+    "title": "9986 Main Ter",
+    "sub": "Kansas City, MO 64131",
+    "score": 4.3,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$245K",
+    "mao": "$97K",
+    "ask": "$177K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 28% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "HVAC at end of life"
+    ]
+  },
+  {
+    "id": "stress-re-106",
+    "zip": "64111",
+    "title": "8976 Cedar St",
+    "sub": "Kansas City, MO 64111",
+    "score": 7.7,
+    "label": "STRONG BUY",
+    "labelType": "green",
+    "tag": "BRRRR",
+    "arv": "$425K",
+    "mao": "$223K",
+    "ask": "$276K",
+    "risk": "Low",
+    "thesis": "Asking 35% below ARV with low execution risk — clean equity play in Kansas City.",
+    "nextAction": "Engage seller. Verify comps and rehab estimate before LOI.",
+    "riskFactors": [
+      "Minor cosmetic updates needed",
+      "HVAC near end of life",
+      "Roof age 10-15 years"
+    ]
+  },
+  {
+    "id": "stress-re-107",
+    "zip": "64129",
+    "title": "2242 Washington St",
+    "sub": "Kansas City, MO 64129",
+    "score": 9.7,
+    "label": "ACT NOW",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$102K",
+    "mao": "$50K",
+    "ask": "$57K",
+    "risk": "Low",
+    "thesis": "Asking 44% below ARV with low execution risk — clean equity play in Kansas City.",
+    "nextAction": "Submit LOI at $57,000 immediately — well under MAO with low risk.",
+    "riskFactors": [
+      "HVAC near end of life",
+      "Roof age 10-15 years"
+    ]
+  },
+  {
+    "id": "stress-re-108",
+    "zip": "64113",
+    "title": "1819 Roe St",
+    "sub": "Kansas City, MO 64113",
+    "score": 4.9,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$496K",
+    "mao": "$271K",
+    "ask": "$365K",
+    "risk": "Low-Med",
+    "thesis": "Workable equity at 26% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Driveway resurface needed",
+      "Single-pane windows"
+    ]
+  },
+  {
+    "id": "stress-re-109",
+    "zip": "64132",
+    "title": "3421 Lincoln Rd",
+    "sub": "Kansas City, MO 64132",
+    "score": 5.7,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "BRRRR",
+    "arv": "$167K",
+    "mao": "$48K",
+    "ask": "$116K",
+    "risk": "Low-Med",
+    "thesis": "Workable equity at 31% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Driveway resurface needed",
+      "Single-pane windows"
+    ]
+  },
+  {
+    "id": "stress-re-110",
+    "zip": "66209",
+    "title": "7024 Holmes Blvd",
+    "sub": "Leawood, KS 66209",
+    "score": 0,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Rental",
+    "arv": "$942K",
+    "mao": "$621K",
+    "ask": "$1.0M",
+    "risk": "High",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Structural concerns flagged"
+    ]
+  },
+  {
+    "id": "stress-re-111",
+    "zip": "64130",
+    "title": "8307 Lincoln Ln",
+    "sub": "Kansas City, MO 64130",
+    "score": 4.8,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$170K",
+    "mao": "$77K",
+    "ask": "$126K",
+    "risk": "Low-Med",
+    "thesis": "Workable equity at 26% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Kitchen needs minor refresh",
+      "Older HVAC system"
+    ]
+  },
+  {
+    "id": "stress-re-112",
+    "zip": "64129",
+    "title": "5511 Olive Blvd",
+    "sub": "Kansas City, MO 64129",
+    "score": 0.7,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$130K",
+    "mao": "$58K",
+    "ask": "$119K",
+    "risk": "High",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Basement water intrusion",
+      "Foundation crack noted",
+      "Major systems failing"
+    ]
+  },
+  {
+    "id": "stress-re-113",
+    "zip": "64129",
+    "title": "3906 Wornall Pl",
+    "sub": "Kansas City, MO 64129",
+    "score": 7.1,
+    "label": "STRONG BUY",
+    "labelType": "green",
+    "tag": "BRRRR",
+    "arv": "$97K",
+    "mao": "$8K",
+    "ask": "$60K",
+    "risk": "Low-Med",
+    "thesis": "Asking 38% below ARV with low-med execution risk — clean equity play in Kansas City.",
+    "nextAction": "Engage seller. Verify comps and rehab estimate before LOI.",
+    "riskFactors": [
+      "Single-pane windows",
+      "Kitchen needs minor refresh"
+    ]
+  },
+  {
+    "id": "stress-re-114",
+    "zip": "64131",
+    "title": "11660 Belleview Ave",
+    "sub": "Kansas City, MO 64131",
+    "score": 4.2,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$228K",
+    "mao": "$144K",
+    "ask": "$166K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 27% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Roof age 18+ years",
+      "Kitchen original — full update needed",
+      "Bathroom modernization required"
+    ]
+  },
+  {
+    "id": "stress-re-115",
+    "zip": "64127",
+    "title": "7029 Olive Pl",
+    "sub": "Kansas City, MO 64127",
+    "score": 4,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$84K",
+    "mao": "$39K",
+    "ask": "$62K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 26% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Electrical panel update needed",
+      "Bathroom modernization required",
+      "Kitchen original — full update needed"
+    ]
+  },
+  {
+    "id": "stress-re-116",
+    "zip": "64111",
+    "title": "6696 Quivira Rd",
+    "sub": "Kansas City, MO 64111",
+    "score": 6.7,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "BRRRR",
+    "arv": "$294K",
+    "mao": "$146K",
+    "ask": "$188K",
+    "risk": "Low-Med",
+    "thesis": "Asking 36% below ARV with low-med execution risk — clean equity play in Kansas City.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Older HVAC system"
+    ]
+  },
+  {
+    "id": "stress-re-117",
+    "zip": "64129",
+    "title": "499 Olive Rd",
+    "sub": "Kansas City, MO 64129",
+    "score": 0.8,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$164K",
+    "mao": "$36K",
+    "ask": "$150K",
+    "risk": "High",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Basement water intrusion"
+    ]
+  },
+  {
+    "id": "stress-re-118",
+    "zip": "66211",
+    "title": "1703 Oak Ter",
+    "sub": "Overland Park, KS 66211",
+    "score": 1.2,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Rental",
+    "arv": "$513K",
+    "mao": "$310K",
+    "ask": "$474K",
+    "risk": "Medium",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Kitchen original — full update needed",
+      "HVAC at end of life",
+      "Electrical panel update needed"
+    ]
+  },
+  {
+    "id": "stress-re-119",
+    "zip": "64114",
+    "title": "1539 Prospect Blvd",
+    "sub": "Kansas City, MO 64114",
+    "score": 8.5,
+    "label": "ACT NOW",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$511K",
+    "mao": "$330K",
+    "ask": "$279K",
+    "risk": "Low-Med",
+    "thesis": "Asking 45% below ARV with low-med execution risk — clean equity play in Kansas City.",
+    "nextAction": "Submit LOI at $279,000 immediately — well under MAO with low risk.",
+    "riskFactors": [
+      "Single-pane windows",
+      "Driveway resurface needed",
+      "Older HVAC system"
+    ]
+  },
+  {
+    "id": "stress-re-120",
+    "zip": "64132",
+    "title": "8495 Cedar St",
+    "sub": "Kansas City, MO 64132",
+    "score": 3.1,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Rental",
+    "arv": "$232K",
+    "mao": "$129K",
+    "ask": "$185K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 20% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Bathroom modernization required",
+      "Roof age 18+ years"
+    ]
+  },
+  {
+    "id": "stress-re-121",
+    "zip": "66211",
+    "title": "11878 Wabash Ave",
+    "sub": "Overland Park, KS 66211",
+    "score": 5.1,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "BRRRR",
+    "arv": "$569K",
+    "mao": "$332K",
+    "ask": "$382K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 33% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Electrical panel update needed"
+    ]
+  },
+  {
+    "id": "stress-re-122",
+    "zip": "66209",
+    "title": "7053 Wornall Ter",
+    "sub": "Leawood, KS 66209",
+    "score": 3,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$875K",
+    "mao": "$590K",
+    "ask": "$733K",
+    "risk": "Low-Med",
+    "thesis": "Margin is thin — asking is 16% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Kitchen needs minor refresh",
+      "Driveway resurface needed",
+      "Single-pane windows"
+    ]
+  },
+  {
+    "id": "stress-re-123",
+    "zip": "64114",
+    "title": "5791 Antioch Pl",
+    "sub": "Kansas City, MO 64114",
+    "score": 6.2,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "BRRRR",
+    "arv": "$446K",
+    "mao": "$260K",
+    "ask": "$299K",
+    "risk": "Low-Med",
+    "thesis": "Workable equity at 33% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Driveway resurface needed"
+    ]
+  },
+  {
+    "id": "stress-re-124",
+    "zip": "64130",
+    "title": "5604 Brookside Ave",
+    "sub": "Kansas City, MO 64130",
+    "score": 7.9,
+    "label": "STRONG BUY",
+    "labelType": "green",
+    "tag": "Flip",
+    "arv": "$179K",
+    "mao": "$111K",
+    "ask": "$115K",
+    "risk": "Low",
+    "thesis": "Asking 36% below ARV with low execution risk — clean equity play in Kansas City.",
+    "nextAction": "Engage seller. Verify comps and rehab estimate before LOI.",
+    "riskFactors": [
+      "HVAC near end of life",
+      "Roof age 10-15 years",
+      "Minor cosmetic updates needed"
+    ]
+  },
+  {
+    "id": "stress-re-125",
+    "zip": "64129",
+    "title": "3428 Mission Pl",
+    "sub": "Kansas City, MO 64129",
+    "score": 5.7,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "BRRRR",
+    "arv": "$119K",
+    "mao": "$9K",
+    "ask": "$83K",
+    "risk": "Low-Med",
+    "thesis": "Workable equity at 31% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Single-pane windows",
+      "Kitchen needs minor refresh",
+      "Older HVAC system"
+    ]
+  },
+  {
+    "id": "stress-re-126",
+    "zip": "64132",
+    "title": "7935 Antioch Pl",
+    "sub": "Kansas City, MO 64132",
+    "score": 6.4,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "BRRRR",
+    "arv": "$182K",
+    "mao": "$69K",
+    "ask": "$120K",
+    "risk": "Low-Med",
+    "thesis": "Workable equity at 34% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Kitchen needs minor refresh"
+    ]
+  },
+  {
+    "id": "stress-re-127",
+    "zip": "64127",
+    "title": "3975 Belleview Rd",
+    "sub": "Kansas City, MO 64127",
+    "score": 0.5,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Rental",
+    "arv": "$118K",
+    "mao": "$45K",
+    "ask": "$111K",
+    "risk": "High",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Structural concerns flagged"
+    ]
+  },
+  {
+    "id": "stress-re-128",
+    "zip": "64127",
+    "title": "11485 Elm Ter",
+    "sub": "Kansas City, MO 64127",
+    "score": 2.8,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$81K",
+    "mao": "$3K",
+    "ask": "$69K",
+    "risk": "Low-Med",
+    "thesis": "Margin is thin — asking is 15% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Driveway resurface needed",
+      "Single-pane windows"
+    ]
+  },
+  {
+    "id": "stress-re-129",
+    "zip": "66206",
+    "title": "10766 Antioch Rd",
+    "sub": "Leawood, KS 66206",
+    "score": 8.1,
+    "label": "STRONG BUY",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$848K",
+    "mao": "$567K",
+    "ask": "$479K",
+    "risk": "Low-Med",
+    "thesis": "Asking 43% below ARV with low-med execution risk — clean equity play in Leawood.",
+    "nextAction": "Engage seller. Verify comps and rehab estimate before LOI.",
+    "riskFactors": [
+      "Single-pane windows",
+      "Driveway resurface needed",
+      "Older HVAC system"
+    ]
+  },
+  {
+    "id": "stress-re-130",
+    "zip": "66207",
+    "title": "3052 Maple Blvd",
+    "sub": "Leawood, KS 66207",
+    "score": 5.2,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "Flip",
+    "arv": "$517K",
+    "mao": "$346K",
+    "ask": "$373K",
+    "risk": "Low-Med",
+    "thesis": "Workable equity at 28% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Older HVAC system",
+      "Kitchen needs minor refresh",
+      "Single-pane windows"
+    ]
+  },
+  {
+    "id": "stress-re-131",
+    "zip": "66207",
+    "title": "11415 Charlotte St",
+    "sub": "Leawood, KS 66207",
+    "score": 3.2,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Rental",
+    "arv": "$448K",
+    "mao": "$281K",
+    "ask": "$372K",
+    "risk": "Low-Med",
+    "thesis": "Margin is thin — asking is 17% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Kitchen needs minor refresh",
+      "Driveway resurface needed"
+    ]
+  },
+  {
+    "id": "stress-re-132",
+    "zip": "64111",
+    "title": "617 Chestnut Pl",
+    "sub": "Kansas City, MO 64111",
+    "score": 5.1,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "BRRRR",
+    "arv": "$393K",
+    "mao": "$223K",
+    "ask": "$263K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 33% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Roof age 18+ years",
+      "Bathroom modernization required",
+      "Electrical panel update needed"
+    ]
+  },
+  {
+    "id": "stress-re-133",
+    "zip": "64130",
+    "title": "2142 Walnut Blvd",
+    "sub": "Kansas City, MO 64130",
+    "score": 0.1,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$147K",
+    "mao": "$26K",
+    "ask": "$146K",
+    "risk": "Medium",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Roof age 18+ years",
+      "Bathroom modernization required"
+    ]
+  },
+  {
+    "id": "stress-re-134",
+    "zip": "64127",
+    "title": "9715 Jefferson Blvd",
+    "sub": "Kansas City, MO 64127",
+    "score": 0.5,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$116K",
+    "mao": "$20K",
+    "ask": "$109K",
+    "risk": "High",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Foundation crack noted"
+    ]
+  },
+  {
+    "id": "stress-re-135",
+    "zip": "64109",
+    "title": "8994 Holmes Ln",
+    "sub": "Kansas City, MO 64109",
+    "score": 4.2,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$174K",
+    "mao": "$108K",
+    "ask": "$127K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 27% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Bathroom modernization required"
+    ]
+  },
+  {
+    "id": "stress-re-136",
+    "zip": "66211",
+    "title": "5862 Metcalf Rd",
+    "sub": "Overland Park, KS 66211",
+    "score": 0,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$541K",
+    "mao": "$328K",
+    "ask": "$546K",
+    "risk": "High",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Basement water intrusion",
+      "Structural concerns flagged",
+      "Foundation crack noted"
+    ]
+  },
+  {
+    "id": "stress-re-137",
+    "zip": "64131",
+    "title": "11199 Olive Blvd",
+    "sub": "Kansas City, MO 64131",
+    "score": 4.2,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Rental",
+    "arv": "$269K",
+    "mao": "$176K",
+    "ask": "$208K",
+    "risk": "Low-Med",
+    "thesis": "Margin is thin — asking is 23% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Driveway resurface needed",
+      "Older HVAC system"
+    ]
+  },
+  {
+    "id": "stress-re-138",
+    "zip": "64132",
+    "title": "7162 Jefferson Ter",
+    "sub": "Kansas City, MO 64132",
+    "score": 4.6,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$155K",
+    "mao": "$44K",
+    "ask": "$109K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 30% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Electrical panel update needed",
+      "Bathroom modernization required",
+      "Kitchen original — full update needed"
+    ]
+  },
+  {
+    "id": "stress-re-139",
+    "zip": "64109",
+    "title": "6612 Holmes Rd",
+    "sub": "Kansas City, MO 64109",
+    "score": 0,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$112K",
+    "mao": "$19K",
+    "ask": "$122K",
+    "risk": "High",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Significant rehab budget required"
+    ]
+  },
+  {
+    "id": "stress-re-140",
+    "zip": "66209",
+    "title": "4811 Nall Pl",
+    "sub": "Leawood, KS 66209",
+    "score": 3.8,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$677K",
+    "mao": "$417K",
+    "ask": "$541K",
+    "risk": "Low-Med",
+    "thesis": "Margin is thin — asking is 20% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Kitchen needs minor refresh",
+      "Driveway resurface needed"
+    ]
+  },
+  {
+    "id": "stress-re-141",
+    "zip": "66209",
+    "title": "6329 Mersington Blvd",
+    "sub": "Leawood, KS 66209",
+    "score": 7.4,
+    "label": "STRONG BUY",
+    "labelType": "green",
+    "tag": "Flip",
+    "arv": "$820K",
+    "mao": "$564K",
+    "ask": "$495K",
+    "risk": "Low-Med",
+    "thesis": "Asking 40% below ARV with low-med execution risk — clean equity play in Leawood.",
+    "nextAction": "Engage seller. Verify comps and rehab estimate before LOI.",
+    "riskFactors": [
+      "Older HVAC system"
+    ]
+  },
+  {
+    "id": "stress-re-142",
+    "zip": "64129",
+    "title": "11290 Nall Pl",
+    "sub": "Kansas City, MO 64129",
+    "score": 2.7,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$159K",
+    "mao": "$45K",
+    "ask": "$131K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 17% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Roof age 18+ years"
+    ]
+  },
+  {
+    "id": "stress-re-143",
+    "zip": "66206",
+    "title": "8197 Switzer Ter",
+    "sub": "Leawood, KS 66206",
+    "score": 4.7,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$700K",
+    "mao": "$428K",
+    "ask": "$523K",
+    "risk": "Low-Med",
+    "thesis": "Workable equity at 25% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Driveway resurface needed"
+    ]
+  },
+  {
+    "id": "stress-re-144",
+    "zip": "64127",
+    "title": "1559 Chestnut Rd",
+    "sub": "Kansas City, MO 64127",
+    "score": 5.3,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "Flip",
+    "arv": "$145K",
+    "mao": "$64K",
+    "ask": "$104K",
+    "risk": "Low-Med",
+    "thesis": "Workable equity at 28% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Older HVAC system"
+    ]
+  },
+  {
+    "id": "stress-re-145",
+    "zip": "66211",
+    "title": "9890 Broadway Ter",
+    "sub": "Overland Park, KS 66211",
+    "score": 4.9,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$632K",
+    "mao": "$418K",
+    "ask": "$431K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 32% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Kitchen original — full update needed"
+    ]
+  },
+  {
+    "id": "stress-re-146",
+    "zip": "64132",
+    "title": "9063 Jefferson Blvd",
+    "sub": "Kansas City, MO 64132",
+    "score": 2.2,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$169K",
+    "mao": "$63K",
+    "ask": "$145K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 14% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Roof age 18+ years",
+      "HVAC at end of life",
+      "Electrical panel update needed"
+    ]
+  },
+  {
+    "id": "stress-re-147",
+    "zip": "64108",
+    "title": "1292 Belleview St",
+    "sub": "Kansas City, MO 64108",
+    "score": 0.1,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$269K",
+    "mao": "$168K",
+    "ask": "$265K",
+    "risk": "High",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Structural concerns flagged",
+      "Significant rehab budget required"
+    ]
+  },
+  {
+    "id": "stress-re-148",
+    "zip": "64108",
+    "title": "982 Brookside Pl",
+    "sub": "Kansas City, MO 64108",
+    "score": 3.2,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Rental",
+    "arv": "$373K",
+    "mao": "$213K",
+    "ask": "$310K",
+    "risk": "Low-Med",
+    "thesis": "Margin is thin — asking is 17% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Older HVAC system",
+      "Single-pane windows",
+      "Driveway resurface needed"
+    ]
+  },
+  {
+    "id": "stress-re-149",
+    "zip": "64108",
+    "title": "1109 Chestnut Rd",
+    "sub": "Kansas City, MO 64108",
+    "score": 3.1,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$323K",
+    "mao": "$169K",
+    "ask": "$270K",
+    "risk": "Low-Med",
+    "thesis": "Margin is thin — asking is 16% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Single-pane windows",
+      "Driveway resurface needed"
+    ]
+  },
+  {
+    "id": "stress-re-150",
+    "zip": "64114",
+    "title": "9620 Elm Ter",
+    "sub": "Kansas City, MO 64114",
+    "score": 6.2,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "BRRRR",
+    "arv": "$494K",
+    "mao": "$292K",
+    "ask": "$330K",
+    "risk": "Low-Med",
+    "thesis": "Workable equity at 33% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Older HVAC system",
+      "Driveway resurface needed"
+    ]
+  },
+  {
+    "id": "stress-re-151",
+    "zip": "66206",
+    "title": "11825 Wornall Pl",
+    "sub": "Leawood, KS 66206",
+    "score": 5,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "BRRRR",
+    "arv": "$843K",
+    "mao": "$533K",
+    "ask": "$570K",
+    "risk": "Medium",
+    "thesis": "Workable equity at 32% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Kitchen original — full update needed",
+      "HVAC at end of life",
+      "Bathroom modernization required"
+    ]
+  },
+  {
+    "id": "stress-re-152",
+    "zip": "64131",
+    "title": "2248 Wornall Ln",
+    "sub": "Kansas City, MO 64131",
+    "score": 4.7,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$291K",
+    "mao": "$184K",
+    "ask": "$218K",
+    "risk": "Low-Med",
+    "thesis": "Workable equity at 25% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Older HVAC system",
+      "Driveway resurface needed",
+      "Kitchen needs minor refresh"
+    ]
+  },
+  {
+    "id": "stress-re-153",
+    "zip": "64132",
+    "title": "10367 Nall Rd",
+    "sub": "Kansas City, MO 64132",
+    "score": 0,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$240K",
+    "mao": "$105K",
+    "ask": "$257K",
+    "risk": "Medium",
+    "thesis": "Asking is at or above ARV — no equity play here. Walk unless price drops 15%+.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Bathroom modernization required",
+      "Electrical panel update needed"
+    ]
+  },
+  {
+    "id": "stress-re-154",
+    "zip": "66209",
+    "title": "2454 Holmes Pl",
+    "sub": "Leawood, KS 66209",
+    "score": 4.7,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$605K",
+    "mao": "$395K",
+    "ask": "$453K",
+    "risk": "Low-Med",
+    "thesis": "Workable equity at 25% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Driveway resurface needed",
+      "Kitchen needs minor refresh"
+    ]
+  },
+  {
+    "id": "stress-re-155",
+    "zip": "64109",
+    "title": "1148 Lee Blvd",
+    "sub": "Kansas City, MO 64109",
+    "score": 10,
+    "label": "ACT NOW",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$136K",
+    "mao": "$41K",
+    "ask": "$74K",
+    "risk": "Low",
+    "thesis": "Asking 45% below ARV with low execution risk — clean equity play in Kansas City.",
+    "nextAction": "Submit LOI at $74,000 immediately — well under MAO with low risk.",
+    "riskFactors": [
+      "Roof age 10-15 years"
+    ]
+  },
+  {
+    "id": "stress-re-156",
+    "zip": "66211",
+    "title": "7334 Walnut Ter",
+    "sub": "Overland Park, KS 66211",
+    "score": 2.9,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$420K",
+    "mao": "$223K",
+    "ask": "$342K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 19% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "HVAC at end of life",
+      "Kitchen original — full update needed"
+    ]
+  },
+  {
+    "id": "stress-re-157",
+    "zip": "66206",
+    "title": "11368 Chestnut Ter",
+    "sub": "Leawood, KS 66206",
+    "score": 9.4,
+    "label": "ACT NOW",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$671K",
+    "mao": "$418K",
+    "ask": "$383K",
+    "risk": "Low",
+    "thesis": "Asking 43% below ARV with low execution risk — clean equity play in Leawood.",
+    "nextAction": "Submit LOI at $383,000 immediately — well under MAO with low risk.",
+    "riskFactors": [
+      "HVAC near end of life",
+      "Roof age 10-15 years",
+      "Driveway resurface needed"
+    ]
+  },
+  {
+    "id": "stress-re-158",
+    "zip": "64127",
+    "title": "2569 Olive Ave",
+    "sub": "Kansas City, MO 64127",
+    "score": 3.4,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$96K",
+    "mao": "$51K",
+    "ask": "$75K",
+    "risk": "Medium",
+    "thesis": "Margin is thin — asking is 22% below ARV but rehab and risk eat into spread.",
+    "nextAction": "Pass — math doesn't work at current ask.",
+    "riskFactors": [
+      "Roof age 18+ years",
+      "Electrical panel update needed"
+    ]
+  },
+  {
+    "id": "stress-re-159",
+    "zip": "66206",
+    "title": "1214 Roe Ave",
+    "sub": "Leawood, KS 66206",
+    "score": 9.8,
+    "label": "ACT NOW",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$606K",
+    "mao": "$406K",
+    "ask": "$337K",
+    "risk": "Low",
+    "thesis": "Asking 44% below ARV with low execution risk — clean equity play in Leawood.",
+    "nextAction": "Submit LOI at $337,000 immediately — well under MAO with low risk.",
+    "riskFactors": [
+      "Minor cosmetic updates needed",
+      "Driveway resurface needed",
+      "Roof age 10-15 years"
+    ]
+  },
+  {
+    "id": "stress-re-160",
+    "zip": "64114",
+    "title": "8176 Lee Ln",
+    "sub": "Kansas City, MO 64114",
+    "score": 6.1,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "BRRRR",
+    "arv": "$465K",
+    "mao": "$261K",
+    "ask": "$313K",
+    "risk": "Low-Med",
+    "thesis": "Workable equity at 33% below ARV — needs negotiation to close to MAO.",
+    "nextAction": "Wait — re-engage at 30 days on market or after price drop.",
+    "riskFactors": [
+      "Kitchen needs minor refresh",
+      "Single-pane windows"
+    ]
+  }
+]

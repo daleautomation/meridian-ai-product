@@ -1,0 +1,163 @@
+[
+  {
+    "id": "kc-64113-001",
+    "zip": "64113",
+    "title": "6234 Brookside Blvd",
+    "sub": "Kansas City, MO 64113",
+    "score": 8.9,
+    "label": "ACT NOW",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$485K",
+    "mao": "$298K",
+    "ask": "$285K",
+    "risk": "Low",
+    "thesis": "Cleanest 64113 trade on the desk — 41% margin to ARV with low execution risk and strong comp velocity in a tight Brookside submarket.",
+    "nextAction": "Submit LOI at $285K — $13K under MAO. Move within 48 hours.",
+    "riskFactors": [
+      "Roof age 18 years — budget $14K replacement",
+      "Original kitchen requires full update"
+    ]
+  },
+  {
+    "id": "kc-64113-002",
+    "zip": "64113",
+    "title": "612 W 65th St",
+    "sub": "Kansas City, MO 64113",
+    "score": 7.6,
+    "label": "STRONG BUY",
+    "labelType": "green",
+    "tag": "BRRRR",
+    "arv": "$420K",
+    "mao": "$258K",
+    "ask": "$249K",
+    "risk": "Low-Med",
+    "thesis": "BRRRR math works at 75% LTV refi — basis is clean, but tenant turnover and the garage settlement gate the timing of your refi event.",
+    "nextAction": "Engage seller. Refi math works at 75% LTV after rehab.",
+    "riskFactors": [
+      "Detached garage settlement — get structural opinion",
+      "Tenant in place, lease ends in 60 days"
+    ]
+  },
+  {
+    "id": "kc-64113-003",
+    "zip": "64113",
+    "title": "5810 Wornall Rd",
+    "sub": "Kansas City, MO 64113",
+    "score": 6.4,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "Flip",
+    "arv": "$395K",
+    "mao": "$241K",
+    "ask": "$268K",
+    "risk": "Medium",
+    "thesis": "Priced 11% over MAO with traffic-noise drag on resale velocity — wait for the inevitable price cut at 30 days on market.",
+    "nextAction": "Wait — priced $27K over MAO. Re-engage at 30 days on market.",
+    "riskFactors": [
+      "Overpriced by 11%",
+      "Wornall traffic noise hurts resale velocity"
+    ]
+  },
+  {
+    "id": "kc-64113-004",
+    "zip": "64113",
+    "title": "408 W 63rd St",
+    "sub": "Kansas City, MO 64113",
+    "score": 4.1,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$360K",
+    "mao": "$218K",
+    "ask": "$345K",
+    "risk": "High",
+    "thesis": "Listed 58% above MAO with foundation flags and a flipper seller — no path to a deal at any price you'd accept.",
+    "nextAction": "No action — $127K above MAO, no path to a deal.",
+    "riskFactors": [
+      "58% above MAO",
+      "Foundation issues flagged in disclosure",
+      "Seller is a flipper, not motivated"
+    ]
+  },
+  {
+    "id": "ks-66206-001",
+    "zip": "66206",
+    "title": "9420 Mission Rd",
+    "sub": "Leawood, KS 66206",
+    "score": 9.2,
+    "label": "ACT NOW",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$625K",
+    "mao": "$402K",
+    "ask": "$389K",
+    "risk": "Low",
+    "thesis": "Estate sale in an A-grade Leawood school district at $13K under MAO — pool refurb is cheap insurance for a $236K spread.",
+    "nextAction": "Submit LOI immediately at $389K — $13K under MAO, A-grade school district.",
+    "riskFactors": [
+      "Pool requires $8K resurfacing",
+      "Estate sale — multiple heirs may slow close"
+    ]
+  },
+  {
+    "id": "ks-66206-002",
+    "zip": "66206",
+    "title": "2715 W 96th St",
+    "sub": "Leawood, KS 66206",
+    "score": 8.0,
+    "label": "STRONG BUY",
+    "labelType": "green",
+    "tag": "Rental",
+    "arv": "$540K",
+    "mao": "$345K",
+    "ask": "$338K",
+    "risk": "Low-Med",
+    "thesis": "Cash-flow positive at ask with $3,200/mo rent comps — HOA short-term-rental rules cap upside but don't break the deal.",
+    "nextAction": "Verify rent comps at $3,200/mo. Cash flow positive at ask.",
+    "riskFactors": [
+      "HVAC at end of life",
+      "HOA rules limit short-term rentals"
+    ]
+  },
+  {
+    "id": "ks-66206-003",
+    "zip": "66206",
+    "title": "10832 Lee Blvd",
+    "sub": "Leawood, KS 66206",
+    "score": 6.8,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "Flip",
+    "arv": "$475K",
+    "mao": "$302K",
+    "ask": "$325K",
+    "risk": "Medium",
+    "thesis": "$23K over MAO with soft comps within half a mile — no urgency, watch for a 21-day price cut before re-engaging.",
+    "nextAction": "Wait — $23K over MAO. Watch for price drop at 21 days.",
+    "riskFactors": [
+      "Dated finishes throughout — full cosmetic refresh needed",
+      "Comps soft within 0.5 mi radius"
+    ]
+  },
+  {
+    "id": "kc-64109-001",
+    "zip": "64109",
+    "title": "3310 Olive St",
+    "sub": "Kansas City, MO 64109",
+    "score": 4.2,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Flip",
+    "arv": "$145K",
+    "mao": "$79K",
+    "ask": "$128K",
+    "risk": "High",
+    "thesis": "$49K above MAO with structural concerns and zero seller motivation — dead deal at any price.",
+    "nextAction": "No action — $49K above MAO, no deal structure works.",
+    "riskFactors": [
+      "48% above MAO",
+      "Structural concerns flagged"
+    ]
+  }
+]
