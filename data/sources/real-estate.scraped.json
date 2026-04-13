@@ -1,0 +1,224 @@
+[
+  {
+    "listingId": "scraped-64113-oak",
+    "address": {
+      "street": "5901 Oak St",
+      "city": "Kansas City",
+      "state": "MO",
+      "zip": "64113"
+    },
+    "listPrice": 299000,
+    "originalListPrice": 349000,
+    "priceHistory": [
+      {
+        "date": "2026-01-15",
+        "price": 349000
+      },
+      {
+        "date": "2026-02-20",
+        "price": 329000
+      },
+      {
+        "date": "2026-03-25",
+        "price": 299000
+      }
+    ],
+    "daysOnMarket": 84,
+    "status": "price-reduced",
+    "description": "Price reduced! Motivated seller. 4 bed 2.5 bath, 2,100 sqft. Updated kitchen with granite counters. Original hardwood floors. Full finished basement. 2-car attached garage. Large fenced backyard. Newer HVAC (2022). Roof 10 years. Bring offers \u2014 seller is relocating and needs to close.",
+    "bedrooms": 4,
+    "bathrooms": 2.5,
+    "squareFeet": 2100,
+    "yearBuilt": 1958,
+    "propertyType": "single-family",
+    "agent": {
+      "name": "Lisa Chen",
+      "brokerage": "Keller Williams"
+    },
+    "arvEstimate": 430000,
+    "estimatedRehabCost": 22000,
+    "riskFlags": [
+      "Roof age 10 years \u2014 budget for replacement within 5"
+    ],
+    "listedAt": "2026-01-15T12:00:00Z",
+    "photos": 24,
+    "views": 340,
+    "saves": 18
+  },
+  {
+    "listingId": "scraped-66206-spruce",
+    "address": {
+      "street": "7812 Spruce Dr",
+      "city": "Overland Park",
+      "state": "KS",
+      "zip": "66206"
+    },
+    "listPrice": 315000,
+    "daysOnMarket": 12,
+    "status": "active",
+    "description": "New listing. 3 bed 2 bath ranch, 1,800 sqft. Open floor plan. Updated bathrooms. Kitchen is dated but functional. Large lot, mature trees. 2-car garage. Great school district. Foundation inspection on file \u2014 no issues.",
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "squareFeet": 1800,
+    "yearBuilt": 1972,
+    "propertyType": "single-family",
+    "agent": {
+      "name": "Tom Rivera",
+      "brokerage": "RE/MAX"
+    },
+    "arvEstimate": 385000,
+    "estimatedRehabCost": 18000,
+    "riskFlags": [
+      "Kitchen dated \u2014 cosmetic update needed"
+    ],
+    "listedAt": "2026-03-28T09:00:00Z",
+    "photos": 18,
+    "views": 89,
+    "saves": 6
+  },
+  {
+    "listingId": "scraped-64113-prospect",
+    "address": {
+      "street": "6445 Prospect Ave",
+      "city": "Kansas City",
+      "state": "MO",
+      "zip": "64113"
+    },
+    "listPrice": 189000,
+    "originalListPrice": 189000,
+    "daysOnMarket": 127,
+    "status": "active",
+    "description": "Back on market \u2014 previous buyer financing fell through. 3 bed 1.5 bath, 1,200 sqft. Needs updating throughout. Good bones. Partial basement. 1-car detached garage. Estate sale, sold as-is. Priced below market for quick close.",
+    "bedrooms": 3,
+    "bathrooms": 1.5,
+    "squareFeet": 1200,
+    "yearBuilt": 1942,
+    "propertyType": "single-family",
+    "arvEstimate": 325000,
+    "estimatedRehabCost": 62000,
+    "riskFlags": [
+      "Needs full rehab",
+      "Estate sale \u2014 limited disclosures",
+      "Partial basement \u2014 check moisture"
+    ],
+    "listedAt": "2025-12-03T10:00:00Z",
+    "photos": 8,
+    "views": 510,
+    "saves": 4
+  },
+  {
+    "listingId": "scraped-64109-troost",
+    "address": {
+      "street": "4920 Troost Ave",
+      "city": "Kansas City",
+      "state": "MO",
+      "zip": "64109"
+    },
+    "listPrice": 72000,
+    "originalListPrice": 95000,
+    "priceHistory": [
+      {
+        "date": "2025-11-01",
+        "price": 95000
+      },
+      {
+        "date": "2026-01-15",
+        "price": 85000
+      },
+      {
+        "date": "2026-03-01",
+        "price": 72000
+      }
+    ],
+    "daysOnMarket": 160,
+    "status": "price-reduced",
+    "description": "Bank-owned REO. 3 bed 1 bath, 950 sqft. Vacant. As-is condition. Needs significant work \u2014 roof, HVAC, plumbing updates. Cash buyers only. Great for investors who can execute a full rehab.",
+    "bedrooms": 3,
+    "bathrooms": 1,
+    "squareFeet": 950,
+    "yearBuilt": 1935,
+    "propertyType": "single-family",
+    "arvEstimate": 165000,
+    "estimatedRehabCost": 55000,
+    "riskFlags": [
+      "Bank-owned REO",
+      "Roof replacement needed",
+      "HVAC failed",
+      "Plumbing concerns \u2014 galvanized pipes"
+    ],
+    "listedAt": "2025-11-01T08:00:00Z",
+    "photos": 6,
+    "views": 720,
+    "saves": 2
+  },
+  {
+    "listingId": "scraped-64113-walnut",
+    "address": {
+      "street": "6012 Walnut St",
+      "city": "Kansas City",
+      "state": "MO",
+      "zip": "64113"
+    },
+    "listPrice": 259000,
+    "originalListPrice": 289000,
+    "priceHistory": [
+      {
+        "date": "2026-03-01",
+        "price": 289000
+      },
+      {
+        "date": "2026-03-28",
+        "price": 259000
+      }
+    ],
+    "daysOnMarket": 39,
+    "status": "price-reduced",
+    "description": "Price reduced $30K! Motivated seller relocating. Solid 3 bed 2 bath ranch, 1,520 sqft. Updated kitchen with granite and stainless. Hardwood floors. Newer roof (2022). Updated HVAC (2021). Full finished basement. 2-car garage. Large corner lot. Move-in ready with cosmetic updates. Bring offers \u2014 seller wants to close in 30 days.",
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "squareFeet": 1520,
+    "yearBuilt": 1956,
+    "propertyType": "single-family",
+    "agent": {
+      "name": "Sarah Martinez",
+      "brokerage": "Compass"
+    },
+    "arvEstimate": 415000,
+    "estimatedRehabCost": 15000,
+    "riskFlags": [
+      "Cosmetic updates needed in bathrooms"
+    ],
+    "listedAt": "2026-03-01T09:00:00Z",
+    "photos": 28,
+    "views": 280,
+    "saves": 14
+  },
+  {
+    "listingId": "scraped-64113-holly",
+    "address": {
+      "street": "5734 Holly Ave",
+      "city": "Kansas City",
+      "state": "MO",
+      "zip": "64113"
+    },
+    "listPrice": 195000,
+    "daysOnMarket": 8,
+    "status": "active",
+    "description": "New listing in Brookside! Estate sale. 4 bed 1.5 bath two-story, 1,850 sqft. Needs full cosmetic rehab \u2014 kitchen, bathrooms, flooring, paint. Structurally sound per estate inspection. Newer water heater (2023). Roof age 5 years. Hardwood under carpet. Full basement. Estate wants quick close. As-is sale.",
+    "bedrooms": 4,
+    "bathrooms": 1.5,
+    "squareFeet": 1850,
+    "yearBuilt": 1938,
+    "propertyType": "single-family",
+    "arvEstimate": 425000,
+    "estimatedRehabCost": 75000,
+    "riskFlags": [
+      "Full cosmetic rehab needed",
+      "Estate sale \u2014 limited disclosures"
+    ],
+    "listedAt": "2026-04-01T10:00:00Z",
+    "photos": 12,
+    "views": 95,
+    "saves": 8
+  }
+]

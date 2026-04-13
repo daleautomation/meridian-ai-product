@@ -5,78 +5,17 @@
 //   - paymentMethod = "paypal_goods" (eBay default; safe but not maximum trust)
 //   - escrowAvailable = false (eBay doesn't escrow)
 //   - serialProvided = whatever the listing says, default false
-//
-// Heuristics:
-//   - Tag from title (Sport/Tool/Dress/Vintage)
-//   - Year from title (4-digit pattern in 1900-2030)
-//   - Listing quality from feedback × auth × box+papers signals
 
 import type {
   NormalizedWatchRecord,
   RawEbayWatchListing,
 } from "@/lib/ingestion/types";
-
-const SPORT_KEYWORDS = [
-  "submariner",
-  "gmt",
-  "daytona",
-  "explorer",
-  "sea-dweller",
-  "yacht-master",
-  "royal oak",
-  "nautilus",
-  "aquanaut",
-  "black bay",
-  "pelagos",
-  "speedmaster",
-];
-const DRESS_KEYWORDS = [
-  "calatrava",
-  "cellini",
-  "santos",
-  "tank",
-  "saxonia",
-  "1815",
-  "datejust",
-  "day-date",
-  "patrimony",
-];
-const VINTAGE_KEYWORDS = ["vintage", "1960", "1970", "1980", "no-date"];
-
-function guessTag(title: string): string {
-  const t = title.toLowerCase();
-  if (VINTAGE_KEYWORDS.some((k) => t.includes(k))) return "Vintage";
-  if (SPORT_KEYWORDS.some((k) => t.includes(k))) return "Sport";
-  if (DRESS_KEYWORDS.some((k) => t.includes(k))) return "Dress";
-  if (t.includes("speedmaster") || t.includes("chronograph")) return "Tool";
-  return "Sport";
-}
-
-function extractYear(title: string): string | null {
-  const m = title.match(/\b(19\d{2}|20[0-2]\d)\b/);
-  return m ? m[1] : null;
-}
-
-function normalizeBoxPapers(
-  raw: RawEbayWatchListing["hasBoxAndPapers"]
-): string {
-  if (raw === true || raw === "full_set") return "full_set";
-  if (raw === "box_only") return "box_only";
-  if (raw === "papers_only") return "papers_only";
-  return "neither";
-}
-
-function estimateListingQuality(raw: RawEbayWatchListing): number {
-  let score = 5;
-  if (raw.seller.feedbackPercent && raw.seller.feedbackPercent >= 99.5) score += 2;
-  else if (raw.seller.feedbackPercent && raw.seller.feedbackPercent >= 98) score += 1;
-  if (raw.seller.feedbackCount && raw.seller.feedbackCount >= 1000) score += 1;
-  if (raw.authenticityGuarantee) score += 1;
-  if (raw.hasBoxAndPapers === true || raw.hasBoxAndPapers === "full_set") score += 1;
-  if (raw.seller.topRated) score += 1;
-  if (raw.description && raw.description.length > 200) score += 0.5;
-  return Math.min(10, Math.round(score));
-}
+import { guessTag, extractYear, normalizeBoxPapers } from "./shared";
+import {
+  computeFreshnessScore,
+  computeDescriptionQuality,
+  detectDistressSignals,
+} from "./qualityFilters";
 
 export function normalizeEbayListing(
   raw: RawEbayWatchListing,
@@ -91,6 +30,18 @@ export function normalizeEbayListing(
     raw.itemLocation,
   ].filter((s): s is string => Boolean(s));
   const sub = subParts.join(" · ");
+
+  const desc = raw.description || "";
+  const descQuality = computeDescriptionQuality(desc, raw.title);
+  const freshness = computeFreshnessScore(undefined); // eBay bulk dumps lack per-item timestamps
+  const distress = detectDistressSignals(raw.title, desc, undefined);
+
+  // Boost listing quality for eBay-specific structured trust signals
+  let lqs = descQuality.listingQualityScore;
+  if (raw.seller.feedbackPercent && raw.seller.feedbackPercent >= 99.5) lqs = Math.min(10, lqs + 1);
+  if (raw.seller.feedbackCount && raw.seller.feedbackCount >= 1000) lqs = Math.min(10, lqs + 1);
+  if (raw.authenticityGuarantee) lqs = Math.min(10, lqs + 1);
+  if (raw.seller.topRated) lqs = Math.min(10, lqs + 1);
 
   return {
     id,
@@ -112,9 +63,13 @@ export function normalizeEbayListing(
     boxPapers: normalizeBoxPapers(raw.hasBoxAndPapers),
     serviceHistory: raw.serviceHistory ?? null,
     serialProvided: raw.serialProvided ?? false,
-    listingQualityScore: estimateListingQuality(raw),
+    listingQualityScore: lqs,
     priceTooGoodToBeTrue: false,
-    notes: raw.description ? raw.description.slice(0, 240) : undefined,
+    listingUrl: raw.listingUrl,
+    notes: desc ? desc.slice(0, 240) : undefined,
+    freshnessScore: freshness,
+    descriptionQualityDetail: descQuality.detail,
+    distressSignals: distress,
   };
 }
 

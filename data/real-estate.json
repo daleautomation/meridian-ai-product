@@ -12,12 +12,24 @@
     "mao": "$298K",
     "ask": "$285K",
     "risk": "Low",
-    "thesis": "Cleanest 64113 trade on the desk — 41% margin to ARV with low execution risk and strong comp velocity in a tight Brookside submarket.",
-    "nextAction": "Submit LOI at $285K — $13K under MAO. Move within 48 hours.",
+    "thesis": "Cleanest 64113 trade on the desk \u2014 41% margin to ARV with low execution risk and strong comp velocity in a tight Brookside submarket.",
+    "nextAction": "Submit LOI at $285K \u2014 $13K under MAO. Move within 48 hours.",
     "riskFactors": [
-      "Roof age 18 years — budget $14K replacement",
+      "Roof age 18 years \u2014 budget $14K replacement",
       "Original kitchen requires full update"
-    ]
+    ],
+    "listingTimestamp": "2026-04-08T09:00:00Z",
+    "compCount": 5,
+    "daysOnMarket": 6,
+    "condition": {
+      "exteriorCondition": "dated",
+      "interiorCondition": "dated",
+      "kitchenBathCondition": "dated",
+      "systemsCondition": "aging",
+      "structuralRisk": "none",
+      "rehabLevel": "moderate_rehab",
+      "occupancyFriction": "vacant"
+    }
   },
   {
     "id": "kc-64113-002",
@@ -32,12 +44,24 @@
     "mao": "$258K",
     "ask": "$249K",
     "risk": "Low-Med",
-    "thesis": "BRRRR math works at 75% LTV refi — basis is clean, but tenant turnover and the garage settlement gate the timing of your refi event.",
+    "thesis": "BRRRR math works at 75% LTV refi \u2014 basis is clean, but tenant turnover and the garage settlement gate the timing of your refi event.",
     "nextAction": "Engage seller. Refi math works at 75% LTV after rehab.",
     "riskFactors": [
-      "Detached garage settlement — get structural opinion",
+      "Detached garage settlement \u2014 get structural opinion",
       "Tenant in place, lease ends in 60 days"
-    ]
+    ],
+    "listingTimestamp": "2026-04-05T14:00:00Z",
+    "compCount": 4,
+    "daysOnMarket": 18,
+    "condition": {
+      "exteriorCondition": "dated",
+      "interiorCondition": "worn",
+      "kitchenBathCondition": "dated",
+      "systemsCondition": "aging",
+      "structuralRisk": "minor",
+      "rehabLevel": "moderate_rehab",
+      "occupancyFriction": "tenant_in_place"
+    }
   },
   {
     "id": "kc-64113-003",
@@ -52,12 +76,24 @@
     "mao": "$241K",
     "ask": "$268K",
     "risk": "Medium",
-    "thesis": "Priced 11% over MAO with traffic-noise drag on resale velocity — wait for the inevitable price cut at 30 days on market.",
-    "nextAction": "Wait — priced $27K over MAO. Re-engage at 30 days on market.",
+    "thesis": "Priced 11% over MAO with traffic-noise drag on resale velocity \u2014 wait for the inevitable price cut at 30 days on market.",
+    "nextAction": "Wait \u2014 priced $27K over MAO. Re-engage at 30 days on market.",
     "riskFactors": [
       "Overpriced by 11%",
       "Wornall traffic noise hurts resale velocity"
-    ]
+    ],
+    "listingTimestamp": "2026-03-20T10:00:00Z",
+    "compCount": 3,
+    "daysOnMarket": 42,
+    "condition": {
+      "exteriorCondition": "worn",
+      "interiorCondition": "worn",
+      "kitchenBathCondition": "partial_rehab",
+      "systemsCondition": "aging",
+      "structuralRisk": "none",
+      "rehabLevel": "moderate_rehab",
+      "occupancyFriction": "owner_occupied"
+    }
   },
   {
     "id": "kc-64113-004",
@@ -72,13 +108,16 @@
     "mao": "$218K",
     "ask": "$345K",
     "risk": "High",
-    "thesis": "Listed 58% above MAO with foundation flags and a flipper seller — no path to a deal at any price you'd accept.",
-    "nextAction": "No action — $127K above MAO, no path to a deal.",
+    "thesis": "Listed 58% above MAO with foundation flags and a flipper seller \u2014 no path to a deal at any price you'd accept.",
+    "nextAction": "No action \u2014 $127K above MAO, no path to a deal.",
     "riskFactors": [
       "58% above MAO",
       "Foundation issues flagged in disclosure",
       "Seller is a flipper, not motivated"
-    ]
+    ],
+    "listingTimestamp": "2026-02-15T08:00:00Z",
+    "compCount": 2,
+    "daysOnMarket": 95
   },
   {
     "id": "ks-66206-001",
@@ -93,19 +132,31 @@
     "mao": "$402K",
     "ask": "$389K",
     "risk": "Low",
-    "thesis": "Estate sale in an A-grade Leawood school district at $13K under MAO — pool refurb is cheap insurance for a $236K spread.",
-    "nextAction": "Submit LOI immediately at $389K — $13K under MAO, A-grade school district.",
+    "thesis": "Estate sale in an A-grade Leawood school district at $13K under MAO \u2014 pool refurb is cheap insurance for a $236K spread.",
+    "nextAction": "Submit LOI immediately at $389K \u2014 $13K under MAO, A-grade school district.",
     "riskFactors": [
       "Pool requires $8K resurfacing",
-      "Estate sale — multiple heirs may slow close"
-    ]
+      "Estate sale \u2014 multiple heirs may slow close"
+    ],
+    "listingTimestamp": "2026-04-09T07:00:00Z",
+    "compCount": 6,
+    "daysOnMarket": 3,
+    "condition": {
+      "exteriorCondition": "turnkey",
+      "interiorCondition": "dated",
+      "kitchenBathCondition": "updated",
+      "systemsCondition": "modern",
+      "structuralRisk": "none",
+      "rehabLevel": "light_cosmetic",
+      "occupancyFriction": "vacant"
+    }
   },
   {
     "id": "ks-66206-002",
     "zip": "66206",
     "title": "2715 W 96th St",
     "sub": "Leawood, KS 66206",
-    "score": 8.0,
+    "score": 8,
     "label": "STRONG BUY",
     "labelType": "green",
     "tag": "Rental",
@@ -113,12 +164,24 @@
     "mao": "$345K",
     "ask": "$338K",
     "risk": "Low-Med",
-    "thesis": "Cash-flow positive at ask with $3,200/mo rent comps — HOA short-term-rental rules cap upside but don't break the deal.",
+    "thesis": "Cash-flow positive at ask with $3,200/mo rent comps \u2014 HOA short-term-rental rules cap upside but don't break the deal.",
     "nextAction": "Verify rent comps at $3,200/mo. Cash flow positive at ask.",
     "riskFactors": [
       "HVAC at end of life",
       "HOA rules limit short-term rentals"
-    ]
+    ],
+    "listingTimestamp": "2026-04-06T11:00:00Z",
+    "compCount": 4,
+    "daysOnMarket": 14,
+    "condition": {
+      "exteriorCondition": "dated",
+      "interiorCondition": "dated",
+      "kitchenBathCondition": "dated",
+      "systemsCondition": "aging",
+      "structuralRisk": "none",
+      "rehabLevel": "moderate_rehab",
+      "occupancyFriction": "vacant"
+    }
   },
   {
     "id": "ks-66206-003",
@@ -133,12 +196,15 @@
     "mao": "$302K",
     "ask": "$325K",
     "risk": "Medium",
-    "thesis": "$23K over MAO with soft comps within half a mile — no urgency, watch for a 21-day price cut before re-engaging.",
-    "nextAction": "Wait — $23K over MAO. Watch for price drop at 21 days.",
+    "thesis": "$23K over MAO with soft comps within half a mile \u2014 no urgency, watch for a 21-day price cut before re-engaging.",
+    "nextAction": "Wait \u2014 $23K over MAO. Watch for price drop at 21 days.",
     "riskFactors": [
-      "Dated finishes throughout — full cosmetic refresh needed",
+      "Dated finishes throughout \u2014 full cosmetic refresh needed",
       "Comps soft within 0.5 mi radius"
-    ]
+    ],
+    "listingTimestamp": "2026-03-25T15:00:00Z",
+    "compCount": 3,
+    "daysOnMarket": 35
   },
   {
     "id": "kc-64109-001",
@@ -153,11 +219,483 @@
     "mao": "$79K",
     "ask": "$128K",
     "risk": "High",
-    "thesis": "$49K above MAO with structural concerns and zero seller motivation — dead deal at any price.",
-    "nextAction": "No action — $49K above MAO, no deal structure works.",
+    "thesis": "$49K above MAO with structural concerns and zero seller motivation \u2014 dead deal at any price.",
+    "nextAction": "No action \u2014 $49K above MAO, no deal structure works.",
     "riskFactors": [
       "48% above MAO",
       "Structural concerns flagged"
-    ]
+    ],
+    "listingTimestamp": "2026-01-10T09:00:00Z",
+    "compCount": 2,
+    "daysOnMarket": 120
+  },
+  {
+    "id": "fsbo-64113-elm",
+    "zip": "64113",
+    "title": "4417 Elm Ave",
+    "sub": "Kansas City, MO 64113",
+    "score": 3.3,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Equity Play",
+    "arv": "$395K",
+    "mao": "$249K",
+    "ask": "$245K",
+    "risk": "High",
+    "nextAction": "No action \u2014 math doesn't work.",
+    "riskFactors": [
+      "Roof condition flagged"
+    ],
+    "thesis": "[NEW] FSBO with distress signals (must sell, bring all offers). Owner-sold = no commission, potential mispricing.",
+    "listingTimestamp": "2026-04-07T10:00:00Z",
+    "sourcePlatform": "fsbo",
+    "sellerType": "owner",
+    "freshnessScore": 90,
+    "listingQualityScore": 9,
+    "distressSignals": {
+      "detected": true,
+      "keywords": [
+        "must sell",
+        "bring all offers",
+        "relocating",
+        "cosmetic",
+        "priced to sell"
+      ],
+      "score": 81
+    },
+    "descriptionQualityDetail": {
+      "lengthScore": 94,
+      "specificityScore": 90,
+      "completenessScore": 75
+    },
+    "compCount": 2
+  },
+  {
+    "id": "fsbo-64113-cherry",
+    "zip": "64113",
+    "title": "6118 Cherry St",
+    "sub": "Kansas City, MO 64113",
+    "score": 6.2,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "Equity Play",
+    "arv": "$445K",
+    "mao": "$257K",
+    "ask": "$265K",
+    "risk": "Medium",
+    "nextAction": "Monitor \u2014 re-check in 2 weeks for price drop.",
+    "riskFactors": [
+      "Roof condition flagged",
+      "HVAC may need attention",
+      "Sold as-is \u2014 no repairs"
+    ],
+    "thesis": "FSBO with distress signals (motivated, as-is). Owner-sold = no commission, potential mispricing.",
+    "listingTimestamp": "2026-04-02T14:00:00Z",
+    "sourcePlatform": "fsbo",
+    "sellerType": "owner",
+    "freshnessScore": 65,
+    "listingQualityScore": 7,
+    "distressSignals": {
+      "detected": true,
+      "keywords": [
+        "motivated",
+        "as-is",
+        "sold as-is",
+        "estate sale",
+        "probate"
+      ],
+      "score": 72
+    },
+    "descriptionQualityDetail": {
+      "lengthScore": 72,
+      "specificityScore": 90,
+      "completenessScore": 50
+    },
+    "condition": {
+      "exteriorCondition": "dated",
+      "interiorCondition": "worn",
+      "kitchenBathCondition": "full_rehab",
+      "systemsCondition": "modern",
+      "structuralRisk": "none",
+      "rehabLevel": "heavy_rehab",
+      "occupancyFriction": "estate_sale"
+    },
+    "compCount": 3
+  },
+  {
+    "id": "fsbo-66206-cedar",
+    "zip": "66206",
+    "title": "9234 Cedar Ln",
+    "sub": "Overland Park, KS 66206",
+    "score": 4,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "Equity Play",
+    "arv": "$210K",
+    "mao": "$102K",
+    "ask": "$89K",
+    "risk": "High",
+    "nextAction": "No action \u2014 math doesn't work.",
+    "riskFactors": [
+      "Foundation concerns noted",
+      "Roof condition flagged"
+    ],
+    "thesis": "[NEW] FSBO with distress signals (handyman special). Owner-sold = no commission, potential mispricing.",
+    "listingTimestamp": "2026-04-08T08:30:00Z",
+    "sourcePlatform": "fsbo",
+    "sellerType": "owner",
+    "freshnessScore": 90,
+    "listingQualityScore": 6,
+    "distressSignals": {
+      "detected": true,
+      "keywords": [
+        "handyman special"
+      ],
+      "score": 12
+    },
+    "descriptionQualityDetail": {
+      "lengthScore": 54,
+      "specificityScore": 75,
+      "completenessScore": 40
+    },
+    "compCount": 2
+  },
+  {
+    "id": "fsbo-64109-main",
+    "zip": "64109",
+    "title": "3312 Main St",
+    "sub": "Kansas City, MO 64109",
+    "score": 6.7,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "Equity Play",
+    "arv": "$275K",
+    "mao": "$158K",
+    "ask": "$155K",
+    "risk": "Medium",
+    "nextAction": "Monitor \u2014 re-check in 2 weeks for price drop.",
+    "riskFactors": [
+      "Roof condition flagged"
+    ],
+    "thesis": "FSBO listing \u2014 owner-sold with no agent. Verify ARV independently.",
+    "listingTimestamp": "2026-04-05T16:00:00Z",
+    "sourcePlatform": "fsbo",
+    "sellerType": "owner",
+    "freshnessScore": 78,
+    "listingQualityScore": 6,
+    "distressSignals": {
+      "detected": false,
+      "keywords": [],
+      "score": 0
+    },
+    "descriptionQualityDetail": {
+      "lengthScore": 59,
+      "specificityScore": 65,
+      "completenessScore": 55
+    },
+    "compCount": 2
+  },
+  {
+    "id": "scraped-64113-oak",
+    "zip": "64113",
+    "title": "5901 Oak St",
+    "sub": "Kansas City, MO 64113",
+    "score": 5,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "Flip",
+    "arv": "$430K",
+    "mao": "$279K",
+    "ask": "$299K",
+    "risk": "Medium",
+    "thesis": "30% equity spread. 84d on market. 2 price drops (14% total). Distress signals: motivated seller, motivated.",
+    "nextAction": "Monitor for further price reductions.",
+    "riskFactors": [
+      "Roof age 10 years \u2014 budget for replacement within 5"
+    ],
+    "daysOnMarket": 84,
+    "listingTimestamp": "2026-01-15T12:00:00Z",
+    "sourcePlatform": "scraped",
+    "sellerType": "agent",
+    "freshnessScore": 35,
+    "listingQualityScore": 8,
+    "priceReductionCount": 2,
+    "originalAsk": "$349K",
+    "distressSignals": {
+      "detected": true,
+      "keywords": [
+        "motivated seller",
+        "motivated",
+        "bring offers",
+        "relocating",
+        "price reduced",
+        "reduced"
+      ],
+      "score": 100
+    },
+    "descriptionQualityDetail": {
+      "lengthScore": 71,
+      "specificityScore": 90,
+      "completenessScore": 75
+    },
+    "condition": {
+      "exteriorCondition": "dated",
+      "interiorCondition": "dated",
+      "kitchenBathCondition": "dated",
+      "systemsCondition": "aging",
+      "structuralRisk": "none",
+      "rehabLevel": "moderate_rehab",
+      "occupancyFriction": "owner_occupied"
+    },
+    "compCount": 4
+  },
+  {
+    "id": "scraped-66206-spruce",
+    "zip": "66206",
+    "title": "7812 Spruce Dr",
+    "sub": "Overland Park, KS 66206",
+    "score": 2.8,
+    "label": "PASS",
+    "labelType": "red",
+    "tag": "BRRRR",
+    "arv": "$385K",
+    "mao": "$252K",
+    "ask": "$315K",
+    "risk": "Medium",
+    "thesis": "12d on market. Distress signals: cosmetic.",
+    "nextAction": "No action at current price.",
+    "riskFactors": [
+      "Kitchen dated \u2014 cosmetic update needed"
+    ],
+    "daysOnMarket": 12,
+    "listingTimestamp": "2026-03-28T09:00:00Z",
+    "sourcePlatform": "scraped",
+    "sellerType": "agent",
+    "freshnessScore": 65,
+    "listingQualityScore": 7,
+    "priceReductionCount": 0,
+    "distressSignals": {
+      "detected": true,
+      "keywords": [
+        "cosmetic"
+      ],
+      "score": 12
+    },
+    "descriptionQualityDetail": {
+      "lengthScore": 55,
+      "specificityScore": 80,
+      "completenessScore": 55
+    },
+    "compCount": 3
+  },
+  {
+    "id": "scraped-64113-prospect",
+    "zip": "64113",
+    "title": "6445 Prospect Ave",
+    "sub": "Kansas City, MO 64113",
+    "score": 8.3,
+    "label": "STRONG BUY",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$325K",
+    "mao": "$166K",
+    "ask": "$189K",
+    "risk": "Low-Med",
+    "thesis": "42% equity spread. 127d on market. Distress signals: quick close, as-is.",
+    "nextAction": "Verify comps, then engage. ",
+    "riskFactors": [
+      "Needs full rehab",
+      "Estate sale \u2014 limited disclosures",
+      "Partial basement \u2014 check moisture"
+    ],
+    "daysOnMarket": 127,
+    "listingTimestamp": "2025-12-03T10:00:00Z",
+    "sourcePlatform": "scraped",
+    "sellerType": "owner",
+    "freshnessScore": 18,
+    "listingQualityScore": 5,
+    "priceReductionCount": 0,
+    "distressSignals": {
+      "detected": true,
+      "keywords": [
+        "quick close",
+        "as-is",
+        "needs updating",
+        "sold as-is",
+        "below market",
+        "estate sale"
+      ],
+      "score": 84
+    },
+    "descriptionQualityDetail": {
+      "lengthScore": 56,
+      "specificityScore": 65,
+      "completenessScore": 40
+    },
+    "condition": {
+      "exteriorCondition": "worn",
+      "interiorCondition": "worn",
+      "kitchenBathCondition": "full_rehab",
+      "systemsCondition": "aging",
+      "structuralRisk": "minor",
+      "rehabLevel": "heavy_rehab",
+      "occupancyFriction": "estate_sale"
+    },
+    "compCount": 3
+  },
+  {
+    "id": "scraped-64109-troost",
+    "zip": "64109",
+    "title": "4920 Troost Ave",
+    "sub": "Kansas City, MO 64109",
+    "score": 7,
+    "label": "STRONG BUY",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$165K",
+    "mao": "$61K",
+    "ask": "$72K",
+    "risk": "Medium",
+    "thesis": "56% equity spread. 160d on market. 2 price drops (24% total). Distress signals: as-is, reo.",
+    "nextAction": "Verify comps, then engage. 2 price drops (24% total)",
+    "riskFactors": [
+      "Bank-owned REO",
+      "Roof replacement needed",
+      "HVAC failed",
+      "Plumbing concerns \u2014 galvanized pipes"
+    ],
+    "daysOnMarket": 160,
+    "listingTimestamp": "2025-11-01T08:00:00Z",
+    "sourcePlatform": "scraped",
+    "sellerType": "owner",
+    "freshnessScore": 18,
+    "listingQualityScore": 5,
+    "priceReductionCount": 2,
+    "originalAsk": "$95K",
+    "distressSignals": {
+      "detected": true,
+      "keywords": [
+        "as-is",
+        "reo"
+      ],
+      "score": 27
+    },
+    "descriptionQualityDetail": {
+      "lengthScore": 47,
+      "specificityScore": 65,
+      "completenessScore": 40
+    },
+    "compCount": 2
+  },
+  {
+    "id": "scraped-64113-walnut",
+    "zip": "64113",
+    "title": "6012 Walnut St",
+    "sub": "Kansas City, MO 64113",
+    "score": 5.9,
+    "label": "MONITOR",
+    "labelType": "amber",
+    "tag": "Equity Play",
+    "arv": "$415K",
+    "mao": "$276K",
+    "ask": "$259K",
+    "risk": "Medium",
+    "thesis": "38% equity spread. 39d on market. 1 price drop (10% total). Distress signals: motivated seller, motivated.",
+    "nextAction": "Monitor for further price reductions.",
+    "riskFactors": [
+      "Cosmetic updates needed in bathrooms"
+    ],
+    "daysOnMarket": 39,
+    "listingTimestamp": "2026-03-01T09:00:00Z",
+    "sourcePlatform": "scraped",
+    "sellerType": "agent",
+    "freshnessScore": 35,
+    "listingQualityScore": 9,
+    "priceReductionCount": 1,
+    "originalAsk": "$289K",
+    "distressSignals": {
+      "detected": true,
+      "keywords": [
+        "motivated seller",
+        "motivated",
+        "bring offers",
+        "relocating",
+        "cosmetic",
+        "price reduced",
+        "reduced"
+      ],
+      "score": 100
+    },
+    "descriptionQualityDetail": {
+      "lengthScore": 82,
+      "specificityScore": 100,
+      "completenessScore": 75
+    },
+    "isNew": false,
+    "ingestedAt": "2026-04-09T20:45:37.868Z",
+    "condition": {
+      "exteriorCondition": "dated",
+      "interiorCondition": "dated",
+      "kitchenBathCondition": "updated",
+      "systemsCondition": "modern",
+      "structuralRisk": "none",
+      "rehabLevel": "light_cosmetic",
+      "occupancyFriction": "vacant"
+    },
+    "compCount": 5
+  },
+  {
+    "id": "scraped-64113-holly",
+    "zip": "64113",
+    "title": "5734 Holly Ave",
+    "sub": "Kansas City, MO 64113",
+    "score": 8.5,
+    "label": "ACT NOW",
+    "labelType": "green",
+    "tag": "Equity Play",
+    "arv": "$425K",
+    "mao": "$223K",
+    "ask": "$195K",
+    "risk": "Low-Med",
+    "thesis": "54% equity spread. 8d on market. Distress signals: quick close, as-is.",
+    "nextAction": "Submit offer at $195,000. 8d on market \u2014 seller likely flexible.",
+    "riskFactors": [
+      "Full cosmetic rehab needed",
+      "Estate sale \u2014 limited disclosures"
+    ],
+    "daysOnMarket": 8,
+    "listingTimestamp": "2026-04-01T10:00:00Z",
+    "sourcePlatform": "scraped",
+    "sellerType": "owner",
+    "freshnessScore": 65,
+    "listingQualityScore": 7,
+    "priceReductionCount": 0,
+    "distressSignals": {
+      "detected": true,
+      "keywords": [
+        "quick close",
+        "as-is",
+        "cosmetic",
+        "estate sale"
+      ],
+      "score": 57
+    },
+    "descriptionQualityDetail": {
+      "lengthScore": 76,
+      "specificityScore": 90,
+      "completenessScore": 50
+    },
+    "isNew": false,
+    "ingestedAt": "2026-04-09T20:45:37.868Z",
+    "condition": {
+      "exteriorCondition": "worn",
+      "interiorCondition": "worn",
+      "kitchenBathCondition": "full_rehab",
+      "systemsCondition": "aging",
+      "structuralRisk": "none",
+      "rehabLevel": "heavy_rehab",
+      "occupancyFriction": "estate_sale"
+    },
+    "compCount": 4
   }
 ]

@@ -24,7 +24,7 @@ export const TENANTS: Record<string, Tenant> = {
     id: "nicole",
     name: "Nicole Lonergan",
     password: "nicole",
-    modules: ["real-estate"],
+    modules: ["real-estate", "watches"],
     geo: ["64113"],
   },
   ryan: {

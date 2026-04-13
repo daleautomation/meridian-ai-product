@@ -137,6 +137,7 @@ export type NormalizedWatchRecord = {
   listingQualityScore?: number;
   priceTooGoodToBeTrue?: boolean;
   notes?: string;
+  listingUrl?: string;              // original listing URL for direct access
 
   // ── Source-quality / valuation inputs (optional) ──
   // The engine downgrades confidence when these are absent.
@@ -144,6 +145,27 @@ export type NormalizedWatchRecord = {
   condition?: WatchCondition;     // structured sub-condition signals
   compCount?: number;             // number of comps backing marketPrice (0 = single anchor)
   comps?: WatchComp[];            // optional structured comp set; weighted by similarity
+
+  // ── Ingestion-time quality signals (computed by adapters) ──
+  freshnessScore?: number;          // 0-100; derived from listingTimestamp at ingest time
+  descriptionQualityDetail?: {      // richer breakdown behind listingQualityScore
+    lengthScore: number;            // 0-100 based on description char count
+    specificityScore: number;       // 0-100 ref/caliber/year mentions
+    completenessScore: number;      // 0-100 box/papers/service mentioned
+  };
+  distressSignals?: {
+    detected: boolean;
+    keywords: string[];             // matched keywords
+    score: number;                  // 0-100; higher = stronger distress signal
+  };
+  engagementSignals?: {
+    views?: number;
+    saves?: number;
+    comments?: number;
+    engagementScore?: number;       // 0-100 normalized
+  };
+  isNew?: boolean;                  // tagged by ingestion runner when freshnessScore >= threshold
+  ingestedAt?: string;              // ISO timestamp — when the runner first saw this record
 };
 
 // Real-estate normalized record — exactly what the inline dataset uses today.
@@ -170,6 +192,26 @@ export type NormalizedRealEstateRecord = {
   condition?: RealEstateCondition; // structured sub-condition signals
   compCount?: number;             // number of nearby sold comps backing the ARV
   comps?: RealEstateComp[];       // optional structured comp set; weighted by similarity
+
+  // ── Ingestion-time quality signals (computed by adapters) ──
+  freshnessScore?: number;          // 0-100; derived from listingTimestamp
+  listingQualityScore?: number;     // 0-10; description quality
+  priceReductionCount?: number;     // number of price drops observed
+  originalAsk?: string;             // formatted USD — first listed price
+  sourcePlatform?: string;          // "zillow" | "craigslist" | "fsbo" | "mls" | "public-record"
+  sellerType?: string;              // "owner" | "agent" | "bank" | "estate" | "flipper"
+  distressSignals?: {
+    detected: boolean;
+    keywords: string[];
+    score: number;                  // 0-100
+  };
+  descriptionQualityDetail?: {
+    lengthScore: number;
+    specificityScore: number;
+    completenessScore: number;
+  };
+  isNew?: boolean;                  // tagged by ingestion runner when freshnessScore >= threshold
+  ingestedAt?: string;              // ISO timestamp — when the runner first saw this record
 };
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -205,6 +247,48 @@ export type RawEbayWatchListing = {
   hasBoxAndPapers?: boolean | "full_set" | "box_only" | "papers_only" | "neither";
   serviceHistory?: string;
   serialProvided?: boolean;
+};
+
+// Facebook Marketplace watch listing — informal format with sparse metadata.
+// Trust signals are weak by default; descriptions are often short/vague.
+export type RawFacebookMarketplaceListing = {
+  listingId: string;
+  title: string;
+  description?: string;
+  priceUsd: number;
+  location?: string;
+  listedAt?: string;              // ISO timestamp
+  seller: {
+    name: string;
+    profileUrl?: string;
+    joinedDate?: string;          // ISO date — when the seller created their account
+    rating?: number;              // 0–5 stars (FB rating)
+  };
+  photos?: number;                // photo count
+  views?: number;
+  saves?: number;
+  condition?: string;             // free-form: "used", "good", "like new", etc.
+  shippingAvailable?: boolean;
+  estimatedMarketUsd?: number;    // optional enrichment from comp data
+};
+
+// Reddit r/WatchExchange listing — community post format.
+// Title convention: [WTS] Brand Model Ref $Price
+// Body is markdown with detailed condition, box/papers, payment, etc.
+export type RawRedditWatchExchangeListing = {
+  postId: string;
+  title: string;                  // "[WTS] Omega Speedmaster 3861 $4,800"
+  body: string;                   // markdown post body
+  author: string;
+  authorKarma?: number;
+  authorAccountAgeDays?: number;
+  flair?: string;                 // "WTS" | "WTB" | "WTT" | "SOLD"
+  priceUsd?: number;              // parsed from title; may be absent
+  timestamp: string;              // ISO timestamp
+  upvotes?: number;
+  commentCount?: number;
+  imageUrls?: string[];
+  estimatedMarketUsd?: number;    // optional enrichment
 };
 
 // Public-record / property-record style real-estate input. Maps roughly to
@@ -245,4 +329,73 @@ export type RawPropertyRecord = {
   // Disclosures
   knownIssues?: string[];
   disclosures?: string[];
+
+  // Listing metadata
+  listingTimestamp?: string;       // ISO — when listed
+  description?: string;            // free-form listing description
+  listingUrl?: string;
+  photos?: number;
+  priceHistory?: { date: string; price: number }[];
+};
+
+// FSBO / Craigslist-style residential listing — informal, owner-sold.
+// Sparse metadata, no MLS, no agent. Trust is low by default.
+export type RawFsboListing = {
+  listingId: string;
+  title: string;                    // "3BR Ranch — Must Sell, Bring Offers"
+  description?: string;
+  askingPrice: number;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    zip: string;
+  };
+  listedAt?: string;                // ISO timestamp
+  seller?: {
+    name?: string;
+    phone?: string;
+    isOwner?: boolean;
+  };
+  bedrooms?: number;
+  bathrooms?: number;
+  squareFeet?: number;
+  yearBuilt?: number;
+  lotSize?: string;
+  condition?: string;               // free-form: "needs work", "move-in ready"
+  photos?: number;
+  views?: number;
+  arvEstimate?: number;             // optional enrichment
+  estimatedRehabCost?: number;
+};
+
+// Scraped / aggregator listing — Zillow, Redfin, Realtor style.
+// Has structured data + price history + DOM.
+export type RawScrapedRealEstateListing = {
+  listingId: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    zip: string;
+  };
+  listPrice: number;
+  originalListPrice?: number;
+  priceHistory?: { date: string; price: number }[];
+  daysOnMarket?: number;
+  status?: string;                  // "active" | "pending" | "price-reduced" | "back-on-market"
+  description?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  squareFeet?: number;
+  yearBuilt?: number;
+  propertyType?: string;
+  agent?: { name?: string; brokerage?: string };
+  arvEstimate?: number;
+  estimatedRehabCost?: number;
+  riskFlags?: string[];
+  listedAt?: string;
+  photos?: number;
+  views?: number;
+  saves?: number;
 };

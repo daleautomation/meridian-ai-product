@@ -1,0 +1,59 @@
+[
+  {
+    "listingId": "fb-8834721",
+    "title": "Omega Speedmaster Professional - must sell, moving overseas",
+    "description": "Selling my speedy. 2020, box and papers included. Crystal is clean, minor desk diving marks on case. Recently serviced at Omega boutique. Serial number available. Need gone before I leave the country. Price negotiable for quick sale.",
+    "priceUsd": 4200,
+    "location": "Austin, TX",
+    "listedAt": "2026-04-08T14:30:00Z",
+    "seller": {
+      "name": "Marcus T.",
+      "joinedDate": "2019-03-15",
+      "rating": 4.8
+    },
+    "photos": 6,
+    "views": 12,
+    "saves": 3,
+    "condition": "good",
+    "shippingAvailable": false,
+    "estimatedMarketUsd": 5400
+  },
+  {
+    "listingId": "fb-9921843",
+    "title": "Rolex watch for sale",
+    "description": "Submariner no date. Works great. Asking $7000 OBO. Cash only.",
+    "priceUsd": 7000,
+    "location": "Miami, FL",
+    "listedAt": "2026-04-07T09:00:00Z",
+    "seller": {
+      "name": "J Rodriguez",
+      "joinedDate": "2023-11-01",
+      "rating": 3.2
+    },
+    "photos": 2,
+    "views": 45,
+    "saves": 8,
+    "condition": "used",
+    "shippingAvailable": false,
+    "estimatedMarketUsd": 8500
+  },
+  {
+    "listingId": "fb-1047382",
+    "title": "Tudor Black Bay 58 blue - priced to sell",
+    "description": "2022 BB58 blue. Full set with box, papers, warranty card. Worn a handful of times. Downsizing collection to pay tuition. Can meet in person or ship insured.",
+    "priceUsd": 3100,
+    "location": "Chicago, IL",
+    "listedAt": "2026-04-09T06:15:00Z",
+    "seller": {
+      "name": "Alex K",
+      "joinedDate": "2017-06-20",
+      "rating": 5.0
+    },
+    "photos": 8,
+    "views": 3,
+    "saves": 1,
+    "condition": "like new",
+    "shippingAvailable": true,
+    "estimatedMarketUsd": 3800
+  }
+]

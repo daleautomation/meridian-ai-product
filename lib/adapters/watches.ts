@@ -16,6 +16,8 @@
 import path from "node:path";
 import type { DecisionItem } from "@/lib/types";
 import type { NormalizedWatchRecord } from "@/lib/ingestion/types";
+import { generateAlerts } from "@/lib/alerts/generate";
+import { applyOpportunityTiers } from "@/lib/scoring/opportunityTier";
 import { loadWatchesFromFile } from "@/lib/ingestion/watches/loader";
 import {
   type Liquidity,
@@ -76,6 +78,7 @@ const PLATFORM_FRICTION: Record<string, number> = {
   craigslist: 0.04,
   instagram_dm: 0.04,
   telegram: 0.04,
+  reddit_watchexchange: 0.04,
 };
 
 function inferFriction(
@@ -95,10 +98,41 @@ function inferFriction(
 // data/watches.json conforms to NormalizedWatchRecord exactly.
 type WatchRecord = NormalizedWatchRecord;
 
-const DATA_PATH = path.join(process.cwd(), "data", "watches.json");
+import { loadWatchOpportunities, type SourceSpec } from "@/lib/ingestion/loader";
+
+const DATA_DIR = path.join(process.cwd(), "data");
+
+// Validate that a URL is an actual listing detail page, not a search/home page.
+function isValidListingUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  try {
+    const u = new URL(url);
+    // Reject bare homepages
+    if (u.pathname === "/" || u.pathname === "") return false;
+    // Reject search/index pages
+    if (u.pathname.includes("/search") || u.pathname.includes("/index.htm")) return false;
+    // Must have a meaningful path segment
+    return u.pathname.length > 5;
+  } catch {
+    return false;
+  }
+}
+
+function watchSourceFiles(): SourceSpec[] {
+  // Primary curated dataset always loads first (highest dedup priority).
+  // Supplemental sources add breadth — messy/raw signals preserved.
+  // Only list files that actually exist; missing files log warnings.
+  return [
+    { path: path.join(DATA_DIR, "watches.json"), type: "normalized" },
+    { path: path.join(DATA_DIR, "sources", "watches.facebook.json"), type: "facebook" },
+    { path: path.join(DATA_DIR, "sources", "watches.facebook.manual.json"), type: "facebook_manual" },
+    { path: path.join(DATA_DIR, "sources", "watches.reddit.json"), type: "reddit" },
+    { type: "reddit_live" },
+  ];
+}
 
 async function readDataset(): Promise<WatchRecord[]> {
-  return loadWatchesFromFile(DATA_PATH, { source: "normalized" });
+  return loadWatchOpportunities(watchSourceFiles());
 }
 
 function formatUSD(n: number | undefined): string | undefined {
@@ -229,6 +263,11 @@ function toDecisionItem(r: WatchRecord): DecisionItem {
     trustTier: trust.tier,
     trustNote,
     trustReasons: trust.reasons,
+    freshnessPriority: (r.freshnessScore ?? 0) >= 85 ? "HIGH" : "NORMAL",
+    sourcePlatform: r.sourcePlatform,
+    sellerName: r.sellerName,
+    listingUrl: isValidListingUrl(r.listingUrl) ? r.listingUrl : undefined,
+    lastChecked: r.listingTimestamp || (r as Record<string, unknown>).ingestedAt as string | undefined,
     valuation: valuation ?? undefined,
     ...(haveBoth
       ? (() => {
@@ -266,7 +305,14 @@ export async function loadWatchesItems(userId: string): Promise<DecisionItem[]> 
   let items = dataset
     .filter((r) => r && r.ownerId === userId)
     .map(toDecisionItem)
-    .sort((a, b) => b.score - a.score);
+    .sort((a, b) => {
+      // Primary: score descending
+      if (b.score !== a.score) return b.score - a.score;
+      // Tiebreak: HIGH freshness priority surfaces first
+      const ap = a.freshnessPriority === "HIGH" ? 1 : 0;
+      const bp = b.freshnessPriority === "HIGH" ? 1 : 0;
+      return bp - ap;
+    });
 
   // 2. Apply persisted negotiation state per item — auto-age the time field
   //    from lastUpdated, then evolve the plan.
@@ -307,5 +353,12 @@ export async function loadWatchesItems(userId: string): Promise<DecisionItem[]> 
   // 3. Apply portfolio context — reshape capitalContext / urgency based on
   //    total budget and what's already in active negotiations.
   const result = applyPortfolioContext(items, WATCHES_DEFAULT_BUDGET, allocated);
-  return result.items;
+
+  // 4. Classify opportunity tiers + capital slots (grouping only — no scoring change).
+  const tiered = applyOpportunityTiers(result.items, WATCHES_DEFAULT_BUDGET - allocated);
+
+  // 5. Generate alerts (side effect — items returned unchanged).
+  await generateAlerts(userId, "watches", tiered);
+
+  return tiered;
 }

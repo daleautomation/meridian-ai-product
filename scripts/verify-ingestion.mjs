@@ -118,47 +118,108 @@ function normalizePropertyRecord(raw) {
   };
 }
 
+// ── Inline normalizers for new sources (plain JS mirrors of TS adapters) ──
+
+function normalizeFacebookListing(raw) {
+  const t = raw.title.toLowerCase();
+  const sport = ["submariner","gmt","daytona","explorer","sea-dweller","yacht-master","royal oak","nautilus","aquanaut","black bay","pelagos","speedmaster"];
+  const dress = ["calatrava","cellini","santos","tank","saxonia","1815","datejust","day-date","patrimony"];
+  let tag = "Sport";
+  if (sport.some((k) => t.includes(k))) tag = "Sport";
+  else if (dress.some((k) => t.includes(k))) tag = "Dress";
+  const desc = raw.description || "";
+  const text = (raw.title + " " + desc).toLowerCase();
+  const hasBox = text.includes("box") || text.includes("full set");
+  const hasPapers = text.includes("papers") || text.includes("card") || text.includes("warranty") || text.includes("full set");
+  const boxPapers = hasBox && hasPapers ? "full_set" : hasBox ? "box_only" : hasPapers ? "papers_only" : "neither";
+  const distressKw = ["must sell","need gone","quick sale","urgent","priced to sell","obo","negotiable","downsizing","tuition","emergency","leaving country"];
+  const matched = distressKw.filter((kw) => text.includes(kw));
+  return {
+    id: `fb-${raw.listingId}`,
+    ownerId: "dylan",
+    title: raw.title,
+    sub: [raw.condition, raw.location].filter(Boolean).join(" · "),
+    tag,
+    buyPrice: raw.priceUsd,
+    marketPrice: raw.estimatedMarketUsd,
+    sourcePlatform: "facebook_marketplace",
+    boxPapers,
+    distressSignals: { detected: matched.length > 0, keywords: matched, score: Math.min(100, matched.length * 15) },
+    engagementSignals: { views: raw.views, saves: raw.saves },
+  };
+}
+
+function normalizeRedditListing(raw) {
+  const cleanTitle = raw.title.replace(/^\[(?:WTS|WTT|WTB)\]\s*/i, "").trim();
+  const t = cleanTitle.toLowerCase();
+  const sport = ["submariner","gmt","daytona","explorer","sea-dweller","yacht-master","royal oak","nautilus","aquanaut","black bay","pelagos","speedmaster"];
+  const dress = ["calatrava","cellini","santos","tank","saxonia","1815","datejust","day-date","patrimony"];
+  let tag = "Sport";
+  if (sport.some((k) => t.includes(k))) tag = "Sport";
+  else if (dress.some((k) => t.includes(k))) tag = "Dress";
+  const body = raw.body || "";
+  const text = (cleanTitle + " " + body).toLowerCase();
+  const hasBox = text.includes("box") || text.includes("full set");
+  const hasPapers = text.includes("papers") || text.includes("card") || text.includes("warranty") || text.includes("full set");
+  const boxPapers = hasBox && hasPapers ? "full_set" : hasBox ? "box_only" : hasPapers ? "papers_only" : "neither";
+  const distressKw = ["must sell","need sold","asap","priced to sell","obo","negotiable","emergency","medical"];
+  const matched = distressKw.filter((kw) => text.includes(kw));
+  return {
+    id: `reddit-${raw.postId}`,
+    ownerId: "dylan",
+    title: cleanTitle,
+    sub: raw.flair ? `${raw.flair.toUpperCase()} · r/WatchExchange` : "r/WatchExchange",
+    tag,
+    buyPrice: raw.priceUsd,
+    marketPrice: raw.estimatedMarketUsd,
+    sourcePlatform: "reddit_watchexchange",
+    boxPapers,
+    distressSignals: { detected: matched.length > 0, keywords: matched, score: Math.min(100, matched.length * 15) },
+    engagementSignals: { upvotes: raw.upvotes, comments: raw.commentCount },
+  };
+}
+
 // ── Run ──
 
 async function main() {
   console.log("=== Meridian AI ingestion verification ===\n");
 
+  // eBay
   const watchesRaw = await loadJson("data/sources/watches.ebay.example.json");
   const watchesNormalized = watchesRaw.map(normalizeEbayListing);
-  console.log(`Watches: ${watchesRaw.length} raw eBay records → ${watchesNormalized.length} normalized`);
-  console.log(`  Sample (first):`);
+  console.log(`eBay: ${watchesRaw.length} raw → ${watchesNormalized.length} normalized`);
   const w0 = watchesNormalized[0];
-  console.log(`    id: ${w0.id}`);
-  console.log(`    title: ${w0.title}`);
-  console.log(`    tag: ${w0.tag}`);
-  console.log(`    buyPrice: $${w0.buyPrice?.toLocaleString()}, marketPrice: $${w0.marketPrice?.toLocaleString()}`);
-  console.log(`    seller: ${w0.sellerName} (${w0.sellerFeedbackScore}% / ${w0.sellerFeedbackCount} ratings)`);
-  console.log(`    box+papers: ${w0.boxPapers}, listingQuality: ${w0.listingQualityScore}/10`);
+  console.log(`  Sample: ${w0.title}`);
+  console.log(`    buyPrice: $${w0.buyPrice?.toLocaleString()}, listingQuality: ${w0.listingQualityScore}/10`);
 
+  // Facebook
+  console.log();
+  const fbRaw = await loadJson("data/sources/watches.facebook.example.json");
+  const fbNormalized = fbRaw.map(normalizeFacebookListing);
+  console.log(`Facebook: ${fbRaw.length} raw → ${fbNormalized.length} normalized`);
+  for (const fb of fbNormalized) {
+    const distressTag = fb.distressSignals?.detected ? ` [DISTRESS: ${fb.distressSignals.keywords.join(", ")}]` : "";
+    console.log(`  ${fb.title} — $${fb.buyPrice?.toLocaleString()} → mkt $${fb.marketPrice?.toLocaleString()}${distressTag}`);
+  }
+
+  // Reddit
+  console.log();
+  const redditRaw = await loadJson("data/sources/watches.reddit.example.json");
+  const redditNormalized = redditRaw.map(normalizeRedditListing);
+  console.log(`Reddit: ${redditRaw.length} raw → ${redditNormalized.length} normalized`);
+  for (const r of redditNormalized) {
+    const distressTag = r.distressSignals?.detected ? ` [DISTRESS: ${r.distressSignals.keywords.join(", ")}]` : "";
+    console.log(`  ${r.title} — $${r.buyPrice?.toLocaleString()} → mkt $${r.marketPrice?.toLocaleString()}${distressTag}`);
+  }
+
+  // Real estate (unchanged)
   console.log();
   const reRaw = await loadJson("data/sources/real-estate.public.example.json");
   const reNormalized = reRaw.map(normalizePropertyRecord).filter(Boolean);
-  console.log(`Real estate: ${reRaw.length} raw public records → ${reNormalized.length} normalized`);
-  console.log(`  Sample (first):`);
-  const r0 = reNormalized[0];
-  console.log(`    id: ${r0.id}`);
-  console.log(`    title: ${r0.title}`);
-  console.log(`    sub: ${r0.sub}`);
-  console.log(`    arv: ${r0.arv}, mao: ${r0.mao}, ask: ${r0.ask}`);
-  console.log(`    score: ${r0.score}, label: ${r0.label}, risk: ${r0.risk}`);
+  console.log(`Real estate: ${reRaw.length} raw → ${reNormalized.length} normalized`);
 
   console.log();
-  console.log("=== Distribution by label ===");
-  const labelCounts = {};
-  for (const r of reNormalized) {
-    labelCounts[r.label] = (labelCounts[r.label] || 0) + 1;
-  }
-  for (const [k, v] of Object.entries(labelCounts)) {
-    console.log(`  ${k}: ${v}`);
-  }
-
-  console.log();
-  console.log("✓ Bulk loading verified — both verticals normalize cleanly.");
+  console.log("✓ All sources normalize cleanly.");
 }
 
 main().catch((e) => {

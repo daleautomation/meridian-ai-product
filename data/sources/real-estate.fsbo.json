@@ -1,0 +1,94 @@
+[
+  {
+    "listingId": "fsbo-64113-elm",
+    "title": "3BR Ranch on Quiet Street — Must Sell, Relocating",
+    "description": "Owner selling direct — no agent, no commission. 3 bed, 2 bath ranch, 1,450 sqft on a big corner lot. Hardwood floors throughout. Updated kitchen 2020. Roof is 8 years old. Detached 2-car garage. Needs some cosmetic work in the basement but structurally solid. We're relocating for work and need to close within 45 days. Bring all offers — priced to sell. Cash buyers preferred.",
+    "askingPrice": 245000,
+    "address": {
+      "street": "4417 Elm Ave",
+      "city": "Kansas City",
+      "state": "MO",
+      "zip": "64113"
+    },
+    "listedAt": "2026-04-07T10:00:00Z",
+    "seller": { "name": "Dave & Karen Miller", "isOwner": true },
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "squareFeet": 1450,
+    "yearBuilt": 1962,
+    "condition": "good, needs cosmetic basement work",
+    "photos": 4,
+    "views": 8,
+    "arvEstimate": 395000,
+    "estimatedRehabCost": 28000
+  },
+  {
+    "listingId": "fsbo-64113-cherry",
+    "title": "Estate Sale — 4BR Brookside Bungalow, As-Is",
+    "description": "Selling on behalf of estate. 4 bed 2 bath bungalow in prime Brookside location. 1,680 sqft. Original hardwood under carpet. Kitchen and bathrooms are dated but bones are great. Newer HVAC (2019). Roof age unknown. Full basement. Sold strictly as-is. Probate approved. Motivated to close.",
+    "askingPrice": 265000,
+    "address": {
+      "street": "6118 Cherry St",
+      "city": "Kansas City",
+      "state": "MO",
+      "zip": "64113"
+    },
+    "listedAt": "2026-04-02T14:00:00Z",
+    "seller": { "name": "Trustee — Miller Estate", "isOwner": true },
+    "bedrooms": 4,
+    "bathrooms": 2,
+    "squareFeet": 1680,
+    "yearBuilt": 1948,
+    "condition": "dated, solid bones, as-is",
+    "photos": 6,
+    "views": 22,
+    "arvEstimate": 445000,
+    "estimatedRehabCost": 55000
+  },
+  {
+    "listingId": "fsbo-66206-cedar",
+    "title": "Handyman Special — Investor Opportunity",
+    "description": "3 bed 1 bath. 1,100 sqft. Needs full rehab — kitchen, bath, flooring, paint. Roof is newer (2021). Foundation appears solid. Seller is out of state, hasn't seen property in 2 years. Priced for quick sale. Cash only.",
+    "askingPrice": 89000,
+    "address": {
+      "street": "9234 Cedar Ln",
+      "city": "Overland Park",
+      "state": "KS",
+      "zip": "66206"
+    },
+    "listedAt": "2026-04-08T08:30:00Z",
+    "seller": { "name": "R. Thompson", "isOwner": true },
+    "bedrooms": 3,
+    "bathrooms": 1,
+    "squareFeet": 1100,
+    "yearBuilt": 1955,
+    "condition": "needs full rehab",
+    "photos": 3,
+    "views": 31,
+    "arvEstimate": 210000,
+    "estimatedRehabCost": 45000
+  },
+  {
+    "listingId": "fsbo-64109-main",
+    "title": "2BR Duplex — Owner Occupied, One Unit Vacant",
+    "description": "Selling my duplex. I live in one side, other side is vacant and rent-ready. Each unit is 2 bed 1 bath, ~800 sqft. Both sides have updated electrical. Roof 12 years old. Small yard. Great rental area. Need to sell — medical bills. OBO.",
+    "askingPrice": 155000,
+    "address": {
+      "street": "3312 Main St",
+      "city": "Kansas City",
+      "state": "MO",
+      "zip": "64109"
+    },
+    "listedAt": "2026-04-05T16:00:00Z",
+    "seller": { "name": "Marcus Johnson", "isOwner": true },
+    "bedrooms": 4,
+    "bathrooms": 2,
+    "squareFeet": 1600,
+    "yearBuilt": 1940,
+    "condition": "functional, needs cosmetic work",
+    "photos": 5,
+    "views": 14,
+    "arvEstimate": 275000,
+    "estimatedRehabCost": 35000
+  }
+]

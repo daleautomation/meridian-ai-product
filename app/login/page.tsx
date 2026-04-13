@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +27,10 @@ export default function LoginPage() {
         setLoading(false);
         return;
       }
-      router.replace("/");
+      const next = searchParams.get("next") || "/dashboard";
+      // Only allow internal redirects
+      const safe = next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+      router.replace(safe);
       router.refresh();
     } catch {
       setError("Network error");
@@ -37,7 +41,8 @@ export default function LoginPage() {
   return (
     <div style={styles.root}>
       <form onSubmit={onSubmit} style={styles.card}>
-        <div style={styles.brand}>MERIDIAN</div>
+        <a href="/" style={styles.backLink}>← Back</a>
+        <div style={styles.brand}>MERIDIAN AI</div>
         <div style={styles.sub}>Decision Platform</div>
         <label style={styles.label}>USERNAME</label>
         <input
@@ -57,7 +62,7 @@ export default function LoginPage() {
         />
         {error && <div style={styles.error}>{error}</div>}
         <button type="submit" disabled={loading} style={styles.btn}>
-          {loading ? "Signing in..." : "Sign in"}
+          {loading ? "Signing in..." : "Sign In"}
         </button>
       </form>
     </div>
@@ -67,8 +72,8 @@ export default function LoginPage() {
 const styles: Record<string, React.CSSProperties> = {
   root: {
     minHeight: "100vh",
-    background: "#080910",
-    color: "#E8EAF0",
+    background: "#0C0731",
+    color: "#F0EFF5",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -77,36 +82,43 @@ const styles: Record<string, React.CSSProperties> = {
   card: {
     width: "320px",
     padding: "32px 28px",
-    background: "#0A0B10",
-    border: "1px solid rgba(255,255,255,0.06)",
+    background: "#11102A",
+    border: "1px solid rgba(240,239,245,0.06)",
     borderRadius: "12px",
     display: "flex",
     flexDirection: "column",
   },
+  backLink: {
+    fontSize: "12px",
+    color: "rgba(240,239,245,0.35)",
+    textDecoration: "none",
+    marginBottom: "16px",
+  },
   brand: {
     fontSize: "18px",
     fontWeight: 800,
-    letterSpacing: "0.12em",
+    letterSpacing: "0.10em",
+    fontFamily: "'Syne', sans-serif",
   },
   sub: {
     fontSize: "11px",
-    color: "rgba(255,255,255,0.3)",
+    color: "rgba(240,239,245,0.35)",
     letterSpacing: "0.05em",
     marginBottom: "24px",
   },
   label: {
     fontSize: "10px",
     letterSpacing: "0.1em",
-    color: "rgba(255,255,255,0.4)",
+    color: "rgba(240,239,245,0.40)",
     marginTop: "12px",
     marginBottom: "6px",
   },
   input: {
-    background: "rgba(255,255,255,0.04)",
-    border: "1px solid rgba(255,255,255,0.08)",
+    background: "rgba(240,239,245,0.04)",
+    border: "1px solid rgba(240,239,245,0.08)",
     borderRadius: "6px",
     padding: "10px 12px",
-    color: "#E8EAF0",
+    color: "#F0EFF5",
     fontSize: "13px",
     fontFamily: "inherit",
     outline: "none",
@@ -114,17 +126,18 @@ const styles: Record<string, React.CSSProperties> = {
   error: {
     marginTop: "14px",
     fontSize: "12px",
-    color: "#FF5555",
+    color: "#D4726A",
   },
   btn: {
     marginTop: "20px",
-    padding: "10px 12px",
+    padding: "11px 12px",
     borderRadius: "7px",
-    background: "#C8873A",
-    color: "#080910",
+    background: "#68ECF4",
+    color: "#0C0731",
     border: "none",
     fontSize: "13px",
     fontWeight: 600,
     cursor: "pointer",
+    letterSpacing: "0.02em",
   },
 };

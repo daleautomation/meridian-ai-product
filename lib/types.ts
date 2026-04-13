@@ -115,6 +115,18 @@ export type DecisionItem = {
     };
   };
   // ── Persisted negotiation memory (per item) ──
+  // ── Freshness prioritization (ordering only — does NOT affect scoring) ──
+  freshnessPriority?: "HIGH" | "NORMAL";
+  // ── Opportunity tier (grouping only — does NOT affect scoring) ──
+  opportunityTier?: "ACTION" | "SECONDARY" | "MONITOR" | "LOW";
+  // ── Capital-aware deployment (display only — does NOT affect scoring) ──
+  executableNow?: boolean;           // can be executed with current available capital
+  capitalSlot?: "PRIMARY" | "BACKUP" | "OVERFLOW";
+  // ── Source metadata (display only) ──
+  sourcePlatform?: string;           // "ebay" | "chrono24" | "facebook_marketplace" | etc.
+  sellerName?: string;
+  listingUrl?: string;               // original listing URL or search URL for direct access
+  lastChecked?: string;              // ISO timestamp — when this listing was last seen/ingested
   negotiationState?: {
     currentPhase?: string;
     lastActionTaken?: string;

@@ -11,7 +11,9 @@
 import path from "node:path";
 import type { DecisionItem } from "@/lib/types";
 import type { NormalizedRealEstateRecord } from "@/lib/ingestion/types";
-import { loadRealEstateFromFile } from "@/lib/ingestion/realEstate/loader";
+import { generateAlerts } from "@/lib/alerts/generate";
+import { applyOpportunityTiers } from "@/lib/scoring/opportunityTier";
+import { loadRealEstateOpportunities, type SourceSpec } from "@/lib/ingestion/loader";
 import {
   computeRealEstateAcquisition,
   evolveAcquisitionPlan,
@@ -24,10 +26,17 @@ import {
 } from "@/lib/scoring/portfolioContext";
 
 const REAL_ESTATE_DEFAULT_BUDGET = 400000;
-const DATA_PATH = path.join(process.cwd(), "data", "real-estate.json");
+const DATA_DIR = path.join(process.cwd(), "data");
+
+function realEstateSourceFiles(): SourceSpec[] {
+  return [
+    { path: path.join(DATA_DIR, "real-estate.json"), type: "normalized" },
+    { path: path.join(DATA_DIR, "sources", "real-estate.fsbo.json"), type: "fsbo" },
+    { path: path.join(DATA_DIR, "sources", "real-estate.scraped.json"), type: "scraped" },
+  ];
+}
 
 // Use the centralized normalized type from the ingestion layer.
-// data/real-estate.json conforms to NormalizedRealEstateRecord exactly.
 type RealEstateRecord = NormalizedRealEstateRecord;
 
 // Parses display strings like "$485K" / "$1.2M" / "$285,000" into integer
@@ -43,25 +52,27 @@ function parseUsdShort(s: string | undefined): number | null {
   return Math.round(num * mult);
 }
 
-export async function loadRealEstateItems(geo: string[]): Promise<DecisionItem[]> {
+export async function loadRealEstateItems(geo: string[], userId?: string): Promise<DecisionItem[]> {
   if (!geo || geo.length === 0) return [];
   const allowed = new Set(geo);
   const negStore = await getAllNegotiations();
   const allocated = computeAllocatedFromStore(negStore);
 
-  // Load normalized records from data/real-estate.json via the shared loader.
-  // The file shape conforms to NormalizedRealEstateRecord exactly.
-  const dataset = await loadRealEstateFromFile(DATA_PATH, { source: "normalized" });
+  // Load from all configured sources, merge, deduplicate.
+  const dataset = await loadRealEstateOpportunities(realEstateSourceFiles());
 
   // 1. Build base items + acquisition plans
   let items: DecisionItem[] = dataset
     .filter((r) => allowed.has(r.zip))
-    .map(({ zip: _zip, ...item }) => {
+    .map(({ zip: _zip, freshnessScore: _fresh, ...item }) => {
       void _zip;
       const askUsd = parseUsdShort(item.ask);
       const maoUsd = parseUsdShort(item.mao);
       const arvUsd = parseUsdShort(item.arv);
-      const out: DecisionItem = { ...item };
+      const out: DecisionItem = {
+        ...item,
+        freshnessPriority: (_fresh ?? 0) >= 85 ? "HIGH" : "NORMAL",
+      };
       if (askUsd != null) out.buyPriceUsd = askUsd;        // numeric cost for portfolio math
 
       // ── VALUATION (source-aware) ───────────────────────────────────
@@ -137,7 +148,24 @@ export async function loadRealEstateItems(geo: string[]): Promise<DecisionItem[]
     };
   });
 
-  // 3. Apply portfolio context.
+  // 3. Sort: score descending, freshness priority breaks ties.
+  items.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    const ap = a.freshnessPriority === "HIGH" ? 1 : 0;
+    const bp = b.freshnessPriority === "HIGH" ? 1 : 0;
+    return bp - ap;
+  });
+
+  // 4. Apply portfolio context.
   const result = applyPortfolioContext(items, REAL_ESTATE_DEFAULT_BUDGET, allocated);
-  return result.items;
+
+  // 5. Classify opportunity tiers + capital slots (grouping only — no scoring change).
+  const tiered = applyOpportunityTiers(result.items, REAL_ESTATE_DEFAULT_BUDGET - allocated);
+
+  // 6. Generate alerts (side effect — items returned unchanged).
+  if (userId) {
+    await generateAlerts(userId, "real_estate", tiered);
+  }
+
+  return tiered;
 }
