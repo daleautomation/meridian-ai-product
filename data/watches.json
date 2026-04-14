@@ -44881,5 +44881,891 @@
     },
     "isNew": true,
     "ingestedAt": "2026-04-14T06:50:22.247Z"
+  },
+  {
+    "id": "reddit-1slm0pl",
+    "ownerId": "dylan",
+    "title": "Tag Heuer F1 Grande Date WAU1113",
+    "sub": "$1000-$1999",
+    "tag": "Sport",
+    "liquidity": "Med",
+    "sourcePlatform": "reddit_watchexchange",
+    "sellerName": "Salt-Pirate8591",
+    "paymentMethod": "paypal_ff",
+    "authenticityGuarantee": false,
+    "escrowAvailable": false,
+    "boxPapers": "neither",
+    "serviceHistory": null,
+    "serialProvided": false,
+    "listingQualityScore": 0,
+    "priceTooGoodToBeTrue": false,
+    "listingUrl": "https://www.reddit.com/r/Watchexchange/comments/1slm0pl/",
+    "notes": "Tag Heuer F1 Grande Date WAU1113",
+    "listingTimestamp": "2026-04-14T21:22:52.000Z",
+    "freshnessScore": 100,
+    "descriptionQualityDetail": {
+      "lengthScore": 0,
+      "specificityScore": 0,
+      "completenessScore": 0
+    },
+    "distressSignals": {
+      "detected": false,
+      "keywords": [],
+      "score": 0
+    },
+    "engagementSignals": {
+      "comments": 3,
+      "engagementScore": 9
+    },
+    "isNew": true,
+    "ingestedAt": "2026-04-14T21:23:09.003Z"
+  },
+  {
+    "id": "reddit-1sllu1z",
+    "ownerId": "dylan",
+    "title": "Seiko Prospex SBDC101 SPB143 62MAS",
+    "sub": "$700-$999",
+    "tag": "Sport",
+    "liquidity": "Med",
+    "sourcePlatform": "reddit_watchexchange",
+    "sellerName": "foreman8or",
+    "paymentMethod": "paypal_ff",
+    "authenticityGuarantee": false,
+    "escrowAvailable": false,
+    "boxPapers": "neither",
+    "serviceHistory": null,
+    "serialProvided": false,
+    "listingQualityScore": 1,
+    "priceTooGoodToBeTrue": false,
+    "listingUrl": "https://www.reddit.com/r/Watchexchange/comments/1sllu1z/",
+    "notes": "Seiko Prospex SBDC101 SPB143 62MAS",
+    "listingTimestamp": "2026-04-14T21:16:01.000Z",
+    "freshnessScore": 100,
+    "descriptionQualityDetail": {
+      "lengthScore": 0,
+      "specificityScore": 15,
+      "completenessScore": 0
+    },
+    "distressSignals": {
+      "detected": false,
+      "keywords": [],
+      "score": 0
+    },
+    "engagementSignals": {
+      "comments": 2,
+      "engagementScore": 7
+    },
+    "isNew": true,
+    "ingestedAt": "2026-04-14T21:23:09.003Z"
+  },
+  {
+    "id": "reddit-1slllrl",
+    "ownerId": "dylan",
+    "title": "[US] Tudor Black Bay 58 M79030N Full Retail Kit, Excellent on Uncle Straps Jubilee",
+    "sub": "$2000-$2999",
+    "tag": "Sport",
+    "liquidity": "Med",
+    "sourcePlatform": "reddit_watchexchange",
+    "sellerName": "umamiking",
+    "paymentMethod": "paypal_ff",
+    "authenticityGuarantee": false,
+    "escrowAvailable": false,
+    "boxPapers": "neither",
+    "serviceHistory": null,
+    "serialProvided": false,
+    "listingQualityScore": 2,
+    "priceTooGoodToBeTrue": false,
+    "listingUrl": "https://www.reddit.com/r/Watchexchange/comments/1slllrl/",
+    "notes": "[US] Tudor Black Bay 58 M79030N Full Retail Kit, Excellent on Uncle Straps Jubilee",
+    "listingTimestamp": "2026-04-14T21:07:18.000Z",
+    "freshnessScore": 100,
+    "descriptionQualityDetail": {
+      "lengthScore": 0,
+      "specificityScore": 15,
+      "completenessScore": 10
+    },
+    "distressSignals": {
+      "detected": false,
+      "keywords": [],
+      "score": 0
+    },
+    "engagementSignals": {
+      "comments": 5,
+      "engagementScore": 11
+    },
+    "isNew": true,
+    "ingestedAt": "2026-04-14T21:23:09.003Z"
+  },
+  {
+    "id": "reddit-1slll56",
+    "ownerId": "dylan",
+    "title": "Omega Seamaster rubber straps and bracelet",
+    "sub": "$300-$499",
+    "tag": "Sport",
+    "liquidity": "Med",
+    "sourcePlatform": "reddit_watchexchange",
+    "sellerName": "Nocam1",
+    "paymentMethod": "paypal_ff",
+    "authenticityGuarantee": false,
+    "escrowAvailable": false,
+    "boxPapers": "neither",
+    "serviceHistory": null,
+    "serialProvided": false,
+    "listingQualityScore": 1,
+    "priceTooGoodToBeTrue": false,
+    "listingUrl": "https://www.reddit.com/r/Watchexchange/comments/1slll56/",
+    "notes": "Omega Seamaster rubber straps and bracelet",
+    "listingTimestamp": "2026-04-14T21:06:40.000Z",
+    "freshnessScore": 100,
+    "descriptionQualityDetail": {
+      "lengthScore": 0,
+      "specificityScore": 15,
+      "completenessScore": 10
+    },
+    "distressSignals": {
+      "detected": false,
+      "keywords": [],
+      "score": 0
+    },
+    "engagementSignals": {
+      "comments": 5,
+      "engagementScore": 11
+    },
+    "isNew": true,
+    "ingestedAt": "2026-04-14T21:23:09.003Z"
+  },
+  {
+    "id": "reddit-1sllk3d",
+    "ownerId": "dylan",
+    "title": "Cartier Tank Vermeil Gold Plated Black Roman Dial 1990 (Unpolished/Serviced)",
+    "sub": "1990 · $2000-$2999",
+    "tag": "Dress",
+    "buyPrice": 1990,
+    "liquidity": "Med",
+    "sourcePlatform": "reddit_watchexchange",
+    "sellerName": "BoghossianJewelry",
+    "paymentMethod": "paypal_ff",
+    "authenticityGuarantee": false,
+    "escrowAvailable": false,
+    "boxPapers": "neither",
+    "serviceHistory": "mentioned in listing",
+    "serialProvided": false,
+    "listingQualityScore": 5,
+    "priceTooGoodToBeTrue": false,
+    "listingUrl": "https://www.reddit.com/r/Watchexchange/comments/1sllk3d/",
+    "notes": "Cartier Tank Vermeil Gold Plated Black Roman Dial 1990 (Unpolished/Serviced)",
+    "listingTimestamp": "2026-04-14T21:05:36.000Z",
+    "freshnessScore": 100,
+    "descriptionQualityDetail": {
+      "lengthScore": 0,
+      "specificityScore": 60,
+      "completenessScore": 45
+    },
+    "distressSignals": {
+      "detected": false,
+      "keywords": [],
+      "score": 0
+    },
+    "engagementSignals": {
+      "comments": 4,
+      "engagementScore": 10
+    },
+    "isNew": true,
+    "ingestedAt": "2026-04-14T21:23:09.003Z"
+  },
+  {
+    "id": "reddit-1slljws",
+    "ownerId": "dylan",
+    "title": "Cartier Tank Vermeil Gold Plated Quartz White Roman Dial",
+    "sub": "$2000-$2999",
+    "tag": "Dress",
+    "liquidity": "Med",
+    "sourcePlatform": "reddit_watchexchange",
+    "sellerName": "BoghossianJewelry",
+    "paymentMethod": "paypal_ff",
+    "authenticityGuarantee": false,
+    "escrowAvailable": false,
+    "boxPapers": "neither",
+    "serviceHistory": null,
+    "serialProvided": false,
+    "listingQualityScore": 1,
+    "priceTooGoodToBeTrue": false,
+    "listingUrl": "https://www.reddit.com/r/Watchexchange/comments/1slljws/",
+    "notes": "Cartier Tank Vermeil Gold Plated Quartz White Roman Dial",
+    "listingTimestamp": "2026-04-14T21:05:24.000Z",
+    "freshnessScore": 100,
+    "descriptionQualityDetail": {
+      "lengthScore": 0,
+      "specificityScore": 15,
+      "completenessScore": 10
+    },
+    "distressSignals": {
+      "detected": false,
+      "keywords": [],
+      "score": 0
+    },
+    "engagementSignals": {
+      "comments": 4,
+      "engagementScore": 10
+    },
+    "isNew": true,
+    "ingestedAt": "2026-04-14T21:23:09.003Z"
+  },
+  {
+    "id": "reddit-1slljt5",
+    "ownerId": "dylan",
+    "title": "Cartier Tank Vermeil Gold Plated Wood Dial Manual Winding 1990 (Unpolished)",
+    "sub": "1990 · $2000-$2999",
+    "tag": "Dress",
+    "buyPrice": 1990,
+    "liquidity": "Med",
+    "sourcePlatform": "reddit_watchexchange",
+    "sellerName": "BoghossianJewelry",
+    "paymentMethod": "paypal_ff",
+    "authenticityGuarantee": false,
+    "escrowAvailable": false,
+    "boxPapers": "neither",
+    "serviceHistory": null,
+    "serialProvided": false,
+    "listingQualityScore": 4,
+    "priceTooGoodToBeTrue": false,
+    "listingUrl": "https://www.reddit.com/r/Watchexchange/comments/1slljt5/",
+    "notes": "Cartier Tank Vermeil Gold Plated Wood Dial Manual Winding 1990 (Unpolished)",
+    "listingTimestamp": "2026-04-14T21:05:18.000Z",
+    "freshnessScore": 100,
+    "descriptionQualityDetail": {
+      "lengthScore": 0,
+      "specificityScore": 60,
+      "completenessScore": 25
+    },
+    "distressSignals": {
+      "detected": false,
+      "keywords": [],
+      "score": 0
+    },
+    "engagementSignals": {
+      "comments": 4,
+      "engagementScore": 10
+    },
+    "isNew": true,
+    "ingestedAt": "2026-04-14T21:23:09.003Z"
+  },
+  {
+    "id": "reddit-1sll6wp",
+    "ownerId": "dylan",
+    "title": "Extremely Rare Seiko Osaka “Expo ‘70” Ref 6119-8090",
+    "sub": "$700-$999",
+    "tag": "Sport",
+    "buyPrice": 6119,
+    "liquidity": "Med",
+    "sourcePlatform": "reddit_watchexchange",
+    "sellerName": "_Detectorist_",
+    "paymentMethod": "paypal_ff",
+    "authenticityGuarantee": false,
+    "escrowAvailable": false,
+    "boxPapers": "neither",
+    "serviceHistory": null,
+    "serialProvided": false,
+    "listingQualityScore": 3,
+    "priceTooGoodToBeTrue": false,
+    "listingUrl": "https://www.reddit.com/r/Watchexchange/comments/1sll6wp/",
+    "notes": "Extremely Rare Seiko Osaka “Expo ‘70” Ref 6119-8090",
+    "listingTimestamp": "2026-04-14T20:52:07.000Z",
+    "freshnessScore": 100,
+    "descriptionQualityDetail": {
+      "lengthScore": 0,
+      "specificityScore": 45,
+      "completenessScore": 0
+    },
+    "distressSignals": {
+      "detected": false,
+      "keywords": [],
+      "score": 0
+    },
+    "engagementSignals": {
+      "comments": 5,
+      "engagementScore": 11
+    },
+    "isNew": true,
+    "ingestedAt": "2026-04-14T21:23:09.003Z"
+  },
+  {
+    "id": "reddit-1sll669",
+    "ownerId": "dylan",
+    "title": "Spinnaker Spence 300 Automatic 40mm SP-5097-88 / BNIB Full Set $499 + label",
+    "sub": "$300-$499",
+    "tag": "Sport",
+    "buyPrice": 499,
+    "liquidity": "Med",
+    "sourcePlatform": "reddit_watchexchange",
+    "sellerName": "Comfortable-Area1149",
+    "paymentMethod": "paypal_ff",
+    "authenticityGuarantee": false,
+    "escrowAvailable": false,
+    "boxPapers": "papers_only",
+    "serviceHistory": null,
+    "serialProvided": false,
+    "listingQualityScore": 2,
+    "priceTooGoodToBeTrue": false,
+    "listingUrl": "https://www.reddit.com/r/Watchexchange/comments/1sll669/",
+    "notes": "Spinnaker Spence 300 Automatic 40mm SP-5097-88 / BNIB Full Set $499 + label",
+    "listingTimestamp": "2026-04-14T20:51:22.000Z",
+    "freshnessScore": 100,
+    "descriptionQualityDetail": {
+      "lengthScore": 0,
+      "specificityScore": 30,
+      "completenessScore": 0
+    },
+    "distressSignals": {
+      "detected": false,
+      "keywords": [],
+      "score": 0
+    },
+    "engagementSignals": {
+      "comments": 2,
+      "engagementScore": 7
+    },
+    "isNew": true,
+    "ingestedAt": "2026-04-14T21:23:09.003Z"
+  },
+  {
+    "id": "reddit-1sll2zc",
+    "ownerId": "dylan",
+    "title": "traska summiteer 36mm pinegreen V6 mint full kit",
+    "sub": "$500-$699",
+    "tag": "Sport",
+    "liquidity": "Med",
+    "sourcePlatform": "reddit_watchexchange",
+    "sellerName": "myohtet1991",
+    "paymentMethod": "paypal_ff",
+    "authenticityGuarantee": false,
+    "escrowAvailable": false,
+    "boxPapers": "full_set",
+    "serviceHistory": null,
+    "serialProvided": false,
+    "listingQualityScore": 0,
+    "priceTooGoodToBeTrue": false,
+    "listingUrl": "https://www.reddit.com/r/Watchexchange/comments/1sll2zc/",
+    "notes": "traska summiteer 36mm pinegreen V6 mint full kit",
+    "listingTimestamp": "2026-04-14T20:47:56.000Z",
+    "freshnessScore": 100,
+    "descriptionQualityDetail": {
+      "lengthScore": 0,
+      "specificityScore": 0,
+      "completenessScore": 15
+    },
+    "distressSignals": {
+      "detected": false,
+      "keywords": [],
+      "score": 0
+    },
+    "engagementSignals": {
+      "comments": 4,
+      "engagementScore": 10
+    },
+    "isNew": true,
+    "ingestedAt": "2026-04-14T21:23:09.003Z"
+  },
+  {
+    "id": "reddit-1slkyhd",
+    "ownerId": "dylan",
+    "title": "Ultra Rare Seiko Marvel Hand Etched Dial J14011",
+    "sub": "$1000-$1999",
+    "tag": "Sport",
+    "liquidity": "Med",
+    "sourcePlatform": "reddit_watchexchange",
+    "sellerName": "_Detectorist_",
+    "paymentMethod": "paypal_ff",
+    "authenticityGuarantee": false,
+    "escrowAvailable": false,
+    "boxPapers": "neither",
+    "serviceHistory": null,
+    "serialProvided": false,
+    "listingQualityScore": 1,
+    "priceTooGoodToBeTrue": false,
+    "listingUrl": "https://www.reddit.com/r/Watchexchange/comments/1slkyhd/",
+    "notes": "Ultra Rare Seiko Marvel Hand Etched Dial J14011",
+    "listingTimestamp": "2026-04-14T20:43:06.000Z",
+    "freshnessScore": 100,
+    "descriptionQualityDetail": {
+      "lengthScore": 0,
+      "specificityScore": 15,
+      "completenessScore": 10
+    },
+    "distressSignals": {
+      "detected": false,
+      "keywords": [],
+      "score": 0
+    },
+    "engagementSignals": {
+      "comments": 6,
+      "engagementScore": 12
+    },
+    "isNew": true,
+    "ingestedAt": "2026-04-14T21:23:09.003Z"
+  },
+  {
+    "id": "reddit-1slkvef",
+    "ownerId": "dylan",
+    "title": "Authentic OEM TUDOR 16mm Link for 79500 (Black Bay 36) Heritage",
+    "sub": "$100-$299",
+    "tag": "Sport",
+    "buyPrice": 79500,
+    "liquidity": "Med",
+    "sourcePlatform": "reddit_watchexchange",
+    "sellerName": "Glittering_Poet_4235",
+    "paymentMethod": "paypal_ff",
+    "authenticityGuarantee": false,
+    "escrowAvailable": false,
+    "boxPapers": "neither",
+    "serviceHistory": null,
+    "serialProvided": false,
+    "listingQualityScore": 4,
+    "priceTooGoodToBeTrue": false,
+    "listingUrl": "https://www.reddit.com/r/Watchexchange/comments/1slkvef/",
+    "notes": "Authentic OEM TUDOR 16mm Link for 79500 (Black Bay 36) Heritage",
+    "listingTimestamp": "2026-04-14T20:39:54.000Z",
+    "freshnessScore": 100,
+    "descriptionQualityDetail": {
+      "lengthScore": 0,
+      "specificityScore": 45,
+      "completenessScore": 0
+    },
+    "distressSignals": {
+      "detected": false,
+      "keywords": [],
+      "score": 0
+    },
+    "engagementSignals": {
+      "comments": 4,
+      "engagementScore": 10
+    },
+    "isNew": true,
+    "ingestedAt": "2026-04-14T21:23:09.003Z"
+  },
+  {
+    "id": "reddit-1slkuhf",
+    "ownerId": "dylan",
+    "title": "Cadola AHRENS AUTOMATIC RACECRAFT BLACK\nCD-1061-55 BNIB $250 + label",
+    "sub": "$100-$299",
+    "tag": "Sport",
+    "buyPrice": 250,
+    "liquidity": "Med",
+    "sourcePlatform": "reddit_watchexchange",
+    "sellerName": "Comfortable-Area1149",
+    "paymentMethod": "paypal_ff",
+    "authenticityGuarantee": false,
+    "escrowAvailable": false,
+    "boxPapers": "neither",
+    "serviceHistory": null,
+    "serialProvided": false,
+    "listingQualityScore": 2,
+    "priceTooGoodToBeTrue": false,
+    "listingUrl": "https://www.reddit.com/r/Watchexchange/comments/1slkuhf/",
+    "notes": "Cadola AHRENS AUTOMATIC RACECRAFT BLACK\nCD-1061-55 BNIB $250 + label",
+    "listingTimestamp": "2026-04-14T20:38:59.000Z",
+    "freshnessScore": 100,
+    "descriptionQualityDetail": {
+      "lengthScore": 0,
+      "specificityScore": 30,
+      "completenessScore": 0
+    },
+    "distressSignals": {
+      "detected": false,
+      "keywords": [],
+      "score": 0
+    },
+    "engagementSignals": {
+      "comments": 4,
+      "engagementScore": 10
+    },
+    "isNew": true,
+    "ingestedAt": "2026-04-14T21:23:09.003Z"
+  },
+  {
+    "id": "reddit-1slkqte",
+    "ownerId": "dylan",
+    "title": "Rolex Submariner Date 40MM - Ref 116610LN (EXCELLENT 2017 COMPLETE SET)",
+    "sub": "2017 · $9000-$11999",
+    "tag": "Sport",
+    "buyPrice": 2017,
+    "liquidity": "Med",
+    "sourcePlatform": "reddit_watchexchange",
+    "sellerName": "Sjohn1997",
+    "paymentMethod": "paypal_ff",
+    "authenticityGuarantee": false,
+    "escrowAvailable": false,
+    "boxPapers": "neither",
+    "serviceHistory": null,
+    "serialProvided": false,
+    "listingQualityScore": 5,
+    "priceTooGoodToBeTrue": false,
+    "listingUrl": "https://www.reddit.com/r/Watchexchange/comments/1slkqte/",
+    "notes": "Rolex Submariner Date 40MM - Ref 116610LN (EXCELLENT 2017 COMPLETE SET)",
+    "listingTimestamp": "2026-04-14T20:35:11.000Z",
+    "freshnessScore": 100,
+    "descriptionQualityDetail": {
+      "lengthScore": 0,
+      "specificityScore": 75,
+      "completenessScore": 0
+    },
+    "distressSignals": {
+      "detected": false,
+      "keywords": [],
+      "score": 0
+    },
+    "engagementSignals": {
+      "comments": 4,
+      "engagementScore": 10
+    },
+    "isNew": true,
+    "ingestedAt": "2026-04-14T21:23:09.003Z"
+  },
+  {
+    "id": "reddit-1slkp5l",
+    "ownerId": "dylan",
+    "title": "Rolex Oyster Perpetual 36 \"Mediterranean Blue\" 126000",
+    "sub": "$9000-$11999",
+    "tag": "Sport",
+    "buyPrice": 126000,
+    "liquidity": "Med",
+    "sourcePlatform": "reddit_watchexchange",
+    "sellerName": "slopekind",
+    "paymentMethod": "paypal_ff",
+    "authenticityGuarantee": false,
+    "escrowAvailable": false,
+    "boxPapers": "neither",
+    "serviceHistory": null,
+    "serialProvided": false,
+    "listingQualityScore": 3,
+    "priceTooGoodToBeTrue": false,
+    "listingUrl": "https://www.reddit.com/r/Watchexchange/comments/1slkp5l/",
+    "notes": "Rolex Oyster Perpetual 36 \"Mediterranean Blue\" 126000",
+    "listingTimestamp": "2026-04-14T20:33:31.000Z",
+    "freshnessScore": 100,
+    "descriptionQualityDetail": {
+      "lengthScore": 0,
+      "specificityScore": 45,
+      "completenessScore": 0
+    },
+    "distressSignals": {
+      "detected": false,
+      "keywords": [],
+      "score": 0
+    },
+    "engagementSignals": {
+      "comments": 4,
+      "engagementScore": 10
+    },
+    "isNew": true,
+    "ingestedAt": "2026-04-14T21:23:09.003Z"
+  },
+  {
+    "id": "reddit-1slkncr",
+    "ownerId": "dylan",
+    "title": "Rolex Explorer II 42MM “Polar” - Ref 226570 (LIKE NEW 2025 COMPLETE SET)",
+    "sub": "2025 · $12000-$15499",
+    "tag": "Sport",
+    "buyPrice": 226570,
+    "liquidity": "Med",
+    "sourcePlatform": "reddit_watchexchange",
+    "sellerName": "Sjohn1997",
+    "paymentMethod": "paypal_ff",
+    "authenticityGuarantee": false,
+    "escrowAvailable": false,
+    "boxPapers": "neither",
+    "serviceHistory": null,
+    "serialProvided": false,
+    "listingQualityScore": 4,
+    "priceTooGoodToBeTrue": false,
+    "listingUrl": "https://www.reddit.com/r/Watchexchange/comments/1slkncr/",
+    "notes": "Rolex Explorer II 42MM “Polar” - Ref 226570 (LIKE NEW 2025 COMPLETE SET)",
+    "listingTimestamp": "2026-04-14T20:31:41.000Z",
+    "freshnessScore": 100,
+    "descriptionQualityDetail": {
+      "lengthScore": 0,
+      "specificityScore": 60,
+      "completenessScore": 0
+    },
+    "distressSignals": {
+      "detected": false,
+      "keywords": [],
+      "score": 0
+    },
+    "engagementSignals": {
+      "comments": 4,
+      "engagementScore": 10
+    },
+    "isNew": true,
+    "ingestedAt": "2026-04-14T21:23:09.003Z"
+  },
+  {
+    "id": "reddit-1slkn1w",
+    "ownerId": "dylan",
+    "title": "SKX007 With Extra Bezels",
+    "sub": "$100-$299",
+    "tag": "Sport",
+    "liquidity": "Med",
+    "sourcePlatform": "reddit_watchexchange",
+    "sellerName": "Form_and_Malcontent",
+    "paymentMethod": "paypal_ff",
+    "authenticityGuarantee": false,
+    "escrowAvailable": false,
+    "boxPapers": "neither",
+    "serviceHistory": null,
+    "serialProvided": false,
+    "listingQualityScore": 0,
+    "priceTooGoodToBeTrue": false,
+    "listingUrl": "https://www.reddit.com/r/Watchexchange/comments/1slkn1w/",
+    "notes": "SKX007 With Extra Bezels",
+    "listingTimestamp": "2026-04-14T20:31:24.000Z",
+    "freshnessScore": 100,
+    "descriptionQualityDetail": {
+      "lengthScore": 0,
+      "specificityScore": 0,
+      "completenessScore": 10
+    },
+    "distressSignals": {
+      "detected": false,
+      "keywords": [],
+      "score": 0
+    },
+    "engagementSignals": {
+      "comments": 4,
+      "engagementScore": 10
+    },
+    "isNew": true,
+    "ingestedAt": "2026-04-14T21:23:09.003Z"
+  },
+  {
+    "id": "reddit-1slkmt7",
+    "ownerId": "dylan",
+    "title": "Omega Seamaster Planet Ocean 600M 217.32.42.21.01.001 (Feb 2026) – $6800",
+    "sub": "2026 · $6000-$6999",
+    "tag": "Sport",
+    "buyPrice": 6800,
+    "liquidity": "Med",
+    "sourcePlatform": "reddit_watchexchange",
+    "sellerName": "Green_Assistance_336",
+    "paymentMethod": "paypal_ff",
+    "authenticityGuarantee": false,
+    "escrowAvailable": false,
+    "boxPapers": "neither",
+    "serviceHistory": null,
+    "serialProvided": false,
+    "listingQualityScore": 4,
+    "priceTooGoodToBeTrue": false,
+    "listingUrl": "https://www.reddit.com/r/Watchexchange/comments/1slkmt7/",
+    "notes": "Omega Seamaster Planet Ocean 600M 217.32.42.21.01.001 (Feb 2026) – $6800",
+    "listingTimestamp": "2026-04-14T20:31:08.000Z",
+    "freshnessScore": 100,
+    "descriptionQualityDetail": {
+      "lengthScore": 0,
+      "specificityScore": 60,
+      "completenessScore": 0
+    },
+    "distressSignals": {
+      "detected": false,
+      "keywords": [],
+      "score": 0
+    },
+    "engagementSignals": {
+      "comments": 4,
+      "engagementScore": 10
+    },
+    "isNew": true,
+    "ingestedAt": "2026-04-14T21:23:09.003Z"
+  },
+  {
+    "id": "reddit-1slkmmx",
+    "ownerId": "dylan",
+    "title": "Rolex Milgauss Z-Blue 116400GV",
+    "sub": "$12000-$15499",
+    "tag": "Sport",
+    "liquidity": "Med",
+    "sourcePlatform": "reddit_watchexchange",
+    "sellerName": "slopekind",
+    "paymentMethod": "paypal_ff",
+    "authenticityGuarantee": false,
+    "escrowAvailable": false,
+    "boxPapers": "neither",
+    "serviceHistory": null,
+    "serialProvided": false,
+    "listingQualityScore": 2,
+    "priceTooGoodToBeTrue": false,
+    "listingUrl": "https://www.reddit.com/r/Watchexchange/comments/1slkmmx/",
+    "notes": "Rolex Milgauss Z-Blue 116400GV",
+    "listingTimestamp": "2026-04-14T20:30:57.000Z",
+    "freshnessScore": 100,
+    "descriptionQualityDetail": {
+      "lengthScore": 0,
+      "specificityScore": 15,
+      "completenessScore": 0
+    },
+    "distressSignals": {
+      "detected": false,
+      "keywords": [],
+      "score": 0
+    },
+    "engagementSignals": {
+      "comments": 4,
+      "engagementScore": 10
+    },
+    "isNew": true,
+    "ingestedAt": "2026-04-14T21:23:09.003Z"
+  },
+  {
+    "id": "reddit-1slkm2a",
+    "ownerId": "dylan",
+    "title": "Vintage Tudor Tank - Rolex Signed Case - $1,297",
+    "sub": "$1000-$1999",
+    "tag": "Vintage",
+    "buyPrice": 1297,
+    "liquidity": "Med",
+    "sourcePlatform": "reddit_watchexchange",
+    "sellerName": "ChrisDeLosSantos",
+    "paymentMethod": "paypal_ff",
+    "authenticityGuarantee": false,
+    "escrowAvailable": false,
+    "boxPapers": "neither",
+    "serviceHistory": null,
+    "serialProvided": false,
+    "listingQualityScore": 2,
+    "priceTooGoodToBeTrue": false,
+    "listingUrl": "https://www.reddit.com/r/Watchexchange/comments/1slkm2a/",
+    "notes": "Vintage Tudor Tank - Rolex Signed Case - $1,297",
+    "listingTimestamp": "2026-04-14T20:30:23.000Z",
+    "freshnessScore": 100,
+    "descriptionQualityDetail": {
+      "lengthScore": 0,
+      "specificityScore": 15,
+      "completenessScore": 0
+    },
+    "distressSignals": {
+      "detected": false,
+      "keywords": [],
+      "score": 0
+    },
+    "engagementSignals": {
+      "comments": 4,
+      "engagementScore": 10
+    },
+    "isNew": true,
+    "ingestedAt": "2026-04-14T21:23:09.003Z"
+  },
+  {
+    "id": "reddit-1slklfm",
+    "ownerId": "dylan",
+    "title": "(USA) Ginault Ocean Rover 1 - No Date",
+    "sub": "$700-$999",
+    "tag": "Sport",
+    "liquidity": "Med",
+    "sourcePlatform": "reddit_watchexchange",
+    "sellerName": "HeartCompetitive2592",
+    "paymentMethod": "paypal_ff",
+    "authenticityGuarantee": false,
+    "escrowAvailable": false,
+    "boxPapers": "neither",
+    "serviceHistory": null,
+    "serialProvided": false,
+    "listingQualityScore": 0,
+    "priceTooGoodToBeTrue": false,
+    "listingUrl": "https://www.reddit.com/r/Watchexchange/comments/1slklfm/",
+    "notes": "(USA) Ginault Ocean Rover 1 - No Date",
+    "listingTimestamp": "2026-04-14T20:29:48.000Z",
+    "freshnessScore": 100,
+    "descriptionQualityDetail": {
+      "lengthScore": 0,
+      "specificityScore": 0,
+      "completenessScore": 0
+    },
+    "distressSignals": {
+      "detected": false,
+      "keywords": [],
+      "score": 0
+    },
+    "engagementSignals": {
+      "comments": 11,
+      "engagementScore": 17
+    },
+    "isNew": true,
+    "ingestedAt": "2026-04-14T21:23:09.003Z"
+  },
+  {
+    "id": "reddit-1slklay",
+    "ownerId": "dylan",
+    "title": "Girard-Perregaux Laureato Copper 38mm 81005-11-3154-1CM",
+    "sub": "$9000-$11999",
+    "tag": "Sport",
+    "buyPrice": 81005,
+    "liquidity": "Med",
+    "sourcePlatform": "reddit_watchexchange",
+    "sellerName": "slopekind",
+    "paymentMethod": "paypal_ff",
+    "authenticityGuarantee": false,
+    "escrowAvailable": false,
+    "boxPapers": "neither",
+    "serviceHistory": null,
+    "serialProvided": false,
+    "listingQualityScore": 2,
+    "priceTooGoodToBeTrue": false,
+    "listingUrl": "https://www.reddit.com/r/Watchexchange/comments/1slklay/",
+    "notes": "Girard-Perregaux Laureato Copper 38mm 81005-11-3154-1CM",
+    "listingTimestamp": "2026-04-14T20:29:44.000Z",
+    "freshnessScore": 100,
+    "descriptionQualityDetail": {
+      "lengthScore": 0,
+      "specificityScore": 30,
+      "completenessScore": 0
+    },
+    "distressSignals": {
+      "detected": false,
+      "keywords": [],
+      "score": 0
+    },
+    "engagementSignals": {
+      "comments": 4,
+      "engagementScore": 10
+    },
+    "isNew": true,
+    "ingestedAt": "2026-04-14T21:23:09.003Z"
+  },
+  {
+    "id": "reddit-1slm36j",
+    "ownerId": "dylan",
+    "title": "Seiko 5 SRPJ45K1 Time Sonar with true Japanese Kanji",
+    "sub": "$300-$499",
+    "tag": "Sport",
+    "liquidity": "Med",
+    "sourcePlatform": "reddit_watchexchange",
+    "sellerName": "RightDwigt",
+    "paymentMethod": "paypal_ff",
+    "authenticityGuarantee": false,
+    "escrowAvailable": false,
+    "boxPapers": "neither",
+    "serviceHistory": null,
+    "serialProvided": false,
+    "listingQualityScore": 1,
+    "priceTooGoodToBeTrue": false,
+    "listingUrl": "https://www.reddit.com/r/Watchexchange/comments/1slm36j/",
+    "notes": "Seiko 5 SRPJ45K1 Time Sonar with true Japanese Kanji",
+    "listingTimestamp": "2026-04-14T21:25:22.000Z",
+    "freshnessScore": 100,
+    "descriptionQualityDetail": {
+      "lengthScore": 0,
+      "specificityScore": 15,
+      "completenessScore": 0
+    },
+    "distressSignals": {
+      "detected": false,
+      "keywords": [],
+      "score": 0
+    },
+    "engagementSignals": {
+      "comments": 4,
+      "engagementScore": 10
+    },
+    "isNew": true,
+    "ingestedAt": "2026-04-14T21:28:08.040Z"
   }
 ]

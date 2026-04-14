@@ -5,12 +5,13 @@ import { headers } from "next/headers";
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
 
-  const acceptHeader = headers().get("accept") || "";
+  const headersList = headers();
+  const pathname = headersList.get("x-pathname") || "";
 
-  const isApiRequest = !acceptHeader.includes("text/html");
+  const isApiRoute = pathname.startsWith("/api");
 
-  // ✅ Allow API requests (curl, fetch, etc.)
-  if (!session && isApiRequest) {
+  // ✅ Allow API routes to bypass redirect
+  if (!session && isApiRoute) {
     return (
       <html lang="en">
         <body>{children}</body>
@@ -18,7 +19,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     );
   }
 
-  // ✅ Protect real pages
+  // ✅ Protect actual app pages
   if (!session) {
     redirect("/login");
   }

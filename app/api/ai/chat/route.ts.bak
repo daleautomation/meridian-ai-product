@@ -3,15 +3,13 @@ import { callClaude } from "@/lib/ai/claudeClient";
 
 export async function POST(req: NextRequest) {
   try {
-    // IMPORTANT: No session/auth checks here
-    // This route is intentionally public for AI processing
-
     const body = await req.json();
-    const { message, context } = body ?? {};
+
+    const { message, context } = body;
 
     if (!message) {
       return NextResponse.json(
-        { success: false, error: "Missing message" },
+        { error: "Missing message" },
         { status: 400 }
       );
     }
@@ -19,7 +17,7 @@ export async function POST(req: NextRequest) {
     const systemPrompt = `
 You are Meridian AI.
 
-You operate as a decision engine.
+You operate as a decision engine, not a chatbot.
 
 Your job:
 - Analyze opportunities
@@ -41,19 +39,12 @@ ${JSON.stringify(context || {}, null, 2)}
       systemPrompt
     );
 
-    return NextResponse.json({
-      success: true,
-      data: response
-    });
-
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Internal error";
-
+    return NextResponse.json({ success: true, data: response });
+  } catch (error: any) {
     return NextResponse.json(
       {
         success: false,
-        error: message
+        error: error.message || "Internal error"
       },
       { status: 500 }
     );
