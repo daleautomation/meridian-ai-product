@@ -2,7 +2,7 @@
 // NOTE: Passwords are plaintext for local development only.
 // Replace with hashed credentials before any non-local deployment.
 
-export type ModuleId = "real-estate" | "saas" | "trading" | "watches";
+export type ModuleId = "real-estate" | "saas" | "trading" | "watches" | "roofing";
 
 export type Tenant = {
   id: string;
@@ -45,7 +45,14 @@ export const TENANTS: Record<string, Tenant> = {
     id: "dylan",
     name: "Dylan",
     password: "dylan",
-    modules: ["watches"],
+    modules: ["watches", "roofing"],
+    geo: [],
+  },
+  roofing: {
+    id: "roofing",
+    name: "Roofing Demo",
+    password: "roofing",
+    modules: ["roofing"],
     geo: [],
   },
 };

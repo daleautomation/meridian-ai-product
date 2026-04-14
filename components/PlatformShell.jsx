@@ -93,6 +93,31 @@ const MODULES = {
       { id: 4, title: "Cartier Santos", sub: "2020", score: 7.2, label: "MONITOR", labelType: "amber" },
       { id: 5, title: "Tudor BB58", sub: "2019", score: 4.1, label: "PASS", labelType: "red" }
     ]
+  },
+  roofing: {
+    id: "roofing",
+    label: "Roofing",
+    abbr: "RF",
+    tagline: "Lead Prioritization Engine",
+    explanation: "Prioritize inbound roofing leads by urgency, job value, and close probability — ranked by revenue-weighted conversion likelihood.",
+    accent: "#D4854A",
+    accentRgb: "212,133,74",
+    metrics: [
+      { label: "Active Leads", value: "8" },
+      { label: "Avg Close %", value: "54%" },
+      { label: "High Priority", value: "3" },
+      { label: "Est. Pipeline", value: "$127K" },
+    ],
+    items: [
+      { id: 1, title: "Margaret Chen", sub: "4218 Walnut St, Kansas City, MO 64111", score: 9.4, label: "CALL NOW", labelType: "green", tag: "Storm Damage", arv: "$18,500", mao: "87%", ask: "Urgent", risk: "Low", nextAction: "Call immediately — insurance claim filed, adjuster visiting Thursday", riskFactors: ["Adjuster visit in 2 days — must be present to win", "Homeowner referenced a competing bid"], thesis: "Active hail damage claim with adjuster scheduled this week. Homeowner is motivated and pre-qualified through insurance. First roofer on-site wins.", opportunityTier: "ACTION", executableNow: true },
+      { id: 2, title: "David & Sarah Thompson", sub: "8901 Ward Pkwy, Kansas City, MO 64114", score: 8.7, label: "CALL NOW", labelType: "green", tag: "Full Replacement", arv: "$24,200", mao: "78%", ask: "This Week", risk: "Low", nextAction: "Schedule inspection this week — they're collecting three bids by Friday", riskFactors: ["Collecting 3 bids — deadline is Friday", "Premium neighborhood expects premium service"], thesis: "High-value full replacement on an upscale property. Homeowners are actively collecting bids with a decision deadline. Job size and neighborhood justify premium pricing.", opportunityTier: "ACTION", executableNow: true },
+      { id: 3, title: "Robert Martinez", sub: "1547 Independence Ave, Kansas City, MO 64124", score: 8.1, label: "CALL TODAY", labelType: "green", tag: "Leak Repair", arv: "$4,800", mao: "82%", ask: "Urgent", risk: "Low-Med", nextAction: "Call today — active leak causing interior damage, high urgency", riskFactors: ["Active interior water damage escalating daily", "Smaller job but fast close and referral potential"], thesis: "Active leak with interior damage creates genuine urgency. Fast-close opportunity with strong referral upside in a dense neighborhood.", opportunityTier: "ACTION", executableNow: true },
+      { id: 4, title: "Pinnacle Office Park", sub: "6600 College Blvd, Overland Park, KS 66211", score: 7.8, label: "CALL TODAY", labelType: "green", tag: "Commercial", arv: "$67,000", mao: "45%", ask: "This Month", risk: "Medium", nextAction: "Send capability deck and request site walk — property manager is comparing vendors", riskFactors: ["Commercial approval chain is 3+ stakeholders", "Must carry commercial liability coverage"], thesis: "Large commercial flat-roof opportunity. Lower close rate offset by exceptional job value. Property manager is in active vendor selection.", opportunityTier: "SECONDARY" },
+      { id: 5, title: "Linda Whitfield", sub: "3322 Troost Ave, Kansas City, MO 64109", score: 7.2, label: "NURTURE", labelType: "amber", tag: "Storm Damage", arv: "$14,200", mao: "55%", ask: "Exploring", risk: "Medium", nextAction: "Follow up in 3 days — waiting on insurance response, not yet committed", riskFactors: ["Insurance claim pending — timeline uncertain", "Homeowner is passive, needs education on process"], thesis: "Probable storm damage claim but homeowner hasn't committed. Needs process guidance and follow-up once insurance responds.", opportunityTier: "SECONDARY" },
+      { id: 6, title: "James & Karen Park", sub: "2100 W 47th St, Westwood, KS 66205", score: 6.5, label: "NURTURE", labelType: "amber", tag: "Aging Roof", arv: "$16,800", mao: "40%", ask: "Next Quarter", risk: "Medium", nextAction: "Add to drip sequence — interested but no trigger event yet, planning for fall", riskFactors: ["No urgency — exploring options for Q3/Q4", "Price-sensitive, will compare 4+ bids"], thesis: "Aging roof with no active failure. Homeowners are planning ahead. Worth nurturing for Q3 close but no urgency to push now.", opportunityTier: "MONITOR" },
+      { id: 7, title: "Tom Bradley", sub: "901 E Gregory Blvd, Kansas City, MO 64131", score: 4.8, label: "NURTURE", labelType: "amber", tag: "Gutter Add-On", arv: "$2,100", mao: "62%", ask: "Flexible", risk: "Low", nextAction: "Bundle into next nearby job — too small to dispatch solo", riskFactors: ["Low job value doesn't justify standalone dispatch", "Good candidate for route-bundling with nearby jobs"], thesis: "Small gutter job, easy close but not worth a standalone trip. Bundle with the next job in the 64131 zip code.", opportunityTier: "MONITOR" },
+      { id: 8, title: "Patricia Holmes", sub: "5540 Brookside Blvd, Kansas City, MO 64113", score: 3.2, label: "PASS", labelType: "red", tag: "Price Shopping", arv: "$11,500", mao: "12%", ask: "Unknown", risk: "High", nextAction: "No action — sixth contractor contacted, budget expectations unrealistic", riskFactors: ["Has contacted 6+ contractors already", "Expects pricing 40% below market", "No urgency, no damage — cosmetic only"], thesis: "Serial price-shopper with no real urgency and unrealistic budget expectations. Not worth the time investment — move on.", opportunityTier: "LOW" },
+    ],
   }
 };
 
@@ -1843,9 +1868,9 @@ export default function App({ realEstateItems = null, watchesItems = null, initi
                         border: "1px solid rgba(12,7,49,0.08)",
                       }}>
                         {Object.entries({
-                          [module.id === "trading" ? "Price" : module.id === "saas" ? "ARR" : module.id === "watches" ? "Price" : "ARV"]: item.arv,
-                          [module.id === "trading" ? "Rel.Str." : module.id === "saas" ? "Expansion" : module.id === "watches" ? "Market" : "MAO"]: item.mao,
-                          [module.id === "trading" ? "Price" : module.id === "saas" ? "Status" : module.id === "watches" ? "Margin" : "Asking"]: item.ask,
+                          [module.id === "roofing" ? "Est. Value" : module.id === "trading" ? "Price" : module.id === "saas" ? "ARR" : module.id === "watches" ? "Price" : "ARV"]: item.arv,
+                          [module.id === "roofing" ? "Close %" : module.id === "trading" ? "Rel.Str." : module.id === "saas" ? "Expansion" : module.id === "watches" ? "Market" : "MAO"]: item.mao,
+                          [module.id === "roofing" ? "Urgency" : module.id === "trading" ? "Price" : module.id === "saas" ? "Status" : module.id === "watches" ? "Margin" : "Asking"]: item.ask,
                           [module.id === "watches" ? "Liquidity" : "Risk"]: item.risk,
                         }).map(([k, v], idx) => (
                           <div key={k} style={{
@@ -2232,7 +2257,7 @@ function styles(accent, accentRgb) {
       fontSize: "9px",
       fontWeight: "700",
       fontFamily: "'JetBrains Mono', monospace",
-      color: active ? "#fff" : textDim,
+      color: active ? "#fff" : textLabel,
       flexShrink: 0,
       transition: "all 0.15s ease",
     }),
