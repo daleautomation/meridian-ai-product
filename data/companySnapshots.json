@@ -1,0 +1,1282 @@
+{
+  "domain:example.org": {
+    "key": "domain:example.org",
+    "company": {
+      "name": "Overland Park Roofing",
+      "domain": "https://example.org",
+      "url": "https://example.org",
+      "location": "Overland Park"
+    },
+    "createdAt": "2026-04-15T00:04:54.229Z",
+    "updatedAt": "2026-04-15T00:05:02.576Z",
+    "latest": {
+      "inspect_website": {
+        "tool": "inspect_website",
+        "company": {
+          "name": "Overland Park Roofing",
+          "domain": "example.org",
+          "url": "https://example.org",
+          "location": "Overland Park"
+        },
+        "timestamp": "2026-04-15T00:04:54.207Z",
+        "confidence": 10,
+        "confidenceLabel": "LOW",
+        "evidence": [
+          {
+            "kind": "fetch_error",
+            "source": "https://example.org",
+            "observedAt": "2026-04-15T00:04:54.207Z",
+            "detail": "fetch failed"
+          }
+        ],
+        "data": {
+          "reachable": false,
+          "httpStatus": null,
+          "https": true,
+          "finalUrl": null,
+          "responseMs": null,
+          "title": null,
+          "metaDescription": null,
+          "hasViewport": false,
+          "hasOpenGraph": false,
+          "scriptCount": 0,
+          "imageCount": 0,
+          "linkCount": 0,
+          "contentBytes": 0,
+          "weaknesses": [
+            "site unreachable or blocked"
+          ]
+        },
+        "stub": false,
+        "error": "fetch failed"
+      },
+      "inspect_reviews": {
+        "tool": "inspect_reviews",
+        "company": {
+          "name": "Overland Park Roofing",
+          "domain": "https://example.org",
+          "url": "https://example.org",
+          "location": "Overland Park"
+        },
+        "timestamp": "2026-04-15T00:04:54.211Z",
+        "confidence": 0,
+        "confidenceLabel": "LOW",
+        "evidence": [
+          {
+            "kind": "provider_unavailable",
+            "source": "stub",
+            "observedAt": "2026-04-15T00:04:54.211Z",
+            "detail": "GOOGLE_PLACES_API_KEY is not set; no live review data collected"
+          }
+        ],
+        "data": {
+          "provider": "stub",
+          "reviewCount": null,
+          "averageRating": null,
+          "lastReviewAt": null,
+          "weaknesses": [
+            "review signals unavailable — no live provider configured"
+          ]
+        },
+        "stub": true,
+        "notes": [
+          "Add GOOGLE_PLACES_API_KEY to .env.local to enable live review data.",
+          "Interface is stable; callers do not need to change when live mode is enabled."
+        ]
+      },
+      "generate_opportunity_summary": {
+        "tool": "generate_opportunity_summary",
+        "company": {
+          "name": "Overland Park Roofing",
+          "domain": "https://example.org",
+          "url": "https://example.org",
+          "location": "Overland Park"
+        },
+        "timestamp": "2026-04-15T00:04:54.232Z",
+        "confidence": 20,
+        "confidenceLabel": "LOW",
+        "evidence": [
+          {
+            "kind": "fetch_error",
+            "source": "https://example.org",
+            "observedAt": "2026-04-15T00:04:54.207Z",
+            "detail": "fetch failed"
+          },
+          {
+            "kind": "provider_unavailable",
+            "source": "stub",
+            "observedAt": "2026-04-15T00:04:54.211Z",
+            "detail": "GOOGLE_PLACES_API_KEY is not set; no live review data collected"
+          },
+          {
+            "kind": "tool_chain",
+            "source": "meridian_mcp",
+            "observedAt": "2026-04-15T00:04:54.232Z",
+            "detail": "composed from inspect_website (conf 10) + inspect_reviews (conf 0, stub)"
+          }
+        ],
+        "data": {
+          "opportunityLevel": "LOW",
+          "recommendedAction": "MONITOR",
+          "topWeakness": "Website is completely unreachable, meaning the business has no functional web presence.",
+          "weaknesses": [
+            "Website unreachable — returned no HTTP response and zero content",
+            "No viewport meta tag, Open Graph tags, scripts, images, or links detected (site returned nothing)",
+            "Review data entirely unavailable due to missing API configuration — reputation signals unknown",
+            "Overall inspection confidence is critically low (composite score ~5/100)"
+          ],
+          "pitchAngle": "Your website is completely offline right now, meaning every potential customer searching for roofing in Overland Park hits a dead end before they can contact you.",
+          "closeProbability": "Low",
+          "rationale": "Evidence is critically thin: the website failed to load entirely, and review data could not be collected due to a stub provider with no live API key. No meaningful signals exist to confirm business activity, reputation, or digital maturity. The opportunity level is LOW not because the business lacks problems, but because the data is insufficient to qualify the prospect or tailor a credible pitch beyond the site outage. Recommend monitoring until a live website or review data becomes available to properly assess fit.",
+          "citedEvidence": [
+            "[fetch_error] fetch failed (source: https://example.org)",
+            "[provider_unavailable] GOOGLE_PLACES_API_KEY is not set; no live review data collected (source: stub)",
+            "[tool_chain] composed from inspect_website (conf 10) + inspect_reviews (conf 0, stub) (source: meridian_mcp)",
+            "website.reachable: false",
+            "website.contentBytes: 0",
+            "reviewsAreStub: true"
+          ]
+        },
+        "stub": false,
+        "notes": [
+          "Review signals were stubbed — close probability and opportunity level are capped."
+        ]
+      }
+    },
+    "history": [
+      {
+        "tool": "inspect_website",
+        "timestamp": "2026-04-15T00:04:54.207Z",
+        "result": {
+          "tool": "inspect_website",
+          "company": {
+            "name": "Overland Park Roofing",
+            "domain": "example.org",
+            "url": "https://example.org",
+            "location": "Overland Park"
+          },
+          "timestamp": "2026-04-15T00:04:54.207Z",
+          "confidence": 10,
+          "confidenceLabel": "LOW",
+          "evidence": [
+            {
+              "kind": "fetch_error",
+              "source": "https://example.org",
+              "observedAt": "2026-04-15T00:04:54.207Z",
+              "detail": "fetch failed"
+            }
+          ],
+          "data": {
+            "reachable": false,
+            "httpStatus": null,
+            "https": true,
+            "finalUrl": null,
+            "responseMs": null,
+            "title": null,
+            "metaDescription": null,
+            "hasViewport": false,
+            "hasOpenGraph": false,
+            "scriptCount": 0,
+            "imageCount": 0,
+            "linkCount": 0,
+            "contentBytes": 0,
+            "weaknesses": [
+              "site unreachable or blocked"
+            ]
+          },
+          "stub": false,
+          "error": "fetch failed"
+        }
+      },
+      {
+        "tool": "inspect_reviews",
+        "timestamp": "2026-04-15T00:04:54.211Z",
+        "result": {
+          "tool": "inspect_reviews",
+          "company": {
+            "name": "Overland Park Roofing",
+            "domain": "https://example.org",
+            "url": "https://example.org",
+            "location": "Overland Park"
+          },
+          "timestamp": "2026-04-15T00:04:54.211Z",
+          "confidence": 0,
+          "confidenceLabel": "LOW",
+          "evidence": [
+            {
+              "kind": "provider_unavailable",
+              "source": "stub",
+              "observedAt": "2026-04-15T00:04:54.211Z",
+              "detail": "GOOGLE_PLACES_API_KEY is not set; no live review data collected"
+            }
+          ],
+          "data": {
+            "provider": "stub",
+            "reviewCount": null,
+            "averageRating": null,
+            "lastReviewAt": null,
+            "weaknesses": [
+              "review signals unavailable — no live provider configured"
+            ]
+          },
+          "stub": true,
+          "notes": [
+            "Add GOOGLE_PLACES_API_KEY to .env.local to enable live review data.",
+            "Interface is stable; callers do not need to change when live mode is enabled."
+          ]
+        }
+      },
+      {
+        "tool": "generate_opportunity_summary",
+        "timestamp": "2026-04-15T00:04:54.232Z",
+        "result": {
+          "tool": "generate_opportunity_summary",
+          "company": {
+            "name": "Overland Park Roofing",
+            "domain": "https://example.org",
+            "url": "https://example.org",
+            "location": "Overland Park"
+          },
+          "timestamp": "2026-04-15T00:04:54.232Z",
+          "confidence": 20,
+          "confidenceLabel": "LOW",
+          "evidence": [
+            {
+              "kind": "fetch_error",
+              "source": "https://example.org",
+              "observedAt": "2026-04-15T00:04:54.207Z",
+              "detail": "fetch failed"
+            },
+            {
+              "kind": "provider_unavailable",
+              "source": "stub",
+              "observedAt": "2026-04-15T00:04:54.211Z",
+              "detail": "GOOGLE_PLACES_API_KEY is not set; no live review data collected"
+            },
+            {
+              "kind": "tool_chain",
+              "source": "meridian_mcp",
+              "observedAt": "2026-04-15T00:04:54.232Z",
+              "detail": "composed from inspect_website (conf 10) + inspect_reviews (conf 0, stub)"
+            }
+          ],
+          "data": {
+            "opportunityLevel": "LOW",
+            "recommendedAction": "MONITOR",
+            "topWeakness": "Website is completely unreachable, meaning the business has no functional web presence.",
+            "weaknesses": [
+              "Website unreachable — returned no HTTP response and zero content",
+              "No viewport meta tag, Open Graph tags, scripts, images, or links detected (site returned nothing)",
+              "Review data entirely unavailable due to missing API configuration — reputation signals unknown",
+              "Overall inspection confidence is critically low (composite score ~5/100)"
+            ],
+            "pitchAngle": "Your website is completely offline right now, meaning every potential customer searching for roofing in Overland Park hits a dead end before they can contact you.",
+            "closeProbability": "Low",
+            "rationale": "Evidence is critically thin: the website failed to load entirely, and review data could not be collected due to a stub provider with no live API key. No meaningful signals exist to confirm business activity, reputation, or digital maturity. The opportunity level is LOW not because the business lacks problems, but because the data is insufficient to qualify the prospect or tailor a credible pitch beyond the site outage. Recommend monitoring until a live website or review data becomes available to properly assess fit.",
+            "citedEvidence": [
+              "[fetch_error] fetch failed (source: https://example.org)",
+              "[provider_unavailable] GOOGLE_PLACES_API_KEY is not set; no live review data collected (source: stub)",
+              "[tool_chain] composed from inspect_website (conf 10) + inspect_reviews (conf 0, stub) (source: meridian_mcp)",
+              "website.reachable: false",
+              "website.contentBytes: 0",
+              "reviewsAreStub: true"
+            ]
+          },
+          "stub": false,
+          "notes": [
+            "Review signals were stubbed — close probability and opportunity level are capped."
+          ]
+        }
+      }
+    ],
+    "statusHistory": [],
+    "notes": [],
+    "scoreHistory": [
+      {
+        "at": "2026-04-15T00:04:54.232Z",
+        "opportunityLevel": "LOW",
+        "confidence": 20,
+        "recommendedAction": "MONITOR",
+        "sourceTool": "generate_opportunity_summary"
+      }
+    ],
+    "lastCheckedAt": "2026-04-15T00:05:02.576Z"
+  },
+  "domain:iana.org": {
+    "key": "domain:iana.org",
+    "company": {
+      "name": "Lees Summit Roof Pros",
+      "domain": "https://www.iana.org",
+      "url": "https://www.iana.org",
+      "location": "Lee's Summit"
+    },
+    "createdAt": "2026-04-15T00:04:54.495Z",
+    "updatedAt": "2026-04-15T00:05:04.763Z",
+    "latest": {
+      "inspect_website": {
+        "tool": "inspect_website",
+        "company": {
+          "name": "Lees Summit Roof Pros",
+          "domain": "iana.org",
+          "url": "https://www.iana.org",
+          "location": "Lee's Summit"
+        },
+        "timestamp": "2026-04-15T00:04:54.213Z",
+        "confidence": 100,
+        "confidenceLabel": "HIGH",
+        "evidence": [
+          {
+            "kind": "http_status",
+            "source": "https://www.iana.org",
+            "observedAt": "2026-04-15T00:04:54.213Z",
+            "detail": "HTTP 200 in 279ms (6140 bytes)"
+          },
+          {
+            "kind": "html_meta",
+            "source": "https://www.iana.org",
+            "observedAt": "2026-04-15T00:04:54.213Z",
+            "detail": "title: \"Internet Assigned Numbers Authority\""
+          }
+        ],
+        "data": {
+          "reachable": true,
+          "httpStatus": 200,
+          "https": true,
+          "finalUrl": "https://www.iana.org/",
+          "responseMs": 279,
+          "title": "Internet Assigned Numbers Authority",
+          "metaDescription": null,
+          "hasViewport": true,
+          "hasOpenGraph": false,
+          "scriptCount": 3,
+          "imageCount": 0,
+          "linkCount": 34,
+          "contentBytes": 6140,
+          "weaknesses": [
+            "missing meta description — weak SEO",
+            "no OpenGraph tags — weak link previews",
+            "very thin content — possible parked or placeholder page"
+          ]
+        },
+        "stub": false
+      },
+      "inspect_reviews": {
+        "tool": "inspect_reviews",
+        "company": {
+          "name": "Lees Summit Roof Pros",
+          "domain": "https://www.iana.org",
+          "url": "https://www.iana.org",
+          "location": "Lee's Summit"
+        },
+        "timestamp": "2026-04-15T00:04:54.215Z",
+        "confidence": 0,
+        "confidenceLabel": "LOW",
+        "evidence": [
+          {
+            "kind": "provider_unavailable",
+            "source": "stub",
+            "observedAt": "2026-04-15T00:04:54.215Z",
+            "detail": "GOOGLE_PLACES_API_KEY is not set; no live review data collected"
+          }
+        ],
+        "data": {
+          "provider": "stub",
+          "reviewCount": null,
+          "averageRating": null,
+          "lastReviewAt": null,
+          "weaknesses": [
+            "review signals unavailable — no live provider configured"
+          ]
+        },
+        "stub": true,
+        "notes": [
+          "Add GOOGLE_PLACES_API_KEY to .env.local to enable live review data.",
+          "Interface is stable; callers do not need to change when live mode is enabled."
+        ]
+      },
+      "generate_opportunity_summary": {
+        "tool": "generate_opportunity_summary",
+        "company": {
+          "name": "Lees Summit Roof Pros",
+          "domain": "https://www.iana.org",
+          "url": "https://www.iana.org",
+          "location": "Lee's Summit"
+        },
+        "timestamp": "2026-04-15T00:04:54.498Z",
+        "confidence": 65,
+        "confidenceLabel": "MEDIUM",
+        "evidence": [
+          {
+            "kind": "http_status",
+            "source": "https://www.iana.org",
+            "observedAt": "2026-04-15T00:04:54.213Z",
+            "detail": "HTTP 200 in 279ms (6140 bytes)"
+          },
+          {
+            "kind": "html_meta",
+            "source": "https://www.iana.org",
+            "observedAt": "2026-04-15T00:04:54.213Z",
+            "detail": "title: \"Internet Assigned Numbers Authority\""
+          },
+          {
+            "kind": "provider_unavailable",
+            "source": "stub",
+            "observedAt": "2026-04-15T00:04:54.215Z",
+            "detail": "GOOGLE_PLACES_API_KEY is not set; no live review data collected"
+          },
+          {
+            "kind": "tool_chain",
+            "source": "meridian_mcp",
+            "observedAt": "2026-04-15T00:04:54.498Z",
+            "detail": "composed from inspect_website (conf 100) + inspect_reviews (conf 0, stub)"
+          }
+        ],
+        "data": {
+          "opportunityLevel": "LOW",
+          "recommendedAction": "MONITOR",
+          "topWeakness": "Domain resolves to IANA placeholder — no real business web presence detected for Lees Summit Roof Pros",
+          "weaknesses": [
+            "Domain points to IANA (iana.org), not a roofing company website — likely misconfigured or placeholder domain",
+            "Missing meta description — weak SEO",
+            "No OpenGraph tags — weak link previews",
+            "Very thin content (6140 bytes) — possible parked or placeholder page",
+            "Review signals unavailable — no live provider configured, review count and ratings unknown"
+          ],
+          "pitchAngle": "Your business has no real web presence — your domain resolves to a generic IANA page, meaning customers searching for you online find nothing, costing you leads every day.",
+          "closeProbability": "Low",
+          "rationale": "The inspection payload reveals that the domain on file for Lees Summit Roof Pros resolves to iana.org (Internet Assigned Numbers Authority), which is a generic internet infrastructure page entirely unrelated to roofing. This strongly indicates the company either has no real website, submitted an incorrect domain, or has a severely misconfigured web presence. Review data is fully stubbed with zero signals available. Because the core business identity cannot be verified from the evidence provided, and both web and review data are effectively absent or invalid, opportunity scoring is unreliable. The pitch angle is valid — a missing or broken web presence is a genuine pain point — but confidence in close probability is low due to thin and unverifiable evidence.",
+          "citedEvidence": [
+            "[html_meta] title: \"Internet Assigned Numbers Authority\" (source: https://www.iana.org)",
+            "[http_status] HTTP 200 in 279ms (6140 bytes) (source: https://www.iana.org)",
+            "[provider_unavailable] GOOGLE_PLACES_API_KEY is not set; no live review data collected (source: stub)",
+            "[tool_chain] composed from inspect_website (conf 100) + inspect_reviews (conf 0, stub) (source: meridian_mcp)"
+          ]
+        },
+        "stub": false,
+        "notes": [
+          "Review signals were stubbed — close probability and opportunity level are capped."
+        ]
+      }
+    },
+    "history": [
+      {
+        "tool": "inspect_website",
+        "timestamp": "2026-04-15T00:04:54.213Z",
+        "result": {
+          "tool": "inspect_website",
+          "company": {
+            "name": "Lees Summit Roof Pros",
+            "domain": "iana.org",
+            "url": "https://www.iana.org",
+            "location": "Lee's Summit"
+          },
+          "timestamp": "2026-04-15T00:04:54.213Z",
+          "confidence": 100,
+          "confidenceLabel": "HIGH",
+          "evidence": [
+            {
+              "kind": "http_status",
+              "source": "https://www.iana.org",
+              "observedAt": "2026-04-15T00:04:54.213Z",
+              "detail": "HTTP 200 in 279ms (6140 bytes)"
+            },
+            {
+              "kind": "html_meta",
+              "source": "https://www.iana.org",
+              "observedAt": "2026-04-15T00:04:54.213Z",
+              "detail": "title: \"Internet Assigned Numbers Authority\""
+            }
+          ],
+          "data": {
+            "reachable": true,
+            "httpStatus": 200,
+            "https": true,
+            "finalUrl": "https://www.iana.org/",
+            "responseMs": 279,
+            "title": "Internet Assigned Numbers Authority",
+            "metaDescription": null,
+            "hasViewport": true,
+            "hasOpenGraph": false,
+            "scriptCount": 3,
+            "imageCount": 0,
+            "linkCount": 34,
+            "contentBytes": 6140,
+            "weaknesses": [
+              "missing meta description — weak SEO",
+              "no OpenGraph tags — weak link previews",
+              "very thin content — possible parked or placeholder page"
+            ]
+          },
+          "stub": false
+        }
+      },
+      {
+        "tool": "inspect_reviews",
+        "timestamp": "2026-04-15T00:04:54.215Z",
+        "result": {
+          "tool": "inspect_reviews",
+          "company": {
+            "name": "Lees Summit Roof Pros",
+            "domain": "https://www.iana.org",
+            "url": "https://www.iana.org",
+            "location": "Lee's Summit"
+          },
+          "timestamp": "2026-04-15T00:04:54.215Z",
+          "confidence": 0,
+          "confidenceLabel": "LOW",
+          "evidence": [
+            {
+              "kind": "provider_unavailable",
+              "source": "stub",
+              "observedAt": "2026-04-15T00:04:54.215Z",
+              "detail": "GOOGLE_PLACES_API_KEY is not set; no live review data collected"
+            }
+          ],
+          "data": {
+            "provider": "stub",
+            "reviewCount": null,
+            "averageRating": null,
+            "lastReviewAt": null,
+            "weaknesses": [
+              "review signals unavailable — no live provider configured"
+            ]
+          },
+          "stub": true,
+          "notes": [
+            "Add GOOGLE_PLACES_API_KEY to .env.local to enable live review data.",
+            "Interface is stable; callers do not need to change when live mode is enabled."
+          ]
+        }
+      },
+      {
+        "tool": "generate_opportunity_summary",
+        "timestamp": "2026-04-15T00:04:54.498Z",
+        "result": {
+          "tool": "generate_opportunity_summary",
+          "company": {
+            "name": "Lees Summit Roof Pros",
+            "domain": "https://www.iana.org",
+            "url": "https://www.iana.org",
+            "location": "Lee's Summit"
+          },
+          "timestamp": "2026-04-15T00:04:54.498Z",
+          "confidence": 65,
+          "confidenceLabel": "MEDIUM",
+          "evidence": [
+            {
+              "kind": "http_status",
+              "source": "https://www.iana.org",
+              "observedAt": "2026-04-15T00:04:54.213Z",
+              "detail": "HTTP 200 in 279ms (6140 bytes)"
+            },
+            {
+              "kind": "html_meta",
+              "source": "https://www.iana.org",
+              "observedAt": "2026-04-15T00:04:54.213Z",
+              "detail": "title: \"Internet Assigned Numbers Authority\""
+            },
+            {
+              "kind": "provider_unavailable",
+              "source": "stub",
+              "observedAt": "2026-04-15T00:04:54.215Z",
+              "detail": "GOOGLE_PLACES_API_KEY is not set; no live review data collected"
+            },
+            {
+              "kind": "tool_chain",
+              "source": "meridian_mcp",
+              "observedAt": "2026-04-15T00:04:54.498Z",
+              "detail": "composed from inspect_website (conf 100) + inspect_reviews (conf 0, stub)"
+            }
+          ],
+          "data": {
+            "opportunityLevel": "LOW",
+            "recommendedAction": "MONITOR",
+            "topWeakness": "Domain resolves to IANA placeholder — no real business web presence detected for Lees Summit Roof Pros",
+            "weaknesses": [
+              "Domain points to IANA (iana.org), not a roofing company website — likely misconfigured or placeholder domain",
+              "Missing meta description — weak SEO",
+              "No OpenGraph tags — weak link previews",
+              "Very thin content (6140 bytes) — possible parked or placeholder page",
+              "Review signals unavailable — no live provider configured, review count and ratings unknown"
+            ],
+            "pitchAngle": "Your business has no real web presence — your domain resolves to a generic IANA page, meaning customers searching for you online find nothing, costing you leads every day.",
+            "closeProbability": "Low",
+            "rationale": "The inspection payload reveals that the domain on file for Lees Summit Roof Pros resolves to iana.org (Internet Assigned Numbers Authority), which is a generic internet infrastructure page entirely unrelated to roofing. This strongly indicates the company either has no real website, submitted an incorrect domain, or has a severely misconfigured web presence. Review data is fully stubbed with zero signals available. Because the core business identity cannot be verified from the evidence provided, and both web and review data are effectively absent or invalid, opportunity scoring is unreliable. The pitch angle is valid — a missing or broken web presence is a genuine pain point — but confidence in close probability is low due to thin and unverifiable evidence.",
+            "citedEvidence": [
+              "[html_meta] title: \"Internet Assigned Numbers Authority\" (source: https://www.iana.org)",
+              "[http_status] HTTP 200 in 279ms (6140 bytes) (source: https://www.iana.org)",
+              "[provider_unavailable] GOOGLE_PLACES_API_KEY is not set; no live review data collected (source: stub)",
+              "[tool_chain] composed from inspect_website (conf 100) + inspect_reviews (conf 0, stub) (source: meridian_mcp)"
+            ]
+          },
+          "stub": false,
+          "notes": [
+            "Review signals were stubbed — close probability and opportunity level are capped."
+          ]
+        }
+      }
+    ],
+    "statusHistory": [],
+    "notes": [],
+    "scoreHistory": [
+      {
+        "at": "2026-04-15T00:04:54.498Z",
+        "opportunityLevel": "LOW",
+        "confidence": 65,
+        "recommendedAction": "MONITOR",
+        "sourceTool": "generate_opportunity_summary"
+      }
+    ],
+    "lastCheckedAt": "2026-04-15T00:05:04.763Z"
+  },
+  "domain:example.net": {
+    "key": "domain:example.net",
+    "company": {
+      "name": "Olathe Roofing",
+      "domain": "https://example.net",
+      "url": "https://example.net",
+      "location": "Olathe"
+    },
+    "createdAt": "2026-04-15T00:05:02.652Z",
+    "updatedAt": "2026-04-15T00:05:12.815Z",
+    "latest": {
+      "inspect_website": {
+        "tool": "inspect_website",
+        "company": {
+          "name": "Olathe Roofing",
+          "domain": "example.net",
+          "url": "https://example.net",
+          "location": "Olathe"
+        },
+        "timestamp": "2026-04-15T00:05:02.581Z",
+        "confidence": 10,
+        "confidenceLabel": "LOW",
+        "evidence": [
+          {
+            "kind": "fetch_error",
+            "source": "https://example.net",
+            "observedAt": "2026-04-15T00:05:02.581Z",
+            "detail": "fetch failed"
+          }
+        ],
+        "data": {
+          "reachable": false,
+          "httpStatus": null,
+          "https": true,
+          "finalUrl": null,
+          "responseMs": null,
+          "title": null,
+          "metaDescription": null,
+          "hasViewport": false,
+          "hasOpenGraph": false,
+          "scriptCount": 0,
+          "imageCount": 0,
+          "linkCount": 0,
+          "contentBytes": 0,
+          "weaknesses": [
+            "site unreachable or blocked"
+          ]
+        },
+        "stub": false,
+        "error": "fetch failed"
+      },
+      "inspect_reviews": {
+        "tool": "inspect_reviews",
+        "company": {
+          "name": "Olathe Roofing",
+          "domain": "https://example.net",
+          "url": "https://example.net",
+          "location": "Olathe"
+        },
+        "timestamp": "2026-04-15T00:05:02.583Z",
+        "confidence": 0,
+        "confidenceLabel": "LOW",
+        "evidence": [
+          {
+            "kind": "provider_unavailable",
+            "source": "stub",
+            "observedAt": "2026-04-15T00:05:02.583Z",
+            "detail": "GOOGLE_PLACES_API_KEY is not set; no live review data collected"
+          }
+        ],
+        "data": {
+          "provider": "stub",
+          "reviewCount": null,
+          "averageRating": null,
+          "lastReviewAt": null,
+          "weaknesses": [
+            "review signals unavailable — no live provider configured"
+          ]
+        },
+        "stub": true,
+        "notes": [
+          "Add GOOGLE_PLACES_API_KEY to .env.local to enable live review data.",
+          "Interface is stable; callers do not need to change when live mode is enabled."
+        ]
+      },
+      "generate_opportunity_summary": {
+        "tool": "generate_opportunity_summary",
+        "company": {
+          "name": "Olathe Roofing",
+          "domain": "https://example.net",
+          "url": "https://example.net",
+          "location": "Olathe"
+        },
+        "timestamp": "2026-04-15T00:05:02.655Z",
+        "confidence": 20,
+        "confidenceLabel": "LOW",
+        "evidence": [
+          {
+            "kind": "fetch_error",
+            "source": "https://example.net",
+            "observedAt": "2026-04-15T00:05:02.581Z",
+            "detail": "fetch failed"
+          },
+          {
+            "kind": "provider_unavailable",
+            "source": "stub",
+            "observedAt": "2026-04-15T00:05:02.583Z",
+            "detail": "GOOGLE_PLACES_API_KEY is not set; no live review data collected"
+          },
+          {
+            "kind": "tool_chain",
+            "source": "meridian_mcp",
+            "observedAt": "2026-04-15T00:05:02.655Z",
+            "detail": "composed from inspect_website (conf 10) + inspect_reviews (conf 0, stub)"
+          }
+        ],
+        "data": {
+          "opportunityLevel": "LOW",
+          "recommendedAction": "MONITOR",
+          "topWeakness": "Website is completely unreachable, meaning Olathe Roofing has no functioning web presence to capture leads.",
+          "weaknesses": [
+            "Website unreachable — returned no HTTP response and zero content",
+            "No mobile viewport, Open Graph tags, or any detectable on-page SEO signals",
+            "Review data entirely unavailable — no rating, review count, or recency data collected",
+            "Inspection confidence is critically low (composite score: 10/100) due to stub review provider and failed site fetch"
+          ],
+          "pitchAngle": "Your website is completely offline right now, meaning every potential customer searching for a roofer in Olathe is landing on a dead page — we can fix that today.",
+          "closeProbability": "Low",
+          "rationale": "Evidence quality is too thin to make a high-confidence opportunity call. The website fetch failed entirely, yielding zero content signals, and review data was not collected due to a missing API key. While a dead website is a genuine and urgent weakness for a local roofing company, the lack of corroborating signals (reviews, ratings, on-page content) means the full competitive picture is unknown. Opportunity level is LOW not because the lead is uninteresting, but because the evidence base is insufficient to justify HIGH or MEDIUM with confidence. Recommend re-inspection with a live Google Places key and manual verification of the domain before outreach.",
+          "citedEvidence": [
+            "[fetch_error] fetch failed (source: https://example.net)",
+            "[provider_unavailable] GOOGLE_PLACES_API_KEY is not set; no live review data collected (source: stub)",
+            "[tool_chain] composed from inspect_website (conf 10) + inspect_reviews (conf 0, stub) (source: meridian_mcp)",
+            "website.reachable: false",
+            "website.hasViewport: false",
+            "website.hasOpenGraph: false",
+            "website.contentBytes: 0",
+            "reviews.reviewCount: null",
+            "reviews.averageRating: null"
+          ]
+        },
+        "stub": false,
+        "notes": [
+          "Review signals were stubbed — close probability and opportunity level are capped."
+        ]
+      }
+    },
+    "history": [
+      {
+        "tool": "inspect_website",
+        "timestamp": "2026-04-15T00:05:02.581Z",
+        "result": {
+          "tool": "inspect_website",
+          "company": {
+            "name": "Olathe Roofing",
+            "domain": "example.net",
+            "url": "https://example.net",
+            "location": "Olathe"
+          },
+          "timestamp": "2026-04-15T00:05:02.581Z",
+          "confidence": 10,
+          "confidenceLabel": "LOW",
+          "evidence": [
+            {
+              "kind": "fetch_error",
+              "source": "https://example.net",
+              "observedAt": "2026-04-15T00:05:02.581Z",
+              "detail": "fetch failed"
+            }
+          ],
+          "data": {
+            "reachable": false,
+            "httpStatus": null,
+            "https": true,
+            "finalUrl": null,
+            "responseMs": null,
+            "title": null,
+            "metaDescription": null,
+            "hasViewport": false,
+            "hasOpenGraph": false,
+            "scriptCount": 0,
+            "imageCount": 0,
+            "linkCount": 0,
+            "contentBytes": 0,
+            "weaknesses": [
+              "site unreachable or blocked"
+            ]
+          },
+          "stub": false,
+          "error": "fetch failed"
+        }
+      },
+      {
+        "tool": "inspect_reviews",
+        "timestamp": "2026-04-15T00:05:02.583Z",
+        "result": {
+          "tool": "inspect_reviews",
+          "company": {
+            "name": "Olathe Roofing",
+            "domain": "https://example.net",
+            "url": "https://example.net",
+            "location": "Olathe"
+          },
+          "timestamp": "2026-04-15T00:05:02.583Z",
+          "confidence": 0,
+          "confidenceLabel": "LOW",
+          "evidence": [
+            {
+              "kind": "provider_unavailable",
+              "source": "stub",
+              "observedAt": "2026-04-15T00:05:02.583Z",
+              "detail": "GOOGLE_PLACES_API_KEY is not set; no live review data collected"
+            }
+          ],
+          "data": {
+            "provider": "stub",
+            "reviewCount": null,
+            "averageRating": null,
+            "lastReviewAt": null,
+            "weaknesses": [
+              "review signals unavailable — no live provider configured"
+            ]
+          },
+          "stub": true,
+          "notes": [
+            "Add GOOGLE_PLACES_API_KEY to .env.local to enable live review data.",
+            "Interface is stable; callers do not need to change when live mode is enabled."
+          ]
+        }
+      },
+      {
+        "tool": "generate_opportunity_summary",
+        "timestamp": "2026-04-15T00:05:02.655Z",
+        "result": {
+          "tool": "generate_opportunity_summary",
+          "company": {
+            "name": "Olathe Roofing",
+            "domain": "https://example.net",
+            "url": "https://example.net",
+            "location": "Olathe"
+          },
+          "timestamp": "2026-04-15T00:05:02.655Z",
+          "confidence": 20,
+          "confidenceLabel": "LOW",
+          "evidence": [
+            {
+              "kind": "fetch_error",
+              "source": "https://example.net",
+              "observedAt": "2026-04-15T00:05:02.581Z",
+              "detail": "fetch failed"
+            },
+            {
+              "kind": "provider_unavailable",
+              "source": "stub",
+              "observedAt": "2026-04-15T00:05:02.583Z",
+              "detail": "GOOGLE_PLACES_API_KEY is not set; no live review data collected"
+            },
+            {
+              "kind": "tool_chain",
+              "source": "meridian_mcp",
+              "observedAt": "2026-04-15T00:05:02.655Z",
+              "detail": "composed from inspect_website (conf 10) + inspect_reviews (conf 0, stub)"
+            }
+          ],
+          "data": {
+            "opportunityLevel": "LOW",
+            "recommendedAction": "MONITOR",
+            "topWeakness": "Website is completely unreachable, meaning Olathe Roofing has no functioning web presence to capture leads.",
+            "weaknesses": [
+              "Website unreachable — returned no HTTP response and zero content",
+              "No mobile viewport, Open Graph tags, or any detectable on-page SEO signals",
+              "Review data entirely unavailable — no rating, review count, or recency data collected",
+              "Inspection confidence is critically low (composite score: 10/100) due to stub review provider and failed site fetch"
+            ],
+            "pitchAngle": "Your website is completely offline right now, meaning every potential customer searching for a roofer in Olathe is landing on a dead page — we can fix that today.",
+            "closeProbability": "Low",
+            "rationale": "Evidence quality is too thin to make a high-confidence opportunity call. The website fetch failed entirely, yielding zero content signals, and review data was not collected due to a missing API key. While a dead website is a genuine and urgent weakness for a local roofing company, the lack of corroborating signals (reviews, ratings, on-page content) means the full competitive picture is unknown. Opportunity level is LOW not because the lead is uninteresting, but because the evidence base is insufficient to justify HIGH or MEDIUM with confidence. Recommend re-inspection with a live Google Places key and manual verification of the domain before outreach.",
+            "citedEvidence": [
+              "[fetch_error] fetch failed (source: https://example.net)",
+              "[provider_unavailable] GOOGLE_PLACES_API_KEY is not set; no live review data collected (source: stub)",
+              "[tool_chain] composed from inspect_website (conf 10) + inspect_reviews (conf 0, stub) (source: meridian_mcp)",
+              "website.reachable: false",
+              "website.hasViewport: false",
+              "website.hasOpenGraph: false",
+              "website.contentBytes: 0",
+              "reviews.reviewCount: null",
+              "reviews.averageRating: null"
+            ]
+          },
+          "stub": false,
+          "notes": [
+            "Review signals were stubbed — close probability and opportunity level are capped."
+          ]
+        }
+      }
+    ],
+    "statusHistory": [],
+    "notes": [],
+    "scoreHistory": [
+      {
+        "at": "2026-04-15T00:05:02.655Z",
+        "opportunityLevel": "LOW",
+        "confidence": 20,
+        "recommendedAction": "MONITOR",
+        "sourceTool": "generate_opportunity_summary"
+      }
+    ],
+    "lastCheckedAt": "2026-04-15T00:05:12.815Z"
+  },
+  "domain:w3.org": {
+    "key": "domain:w3.org",
+    "company": {
+      "name": "Liberty Top Roof",
+      "domain": "https://www.w3.org",
+      "url": "https://www.w3.org",
+      "location": "Liberty"
+    },
+    "createdAt": "2026-04-15T00:05:04.816Z",
+    "updatedAt": "2026-04-15T00:05:13.530Z",
+    "latest": {
+      "inspect_website": {
+        "tool": "inspect_website",
+        "company": {
+          "name": "Liberty Top Roof",
+          "domain": "w3.org",
+          "url": "https://www.w3.org",
+          "location": "Liberty"
+        },
+        "timestamp": "2026-04-15T00:05:04.772Z",
+        "confidence": 100,
+        "confidenceLabel": "HIGH",
+        "evidence": [
+          {
+            "kind": "http_status",
+            "source": "https://www.w3.org",
+            "observedAt": "2026-04-15T00:05:04.772Z",
+            "detail": "HTTP 200 in 40ms (51566 bytes)"
+          },
+          {
+            "kind": "html_meta",
+            "source": "https://www.w3.org",
+            "observedAt": "2026-04-15T00:05:04.772Z",
+            "detail": "meta description: \"The World Wide Web Consortium (W3C) develops standards and guidelines to help everyone build a web based on the principl\""
+          },
+          {
+            "kind": "html_meta",
+            "source": "https://www.w3.org",
+            "observedAt": "2026-04-15T00:05:04.772Z",
+            "detail": "title: \"W3C\""
+          }
+        ],
+        "data": {
+          "reachable": true,
+          "httpStatus": 200,
+          "https": true,
+          "finalUrl": "https://www.w3.org/",
+          "responseMs": 40,
+          "title": "W3C",
+          "metaDescription": "The World Wide Web Consortium (W3C) develops standards and guidelines to help everyone build a web based on the principles of accessibility, internationalization, privacy and security.",
+          "hasViewport": true,
+          "hasOpenGraph": true,
+          "scriptCount": 4,
+          "imageCount": 8,
+          "linkCount": 97,
+          "contentBytes": 51566,
+          "weaknesses": []
+        },
+        "stub": false
+      },
+      "inspect_reviews": {
+        "tool": "inspect_reviews",
+        "company": {
+          "name": "Liberty Top Roof",
+          "domain": "https://www.w3.org",
+          "url": "https://www.w3.org",
+          "location": "Liberty"
+        },
+        "timestamp": "2026-04-15T00:05:04.775Z",
+        "confidence": 0,
+        "confidenceLabel": "LOW",
+        "evidence": [
+          {
+            "kind": "provider_unavailable",
+            "source": "stub",
+            "observedAt": "2026-04-15T00:05:04.775Z",
+            "detail": "GOOGLE_PLACES_API_KEY is not set; no live review data collected"
+          }
+        ],
+        "data": {
+          "provider": "stub",
+          "reviewCount": null,
+          "averageRating": null,
+          "lastReviewAt": null,
+          "weaknesses": [
+            "review signals unavailable — no live provider configured"
+          ]
+        },
+        "stub": true,
+        "notes": [
+          "Add GOOGLE_PLACES_API_KEY to .env.local to enable live review data.",
+          "Interface is stable; callers do not need to change when live mode is enabled."
+        ]
+      },
+      "generate_opportunity_summary": {
+        "tool": "generate_opportunity_summary",
+        "company": {
+          "name": "Liberty Top Roof",
+          "domain": "https://www.w3.org",
+          "url": "https://www.w3.org",
+          "location": "Liberty"
+        },
+        "timestamp": "2026-04-15T00:05:04.820Z",
+        "confidence": 65,
+        "confidenceLabel": "MEDIUM",
+        "evidence": [
+          {
+            "kind": "http_status",
+            "source": "https://www.w3.org",
+            "observedAt": "2026-04-15T00:05:04.772Z",
+            "detail": "HTTP 200 in 40ms (51566 bytes)"
+          },
+          {
+            "kind": "html_meta",
+            "source": "https://www.w3.org",
+            "observedAt": "2026-04-15T00:05:04.772Z",
+            "detail": "meta description: \"The World Wide Web Consortium (W3C) develops standards and guidelines to help everyone build a web based on the principl\""
+          },
+          {
+            "kind": "html_meta",
+            "source": "https://www.w3.org",
+            "observedAt": "2026-04-15T00:05:04.772Z",
+            "detail": "title: \"W3C\""
+          },
+          {
+            "kind": "provider_unavailable",
+            "source": "stub",
+            "observedAt": "2026-04-15T00:05:04.775Z",
+            "detail": "GOOGLE_PLACES_API_KEY is not set; no live review data collected"
+          },
+          {
+            "kind": "tool_chain",
+            "source": "meridian_mcp",
+            "observedAt": "2026-04-15T00:05:04.820Z",
+            "detail": "composed from inspect_website (conf 100) + inspect_reviews (conf 0, stub)"
+          }
+        ],
+        "data": {
+          "opportunityLevel": "LOW",
+          "recommendedAction": "MONITOR",
+          "topWeakness": "Review signals are entirely unavailable due to no live provider configured, making reputation assessment impossible.",
+          "weaknesses": [
+            "Review data is stubbed — no review count, average rating, or recency available",
+            "Website domain resolves to W3C (www.w3.org), not a legitimate business web presence for Liberty Top Roof",
+            "No business-specific meta description or branding found on the detected website",
+            "Inspection confidence is critically low (composite confidence degraded by 0-confidence review stub)"
+          ],
+          "pitchAngle": "Liberty Top Roof has no verifiable online review presence and no legitimate business website, meaning they are invisible to local customers actively searching for roofing services.",
+          "closeProbability": "Low",
+          "rationale": "The inspection payload contains critically thin and unreliable evidence. The domain on file resolves to W3C (the web standards body), not a roofing company — indicating a data entry error or placeholder domain. Review data is fully stubbed with zero live signals. There is no evidence of a real business web presence, reputation metrics, or identifiable weaknesses to target with a specific solution. Until accurate company data (correct domain, live review provider) is available, no confident opportunity assessment can be made.",
+          "citedEvidence": [
+            "[html_meta] title: \"W3C\" (source: https://www.w3.org)",
+            "[html_meta] meta description: \"The World Wide Web Consortium (W3C) develops standards and guidelines to help everyone build a web based on the principl\" (source: https://www.w3.org)",
+            "[provider_unavailable] GOOGLE_PLACES_API_KEY is not set; no live review data collected (source: stub)",
+            "[tool_chain] composed from inspect_website (conf 100) + inspect_reviews (conf 0, stub) (source: meridian_mcp)"
+          ]
+        },
+        "stub": false,
+        "notes": [
+          "Review signals were stubbed — close probability and opportunity level are capped."
+        ]
+      }
+    },
+    "history": [
+      {
+        "tool": "inspect_website",
+        "timestamp": "2026-04-15T00:05:04.772Z",
+        "result": {
+          "tool": "inspect_website",
+          "company": {
+            "name": "Liberty Top Roof",
+            "domain": "w3.org",
+            "url": "https://www.w3.org",
+            "location": "Liberty"
+          },
+          "timestamp": "2026-04-15T00:05:04.772Z",
+          "confidence": 100,
+          "confidenceLabel": "HIGH",
+          "evidence": [
+            {
+              "kind": "http_status",
+              "source": "https://www.w3.org",
+              "observedAt": "2026-04-15T00:05:04.772Z",
+              "detail": "HTTP 200 in 40ms (51566 bytes)"
+            },
+            {
+              "kind": "html_meta",
+              "source": "https://www.w3.org",
+              "observedAt": "2026-04-15T00:05:04.772Z",
+              "detail": "meta description: \"The World Wide Web Consortium (W3C) develops standards and guidelines to help everyone build a web based on the principl\""
+            },
+            {
+              "kind": "html_meta",
+              "source": "https://www.w3.org",
+              "observedAt": "2026-04-15T00:05:04.772Z",
+              "detail": "title: \"W3C\""
+            }
+          ],
+          "data": {
+            "reachable": true,
+            "httpStatus": 200,
+            "https": true,
+            "finalUrl": "https://www.w3.org/",
+            "responseMs": 40,
+            "title": "W3C",
+            "metaDescription": "The World Wide Web Consortium (W3C) develops standards and guidelines to help everyone build a web based on the principles of accessibility, internationalization, privacy and security.",
+            "hasViewport": true,
+            "hasOpenGraph": true,
+            "scriptCount": 4,
+            "imageCount": 8,
+            "linkCount": 97,
+            "contentBytes": 51566,
+            "weaknesses": []
+          },
+          "stub": false
+        }
+      },
+      {
+        "tool": "inspect_reviews",
+        "timestamp": "2026-04-15T00:05:04.775Z",
+        "result": {
+          "tool": "inspect_reviews",
+          "company": {
+            "name": "Liberty Top Roof",
+            "domain": "https://www.w3.org",
+            "url": "https://www.w3.org",
+            "location": "Liberty"
+          },
+          "timestamp": "2026-04-15T00:05:04.775Z",
+          "confidence": 0,
+          "confidenceLabel": "LOW",
+          "evidence": [
+            {
+              "kind": "provider_unavailable",
+              "source": "stub",
+              "observedAt": "2026-04-15T00:05:04.775Z",
+              "detail": "GOOGLE_PLACES_API_KEY is not set; no live review data collected"
+            }
+          ],
+          "data": {
+            "provider": "stub",
+            "reviewCount": null,
+            "averageRating": null,
+            "lastReviewAt": null,
+            "weaknesses": [
+              "review signals unavailable — no live provider configured"
+            ]
+          },
+          "stub": true,
+          "notes": [
+            "Add GOOGLE_PLACES_API_KEY to .env.local to enable live review data.",
+            "Interface is stable; callers do not need to change when live mode is enabled."
+          ]
+        }
+      },
+      {
+        "tool": "generate_opportunity_summary",
+        "timestamp": "2026-04-15T00:05:04.820Z",
+        "result": {
+          "tool": "generate_opportunity_summary",
+          "company": {
+            "name": "Liberty Top Roof",
+            "domain": "https://www.w3.org",
+            "url": "https://www.w3.org",
+            "location": "Liberty"
+          },
+          "timestamp": "2026-04-15T00:05:04.820Z",
+          "confidence": 65,
+          "confidenceLabel": "MEDIUM",
+          "evidence": [
+            {
+              "kind": "http_status",
+              "source": "https://www.w3.org",
+              "observedAt": "2026-04-15T00:05:04.772Z",
+              "detail": "HTTP 200 in 40ms (51566 bytes)"
+            },
+            {
+              "kind": "html_meta",
+              "source": "https://www.w3.org",
+              "observedAt": "2026-04-15T00:05:04.772Z",
+              "detail": "meta description: \"The World Wide Web Consortium (W3C) develops standards and guidelines to help everyone build a web based on the principl\""
+            },
+            {
+              "kind": "html_meta",
+              "source": "https://www.w3.org",
+              "observedAt": "2026-04-15T00:05:04.772Z",
+              "detail": "title: \"W3C\""
+            },
+            {
+              "kind": "provider_unavailable",
+              "source": "stub",
+              "observedAt": "2026-04-15T00:05:04.775Z",
+              "detail": "GOOGLE_PLACES_API_KEY is not set; no live review data collected"
+            },
+            {
+              "kind": "tool_chain",
+              "source": "meridian_mcp",
+              "observedAt": "2026-04-15T00:05:04.820Z",
+              "detail": "composed from inspect_website (conf 100) + inspect_reviews (conf 0, stub)"
+            }
+          ],
+          "data": {
+            "opportunityLevel": "LOW",
+            "recommendedAction": "MONITOR",
+            "topWeakness": "Review signals are entirely unavailable due to no live provider configured, making reputation assessment impossible.",
+            "weaknesses": [
+              "Review data is stubbed — no review count, average rating, or recency available",
+              "Website domain resolves to W3C (www.w3.org), not a legitimate business web presence for Liberty Top Roof",
+              "No business-specific meta description or branding found on the detected website",
+              "Inspection confidence is critically low (composite confidence degraded by 0-confidence review stub)"
+            ],
+            "pitchAngle": "Liberty Top Roof has no verifiable online review presence and no legitimate business website, meaning they are invisible to local customers actively searching for roofing services.",
+            "closeProbability": "Low",
+            "rationale": "The inspection payload contains critically thin and unreliable evidence. The domain on file resolves to W3C (the web standards body), not a roofing company — indicating a data entry error or placeholder domain. Review data is fully stubbed with zero live signals. There is no evidence of a real business web presence, reputation metrics, or identifiable weaknesses to target with a specific solution. Until accurate company data (correct domain, live review provider) is available, no confident opportunity assessment can be made.",
+            "citedEvidence": [
+              "[html_meta] title: \"W3C\" (source: https://www.w3.org)",
+              "[html_meta] meta description: \"The World Wide Web Consortium (W3C) develops standards and guidelines to help everyone build a web based on the principl\" (source: https://www.w3.org)",
+              "[provider_unavailable] GOOGLE_PLACES_API_KEY is not set; no live review data collected (source: stub)",
+              "[tool_chain] composed from inspect_website (conf 100) + inspect_reviews (conf 0, stub) (source: meridian_mcp)"
+            ]
+          },
+          "stub": false,
+          "notes": [
+            "Review signals were stubbed — close probability and opportunity level are capped."
+          ]
+        }
+      }
+    ],
+    "statusHistory": [],
+    "notes": [],
+    "scoreHistory": [
+      {
+        "at": "2026-04-15T00:05:04.820Z",
+        "opportunityLevel": "LOW",
+        "confidence": 65,
+        "recommendedAction": "MONITOR",
+        "sourceTool": "generate_opportunity_summary"
+      }
+    ],
+    "lastCheckedAt": "2026-04-15T00:05:13.530Z"
+  }
+}

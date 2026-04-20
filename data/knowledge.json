@@ -1,0 +1,29 @@
+{
+  "da298d21-d3a4-4c19-b0f2-d86b8031ed79": {
+    "id": "da298d21-d3a4-4c19-b0f2-d86b8031ed79",
+    "kind": "pitch_playbook",
+    "title": "Thin Website Angle",
+    "tags": [
+      "thin",
+      "seo",
+      "website"
+    ],
+    "body": "Open with: 'Your site is loading under 1KB — prospects Google you and bounce.' Tie to weaknesses from inspect_website.",
+    "createdBy": "dylan",
+    "createdAt": "2026-04-14T23:26:48.121Z",
+    "updatedAt": "2026-04-14T23:26:48.121Z"
+  },
+  "209779ce-a665-4ff1-b28d-91e656d65abe": {
+    "id": "209779ce-a665-4ff1-b28d-91e656d65abe",
+    "kind": "objection_handling",
+    "title": "Too Expensive",
+    "tags": [
+      "price",
+      "objection"
+    ],
+    "body": "Reframe price as cost-of-inaction. Use review-volume gap or site-bounce estimate from inspection.",
+    "createdBy": "dylan",
+    "createdAt": "2026-04-14T23:26:48.191Z",
+    "updatedAt": "2026-04-14T23:26:48.191Z"
+  }
+}

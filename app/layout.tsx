@@ -1,28 +1,4 @@
-import { getSession } from "../lib/auth";
-import { redirect } from "next/navigation";
-import { headers } from "next/headers";
-
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const session = await getSession();
-
-  const acceptHeader = headers().get("accept") || "";
-
-  const isApiRequest = !acceptHeader.includes("text/html");
-
-  // ✅ Allow API requests (curl, fetch, etc.)
-  if (!session && isApiRequest) {
-    return (
-      <html lang="en">
-        <body>{children}</body>
-      </html>
-    );
-  }
-
-  // ✅ Protect real pages
-  if (!session) {
-    redirect("/login");
-  }
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>{children}</body>

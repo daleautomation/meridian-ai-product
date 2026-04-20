@@ -1,0 +1,32 @@
+{
+  "220e37d5-2faa-423a-bda5-33d8795d7320": {
+    "kind": "summary_grounding",
+    "subjectKey": "domain:example.com",
+    "subjectLabel": "Example",
+    "verdict": "PASS",
+    "rubric": "Evidence cited correctly",
+    "evaluator": "dylan",
+    "id": "220e37d5-2faa-423a-bda5-33d8795d7320",
+    "createdAt": "2026-04-14T23:26:47.903Z"
+  },
+  "4dfa7a9e-9210-4a00-b4fc-5a401f627fbe": {
+    "kind": "weakness_identification",
+    "subjectKey": "domain:example.com",
+    "subjectLabel": "Example",
+    "verdict": "PARTIAL",
+    "rubric": "Caught 2 of 3 real weaknesses",
+    "evaluator": "dylan",
+    "id": "4dfa7a9e-9210-4a00-b4fc-5a401f627fbe",
+    "createdAt": "2026-04-14T23:26:47.942Z"
+  },
+  "d76f7d71-5147-498f-91c5-2e4936f29744": {
+    "kind": "pitch_relevance",
+    "subjectKey": "domain:example.com",
+    "subjectLabel": "Example",
+    "verdict": "FAIL",
+    "rubric": "Pitch was generic, not tied to thin site",
+    "evaluator": "dylan",
+    "id": "d76f7d71-5147-498f-91c5-2e4936f29744",
+    "createdAt": "2026-04-14T23:26:47.978Z"
+  }
+}

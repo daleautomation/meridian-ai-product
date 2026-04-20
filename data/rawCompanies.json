@@ -1,0 +1,141 @@
+{
+  "d:example.com": {
+    "name": "Blue Sky Solar",
+    "city": "Shawnee",
+    "state": "KS",
+    "zip": "66216",
+    "website": "https://example.com",
+    "phone": "913-555-0606",
+    "category": "solar only",
+    "source": "manual_seed_kc_roofing",
+    "collectedAt": "2026-04-15T00:04:54.126Z",
+    "key": "d:example.com",
+    "prefilter": {
+      "verdict": "FILTERED",
+      "reasons": [
+        "non_roofing_category (solar only)"
+      ],
+      "decidedAt": "2026-04-15T00:04:54.167Z"
+    }
+  },
+  "d:example.org": {
+    "name": "Overland Park Roofing",
+    "city": "Overland Park",
+    "state": "KS",
+    "zip": "66210",
+    "website": "https://example.org",
+    "phone": "913-555-0202",
+    "category": "residential roofing",
+    "source": "manual_seed_kc_roofing",
+    "collectedAt": "2026-04-15T00:04:54.127Z",
+    "key": "d:example.org",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-15T00:04:54.167Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-15T00:04:54.205Z",
+      "completedAt": "2026-04-15T00:05:02.577Z"
+    }
+  },
+  "d:iana.org": {
+    "name": "Lees Summit Roof Pros",
+    "city": "Lee's Summit",
+    "state": "MO",
+    "zip": "64063",
+    "website": "https://www.iana.org",
+    "phone": "816-555-0303",
+    "category": "roofing",
+    "source": "manual_seed_kc_roofing",
+    "collectedAt": "2026-04-15T00:04:54.127Z",
+    "key": "d:iana.org",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-15T00:04:54.167Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-15T00:04:54.205Z",
+      "completedAt": "2026-04-15T00:05:04.764Z"
+    }
+  },
+  "d:example.net": {
+    "name": "Olathe Roofing",
+    "city": "Olathe",
+    "state": "KS",
+    "zip": "66061",
+    "website": "https://example.net",
+    "phone": "913-555-0404",
+    "category": "roofing",
+    "source": "manual_seed_kc_roofing",
+    "collectedAt": "2026-04-15T00:04:54.127Z",
+    "key": "d:example.net",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-15T00:04:54.167Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-15T00:05:02.579Z",
+      "completedAt": "2026-04-15T00:05:12.816Z"
+    }
+  },
+  "d:homedepot.com": {
+    "name": "Home Depot",
+    "city": "Kansas City",
+    "state": "MO",
+    "zip": "64111",
+    "website": "https://homedepot.com",
+    "phone": "800-466-3337",
+    "category": "retail",
+    "source": "manual_seed_kc_roofing",
+    "collectedAt": "2026-04-15T00:04:54.127Z",
+    "key": "d:homedepot.com",
+    "prefilter": {
+      "verdict": "FILTERED",
+      "reasons": [
+        "national_brand (home depot)"
+      ],
+      "decidedAt": "2026-04-15T00:04:54.167Z"
+    }
+  },
+  "n:ghost roofing llc": {
+    "name": "Ghost Roofing LLC",
+    "city": "Raytown",
+    "state": "MO",
+    "zip": "64133",
+    "category": "roofing",
+    "source": "manual_seed_kc_roofing",
+    "collectedAt": "2026-04-15T00:04:54.127Z",
+    "key": "n:ghost roofing llc",
+    "prefilter": {
+      "verdict": "FILTERED",
+      "reasons": [
+        "no_footprint (neither website nor phone)"
+      ],
+      "decidedAt": "2026-04-15T00:04:54.167Z"
+    }
+  },
+  "d:w3.org": {
+    "name": "Liberty Top Roof",
+    "city": "Liberty",
+    "state": "MO",
+    "zip": "64068",
+    "website": "https://www.w3.org",
+    "phone": "816-555-0707",
+    "category": "roofing",
+    "source": "manual_seed_kc_roofing",
+    "collectedAt": "2026-04-15T00:04:54.127Z",
+    "key": "d:w3.org",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-15T00:04:54.167Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-15T00:05:04.768Z",
+      "completedAt": "2026-04-15T00:05:13.533Z"
+    }
+  }
+}
