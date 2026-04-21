@@ -1,8 +1,6 @@
-node_modules/
-.next/
+node_modules
+.next
 .env
 .env.local
-.dist
-coverage/
-*.log
+dist
 .DS_Store
