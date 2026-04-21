@@ -137,5 +137,2343 @@
       "startedAt": "2026-04-15T00:05:04.768Z",
       "completedAt": "2026-04-15T00:05:13.533Z"
     }
+  },
+  "d:arroofingkc.com": {
+    "name": "A&R Roofing",
+    "city": "Kansas City",
+    "state": "MO",
+    "zip": "64111",
+    "website": "https://arroofingkc.com",
+    "phone": "816-555-0101",
+    "category": "residential roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:arroofingkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:47:15.175Z",
+      "completedAt": "2026-04-20T17:47:25.048Z"
+    }
+  },
+  "d:advantageroofingkc.com": {
+    "name": "Advantage Roofing",
+    "city": "Overland Park",
+    "state": "KS",
+    "zip": "66210",
+    "website": "https://advantageroofingkc.com",
+    "phone": "913-555-0102",
+    "category": "residential roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:advantageroofingkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:47:15.175Z",
+      "completedAt": "2026-04-20T17:47:23.786Z"
+    }
+  },
+  "d:allweatherroof.com": {
+    "name": "All Weather Roofing",
+    "city": "Lee's Summit",
+    "state": "MO",
+    "zip": "64063",
+    "website": "https://allweatherroof.com",
+    "phone": "816-555-0103",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:allweatherroof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:47:23.788Z",
+      "completedAt": "2026-04-20T17:47:35.139Z"
+    }
+  },
+  "d:alliedroof.com": {
+    "name": "Allied Roofing Solutions",
+    "city": "Olathe",
+    "state": "KS",
+    "zip": "66061",
+    "website": "https://alliedroof.com",
+    "phone": "913-555-0104",
+    "category": "residential roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:alliedroof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:47:25.051Z",
+      "completedAt": "2026-04-20T17:47:36.189Z"
+    }
+  },
+  "d:alpharoofingkc.com": {
+    "name": "Alpha Roofing KC",
+    "city": "Independence",
+    "state": "MO",
+    "zip": "64050",
+    "website": "https://alpharoofingkc.com",
+    "phone": "816-555-0105",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:alpharoofingkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:47:35.142Z",
+      "completedAt": "2026-04-20T17:47:44.341Z"
+    }
+  },
+  "d:americanroofingkc.com": {
+    "name": "American Roofing & Construction",
+    "city": "Blue Springs",
+    "state": "MO",
+    "zip": "64014",
+    "website": "https://americanroofingkc.com",
+    "phone": "816-555-0106",
+    "category": "roofing and construction",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:americanroofingkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:47:36.193Z",
+      "completedAt": "2026-04-20T17:47:47.436Z"
+    }
+  },
+  "d:apexroofkc.com": {
+    "name": "Apex Roofing & Restoration",
+    "city": "Shawnee",
+    "state": "KS",
+    "zip": "66216",
+    "website": "https://apexroofkc.com",
+    "phone": "913-555-0107",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:apexroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:47:44.343Z",
+      "completedAt": "2026-04-20T17:47:54.211Z"
+    }
+  },
+  "d:arrowroofing.com": {
+    "name": "Arrow Roofing",
+    "city": "Liberty",
+    "state": "MO",
+    "zip": "64068",
+    "website": "https://arrowroofing.com",
+    "phone": "816-555-0108",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:arrowroofing.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:47:47.437Z",
+      "completedAt": "2026-04-20T17:47:57.894Z"
+    }
+  },
+  "d:artisanroofkc.com": {
+    "name": "Artisan Roofing KC",
+    "city": "Lenexa",
+    "state": "KS",
+    "zip": "66215",
+    "website": "https://artisanroofkc.com",
+    "phone": "913-555-0109",
+    "category": "residential roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:artisanroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:47:54.212Z",
+      "completedAt": "2026-04-20T17:48:04.263Z"
+    }
+  },
+  "d:atlasexteriors.com": {
+    "name": "Atlas Roofing & Exteriors",
+    "city": "Gladstone",
+    "state": "MO",
+    "zip": "64118",
+    "website": "https://atlasexteriors.com",
+    "phone": "816-555-0110",
+    "category": "roofing and exteriors",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:atlasexteriors.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:47:57.897Z",
+      "completedAt": "2026-04-20T17:48:11.841Z"
+    }
+  },
+  "d:bakerroofingco.com": {
+    "name": "Baker Roofing Co",
+    "city": "Raytown",
+    "state": "MO",
+    "zip": "64133",
+    "website": "https://bakerroofingco.com",
+    "phone": "816-555-0111",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:bakerroofingco.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:48:17.049Z",
+      "completedAt": "2026-04-20T17:48:26.545Z"
+    }
+  },
+  "d:bealroofing.com": {
+    "name": "Beal Roofing",
+    "city": "Leawood",
+    "state": "KS",
+    "zip": "66209",
+    "website": "https://bealroofing.com",
+    "phone": "913-555-0112",
+    "category": "residential roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:bealroofing.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:48:17.049Z",
+      "completedAt": "2026-04-20T17:48:25.983Z"
+    }
+  },
+  "d:blueriverroof.com": {
+    "name": "Blue River Roofing",
+    "city": "Kansas City",
+    "state": "MO",
+    "zip": "64129",
+    "website": "https://blueriverroof.com",
+    "phone": "816-555-0113",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:blueriverroof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:48:17.049Z",
+      "completedAt": "2026-04-20T17:48:27.069Z"
+    }
+  },
+  "d:bridgerroofing.com": {
+    "name": "Bridger Roofing",
+    "city": "Grandview",
+    "state": "MO",
+    "zip": "64030",
+    "website": "https://bridgerroofing.com",
+    "phone": "816-555-0114",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:bridgerroofing.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:48:25.985Z",
+      "completedAt": "2026-04-20T17:48:36.402Z"
+    }
+  },
+  "d:buckeyeroofkc.com": {
+    "name": "Buckeye Roofing",
+    "city": "Belton",
+    "state": "MO",
+    "zip": "64012",
+    "website": "https://buckeyeroofkc.com",
+    "phone": "816-555-0115",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:buckeyeroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:48:26.546Z",
+      "completedAt": "2026-04-20T17:48:36.246Z"
+    }
+  },
+  "d:capitalroof.com": {
+    "name": "Capital Roofing & Restoration",
+    "city": "Overland Park",
+    "state": "KS",
+    "zip": "66213",
+    "website": "https://capitalroof.com",
+    "phone": "913-555-0116",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:capitalroof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:48:27.071Z",
+      "completedAt": "2026-04-20T17:48:36.618Z"
+    }
+  },
+  "d:cenkanroofing.com": {
+    "name": "Cen-Kan Roofing",
+    "city": "Olathe",
+    "state": "KS",
+    "zip": "66062",
+    "website": "https://cenkanroofing.com",
+    "phone": "913-555-0117",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:cenkanroofing.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:48:36.248Z",
+      "completedAt": "2026-04-20T17:48:44.982Z"
+    }
+  },
+  "d:centralroofkc.com": {
+    "name": "Central Roofing KC",
+    "city": "Kansas City",
+    "state": "MO",
+    "zip": "64108",
+    "website": "https://centralroofkc.com",
+    "phone": "816-555-0118",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:centralroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:48:36.404Z",
+      "completedAt": "2026-04-20T17:48:45.541Z"
+    }
+  },
+  "d:championroofkc.com": {
+    "name": "Champion Roofing",
+    "city": "Lee's Summit",
+    "state": "MO",
+    "zip": "64064",
+    "website": "https://championroofkc.com",
+    "phone": "816-555-0119",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:championroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:48:36.619Z",
+      "completedAt": "2026-04-20T17:48:45.394Z"
+    }
+  },
+  "d:citywideroofing.com": {
+    "name": "City Wide Roofing",
+    "city": "Kansas City",
+    "state": "KS",
+    "zip": "66101",
+    "website": "https://citywideroofing.com",
+    "phone": "913-555-0120",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:citywideroofing.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:48:44.983Z",
+      "completedAt": "2026-04-20T17:48:55.516Z"
+    }
+  },
+  "d:clarkroofing.com": {
+    "name": "Clark Roofing & Siding",
+    "city": "Independence",
+    "state": "MO",
+    "zip": "64052",
+    "website": "https://clarkroofing.com",
+    "phone": "816-555-0121",
+    "category": "roofing and siding",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:clarkroofing.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:48:45.396Z",
+      "completedAt": "2026-04-20T17:48:55.881Z"
+    }
+  },
+  "d:classicroofkc.com": {
+    "name": "Classic Roofing KC",
+    "city": "Prairie Village",
+    "state": "KS",
+    "zip": "66208",
+    "website": "https://classicroofkc.com",
+    "phone": "913-555-0122",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:classicroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:48:45.543Z",
+      "completedAt": "2026-04-20T17:48:55.495Z"
+    }
+  },
+  "d:cornerstoneroofkc.com": {
+    "name": "Cornerstone Roofing",
+    "city": "Shawnee",
+    "state": "KS",
+    "zip": "66217",
+    "website": "https://cornerstoneroofkc.com",
+    "phone": "913-555-0123",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:cornerstoneroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:48:55.497Z",
+      "completedAt": "2026-04-20T17:49:05.402Z"
+    }
+  },
+  "d:covenantroof.com": {
+    "name": "Covenant Roofing",
+    "city": "Blue Springs",
+    "state": "MO",
+    "zip": "64015",
+    "website": "https://covenantroof.com",
+    "phone": "816-555-0124",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:covenantroof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:48:55.518Z",
+      "completedAt": "2026-04-20T17:49:04.494Z"
+    }
+  },
+  "d:crestroofkc.com": {
+    "name": "Crest Roofing",
+    "city": "Raymore",
+    "state": "MO",
+    "zip": "64083",
+    "website": "https://crestroofkc.com",
+    "phone": "816-555-0125",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:crestroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:48:55.883Z",
+      "completedAt": "2026-04-20T17:49:04.723Z"
+    }
+  },
+  "d:crownroofkc.com": {
+    "name": "Crown Roofing & Solar",
+    "city": "Lenexa",
+    "state": "KS",
+    "zip": "66219",
+    "website": "https://crownroofkc.com",
+    "phone": "913-555-0126",
+    "category": "roofing and solar",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:crownroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:49:04.495Z",
+      "completedAt": "2026-04-20T17:49:13.400Z"
+    }
+  },
+  "d:dgroofing.com": {
+    "name": "D&G Roofing",
+    "city": "Gladstone",
+    "state": "MO",
+    "zip": "64119",
+    "website": "https://dgroofing.com",
+    "phone": "816-555-0127",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:dgroofing.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:49:04.725Z",
+      "completedAt": "2026-04-20T17:49:16.855Z"
+    }
+  },
+  "d:dakotaroofkc.com": {
+    "name": "Dakota Roofing",
+    "city": "Merriam",
+    "state": "KS",
+    "zip": "66202",
+    "website": "https://dakotaroofkc.com",
+    "phone": "913-555-0128",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:dakotaroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:49:05.403Z",
+      "completedAt": "2026-04-20T17:49:15.924Z"
+    }
+  },
+  "d:diamondroofkc.com": {
+    "name": "Diamond Roofing KC",
+    "city": "Kansas City",
+    "state": "MO",
+    "zip": "64114",
+    "website": "https://diamondroofkc.com",
+    "phone": "816-555-0129",
+    "category": "residential roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:diamondroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:49:13.401Z",
+      "completedAt": "2026-04-20T17:49:23.143Z"
+    }
+  },
+  "d:eagleeyeroof.com": {
+    "name": "Eagle Eye Roofing",
+    "city": "Liberty",
+    "state": "MO",
+    "zip": "64068",
+    "website": "https://eagleeyeroof.com",
+    "phone": "816-555-0130",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:eagleeyeroof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:49:15.926Z",
+      "completedAt": "2026-04-20T17:49:28.392Z"
+    }
+  },
+  "d:eastsideroofkc.com": {
+    "name": "Eastside Roofing",
+    "city": "Independence",
+    "state": "MO",
+    "zip": "64055",
+    "website": "https://eastsideroofkc.com",
+    "phone": "816-555-0131",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:eastsideroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:49:34.186Z",
+      "completedAt": "2026-04-20T17:49:43.275Z"
+    }
+  },
+  "d:eliteroofkc.com": {
+    "name": "Elite Roofing & Gutters",
+    "city": "Overland Park",
+    "state": "KS",
+    "zip": "66212",
+    "website": "https://eliteroofkc.com",
+    "phone": "913-555-0132",
+    "category": "roofing and gutters",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:eliteroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:49:34.186Z",
+      "completedAt": "2026-04-20T17:49:44.114Z"
+    }
+  },
+  "d:emeraldroofkc.com": {
+    "name": "Emerald Roofing",
+    "city": "Olathe",
+    "state": "KS",
+    "zip": "66063",
+    "website": "https://emeraldroofkc.com",
+    "phone": "913-555-0133",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:emeraldroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:49:34.186Z",
+      "completedAt": "2026-04-20T17:49:42.581Z"
+    }
+  },
+  "d:excelroofkc.com": {
+    "name": "Excel Roofing",
+    "city": "Lee's Summit",
+    "state": "MO",
+    "zip": "64081",
+    "website": "https://excelroofkc.com",
+    "phone": "816-555-0134",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:excelroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:49:42.583Z",
+      "completedAt": "2026-04-20T17:49:51.624Z"
+    }
+  },
+  "d:f5stormrepair.com": {
+    "name": "F5 Storm Repair",
+    "city": "Kansas City",
+    "state": "MO",
+    "zip": "64116",
+    "website": "https://f5stormrepair.com",
+    "phone": "816-555-0135",
+    "category": "storm damage roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:f5stormrepair.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:49:43.278Z",
+      "completedAt": "2026-04-20T17:49:56.808Z"
+    }
+  },
+  "d:firstcallroof.com": {
+    "name": "First Call Roofing",
+    "city": "Shawnee",
+    "state": "KS",
+    "zip": "66203",
+    "website": "https://firstcallroof.com",
+    "phone": "913-555-0136",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:firstcallroof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:49:44.120Z",
+      "completedAt": "2026-04-20T17:49:53.815Z"
+    }
+  },
+  "d:firstrateroof.com": {
+    "name": "First Rate Roofing",
+    "city": "Raytown",
+    "state": "MO",
+    "zip": "64138",
+    "website": "https://firstrateroof.com",
+    "phone": "816-555-0137",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:firstrateroof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:49:51.626Z",
+      "completedAt": "2026-04-20T17:50:00.952Z"
+    }
+  },
+  "d:fivestardroofkc.com": {
+    "name": "Five Star Roofing KC",
+    "city": "Leawood",
+    "state": "KS",
+    "zip": "66211",
+    "website": "https://fivestardroofkc.com",
+    "phone": "913-555-0138",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:fivestardroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:49:53.817Z",
+      "completedAt": "2026-04-20T17:50:06.137Z"
+    }
+  },
+  "d:fortressroofkc.com": {
+    "name": "Fortress Roofing",
+    "city": "Blue Springs",
+    "state": "MO",
+    "zip": "64014",
+    "website": "https://fortressroofkc.com",
+    "phone": "816-555-0139",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:fortressroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:49:56.812Z",
+      "completedAt": "2026-04-20T17:50:05.794Z"
+    }
+  },
+  "d:freedomroofkc.com": {
+    "name": "Freedom Roofing",
+    "city": "Grandview",
+    "state": "MO",
+    "zip": "64030",
+    "website": "https://freedomroofkc.com",
+    "phone": "816-555-0140",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:freedomroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:50:00.954Z",
+      "completedAt": "2026-04-20T17:50:09.354Z"
+    }
+  },
+  "d:genesisroofkc.com": {
+    "name": "Genesis Roofing",
+    "city": "Belton",
+    "state": "MO",
+    "zip": "64012",
+    "website": "https://genesisroofkc.com",
+    "phone": "816-555-0141",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:genesisroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:50:05.796Z",
+      "completedAt": "2026-04-20T17:50:15.319Z"
+    }
+  },
+  "d:goodfaithroof.com": {
+    "name": "Good Faith Roofing",
+    "city": "Prairie Village",
+    "state": "KS",
+    "zip": "66207",
+    "website": "https://goodfaithroof.com",
+    "phone": "913-555-0142",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:goodfaithroof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:50:06.139Z",
+      "completedAt": "2026-04-20T17:50:17.058Z"
+    }
+  },
+  "d:greatplainsroof.com": {
+    "name": "Great Plains Roofing",
+    "city": "Kansas City",
+    "state": "KS",
+    "zip": "66102",
+    "website": "https://greatplainsroof.com",
+    "phone": "913-555-0143",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:greatplainsroof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:50:09.356Z",
+      "completedAt": "2026-04-20T17:50:18.720Z"
+    }
+  },
+  "d:guardianroofkc.com": {
+    "name": "Guardian Roofing KC",
+    "city": "Lenexa",
+    "state": "KS",
+    "zip": "66220",
+    "website": "https://guardianroofkc.com",
+    "phone": "913-555-0144",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:guardianroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:50:15.321Z",
+      "completedAt": "2026-04-20T17:50:25.250Z"
+    }
+  },
+  "d:hailproroof.com": {
+    "name": "Hail Pro Roofing",
+    "city": "Independence",
+    "state": "MO",
+    "zip": "64057",
+    "website": "https://hailproroof.com",
+    "phone": "816-555-0145",
+    "category": "storm damage roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:hailproroof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:50:17.060Z",
+      "completedAt": "2026-04-20T17:50:27.112Z"
+    }
+  },
+  "d:hawkeyeroofkc.com": {
+    "name": "Hawkeye Roofing",
+    "city": "Gladstone",
+    "state": "MO",
+    "zip": "64118",
+    "website": "https://hawkeyeroofkc.com",
+    "phone": "816-555-0146",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:hawkeyeroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:50:18.722Z",
+      "completedAt": "2026-04-20T17:50:27.217Z"
+    }
+  },
+  "d:heartlandroof.com": {
+    "name": "Heartland Roofing",
+    "city": "Overland Park",
+    "state": "KS",
+    "zip": "66214",
+    "website": "https://heartlandroof.com",
+    "phone": "913-555-0147",
+    "category": "residential roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:heartlandroof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:50:25.252Z",
+      "completedAt": "2026-04-20T17:50:37.363Z"
+    }
+  },
+  "d:heritageroofkc.com": {
+    "name": "Heritage Roofing KC",
+    "city": "Lee's Summit",
+    "state": "MO",
+    "zip": "64082",
+    "website": "https://heritageroofkc.com",
+    "phone": "816-555-0148",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:heritageroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:50:27.114Z",
+      "completedAt": "2026-04-20T17:50:36.806Z"
+    }
+  },
+  "d:highmarkroof.com": {
+    "name": "Highmark Roofing",
+    "city": "Olathe",
+    "state": "KS",
+    "zip": "66061",
+    "website": "https://highmarkroof.com",
+    "phone": "913-555-0149",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:highmarkroof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:50:27.219Z",
+      "completedAt": "2026-04-20T17:50:36.545Z"
+    }
+  },
+  "d:hilltoproofkc.com": {
+    "name": "Hilltop Roofing",
+    "city": "Liberty",
+    "state": "MO",
+    "zip": "64068",
+    "website": "https://hilltoproofkc.com",
+    "phone": "816-555-0150",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:hilltoproofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:50:36.547Z",
+      "completedAt": "2026-04-20T17:50:46.403Z"
+    }
+  },
+  "d:homesteadroofkc.com": {
+    "name": "Homestead Roofing",
+    "city": "Kansas City",
+    "state": "MO",
+    "zip": "64113",
+    "website": "https://homesteadroofkc.com",
+    "phone": "816-555-0151",
+    "category": "residential roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:homesteadroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:50:36.808Z",
+      "completedAt": "2026-04-20T17:50:47.530Z"
+    }
+  },
+  "d:horizonroofkc.com": {
+    "name": "Horizon Roofing & Exteriors",
+    "city": "Shawnee",
+    "state": "KS",
+    "zip": "66218",
+    "website": "https://horizonroofkc.com",
+    "phone": "913-555-0152",
+    "category": "roofing and exteriors",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:horizonroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:50:37.366Z",
+      "completedAt": "2026-04-20T17:50:46.779Z"
+    }
+  },
+  "d:iconroofkc.com": {
+    "name": "Icon Roofing",
+    "city": "Raytown",
+    "state": "MO",
+    "zip": "64133",
+    "website": "https://iconroofkc.com",
+    "phone": "816-555-0153",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:iconroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:50:46.405Z",
+      "completedAt": "2026-04-20T17:50:55.443Z"
+    }
+  },
+  "d:impactroofkc.com": {
+    "name": "Impact Roofing",
+    "city": "Blue Springs",
+    "state": "MO",
+    "zip": "64015",
+    "website": "https://impactroofkc.com",
+    "phone": "816-555-0154",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:impactroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:50:46.781Z",
+      "completedAt": "2026-04-20T17:50:55.008Z"
+    }
+  },
+  "d:integrityroofsystems.com": {
+    "name": "Integrity Roof Systems",
+    "city": "Raymore",
+    "state": "MO",
+    "zip": "64083",
+    "website": "https://integrityroofsystems.com",
+    "phone": "816-555-0155",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:integrityroofsystems.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:50:47.532Z",
+      "completedAt": "2026-04-20T17:50:57.613Z"
+    }
+  },
+  "d:ironshieldroof.com": {
+    "name": "Iron Shield Roofing",
+    "city": "Grandview",
+    "state": "MO",
+    "zip": "64030",
+    "website": "https://ironshieldroof.com",
+    "phone": "816-555-0156",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:ironshieldroof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:50:55.010Z",
+      "completedAt": "2026-04-20T17:51:05.643Z"
+    }
+  },
+  "d:jkroofingkc.com": {
+    "name": "J&K Roofing",
+    "city": "Merriam",
+    "state": "KS",
+    "zip": "66203",
+    "website": "https://jkroofingkc.com",
+    "phone": "913-555-0157",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:jkroofingkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:50:55.445Z",
+      "completedAt": "2026-04-20T17:51:03.837Z"
+    }
+  },
+  "d:jayhawkroof.com": {
+    "name": "Jayhawk Roofing",
+    "city": "Kansas City",
+    "state": "KS",
+    "zip": "66103",
+    "website": "https://jayhawkroof.com",
+    "phone": "913-555-0158",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:jayhawkroof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:50:57.616Z",
+      "completedAt": "2026-04-20T17:51:08.055Z"
+    }
+  },
+  "d:kcroofpros.com": {
+    "name": "Kansas City Roof Pros",
+    "city": "Kansas City",
+    "state": "MO",
+    "zip": "64106",
+    "website": "https://kcroofpros.com",
+    "phone": "816-555-0159",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:kcroofpros.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:51:03.839Z",
+      "completedAt": "2026-04-20T17:51:13.484Z"
+    }
+  },
+  "d:kcroofingnrepair.com": {
+    "name": "KC Roofing & Repair",
+    "city": "Kansas City",
+    "state": "MO",
+    "zip": "64110",
+    "website": "https://kcroofingnrepair.com",
+    "phone": "816-555-0160",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:kcroofingnrepair.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-20T17:51:05.645Z",
+      "completedAt": "2026-04-20T17:51:15.736Z"
+    }
+  },
+  "d:kcstormchasers.com": {
+    "name": "KC Storm Chasers Roofing",
+    "city": "Independence",
+    "state": "MO",
+    "zip": "64053",
+    "website": "https://kcstormchasers.com",
+    "phone": "816-555-0161",
+    "category": "storm damage roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:kcstormchasers.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-21T00:25:26.463Z",
+      "completedAt": "2026-04-21T00:25:36.777Z"
+    }
+  },
+  "d:keystoneroofkc.com": {
+    "name": "Keystone Roofing",
+    "city": "Overland Park",
+    "state": "KS",
+    "zip": "66221",
+    "website": "https://keystoneroofkc.com",
+    "phone": "913-555-0162",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:keystoneroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-21T00:25:26.463Z",
+      "completedAt": "2026-04-21T00:25:35.752Z"
+    }
+  },
+  "d:kingroofkc.com": {
+    "name": "King Roofing",
+    "city": "Olathe",
+    "state": "KS",
+    "zip": "66062",
+    "website": "https://kingroofkc.com",
+    "phone": "913-555-0163",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:kingroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-21T00:25:35.753Z",
+      "completedAt": "2026-04-21T00:25:45.447Z"
+    }
+  },
+  "d:legacyroofkc.com": {
+    "name": "Legacy Roofing KC",
+    "city": "Lee's Summit",
+    "state": "MO",
+    "zip": "64063",
+    "website": "https://legacyroofkc.com",
+    "phone": "816-555-0164",
+    "category": "residential roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:legacyroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-21T00:25:36.779Z",
+      "completedAt": "2026-04-21T00:25:46.643Z"
+    }
+  },
+  "d:libertyroofingco.com": {
+    "name": "Liberty Roofing Co",
+    "city": "Liberty",
+    "state": "MO",
+    "zip": "64068",
+    "website": "https://libertyroofingco.com",
+    "phone": "816-555-0165",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:libertyroofingco.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-21T00:25:45.449Z",
+      "completedAt": "2026-04-21T00:25:56.198Z"
+    }
+  },
+  "d:lifetimeroofkc.com": {
+    "name": "Lifetime Roofing",
+    "city": "Lenexa",
+    "state": "KS",
+    "zip": "66215",
+    "website": "https://lifetimeroofkc.com",
+    "phone": "913-555-0166",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:lifetimeroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    },
+    "inspected": {
+      "startedAt": "2026-04-21T00:26:24.301Z",
+      "completedAt": "2026-04-21T00:26:33.399Z"
+    }
+  },
+  "d:linwoodroofing.com": {
+    "name": "Linwood Roofing",
+    "city": "Kansas City",
+    "state": "MO",
+    "zip": "64128",
+    "website": "https://linwoodroofing.com",
+    "phone": "816-555-0167",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:linwoodroofing.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:lonestarroofkc.com": {
+    "name": "Lone Star Roofing KC",
+    "city": "Gladstone",
+    "state": "MO",
+    "zip": "64119",
+    "website": "https://lonestarroofkc.com",
+    "phone": "816-555-0168",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:lonestarroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:mainstreetroofkc.com": {
+    "name": "Main Street Roofing",
+    "city": "Blue Springs",
+    "state": "MO",
+    "zip": "64014",
+    "website": "https://mainstreetroofkc.com",
+    "phone": "816-555-0169",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:mainstreetroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:mastercraftroof.com": {
+    "name": "Master Craft Roofing",
+    "city": "Shawnee",
+    "state": "KS",
+    "zip": "66216",
+    "website": "https://mastercraftroof.com",
+    "phone": "913-555-0170",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:mastercraftroof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:metrokcroof.com": {
+    "name": "Metro KC Roofing",
+    "city": "Kansas City",
+    "state": "MO",
+    "zip": "64112",
+    "website": "https://metrokcroof.com",
+    "phone": "816-555-0171",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:metrokcroof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:midwestroofexperts.com": {
+    "name": "Midwest Roof Experts",
+    "city": "Overland Park",
+    "state": "KS",
+    "zip": "66204",
+    "website": "https://midwestroofexperts.com",
+    "phone": "913-555-0172",
+    "category": "residential roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:midwestroofexperts.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:midweststormroof.com": {
+    "name": "Midwest Storm Roofing",
+    "city": "Raytown",
+    "state": "MO",
+    "zip": "64138",
+    "website": "https://midweststormroof.com",
+    "phone": "816-555-0173",
+    "category": "storm damage roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:midweststormroof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:missionroofingks.com": {
+    "name": "Mission Roofing",
+    "city": "Mission",
+    "state": "KS",
+    "zip": "66202",
+    "website": "https://missionroofingks.com",
+    "phone": "913-555-0174",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:missionroofingks.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:monarchroofkc.com": {
+    "name": "Monarch Roofing KC",
+    "city": "Raymore",
+    "state": "MO",
+    "zip": "64083",
+    "website": "https://monarchroofkc.com",
+    "phone": "816-555-0175",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:monarchroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:neweraroof.com": {
+    "name": "New Era Roofing",
+    "city": "Independence",
+    "state": "MO",
+    "zip": "64056",
+    "website": "https://neweraroof.com",
+    "phone": "816-555-0176",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:neweraroof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:northlandroofkc.com": {
+    "name": "Northland Roofing",
+    "city": "Kansas City",
+    "state": "MO",
+    "zip": "64151",
+    "website": "https://northlandroofkc.com",
+    "phone": "816-555-0177",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:northlandroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:oakparkroof.com": {
+    "name": "Oak Park Roofing",
+    "city": "Overland Park",
+    "state": "KS",
+    "zip": "66223",
+    "website": "https://oakparkroof.com",
+    "phone": "913-555-0178",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:oakparkroof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:olatheroofgutter.com": {
+    "name": "Olathe Roof & Gutter",
+    "city": "Olathe",
+    "state": "KS",
+    "zip": "66061",
+    "website": "https://olatheroofgutter.com",
+    "phone": "913-555-0179",
+    "category": "roofing and gutters",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:olatheroofgutter.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:overlandroofing.com": {
+    "name": "Overland Roofing",
+    "city": "Overland Park",
+    "state": "KS",
+    "zip": "66210",
+    "website": "https://overlandroofing.com",
+    "phone": "913-555-0180",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:overlandroofing.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:patriotroofkc.com": {
+    "name": "Patriot Roofing KC",
+    "city": "Lee's Summit",
+    "state": "MO",
+    "zip": "64064",
+    "website": "https://patriotroofkc.com",
+    "phone": "816-555-0181",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:patriotroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:peakroofkc.com": {
+    "name": "Peak Performance Roofing",
+    "city": "Liberty",
+    "state": "MO",
+    "zip": "64068",
+    "website": "https://peakroofkc.com",
+    "phone": "816-555-0182",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:peakroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:pinnacleroofkc.com": {
+    "name": "Pinnacle Roofing",
+    "city": "Lenexa",
+    "state": "KS",
+    "zip": "66219",
+    "website": "https://pinnacleroofkc.com",
+    "phone": "913-555-0183",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:pinnacleroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:prairieroofkc.com": {
+    "name": "Prairie Roofing",
+    "city": "Kansas City",
+    "state": "KS",
+    "zip": "66104",
+    "website": "https://prairieroofkc.com",
+    "phone": "913-555-0184",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:prairieroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:premierroofkc.com": {
+    "name": "Premier Roofing KC",
+    "city": "Grandview",
+    "state": "MO",
+    "zip": "64030",
+    "website": "https://premierroofkc.com",
+    "phone": "816-555-0185",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:premierroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:protecroofkc.com": {
+    "name": "Pro-Tec Roofing",
+    "city": "Blue Springs",
+    "state": "MO",
+    "zip": "64014",
+    "website": "https://protecroofkc.com",
+    "phone": "816-555-0186",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:protecroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:qualityfirstroof.com": {
+    "name": "Quality First Roofing",
+    "city": "Shawnee",
+    "state": "KS",
+    "zip": "66203",
+    "website": "https://qualityfirstroof.com",
+    "phone": "913-555-0187",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:qualityfirstroof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:rainstoproof.com": {
+    "name": "Rainstop Roofing",
+    "city": "Gladstone",
+    "state": "MO",
+    "zip": "64118",
+    "website": "https://rainstoproof.com",
+    "phone": "816-555-0188",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:rainstoproof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:redhawkroofkc.com": {
+    "name": "Red Hawk Roofing",
+    "city": "Independence",
+    "state": "MO",
+    "zip": "64050",
+    "website": "https://redhawkroofkc.com",
+    "phone": "816-555-0189",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:redhawkroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:reliableroofkc.com": {
+    "name": "Reliable Roofing KC",
+    "city": "Raytown",
+    "state": "MO",
+    "zip": "64133",
+    "website": "https://reliableroofkc.com",
+    "phone": "816-555-0190",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:reliableroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:resoluteroofkc.com": {
+    "name": "Resolute Roofing",
+    "city": "Leawood",
+    "state": "KS",
+    "zip": "66209",
+    "website": "https://resoluteroofkc.com",
+    "phone": "913-555-0191",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:resoluteroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:ridgeroofkc.com": {
+    "name": "Ridge Roofing",
+    "city": "Belton",
+    "state": "MO",
+    "zip": "64012",
+    "website": "https://ridgeroofkc.com",
+    "phone": "816-555-0192",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:ridgeroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:rightwayroofkc.com": {
+    "name": "Rightway Roofing",
+    "city": "Merriam",
+    "state": "KS",
+    "zip": "66202",
+    "website": "https://rightwayroofkc.com",
+    "phone": "913-555-0193",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:rightwayroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:roofmedickc.com": {
+    "name": "Roof Medic KC",
+    "city": "Kansas City",
+    "state": "MO",
+    "zip": "64109",
+    "website": "https://roofmedickc.com",
+    "phone": "816-555-0194",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:roofmedickc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:roofstarkc.com": {
+    "name": "RoofStar KC",
+    "city": "Overland Park",
+    "state": "KS",
+    "zip": "66215",
+    "website": "https://roofstarkc.com",
+    "phone": "913-555-0195",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:roofstarkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:rooftoppros.com": {
+    "name": "Rooftop Pros",
+    "city": "Olathe",
+    "state": "KS",
+    "zip": "66062",
+    "website": "https://rooftoppros.com",
+    "phone": "913-555-0196",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:rooftoppros.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:royalroofkc.com": {
+    "name": "Royal Roofing",
+    "city": "Lee's Summit",
+    "state": "MO",
+    "zip": "64081",
+    "website": "https://royalroofkc.com",
+    "phone": "816-555-0197",
+    "category": "residential roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:royalroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:sentinelroofkc.com": {
+    "name": "Sentinel Roofing",
+    "city": "Liberty",
+    "state": "MO",
+    "zip": "64068",
+    "website": "https://sentinelroofkc.com",
+    "phone": "816-555-0198",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:sentinelroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:shieldroofkc.com": {
+    "name": "Shield Roofing KC",
+    "city": "Kansas City",
+    "state": "MO",
+    "zip": "64117",
+    "website": "https://shieldroofkc.com",
+    "phone": "816-555-0199",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:shieldroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:signatureroofkc.com": {
+    "name": "Signature Roofing",
+    "city": "Shawnee",
+    "state": "KS",
+    "zip": "66217",
+    "website": "https://signatureroofkc.com",
+    "phone": "913-555-0200",
+    "category": "residential roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:signatureroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:silverliningroof.com": {
+    "name": "Silver Lining Roofing",
+    "city": "Blue Springs",
+    "state": "MO",
+    "zip": "64015",
+    "website": "https://silverliningroof.com",
+    "phone": "816-555-0201",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:silverliningroof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:skylineroofkc.com": {
+    "name": "Skyline Roofing KC",
+    "city": "Raymore",
+    "state": "MO",
+    "zip": "64083",
+    "website": "https://skylineroofkc.com",
+    "phone": "816-555-0202",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:skylineroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:smartroofkc.com": {
+    "name": "Smart Roof KC",
+    "city": "Gladstone",
+    "state": "MO",
+    "zip": "64119",
+    "website": "https://smartroofkc.com",
+    "phone": "816-555-0203",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:smartroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:solidrockroofkc.com": {
+    "name": "Solid Rock Roofing",
+    "city": "Independence",
+    "state": "MO",
+    "zip": "64055",
+    "website": "https://solidrockroofkc.com",
+    "phone": "816-555-0204",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:solidrockroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:southwestroof.com": {
+    "name": "Southwest Roofing KC",
+    "city": "Grandview",
+    "state": "MO",
+    "zip": "64030",
+    "website": "https://southwestroof.com",
+    "phone": "816-555-0205",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:southwestroof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:stormguardkc.com": {
+    "name": "Storm Guard Roofing",
+    "city": "Lenexa",
+    "state": "KS",
+    "zip": "66220",
+    "website": "https://stormguardkc.com",
+    "phone": "913-555-0206",
+    "category": "storm damage roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:stormguardkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:summitroofkc.com": {
+    "name": "Summit Roofing KC",
+    "city": "Lee's Summit",
+    "state": "MO",
+    "zip": "64063",
+    "website": "https://summitroofkc.com",
+    "phone": "816-555-0207",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:summitroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:sunflowerroof.com": {
+    "name": "Sunflower Roofing",
+    "city": "Olathe",
+    "state": "KS",
+    "zip": "66063",
+    "website": "https://sunflowerroof.com",
+    "phone": "913-555-0208",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:sunflowerroof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:superiorroofkc.com": {
+    "name": "Superior Roofing KC",
+    "city": "Overland Park",
+    "state": "KS",
+    "zip": "66212",
+    "website": "https://superiorroofkc.com",
+    "phone": "913-555-0209",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:superiorroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:tigerroofkc.com": {
+    "name": "Tiger Roofing",
+    "city": "Raytown",
+    "state": "MO",
+    "zip": "64138",
+    "website": "https://tigerroofkc.com",
+    "phone": "816-555-0210",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:tigerroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:titanroofkc.com": {
+    "name": "Titan Roofing KC",
+    "city": "Kansas City",
+    "state": "MO",
+    "zip": "64130",
+    "website": "https://titanroofkc.com",
+    "phone": "816-555-0211",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:titanroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:topnotchroofkc.com": {
+    "name": "Top Notch Roofing",
+    "city": "Belton",
+    "state": "MO",
+    "zip": "64012",
+    "website": "https://topnotchroofkc.com",
+    "phone": "816-555-0212",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:topnotchroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:trojanroofkc.com": {
+    "name": "Trojan Roofing",
+    "city": "Leawood",
+    "state": "KS",
+    "zip": "66211",
+    "website": "https://trojanroofkc.com",
+    "phone": "913-555-0213",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:trojanroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:truenorthroofkc.com": {
+    "name": "True North Roofing",
+    "city": "Liberty",
+    "state": "MO",
+    "zip": "64068",
+    "website": "https://truenorthroofkc.com",
+    "phone": "816-555-0214",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:truenorthroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:unitedroofkc.com": {
+    "name": "United Roofing KC",
+    "city": "Prairie Village",
+    "state": "KS",
+    "zip": "66208",
+    "website": "https://unitedroofkc.com",
+    "phone": "913-555-0215",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:unitedroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:valorroofkc.com": {
+    "name": "Valor Roofing",
+    "city": "Blue Springs",
+    "state": "MO",
+    "zip": "64014",
+    "website": "https://valorroofkc.com",
+    "phone": "816-555-0216",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:valorroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:vanguardroofkc.com": {
+    "name": "Vanguard Roofing",
+    "city": "Shawnee",
+    "state": "KS",
+    "zip": "66218",
+    "website": "https://vanguardroofkc.com",
+    "phone": "913-555-0217",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:vanguardroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:victoryroofkc.com": {
+    "name": "Victory Roofing KC",
+    "city": "Kansas City",
+    "state": "MO",
+    "zip": "64105",
+    "website": "https://victoryroofkc.com",
+    "phone": "816-555-0218",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:victoryroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:weathershieldroof.com": {
+    "name": "Weathershield Roofing",
+    "city": "Gladstone",
+    "state": "MO",
+    "zip": "64118",
+    "website": "https://weathershieldroof.com",
+    "phone": "816-555-0219",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:weathershieldroof.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:westsideroofkc.com": {
+    "name": "Westside Roofing",
+    "city": "Kansas City",
+    "state": "KS",
+    "zip": "66106",
+    "website": "https://westsideroofkc.com",
+    "phone": "913-555-0220",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:westsideroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:wolverineroofkc.com": {
+    "name": "Wolverine Roofing",
+    "city": "Independence",
+    "state": "MO",
+    "zip": "64052",
+    "website": "https://wolverineroofkc.com",
+    "phone": "816-555-0221",
+    "category": "roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:wolverineroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
+  },
+  "d:zenithroofkc.com": {
+    "name": "Zenith Roofing KC",
+    "city": "Overland Park",
+    "state": "KS",
+    "zip": "66224",
+    "website": "https://zenithroofkc.com",
+    "phone": "913-555-0222",
+    "category": "residential roofing",
+    "source": "daily_pipeline_dylan",
+    "collectedAt": "2026-04-20T17:47:06.073Z",
+    "key": "d:zenithroofkc.com",
+    "prefilter": {
+      "verdict": "PASSED",
+      "reasons": [],
+      "decidedAt": "2026-04-20T17:47:06.080Z"
+    }
   }
 }

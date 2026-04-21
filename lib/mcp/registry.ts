@@ -31,6 +31,13 @@ import { importCompaniesTool } from "./tools/importCompanies";
 import { prefilterCompaniesTool } from "./tools/prefilterCompanies";
 import { batchInspectTool } from "./tools/batchInspect";
 import { topOpportunitiesTool } from "./tools/topOpportunities";
+import { generateCallScriptTool } from "./tools/generateCallScript";
+import { logDealActionTool } from "./tools/logDealAction";
+import { setNextActionTool } from "./tools/setNextAction";
+import { logCrmActivityTool } from "./tools/logCrmActivity";
+import { getCompanyTimelineTool } from "./tools/getCompanyTimeline";
+import { getCalendarEventsTool } from "./tools/getCalendarEvents";
+import { findBestContactTool } from "./tools/findBestContact";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const TOOLS: ToolDefinition<any, any>[] = [
@@ -70,6 +77,16 @@ const TOOLS: ToolDefinition<any, any>[] = [
   prefilterCompaniesTool,
   batchInspectTool,
   topOpportunitiesTool,
+  // LaborTech execution layer — call scripts + deal pipeline
+  generateCallScriptTool,
+  logDealActionTool,
+  setNextActionTool,
+  // CRM layer — activity log, timeline, calendar
+  logCrmActivityTool,
+  getCompanyTimelineTool,
+  getCalendarEventsTool,
+  // Contact resolution engine
+  findBestContactTool,
 ];
 
 const TOOL_INDEX = new Map(TOOLS.map((t) => [t.name, t]));

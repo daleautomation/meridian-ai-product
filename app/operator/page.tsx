@@ -1,68 +1,105 @@
-// Meridian AI — Operator execution surface.
+// Meridian AI — Operator execution surface for LaborTech.
 //
-// Minimal page, orthogonal to the DecisionItem pipeline and the existing
-// dashboard. Reads MCP tool output in-process (no HTTP round-trip) and
-// renders a compact console: CALL NOW list, top opportunities, and the
-// pending review queue. All mutations (generate pitch, create outreach
-// review, resolve review) are delegated to the OperatorConsole client
-// component, which POSTs to /api/mcp with the session cookie.
+// Full CRM-integrated workflow: priorities, timeline, calendar,
+// close recommendations, ROI tracking.
 
 import { redirect } from "next/navigation";
 import { getSession } from "../../lib/auth";
 import { callTool } from "../../lib/mcp/registry";
+import { listSnapshots } from "../../lib/state/companySnapshotStore";
+import { getAllActivities, getCalendarEvents } from "../../lib/state/crmStore";
+import { getJobHistory } from "../../lib/pipeline/dailyJob";
 import OperatorConsole from "../../components/OperatorConsole";
 
 export const dynamic = "force-dynamic";
-
-type RankedDecision = {
-  key: string;
-  name: string;
-  domain?: string;
-  score: number;
-  opportunityLevel: "HIGH" | "MEDIUM" | "LOW";
-  recommendedAction: "CALL NOW" | "TODAY" | "MONITOR";
-  closeProbability: "High" | "Medium" | "Low";
-  topWeaknesses: string[];
-  pitchAngle: string | null;
-  rationale: string;
-  confidenceFloor: number;
-  staleDays: number | null;
-};
-
-type ReviewItem = {
-  id: string;
-  kind: string;
-  subjectKey: string;
-  subjectLabel: string;
-  status: "PENDING" | "APPROVED" | "REJECTED";
-  requestedBy: string;
-  createdAt: string;
-  payload: Record<string, unknown>;
-};
 
 export default async function OperatorPage() {
   const user = await getSession();
   if (!user) redirect("/login");
 
+  // Load ranked companies + reviews
   const [rankedRes, pendingRes] = await Promise.all([
-    callTool("rank_companies", { limit: 50 }),
+    callTool("rank_companies", { limit: 100 }),
     callTool("list_pending_reviews", { status: "PENDING", limit: 20 }),
   ]);
 
-  const ranked = (rankedRes.data as { ranked: RankedDecision[] } | null)?.ranked ?? [];
-  const pendingReviews =
-    (pendingRes.data as { reviews: ReviewItem[] } | null)?.reviews ?? [];
+  const ranked = (rankedRes.data as { ranked: unknown[] } | null)?.ranked ?? [];
+  const pendingReviews = (pendingRes.data as { reviews: unknown[] } | null)?.reviews ?? [];
 
-  const callNow = ranked.filter((r) => r.recommendedAction === "CALL NOW");
-  const today = ranked.filter((r) => r.recommendedAction === "TODAY");
+  // Load snapshots for pipeline data
+  const snapshots = await listSnapshots();
+  const pipelineMap: Record<string, PipelineData> = {};
+  for (const snap of snapshots) {
+    pipelineMap[snap.key] = {
+      status: snap.status ?? "NEW",
+      lastAction: snap.lastAction ?? null,
+      nextAction: snap.nextAction ?? null,
+      nextActionDate: snap.nextActionDate ?? null,
+      contactName: snap.contactName ?? null,
+      contactPhone: snap.contactPhone ?? null,
+      dealActionCount: snap.dealActions?.length ?? 0,
+      callAttempts: snap.callAttempts ?? 0,
+      consecutiveNoAnswers: snap.consecutiveNoAnswers ?? 0,
+      escalationStage: snap.escalationStage ?? 0,
+    };
+  }
+
+  // ROI
+  const roi = { totalLeads: snapshots.length, contacted: 0, interested: 0, closedWon: 0, closedLost: 0 };
+  for (const snap of snapshots) {
+    const s = (snap.status ?? "").toUpperCase();
+    if (["CONTACTED","CALLED","INTERESTED","QUALIFIED","PITCHED","CLOSED_WON","CLOSED_LOST"].includes(s)) roi.contacted++;
+    if (["INTERESTED","QUALIFIED","PITCHED","CLOSED_WON"].includes(s)) roi.interested++;
+    if (s === "CLOSED_WON") roi.closedWon++;
+    if (s === "CLOSED_LOST") roi.closedLost++;
+  }
+
+  // Calendar events (14 day window)
+  const today = new Date();
+  const calStart = new Date(today); calStart.setDate(calStart.getDate() - 7);
+  const calEnd = new Date(today); calEnd.setDate(calEnd.getDate() + 7);
+  const calendarEvents = await getCalendarEvents(
+    calStart.toISOString().split("T")[0],
+    calEnd.toISOString().split("T")[0]
+  );
+
+  // Recent CRM activities (for activity feed)
+  const recentActivities = await getAllActivities();
+
+  // Pipeline job status
+  const jobHistory = await getJobHistory();
+  const lastJob = jobHistory[0] ?? null;
+
+  // Priority tiers
+  const top25 = ranked.slice(0, 25);
 
   return (
     <OperatorConsole
       user={{ name: user.name ?? user.id, id: user.id }}
-      callNow={callNow}
-      today={today}
+      callTheseFirst={top25.slice(0, 3)}
+      todayList={top25.slice(3, 8)}
+      remaining={top25.slice(8, 25)}
+      rest={ranked.slice(25)}
       pendingReviews={pendingReviews}
       totalPipeline={ranked.length}
+      pipelineMap={pipelineMap}
+      roi={roi}
+      calendarEvents={calendarEvents}
+      recentActivities={recentActivities.slice(0, 30)}
+      lastPipelineJob={lastJob ? { completedAt: lastJob.completedAt, errors: lastJob.errors.length, enriched: lastJob.steps.enrich?.succeeded ?? 0 } : null}
     />
   );
 }
+
+type PipelineData = {
+  status: string;
+  lastAction: { type: string; outcome?: string; performedAt: string } | null;
+  nextAction: string | null;
+  nextActionDate: string | null;
+  contactName: string | null;
+  contactPhone: string | null;
+  dealActionCount: number;
+  callAttempts: number;
+  consecutiveNoAnswers: number;
+  escalationStage: number;
+};

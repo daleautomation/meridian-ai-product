@@ -9,6 +9,7 @@
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { safeWriteJson } from "@/lib/utils/fsSafeWrite";
 
 export type PrefilterVerdict = "PASSED" | "FILTERED";
 
@@ -24,6 +25,11 @@ export type RawCompany = {
   source: string;                  // e.g. "google_places" | "manual_csv"
   sourceUrl?: string;
   collectedAt: string;             // ISO
+  // Optional enrichment fields (populated by ingestion when available).
+  gbpUrl?: string;                 // Google Business Profile URL
+  reviewCount?: number;            // GBP review count
+  rating?: number;                 // GBP rating (0-5)
+  operationalStatus?: "active" | "closed_permanently" | "closed_temporarily";
   prefilter?: {
     verdict: PrefilterVerdict;
     reasons: string[];
@@ -84,10 +90,7 @@ async function readAll(): Promise<Record<string, RawCompany>> {
 }
 
 async function writeAll(data: Record<string, RawCompany>): Promise<void> {
-  await fs.mkdir(path.dirname(STORE_PATH), { recursive: true });
-  const tmp = `${STORE_PATH}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(data, null, 2), "utf8");
-  await fs.rename(tmp, STORE_PATH);
+  await safeWriteJson(STORE_PATH, data);
 }
 
 // In-process serializer. batch_inspect runs multiple workers that can all

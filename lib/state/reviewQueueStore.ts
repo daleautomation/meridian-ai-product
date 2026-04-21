@@ -13,6 +13,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { safeWriteJson } from "@/lib/utils/fsSafeWrite";
 
 export type ReviewStatus = "PENDING" | "APPROVED" | "REJECTED";
 
@@ -46,10 +47,7 @@ async function readAll(): Promise<Record<string, ReviewItem>> {
 }
 
 async function writeAll(data: Record<string, ReviewItem>): Promise<void> {
-  await fs.mkdir(path.dirname(STORE_PATH), { recursive: true });
-  const tmp = `${STORE_PATH}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(data, null, 2), "utf8");
-  await fs.rename(tmp, STORE_PATH);
+  await safeWriteJson(STORE_PATH, data);
 }
 
 export async function createReview(

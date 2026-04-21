@@ -5,6 +5,7 @@
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { safeWriteJson } from "@/lib/utils/fsSafeWrite";
 
 export type AlertSeverity = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
 
@@ -41,10 +42,7 @@ async function readAll(): Promise<Record<string, Alert>> {
 }
 
 async function writeAll(data: Record<string, Alert>): Promise<void> {
-  await fs.mkdir(path.dirname(STORE_PATH), { recursive: true });
-  const tmp = `${STORE_PATH}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(data, null, 2), "utf8");
-  await fs.rename(tmp, STORE_PATH);
+  await safeWriteJson(STORE_PATH, data);
 }
 
 // ── Severity ordering (for upgrade detection) ──────────────────────────

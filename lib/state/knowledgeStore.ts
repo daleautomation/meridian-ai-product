@@ -12,6 +12,7 @@
 //   | "case_study" | "outreach_template"
 
 import { promises as fs } from "node:fs";
+import { safeWriteJson } from "@/lib/utils/fsSafeWrite";
 import path from "node:path";
 import crypto from "node:crypto";
 
@@ -42,10 +43,7 @@ async function readAll(): Promise<Record<string, KnowledgeEntry>> {
 }
 
 async function writeAll(data: Record<string, KnowledgeEntry>): Promise<void> {
-  await fs.mkdir(path.dirname(STORE_PATH), { recursive: true });
-  const tmp = `${STORE_PATH}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(data, null, 2), "utf8");
-  await fs.rename(tmp, STORE_PATH);
+  await safeWriteJson(STORE_PATH, data);
 }
 
 export async function upsertEntry(

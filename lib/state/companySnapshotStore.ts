@@ -21,6 +21,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import type { CompanyRef, ToolResult } from "@/lib/mcp/types";
 import { companyKey } from "@/lib/mcp/types";
+import { safeWriteJson } from "@/lib/utils/fsSafeWrite";
 
 // ── Schema ──────────────────────────────────────────────────────────────
 
@@ -56,6 +57,14 @@ export type ScorePoint = {
   sourceTool: string;        // which tool produced it (auditability)
 };
 
+export type DealAction = {
+  type: string;               // e.g. "call", "email", "voicemail", "meeting", "follow_up"
+  outcome?: string;           // e.g. "connected", "no_answer", "left_vm", "interested", "not_interested"
+  note?: string;
+  performedBy: string;
+  performedAt: string;        // ISO
+};
+
 export type CompanySnapshot = {
   key: string;
   company: CompanyRef;
@@ -70,6 +79,20 @@ export type CompanySnapshot = {
   notes?: CompanyNote[];
   scoreHistory?: ScorePoint[];
   lastCheckedAt?: string;
+  // ── Phase 3: deal pipeline fields ──
+  lastAction?: DealAction;
+  nextAction?: string;        // e.g. "call", "follow_up_email", "send_proposal"
+  nextActionDate?: string;    // ISO date
+  contactName?: string;       // primary contact at the company
+  contactPhone?: string;
+  contactEmail?: string;
+  dealActions?: DealAction[];  // full action history
+  // ── Phase 4: call attempt tracking ──
+  callAttempts?: number;
+  consecutiveNoAnswers?: number;
+  lastAttemptType?: string;
+  lastAttemptOutcome?: string;
+  escalationStage?: number;   // 0=fresh, 1=first try, 2=second, 3=voicemail+email, 4=deprioritize
 };
 
 const STORE_PATH = path.join(process.cwd(), "data", "companySnapshots.json");
@@ -103,10 +126,7 @@ async function readAll(): Promise<Record<string, CompanySnapshot>> {
 }
 
 async function writeAll(data: Record<string, CompanySnapshot>): Promise<void> {
-  await fs.mkdir(path.dirname(STORE_PATH), { recursive: true });
-  const tmp = `${STORE_PATH}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(data, null, 2), "utf8");
-  await fs.rename(tmp, STORE_PATH);
+  await safeWriteJson(STORE_PATH, data);
 }
 
 // ── Internal helpers ────────────────────────────────────────────────────
@@ -340,4 +360,98 @@ async function setStatusUnsafe(
   all[key] = next;
   await writeAll(all);
   return { snapshot: next, change: entry };
+}
+
+// ── Phase 3: deal pipeline actions ─────────────────────────────────────
+
+const MAX_DEAL_ACTIONS = 100;
+
+export async function logDealAction(
+  company: CompanyRef,
+  action: Omit<DealAction, "performedAt"> & { performedAt?: string }
+): Promise<{ snapshot: CompanySnapshot; action: DealAction }> {
+  return serialize(() => logDealActionUnsafe(company, action));
+}
+
+async function logDealActionUnsafe(
+  company: CompanyRef,
+  action: Omit<DealAction, "performedAt"> & { performedAt?: string }
+): Promise<{ snapshot: CompanySnapshot; action: DealAction }> {
+  const all = await readAll();
+  const key = companyKey(company);
+  const now = new Date().toISOString();
+  const existing = all[key] ? ensureShape(all[key]) : freshSnapshot(company, now);
+
+  const entry: DealAction = {
+    type: action.type,
+    outcome: action.outcome,
+    note: action.note,
+    performedBy: action.performedBy,
+    performedAt: action.performedAt ?? now,
+  };
+
+  // Call attempt tracking
+  const isCallAttempt = ["call", "voicemail"].includes(action.type);
+  const callAttempts = (existing.callAttempts ?? 0) + (isCallAttempt ? 1 : 0);
+  const isNoAnswer = action.outcome === "no_answer" || action.outcome === "left_vm";
+  const consecutiveNoAnswers = isNoAnswer
+    ? (existing.consecutiveNoAnswers ?? 0) + 1
+    : (action.outcome === "connected" || action.outcome === "interested") ? 0 : (existing.consecutiveNoAnswers ?? 0);
+
+  // Escalation stage: auto-advance based on consecutive no-answers
+  let escalationStage = existing.escalationStage ?? 0;
+  if (isCallAttempt) {
+    if (consecutiveNoAnswers === 0) escalationStage = 0;
+    else if (consecutiveNoAnswers === 1) escalationStage = 1;
+    else if (consecutiveNoAnswers === 2) escalationStage = 2;
+    else if (consecutiveNoAnswers === 3) escalationStage = 3;
+    else escalationStage = 4;
+  }
+
+  const next: CompanySnapshot = {
+    ...existing,
+    lastAction: entry,
+    dealActions: [...(existing.dealActions ?? []), entry].slice(-MAX_DEAL_ACTIONS),
+    callAttempts,
+    consecutiveNoAnswers,
+    lastAttemptType: isCallAttempt ? action.type : (existing.lastAttemptType ?? undefined),
+    lastAttemptOutcome: isCallAttempt ? action.outcome : (existing.lastAttemptOutcome ?? undefined),
+    escalationStage,
+    updatedAt: now,
+  };
+
+  all[key] = next;
+  await writeAll(all);
+  return { snapshot: next, action: entry };
+}
+
+export async function setNextAction(
+  company: CompanyRef,
+  update: { nextAction: string; nextActionDate?: string; contactName?: string; contactPhone?: string; contactEmail?: string }
+): Promise<CompanySnapshot> {
+  return serialize(() => setNextActionUnsafe(company, update));
+}
+
+async function setNextActionUnsafe(
+  company: CompanyRef,
+  update: { nextAction: string; nextActionDate?: string; contactName?: string; contactPhone?: string; contactEmail?: string }
+): Promise<CompanySnapshot> {
+  const all = await readAll();
+  const key = companyKey(company);
+  const now = new Date().toISOString();
+  const existing = all[key] ? ensureShape(all[key]) : freshSnapshot(company, now);
+
+  const next: CompanySnapshot = {
+    ...existing,
+    nextAction: update.nextAction,
+    nextActionDate: update.nextActionDate,
+    contactName: update.contactName ?? existing.contactName,
+    contactPhone: update.contactPhone ?? existing.contactPhone,
+    contactEmail: update.contactEmail ?? existing.contactEmail,
+    updatedAt: now,
+  };
+
+  all[key] = next;
+  await writeAll(all);
+  return next;
 }

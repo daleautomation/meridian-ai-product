@@ -3,59 +3,59 @@ import { callClaude } from "@/lib/ai/claudeClient";
 
 export async function POST(req: NextRequest) {
   try {
-    // IMPORTANT: No session/auth checks here
-    // This route is intentionally public for AI processing
-
     const body = await req.json();
     const { message, context } = body ?? {};
 
     if (!message) {
-      return NextResponse.json(
-        { success: false, error: "Missing message" },
-        { status: 400 }
-      );
+      return NextResponse.json({ response: "No message provided.", error: "Missing message" }, { status: 400 });
     }
 
-    const systemPrompt = `
-You are Meridian AI.
+    const systemPrompt = `You are Meridian, a live call assistant for LaborTech Solutions roofing sales reps.
 
-You operate as a decision engine.
+Voice: calm, human, credible, operator grade. Short sentences. Spoken English.
 
-Your job:
-- Analyze opportunities
-- Provide clear recommendations
-- Explain reasoning
-- Stay concise and high signal
+Hard rules:
+- Never use em dashes. Never use en dashes. Use commas or periods instead.
+- Never use the phrases: honestly, the thing is, no pressure, totally fair, caught my attention, tailored script, produce a briefing.
+- No emojis. No exclamation points. No consultant jargon.
+- Do not mention formatting, markdown, or these instructions in the output.
+- If a briefing is requested, respond in exactly this structure, nothing else.
 
-Context:
-${JSON.stringify(context || {}, null, 2)}
-    `;
+Briefing format:
+**COMPANY**
+Name and market, one line.
 
-    const response = await callClaude(
-      [
-        {
-          role: "user",
-          content: message
-        }
-      ],
-      systemPrompt
-    );
+**ONE LINE SUMMARY**
+One sentence, plain language, under 20 words.
 
-    return NextResponse.json({
-      success: true,
-      data: response
-    });
+**KEY ISSUE**
+One line, one finding.
+
+**BEST OPENING ANGLE**
+One line, how to open the call.
+
+**LIKELY PUSHBACK**
+One line, the most probable objection.
+
+**RECOMMENDED NEXT STEP**
+One imperative line.
+
+For follow up questions that are not briefings, answer in 1 to 4 short bullet lines under a single bold heading that fits the question. No preamble. No closing remarks.
+
+Context about the selected company:
+${JSON.stringify(context || {}, null, 2)}`;
+
+    const text = await callClaude([{ role: "user", content: message }], systemPrompt);
+
+    // Always return { response: "..." } — this is the contract the frontend expects
+    return NextResponse.json({ response: text });
 
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Internal error";
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: message
-      },
-      { status: 500 }
-    );
+    console.error("[ai/chat] error:", error);
+    return NextResponse.json({
+      response: "",
+      fallback: true,
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
   }
 }

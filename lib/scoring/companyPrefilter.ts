@@ -109,6 +109,11 @@ function isNonRoofingCategory(c: RawCompany): string | null {
 
 // ── Public API ──────────────────────────────────────────────────────────
 
+// Preferred target profile:
+//   active operational status + Google Business Profile + 10-150 reviews + weak/outdated website.
+// The rules below enforce the hard rejects. Soft signals (low reviews, no GBP)
+// are surfaced as reasons so ranking can demote without filtering outright.
+
 export function prefilter(c: RawCompany): PrefilterResult {
   const reasons: string[] = [];
 
@@ -126,9 +131,29 @@ export function prefilter(c: RawCompany): PrefilterResult {
   const nonRoof = isNonRoofingCategory(c);
   if (nonRoof) reasons.push(`non_roofing_category (${nonRoof})`);
 
+  // Hard rejects from enrichment (only fire when the field is populated).
+  if (c.operationalStatus === "closed_permanently") {
+    reasons.push("not_operational (closed permanently)");
+  }
+  if (c.reviewCount !== undefined && c.reviewCount === 0 && !c.website) {
+    reasons.push("inactive_signal (no reviews, no website)");
+  }
+
+  // Soft signals — surfaced as reasons so ranking can demote without rejecting.
+  // These are informational; the verdict below only filters when a reason is hard.
+  const hardReasons = reasons.slice();
+  const softReasons: string[] = [];
+  if (c.gbpUrl === undefined || c.gbpUrl === null || c.gbpUrl === "") {
+    softReasons.push("no_gbp");
+  }
+  if (c.reviewCount !== undefined) {
+    if (c.reviewCount > 0 && c.reviewCount < 10) softReasons.push("low_review_count");
+    if (c.reviewCount > 150) softReasons.push("over_reviewed_established");
+  }
+
   return {
-    verdict: reasons.length === 0 ? "PASSED" : "FILTERED",
-    reasons,
+    verdict: hardReasons.length === 0 ? "PASSED" : "FILTERED",
+    reasons: hardReasons.length === 0 ? softReasons : hardReasons,
   };
 }
 

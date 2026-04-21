@@ -1,7 +1,5 @@
-import { getSession } from "../../lib/auth";
-import AboutPage from "../../components/AboutPage";
+import { redirect } from "next/navigation";
 
-export default async function About() {
-  const user = await getSession();
-  return <AboutPage isAuthenticated={!!user} />;
+export default function About() {
+  redirect("/operator");
 }

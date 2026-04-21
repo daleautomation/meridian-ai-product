@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [username, setUsername] = useState("");
@@ -27,9 +27,9 @@ export default function LoginPage() {
         setLoading(false);
         return;
       }
-      const next = searchParams.get("next") || "/dashboard";
+      const next = searchParams.get("next") || "/operator";
       // Only allow internal redirects
-      const safe = next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+      const safe = next.startsWith("/") && !next.startsWith("//") ? next : "/operator";
       router.replace(safe);
       router.refresh();
     } catch {
@@ -41,9 +41,8 @@ export default function LoginPage() {
   return (
     <div style={styles.root}>
       <form onSubmit={onSubmit} style={styles.card}>
-        <a href="/" style={styles.backLink}>← Back</a>
         <div style={styles.brand}>MERIDIAN AI</div>
-        <div style={styles.sub}>Decision Platform</div>
+        <div style={styles.sub}>Roofing Engine — LaborTech Solutions</div>
         <label style={styles.label}>USERNAME</label>
         <input
           autoFocus
@@ -72,72 +71,74 @@ export default function LoginPage() {
 const styles: Record<string, React.CSSProperties> = {
   root: {
     minHeight: "100vh",
-    background: "#0C0731",
-    color: "#F0EFF5",
+    background: "#FAFBFC",
+    color: "#1A1A2E",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontFamily: "'DM Sans', sans-serif",
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', sans-serif",
   },
   card: {
-    width: "320px",
-    padding: "32px 28px",
-    background: "#11102A",
-    border: "1px solid rgba(240,239,245,0.06)",
-    borderRadius: "12px",
+    width: "340px",
+    padding: "36px 32px",
+    background: "#FFFFFF",
+    border: "1px solid #E2E8F0",
+    borderRadius: "14px",
+    boxShadow: "0 4px 6px rgba(0,0,0,0.04), 0 10px 15px rgba(0,0,0,0.03)",
     display: "flex",
     flexDirection: "column",
   },
-  backLink: {
-    fontSize: "12px",
-    color: "rgba(240,239,245,0.35)",
-    textDecoration: "none",
-    marginBottom: "16px",
-  },
   brand: {
     fontSize: "18px",
-    fontWeight: 800,
-    letterSpacing: "0.10em",
-    fontFamily: "'Syne', sans-serif",
+    fontWeight: 700,
+    color: "#1A1A2E",
+    letterSpacing: "-0.01em",
   },
   sub: {
-    fontSize: "11px",
-    color: "rgba(240,239,245,0.35)",
-    letterSpacing: "0.05em",
-    marginBottom: "24px",
+    fontSize: "12px",
+    color: "#94A3B8",
+    marginBottom: "28px",
+    marginTop: "2px",
   },
   label: {
-    fontSize: "10px",
-    letterSpacing: "0.1em",
-    color: "rgba(240,239,245,0.40)",
-    marginTop: "12px",
+    fontSize: "12px",
+    fontWeight: 500,
+    color: "#64748B",
+    marginTop: "14px",
     marginBottom: "6px",
   },
   input: {
-    background: "rgba(240,239,245,0.04)",
-    border: "1px solid rgba(240,239,245,0.08)",
-    borderRadius: "6px",
+    background: "#FAFBFC",
+    border: "1px solid #E2E8F0",
+    borderRadius: "8px",
     padding: "10px 12px",
-    color: "#F0EFF5",
-    fontSize: "13px",
+    color: "#1A1A2E",
+    fontSize: "14px",
     fontFamily: "inherit",
     outline: "none",
   },
   error: {
     marginTop: "14px",
     fontSize: "12px",
-    color: "#D4726A",
+    color: "#DC2626",
   },
   btn: {
-    marginTop: "20px",
+    marginTop: "24px",
     padding: "11px 12px",
-    borderRadius: "7px",
-    background: "#68ECF4",
-    color: "#0C0731",
+    borderRadius: "8px",
+    background: "#2563EB",
+    color: "#FFFFFF",
     border: "none",
-    fontSize: "13px",
+    fontSize: "14px",
     fontWeight: 600,
     cursor: "pointer",
-    letterSpacing: "0.02em",
   },
 };
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}

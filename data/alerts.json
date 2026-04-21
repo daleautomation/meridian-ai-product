@@ -78,5 +78,21 @@
     "updatedAt": "2026-04-09T21:14:58.298Z",
     "isRead": false,
     "isDismissed": false
+  },
+  "dylan:curated-w-002:EXECUTE_CONTROLLED": {
+    "id": "dylan:curated-w-002:EXECUTE_CONTROLLED",
+    "userId": "dylan",
+    "itemId": "curated-w-002",
+    "vertical": "watches",
+    "title": "Tudor Black Bay 58 79030B Blue 2023",
+    "dominantAction": "EXECUTE_CONTROLLED",
+    "score": 7.3,
+    "freshnessPriority": "NORMAL",
+    "severity": "MEDIUM",
+    "reason": "EXECUTE — exploitable edge, clean inputs, controlled execution",
+    "createdAt": "2026-04-21T00:50:34.926Z",
+    "updatedAt": "2026-04-21T00:50:34.926Z",
+    "isRead": false,
+    "isDismissed": false
   }
 }
