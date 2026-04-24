@@ -22,6 +22,7 @@ import crypto from "node:crypto";
 import type { CompanyRef, ToolResult } from "@/lib/mcp/types";
 import { companyKey } from "@/lib/mcp/types";
 import { safeWriteJson } from "@/lib/utils/fsSafeWrite";
+import type { ContactResolution } from "@/lib/contacts/types";
 
 // ── Schema ──────────────────────────────────────────────────────────────
 
@@ -93,6 +94,33 @@ export type CompanySnapshot = {
   lastAttemptType?: string;
   lastAttemptOutcome?: string;
   escalationStage?: number;   // 0=fresh, 1=first try, 2=second, 3=voicemail+email, 4=deprioritize
+  // ── Phase 5: durable contact resolution ──
+  // Full ContactResolution payload from the most recent resolveContact run,
+  // persisted so first-render UI has real contact paths without a live call.
+  // Operator-curated contactPhone / contactEmail / contactName remain
+  // authoritative — resolver output is a supplement, not an override.
+  contactResolution?: ContactResolution;
+  contactResolutionCheckedAt?: string;  // ISO — when resolveContact last ran
+  // ── Phase 6: explicit manual override block ──
+  // Operator-entered overrides. When present these win over everything —
+  // resolver output, contactResolution, and the legacy contactPhone/Email
+  // fields. The legacy fields are kept as a soft cache (they may equal the
+  // preferred value). Clearing a preferred* field returns control to the
+  // resolver.
+  preferredPhone?: string;
+  preferredEmail?: string;
+  preferredContactName?: string;
+  preferredContactRole?: string;
+  preferredContactSource?: string;
+  contactNotes?: string;
+  preferredUpdatedAt?: string;         // ISO — when overrides were last set
+  preferredUpdatedBy?: string;         // userId or "system"
+  // ── Phase 11: trade + service bucket classification ──
+  // Optional; when absent the UI falls back to TRADE_DEFAULT ("roofing").
+  // Keys match lib/modules/trades.ts. Stored as plain strings to keep
+  // the snapshot store decoupled from the module types.
+  trade?: string;
+  serviceBucket?: string;
 };
 
 const STORE_PATH = path.join(process.cwd(), "data", "companySnapshots.json");
@@ -423,6 +451,113 @@ async function logDealActionUnsafe(
   all[key] = next;
   await writeAll(all);
   return { snapshot: next, action: entry };
+}
+
+// ── Phase 5: contact resolution persistence ────────────────────────────
+// Stores the full ContactResolution payload from resolveContact() so first
+// render has real contact data without another round trip. Also lifts the
+// best phone/email into the legacy contactPhone/Email fields, but ONLY if
+// those fields are empty — operator-curated values always win.
+
+export async function upsertContactResolution(
+  company: CompanyRef,
+  resolution: ContactResolution,
+): Promise<CompanySnapshot> {
+  return serialize(() => upsertContactResolutionUnsafe(company, resolution));
+}
+
+async function upsertContactResolutionUnsafe(
+  company: CompanyRef,
+  resolution: ContactResolution,
+): Promise<CompanySnapshot> {
+  const all = await readAll();
+  const key = companyKey(company);
+  const now = new Date().toISOString();
+  const existing = all[key] ? ensureShape(all[key]) : freshSnapshot(company, now);
+
+  // Lift into legacy contactPhone/Email fields only when no operator value
+  // is already stored. Matches the project rule that operator-curated data
+  // is authoritative.
+  const resolvedPhone = resolution.phone ?? undefined;
+  const resolvedEmail = resolution.email ?? undefined;
+  // `resolution.contactName` is the enriched person-level name (Hunter,
+  // site-derived, etc.). `matchedName` is the business entity and must
+  // never be backfilled into the person slot — otherwise "Acme Roofing
+  // LLC" ends up rendered as the contact person on the UI.
+  const resolvedPersonName = resolution.contactName ?? undefined;
+
+  const next: CompanySnapshot = {
+    ...existing,
+    company: { ...existing.company, ...company },
+    contactResolution: resolution,
+    contactResolutionCheckedAt: resolution.lastCheckedAt ?? now,
+    contactPhone: existing.contactPhone ?? resolvedPhone,
+    contactEmail: existing.contactEmail ?? resolvedEmail,
+    contactName: existing.contactName ?? resolvedPersonName,
+    updatedAt: now,
+  };
+
+  all[key] = next;
+  await writeAll(all);
+  return next;
+}
+
+// ── Phase 6: manual contact overrides ──────────────────────────────────
+// Operator-entered values that take precedence over resolver output. Only
+// fields present in `update` are changed; pass an empty string ("") to
+// clear a field and return that slot to resolver control.
+
+export type ContactPreferencesUpdate = {
+  preferredPhone?: string;
+  preferredEmail?: string;
+  preferredContactName?: string;
+  preferredContactRole?: string;
+  preferredContactSource?: string;
+  contactNotes?: string;
+  performedBy: string;
+};
+
+export async function setContactPreferences(
+  company: CompanyRef,
+  update: ContactPreferencesUpdate,
+): Promise<CompanySnapshot> {
+  return serialize(() => setContactPreferencesUnsafe(company, update));
+}
+
+async function setContactPreferencesUnsafe(
+  company: CompanyRef,
+  update: ContactPreferencesUpdate,
+): Promise<CompanySnapshot> {
+  const all = await readAll();
+  const key = companyKey(company);
+  const now = new Date().toISOString();
+  const existing = all[key] ? ensureShape(all[key]) : freshSnapshot(company, now);
+
+  // Treat empty strings as "clear this field" so operators can remove an
+  // override without touching the JSON.
+  const merge = <T extends string | undefined>(incoming: T, current: T): T => {
+    if (incoming === undefined) return current;
+    if (incoming === "") return undefined as T;
+    return incoming;
+  };
+
+  const next: CompanySnapshot = {
+    ...existing,
+    company: { ...existing.company, ...company },
+    preferredPhone: merge(update.preferredPhone, existing.preferredPhone),
+    preferredEmail: merge(update.preferredEmail, existing.preferredEmail),
+    preferredContactName: merge(update.preferredContactName, existing.preferredContactName),
+    preferredContactRole: merge(update.preferredContactRole, existing.preferredContactRole),
+    preferredContactSource: merge(update.preferredContactSource, existing.preferredContactSource),
+    contactNotes: merge(update.contactNotes, existing.contactNotes),
+    preferredUpdatedAt: now,
+    preferredUpdatedBy: update.performedBy,
+    updatedAt: now,
+  };
+
+  all[key] = next;
+  await writeAll(all);
+  return next;
 }
 
 export async function setNextAction(

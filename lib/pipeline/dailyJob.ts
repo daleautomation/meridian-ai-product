@@ -28,6 +28,7 @@ export type DailyJobResult = {
     import: { received: number; inserted: number; duplicates: number; total: number } | null;
     prefilter: { scanned: number; passed: number; filtered: number } | null;
     enrich: { considered: number; succeeded: number; failed: number; skipped: number } | null;
+    contacts: { considered: number; withPhone: number; withFallback: number; empty: number } | null;
     ranking: { total: number; high: number; medium: number; low: number } | null;
     rotation: { removed: number; staleDeprioritized: number } | null;
   };
@@ -52,6 +53,7 @@ export async function runDailyPipeline(opts: DailyJobOptions = {}): Promise<Dail
     import: null,
     prefilter: null,
     enrich: null,
+    contacts: null,
     ranking: null,
     rotation: null,
   };
@@ -117,6 +119,29 @@ export async function runDailyPipeline(opts: DailyJobOptions = {}): Promise<Dail
   } catch (e) {
     const msg = e instanceof Error ? e.message : "enrich failed";
     errors.push(`enrich: ${msg}`);
+  }
+
+  // ── Step 3b: Batch contact hydration ──────────────────────────────────
+  // Reuses resolveContact() via the batch_resolve_contacts tool. Runs after
+  // website enrichment so site-scraped phone/email can feed the waterfall.
+  // Gracefully no-ops when no provider keys are set (resolver returns empty).
+  try {
+    const res = await callTool("batch_resolve_contacts", {
+      limit: enrichLimit,
+      concurrency: Math.min(3, enrichConcurrency),
+      staleDays,
+      onlyMissing: true,
+    });
+    const data = res.data as Record<string, number> | null;
+    steps.contacts = {
+      considered: data?.considered ?? 0,
+      withPhone: data?.withPhone ?? 0,
+      withFallback: data?.withFallback ?? 0,
+      empty: data?.empty ?? 0,
+    };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "contact hydration failed";
+    errors.push(`contacts: ${msg}`);
   }
 
   // ── Step 4: Rankings (computed on-read, just verify) ───────────────────

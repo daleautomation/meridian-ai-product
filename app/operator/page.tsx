@@ -10,6 +10,7 @@ import { listSnapshots } from "../../lib/state/companySnapshotStore";
 import { getAllActivities, getCalendarEvents } from "../../lib/state/crmStore";
 import { getJobHistory } from "../../lib/pipeline/dailyJob";
 import OperatorConsole from "../../components/OperatorConsole";
+import type { CompanyDecision } from "../../lib/scoring/companyDecision";
 
 export const dynamic = "force-dynamic";
 
@@ -23,8 +24,36 @@ export default async function OperatorPage() {
     callTool("list_pending_reviews", { status: "PENDING", limit: 20 }),
   ]);
 
-  const ranked = (rankedRes.data as { ranked: unknown[] } | null)?.ranked ?? [];
+  let ranked = ((rankedRes.data as { ranked: CompanyDecision[] } | null)?.ranked ?? []) as CompanyDecision[];
   const pendingReviews = (pendingRes.data as { reviews: unknown[] } | null)?.reviews ?? [];
+
+  // ── First-render contact hydration ────────────────────────────────────
+  // Batch-resolve contacts for the top visible leads whose persisted
+  // snapshots don't yet carry a phone. Covers the first-load case when the
+  // daily pipeline hasn't run. Reuses resolveContact via the batch tool.
+  // Bounded (default top 20) so page render is not delayed on big pipelines.
+  const TOP_HYDRATE = 20;
+  const needsHydration = ranked
+    .slice(0, TOP_HYDRATE)
+    .filter((d) => !d.contacts?.primaryPhone && !d.blocked)
+    .map((d) => d.key);
+
+  if (needsHydration.length > 0) {
+    try {
+      await callTool("batch_resolve_contacts", {
+        keys: needsHydration,
+        limit: needsHydration.length,
+        concurrency: 3,
+        staleDays: 14,
+        onlyMissing: true,
+      });
+      // Re-rank so tightened bucket rules see newly-populated contacts.
+      const rerank = await callTool("rank_companies", { limit: 100 });
+      ranked = ((rerank.data as { ranked: CompanyDecision[] } | null)?.ranked ?? []) as CompanyDecision[];
+    } catch {
+      // best-effort; fall back to the already-ranked list
+    }
+  }
 
   // Load snapshots for pipeline data
   const snapshots = await listSnapshots();

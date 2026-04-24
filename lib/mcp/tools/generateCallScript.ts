@@ -11,7 +11,7 @@ import type { CompanyRef, ToolDefinition, ToolResult } from "@/lib/mcp/types";
 import { labelFromConfidence, nowIso } from "@/lib/mcp/types";
 import { callClaude } from "@/lib/ai/claudeClient";
 import { getSnapshot } from "@/lib/state/companySnapshotStore";
-import { decideCompany } from "@/lib/scoring/companyDecision";
+import { decideCompany, LABORTECH_SERVICE_PITCH, type LabortechService } from "@/lib/scoring/companyDecision";
 import { searchEntries } from "@/lib/state/knowledgeStore";
 
 export type GenerateCallScriptInput = {
@@ -85,6 +85,78 @@ function tryParseJson<T>(raw: string): T | null {
   try { return JSON.parse(trimmed) as T; } catch { return null; }
 }
 
+// Deterministic fallback used whenever Claude is unavailable (quota,
+// network, invalid JSON, missing snapshot, etc.). Built from existing
+// decision evidence so the script is still specific to the company, never
+// empty strings. Mirrors the defaults in components/OperatorConsole.jsx.
+function buildFallbackScript(params: {
+  companyName: string;
+  location?: string;
+  callerName: string;
+  topWeakness?: string;
+  siteDown?: boolean;
+  interested?: boolean;
+  escalationStage?: number;
+  consecutiveNoAnswers?: number;
+  topService?: LabortechService | null;
+  whyThisCloses?: string;
+}): CallScript {
+  const {
+    companyName, location, callerName,
+    topWeakness, siteDown, interested,
+    escalationStage = 0, consecutiveNoAnswers = 0,
+    topService, whyThisCloses,
+  } = params;
+  const loc = location ? ` in ${location}` : "";
+  const weakness = topWeakness
+    ? `what I saw on your site — ${topWeakness.toLowerCase().replace(/[.]$/, "")}`
+    : "a couple of things on your site that are probably costing you inbound leads";
+
+  // Pick a tone based on escalation stage so the opener matches reality.
+  let opener: string;
+  if (interested) {
+    opener = `Hi, this is ${callerName} with LaborTech Solutions. Circling back on ${companyName} — you mentioned interest last time. Do you have a few minutes to get to next steps?`;
+  } else if (escalationStage >= 3 || consecutiveNoAnswers >= 2) {
+    opener = `Hi, this is ${callerName} with LaborTech. I've tried reaching ${companyName} a couple of times — I wouldn't keep calling if this wasn't worth it. 60 seconds?`;
+  } else {
+    opener = `Hi, this is ${callerName} with LaborTech Solutions. I ran a quick check on ${companyName}${loc} and flagged ${weakness}. Do you have 60 seconds?`;
+  }
+
+  const siteIssueLine = siteDown
+    ? "Right now the site is not serving real business content, so everyone who clicks is bouncing."
+    : "Referred customers still check the site before they call, and this is shaking that trust.";
+
+  return {
+    companyName,
+    opener,
+    discoveryQuestions: [
+      "How are most of your jobs coming in right now?",
+      "Who handles your website and Google presence today?",
+      "What does a strong month look like for new jobs?",
+    ],
+    valueProp: topService
+      ? `${LABORTECH_SERVICE_PITCH[topService]} ${whyThisCloses ? whyThisCloses : ""}`.trim()
+      : "LaborTech helps KC roofing companies close the gap between inbound search and booked jobs. We fix the visibility and conversion gaps we find on your site and layer in the ops tools that keep leads from falling through.",
+    weaknessTransition: siteIssueLine,
+    objectionResponses: [
+      {
+        objection: "We get enough work from referrals",
+        response: "Makes sense. Referred customers still check the site before they call. When the site fails a live check, that trust breaks on first click.",
+      },
+      {
+        objection: "We already have someone handling marketing",
+        response: "Understood. This is not a marketing pitch — it is a live-check report on what a customer sees right now. Takes 10 minutes to review either way.",
+      },
+      {
+        objection: "Just send me an email",
+        response: "Happy to. The call is faster because I can screen-share the scan and show you exactly what failed. Your call.",
+      },
+    ],
+    closeAsk: "Worth 15 minutes this week so I can walk through what I found and how we fix it?",
+    voicemailScript: `Hi, ${callerName} with LaborTech. I ran a live check on ${companyName}'s site and flagged items costing you inbound leads. Quick callback and I will walk you through them. Thanks.`,
+  };
+}
+
 async function handler(input: GenerateCallScriptInput): Promise<ToolResult<CallScript>> {
   const { company } = input;
   const callerName = input.callerName ?? "John";
@@ -97,20 +169,20 @@ async function handler(input: GenerateCallScriptInput): Promise<ToolResult<CallS
       tool: "generate_call_script",
       company,
       timestamp,
-      confidence: 0,
+      confidence: 25,
       confidenceLabel: "LOW",
-      evidence: [],
-      data: {
+      evidence: [{
+        kind: "fallback",
+        source: "generateCallScript",
+        observedAt: timestamp,
+        detail: "no snapshot on file — returning deterministic template",
+      }],
+      data: buildFallbackScript({
         companyName: company.name,
-        opener: "",
-        discoveryQuestions: [],
-        valueProp: "",
-        weaknessTransition: "",
-        objectionResponses: [],
-        closeAsk: "",
-        voicemailScript: "",
-      },
-      stub: false,
+        location: company.location,
+        callerName,
+      }),
+      stub: true,
       error: "no_snapshot",
     };
   }
@@ -155,6 +227,21 @@ async function handler(input: GenerateCallScriptInput): Promise<ToolResult<CallS
 
   const userMessage = `Call script payload:\n${JSON.stringify(payload, null, 2)}`;
 
+  // Build a deterministic fallback payload up-front so both Claude errors
+  // and invalid-JSON responses land on the same script.
+  const fallbackData = buildFallbackScript({
+    companyName: company.name,
+    location: snap.company.location,
+    callerName,
+    topWeakness: decision.topWeaknesses?.[0],
+    siteDown: ((snap.latest.inspect_website?.data as { reachable?: boolean } | undefined)?.reachable) === false,
+    interested: decision.closeReadiness === "READY TO CLOSE",
+    escalationStage: decision.escalationStage,
+    consecutiveNoAnswers: decision.consecutiveNoAnswers,
+    topService: decision.serviceRecommendations?.[0] ?? null,
+    whyThisCloses: decision.whyThisCloses,
+  });
+
   let raw: string;
   try {
     raw = await callClaude([{ role: "user", content: userMessage }], buildSystemPrompt(scriptTone));
@@ -164,20 +251,16 @@ async function handler(input: GenerateCallScriptInput): Promise<ToolResult<CallS
       tool: "generate_call_script",
       company: snap.company,
       timestamp,
-      confidence: 15,
+      confidence: 40,
       confidenceLabel: "LOW",
-      evidence: [],
-      data: {
-        companyName: company.name,
-        opener: "",
-        discoveryQuestions: [],
-        valueProp: "",
-        weaknessTransition: "",
-        objectionResponses: [],
-        closeAsk: "",
-        voicemailScript: "",
-      },
-      stub: false,
+      evidence: [{
+        kind: "fallback",
+        source: "generateCallScript",
+        observedAt: timestamp,
+        detail: `claude unavailable (${message.slice(0, 120)}) — returning deterministic template built from decision evidence`,
+      }],
+      data: fallbackData,
+      stub: true,
       error: message,
     };
   }
@@ -188,20 +271,16 @@ async function handler(input: GenerateCallScriptInput): Promise<ToolResult<CallS
       tool: "generate_call_script",
       company: snap.company,
       timestamp,
-      confidence: 20,
+      confidence: 35,
       confidenceLabel: "LOW",
-      evidence: [],
-      data: {
-        companyName: company.name,
-        opener: raw.slice(0, 300),
-        discoveryQuestions: [],
-        valueProp: "",
-        weaknessTransition: "",
-        objectionResponses: [],
-        closeAsk: "",
-        voicemailScript: "",
-      },
-      stub: false,
+      evidence: [{
+        kind: "fallback",
+        source: "generateCallScript",
+        observedAt: timestamp,
+        detail: "claude returned non-JSON — returning deterministic template",
+      }],
+      data: fallbackData,
+      stub: true,
       error: "invalid_json_from_model",
     };
   }

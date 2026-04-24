@@ -38,6 +38,12 @@ import { logCrmActivityTool } from "./tools/logCrmActivity";
 import { getCompanyTimelineTool } from "./tools/getCompanyTimeline";
 import { getCalendarEventsTool } from "./tools/getCalendarEvents";
 import { findBestContactTool } from "./tools/findBestContact";
+import { batchResolveContactsTool } from "./tools/batchResolveContacts";
+import { setContactPreferencesTool } from "./tools/setContactPreferences";
+import { createFollowUpTool } from "./tools/createFollowUp";
+import { completeFollowUpTool } from "./tools/completeFollowUp";
+import { listFollowUpsTool } from "./tools/listFollowUps";
+import { clearCompanyActivityTool } from "./tools/clearCompanyActivity";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const TOOLS: ToolDefinition<any, any>[] = [
@@ -87,6 +93,14 @@ const TOOLS: ToolDefinition<any, any>[] = [
   getCalendarEventsTool,
   // Contact resolution engine
   findBestContactTool,
+  batchResolveContactsTool,
+  setContactPreferencesTool,
+  // CRM follow-up layer — scheduled tasks with auto-logged activities
+  createFollowUpTool,
+  completeFollowUpTool,
+  listFollowUpsTool,
+  // CRM scoped reset — per-company activity wipe (confirm-gated)
+  clearCompanyActivityTool,
 ];
 
 const TOOL_INDEX = new Map(TOOLS.map((t) => [t.name, t]));

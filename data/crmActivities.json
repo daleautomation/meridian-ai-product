@@ -201,6 +201,76 @@
       "outcome": "assistant",
       "note": "",
       "id": "878daf2c-d600-4dfd-828e-7b14e60fa4e9"
+    },
+    {
+      "companyKey": "domain:kcroofpros.com",
+      "companyName": "Kansas City Roof Pros",
+      "performedAt": "2026-04-22T16:19:12.658Z",
+      "activityType": "contact_search_started",
+      "performedBy": "dylan",
+      "outcome": "assistant",
+      "note": "",
+      "id": "d2fc87e1-268b-4dce-92d6-715371d0e44b"
+    },
+    {
+      "companyKey": "domain:kcroofpros.com",
+      "companyName": "Kansas City Roof Pros",
+      "performedAt": "2026-04-22T16:22:46.365Z",
+      "activityType": "scan_viewed",
+      "performedBy": "dylan",
+      "outcome": "proof",
+      "note": "",
+      "id": "3f486b87-1f2f-41f1-a31f-542415eccef7"
+    },
+    {
+      "companyKey": "domain:kcroofpros.com",
+      "companyName": "Kansas City Roof Pros",
+      "performedAt": "2026-04-22T16:22:47.342Z",
+      "activityType": "scan_viewed",
+      "performedBy": "dylan",
+      "outcome": "proof",
+      "note": "",
+      "id": "9aaeb1ac-710a-4cde-be3a-3daaf9eb8a25"
+    },
+    {
+      "companyKey": "domain:kcroofpros.com",
+      "companyName": "Kansas City Roof Pros",
+      "performedAt": "2026-04-22T16:22:59.356Z",
+      "activityType": "scan_viewed",
+      "performedBy": "dylan",
+      "outcome": "proof",
+      "note": "",
+      "id": "680e8097-308d-408c-9d9d-65524e5fcf35"
+    },
+    {
+      "companyKey": "domain:kcroofpros.com",
+      "companyName": "Kansas City Roof Pros",
+      "performedAt": "2026-04-22T16:28:40.483Z",
+      "activityType": "contact_search_started",
+      "performedBy": "dylan",
+      "outcome": "assistant",
+      "note": "",
+      "id": "89106beb-fde3-4c98-9e9a-21ecbf90d1a0"
+    },
+    {
+      "companyKey": "domain:kcroofpros.com",
+      "companyName": "Kansas City Roof Pros",
+      "performedAt": "2026-04-22T16:29:03.594Z",
+      "activityType": "contact_search_started",
+      "performedBy": "dylan",
+      "outcome": "assistant",
+      "note": "",
+      "id": "ebef2143-4123-44b2-884d-1e51a993dcad"
+    },
+    {
+      "companyKey": "domain:kcroofpros.com",
+      "companyName": "Kansas City Roof Pros",
+      "performedAt": "2026-04-22T17:11:32.699Z",
+      "activityType": "contact_search_started",
+      "performedBy": "dylan",
+      "outcome": "assistant",
+      "note": "",
+      "id": "50827265-8757-4588-8fbc-7b11216211c3"
     }
   ],
   "domain:atlasexteriors.com": [
@@ -213,6 +283,70 @@
       "outcome": null,
       "note": "",
       "id": "2aa0f0c2-d901-4462-9211-21070dd59132"
+    }
+  ],
+  "domain:citywideroofing.com": [
+    {
+      "companyKey": "domain:citywideroofing.com",
+      "companyName": "City Wide Roofing",
+      "performedAt": "2026-04-22T17:11:50.168Z",
+      "activityType": "contact_search_started",
+      "performedBy": "dylan",
+      "outcome": "assistant",
+      "note": "",
+      "id": "ac1b317c-4f28-4240-bf3f-f9725315a8a5"
+    },
+    {
+      "companyKey": "domain:citywideroofing.com",
+      "companyName": "City Wide Roofing",
+      "performedAt": "2026-04-22T17:11:53.495Z",
+      "activityType": "contact_search_started",
+      "performedBy": "dylan",
+      "outcome": "assistant",
+      "note": "",
+      "id": "88c6cc4a-383a-469d-a495-b35d8f403685"
+    },
+    {
+      "companyKey": "domain:citywideroofing.com",
+      "companyName": "City Wide Roofing",
+      "performedAt": "2026-04-22T17:11:56.402Z",
+      "activityType": "contact_search_expanded",
+      "performedBy": "dylan",
+      "outcome": "assistant",
+      "note": "",
+      "id": "927046f2-b0a3-4f96-bed0-05420ad563da"
+    }
+  ],
+  "domain:bridgerroofing.com": [
+    {
+      "companyKey": "domain:bridgerroofing.com",
+      "companyName": "Bridger Roofing",
+      "performedAt": "2026-04-22T23:20:34.721Z",
+      "activityType": "scan_viewed",
+      "performedBy": "dylan",
+      "outcome": "call_mode",
+      "note": "",
+      "id": "dc98a7c8-72d0-4c6f-920a-01cf780e4e42"
+    },
+    {
+      "companyKey": "domain:bridgerroofing.com",
+      "companyName": "Bridger Roofing",
+      "performedAt": "2026-04-22T23:20:35.790Z",
+      "activityType": "scan_viewed",
+      "performedBy": "dylan",
+      "outcome": "call_mode",
+      "note": "",
+      "id": "d7b28223-0721-4c3d-ac66-d37c3366d78c"
+    },
+    {
+      "companyKey": "domain:bridgerroofing.com",
+      "companyName": "Bridger Roofing",
+      "performedAt": "2026-04-22T23:20:36.592Z",
+      "activityType": "scan_viewed",
+      "performedBy": "dylan",
+      "outcome": "call_mode",
+      "note": "",
+      "id": "1f287d05-eaf3-46ba-9dcb-fd698b741196"
     }
   ]
 }

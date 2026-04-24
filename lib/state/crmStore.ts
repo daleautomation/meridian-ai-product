@@ -131,6 +131,22 @@ export async function getTimeline(companyKey: string): Promise<CrmActivity[]> {
   );
 }
 
+// Scoped clear — wipes every activity for a single company key. Does
+// not touch other companies. Used by the per-card "clear activity log"
+// control; protected server-side by requiring the caller to pass an
+// explicit confirm flag.
+export async function clearActivitiesForCompany(companyKey: string): Promise<number> {
+  return serialize(async () => {
+    const all = await readAll();
+    const list = all[companyKey] ?? [];
+    const removed = list.length;
+    if (removed === 0) return 0;
+    delete all[companyKey];
+    await writeAll(all);
+    return removed;
+  });
+}
+
 export async function getCompanySummary(
   companyKey: string,
   companyName: string

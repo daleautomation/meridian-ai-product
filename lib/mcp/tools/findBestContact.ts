@@ -3,10 +3,18 @@
 // Wraps the contact resolution engine so the operator UI can trigger a
 // live identity-first lookup. Returns the canonical ContactResolution
 // payload documented in lib/contacts/types.ts.
+//
+// Side effects (additive, safe):
+//   - Folds in phone/email previously extracted by inspect_website if those
+//     signals exist on the persisted snapshot (so the waterfall benefits
+//     without the caller having to pass them).
+//   - Persists the resolution via upsertContactResolution so first-render
+//     UI has real contacts without a second round trip.
 
 import type { CompanyRef, ToolDefinition, ToolResult } from "@/lib/mcp/types";
 import { labelFromConfidence, nowIso } from "@/lib/mcp/types";
 import { resolveContact } from "@/lib/contacts/resolver";
+import { getSnapshot, upsertContactResolution } from "@/lib/state/companySnapshotStore";
 import type { ContactResolution } from "@/lib/contacts/types";
 
 export type FindBestContactInput = {
@@ -14,6 +22,12 @@ export type FindBestContactInput = {
   city?: string;
   state?: string;
   category?: string;
+  // Pre-known signals (typically from inspect_website). Fed into the
+  // waterfall so site-scraped phone/email/website/form become explicit paths.
+  websitePhone?: string;
+  websiteEmail?: string;
+  website?: string;
+  hasContactForm?: boolean;
 };
 
 function scoreToNumber(confidence: ContactResolution["confidence"]): number {
@@ -27,12 +41,57 @@ function scoreToNumber(confidence: ContactResolution["confidence"]): number {
 
 async function handler(input: FindBestContactInput): Promise<ToolResult<ContactResolution>> {
   const parsedLocation = parseLocation(input.company.location);
+
+  // If the caller didn't pass site-extracted signals, pull them from the
+  // persisted inspect_website result. This lets the waterfall fold in
+  // phone / email / contact-form / website from the live scan without any
+  // extra wiring.
+  let websitePhone = input.websitePhone;
+  let websiteEmail = input.websiteEmail;
+  let website = input.website ?? input.company.url ?? input.company.domain;
+  let hasContactForm = input.hasContactForm;
+  let siteEmails: Array<{ email: string; method: "website_mailto" | "website_visible" | "website_schema" | "website_obfuscated"; page: string }> | undefined;
+  if (!websitePhone || !websiteEmail || !website || hasContactForm === undefined || !siteEmails) {
+    const snap = await getSnapshot(input.company);
+    const ws = snap?.latest?.["inspect_website"]?.data as
+      | {
+          phone_from_site?: string | null;
+          email_from_site?: string | null;
+          emails_from_site?: Array<{ email: string; method: string; page: string }>;
+          finalUrl?: string | null;
+          has_contact_form?: boolean;
+        }
+      | undefined;
+    if (ws) {
+      websitePhone = websitePhone ?? ws.phone_from_site ?? undefined;
+      websiteEmail = websiteEmail ?? ws.email_from_site ?? undefined;
+      website = website ?? ws.finalUrl ?? undefined;
+      hasContactForm = hasContactForm ?? ws.has_contact_form ?? undefined;
+      // Cast: WebsiteSignals' SiteEmailMethod strings are a subset of the
+      // BusinessInput type's literal union.
+      siteEmails = ws.emails_from_site as typeof siteEmails ?? undefined;
+    }
+  }
+
   const result = await resolveContact({
     companyName: input.company.name,
     city: input.city ?? parsedLocation.city,
     state: input.state ?? parsedLocation.state,
     category: input.category ?? "roofing",
+    website,
+    phone: websitePhone,
+    email: websiteEmail,
+    siteEmails,
+    hasContactForm,
   });
+
+  // Persist so decideCompany / first-render UI read a durable copy next
+  // time. Never blocks the response.
+  try {
+    await upsertContactResolution(input.company, result);
+  } catch {
+    // best-effort persistence; do not fail the tool
+  }
 
   const numeric = scoreToNumber(result.confidence);
 

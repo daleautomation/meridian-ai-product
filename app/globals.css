@@ -18,3 +18,11 @@ html, body {
 * {
   box-sizing: border-box;
 }
+
+/* Inline spinner used in CRM "Saving…" button states. Referenced via
+   the `animation` inline style on the spinner glyph so every save
+   action has a subtle rotating indicator. */
+@keyframes meridian-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}

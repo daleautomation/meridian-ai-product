@@ -25,6 +25,12 @@ export function normalizeIdentity(input: BusinessInput): Identity {
   const city = (input.city ?? "").trim().toLowerCase();
   const state = (input.state ?? "").trim().toUpperCase();
   const category = (input.category ?? "roofing").toLowerCase();
+  const domain = (input.website ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .split("/")[0];
 
   return {
     rawName,
@@ -33,6 +39,7 @@ export function normalizeIdentity(input: BusinessInput): Identity {
     state,
     locationKey: `${city}|${state}`,
     category,
+    domain,
   };
 }
 

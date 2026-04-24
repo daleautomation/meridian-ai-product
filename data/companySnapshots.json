@@ -310,7 +310,7 @@
       "location": "Lee's Summit"
     },
     "createdAt": "2026-04-15T00:04:54.495Z",
-    "updatedAt": "2026-04-15T00:05:04.763Z",
+    "updatedAt": "2026-04-22T17:10:11.515Z",
     "latest": {
       "inspect_website": {
         "tool": "inspect_website",
@@ -625,7 +625,66 @@
         "sourceTool": "generate_opportunity_summary"
       }
     ],
-    "lastCheckedAt": "2026-04-15T00:05:04.763Z"
+    "lastCheckedAt": "2026-04-15T00:05:04.763Z",
+    "statusHistory": [],
+    "contactResolution": {
+      "phone": "(816) 554-8585",
+      "email": null,
+      "fallbackRoute": null,
+      "fallbackUrl": "https://www.leessummitroofing.com/",
+      "source": "google_places",
+      "confidence": "high",
+      "checkedSources": [
+        "google_places",
+        "yelp",
+        "bbb",
+        "facebook"
+      ],
+      "matchedName": "Lee's Summit Roofing",
+      "matchedAddress": "11 SW 3rd St, Lee's Summit, MO 64063, USA",
+      "rating": 4.8,
+      "reviewCount": 40,
+      "lastCheckedAt": "2026-04-22T17:10:10.279Z",
+      "summary": "found",
+      "paths": [
+        {
+          "method": "phone",
+          "value": "(816) 554-8585",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "phone",
+          "value": "(816) 652-9569",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "website",
+          "value": "https://www.iana.org/",
+          "source": "website",
+          "verified": false,
+          "confidence": "low",
+          "rank": 20,
+          "label": "Website contact page"
+        }
+      ],
+      "detail": "verified_phone_found_google_places",
+      "skippedSources": [
+        "yelp_skipped_no_key",
+        "bbb_skipped_no_endpoint",
+        "facebook_skipped_no_endpoint"
+      ]
+    },
+    "contactResolutionCheckedAt": "2026-04-22T17:10:10.279Z",
+    "contactPhone": "(816) 554-8585",
+    "contactName": "Lee's Summit Roofing"
   },
   "domain:example.net": {
     "key": "domain:example.net",
@@ -944,7 +1003,7 @@
       "location": "Liberty"
     },
     "createdAt": "2026-04-15T00:05:04.816Z",
-    "updatedAt": "2026-04-15T00:05:13.530Z",
+    "updatedAt": "2026-04-22T17:10:11.218Z",
     "latest": {
       "inspect_website": {
         "tool": "inspect_website",
@@ -1273,7 +1332,42 @@
         "sourceTool": "generate_opportunity_summary"
       }
     ],
-    "lastCheckedAt": "2026-04-15T00:05:13.530Z"
+    "lastCheckedAt": "2026-04-15T00:05:13.530Z",
+    "statusHistory": [],
+    "contactResolution": {
+      "phone": null,
+      "email": null,
+      "fallbackRoute": null,
+      "fallbackUrl": null,
+      "source": "none",
+      "confidence": "none",
+      "checkedSources": [
+        "google_places",
+        "yelp",
+        "bbb",
+        "facebook"
+      ],
+      "lastCheckedAt": "2026-04-22T17:10:10.282Z",
+      "summary": "empty",
+      "paths": [
+        {
+          "method": "website",
+          "value": "https://www.w3.org/",
+          "source": "website",
+          "verified": false,
+          "confidence": "low",
+          "rank": 20,
+          "label": "Website contact page"
+        }
+      ],
+      "detail": "no_threshold_match",
+      "skippedSources": [
+        "yelp_skipped_no_key",
+        "bbb_skipped_no_endpoint",
+        "facebook_skipped_no_endpoint"
+      ]
+    },
+    "contactResolutionCheckedAt": "2026-04-22T17:10:10.282Z"
   },
   "domain:arroofingkc.com": {
     "key": "domain:arroofingkc.com",
@@ -1892,7 +1986,7 @@
       "location": "Lee's Summit"
     },
     "createdAt": "2026-04-20T17:47:24.283Z",
-    "updatedAt": "2026-04-20T17:47:35.138Z",
+    "updatedAt": "2026-04-22T17:10:11.324Z",
     "latest": {
       "inspect_website": {
         "tool": "inspect_website",
@@ -2223,7 +2317,66 @@
         "sourceTool": "generate_opportunity_summary"
       }
     ],
-    "lastCheckedAt": "2026-04-20T17:47:35.138Z"
+    "lastCheckedAt": "2026-04-20T17:47:35.138Z",
+    "statusHistory": [],
+    "contactResolution": {
+      "phone": "(816) 246-9119",
+      "email": null,
+      "fallbackRoute": null,
+      "fallbackUrl": "http://www.wguardroof.com/",
+      "source": "google_places",
+      "confidence": "high",
+      "checkedSources": [
+        "google_places",
+        "yelp",
+        "bbb",
+        "facebook"
+      ],
+      "matchedName": "WeatherGuard Roofing, LLC",
+      "matchedAddress": "70 SE 29th Terrace, Lee's Summit, MO 64082, USA",
+      "rating": 4.9,
+      "reviewCount": 222,
+      "lastCheckedAt": "2026-04-22T17:10:10.283Z",
+      "summary": "found",
+      "paths": [
+        {
+          "method": "phone",
+          "value": "(816) 246-9119",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "phone",
+          "value": "(573) 789-4940",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "website",
+          "value": "https://allweatherroof.com/",
+          "source": "website",
+          "verified": false,
+          "confidence": "low",
+          "rank": 20,
+          "label": "Website contact page"
+        }
+      ],
+      "detail": "verified_phone_found_google_places",
+      "skippedSources": [
+        "yelp_skipped_no_key",
+        "bbb_skipped_no_endpoint",
+        "facebook_skipped_no_endpoint"
+      ]
+    },
+    "contactResolutionCheckedAt": "2026-04-22T17:10:10.283Z",
+    "contactPhone": "(816) 246-9119",
+    "contactName": "WeatherGuard Roofing, LLC"
   },
   "domain:alliedroof.com": {
     "key": "domain:alliedroof.com",
@@ -2234,7 +2387,7 @@
       "location": "Olathe"
     },
     "createdAt": "2026-04-20T17:47:25.432Z",
-    "updatedAt": "2026-04-20T17:47:36.187Z",
+    "updatedAt": "2026-04-22T17:10:11.950Z",
     "latest": {
       "inspect_website": {
         "tool": "inspect_website",
@@ -2565,7 +2718,57 @@
         "sourceTool": "generate_opportunity_summary"
       }
     ],
-    "lastCheckedAt": "2026-04-20T17:47:36.187Z"
+    "lastCheckedAt": "2026-04-20T17:47:36.187Z",
+    "statusHistory": [],
+    "contactResolution": {
+      "phone": "(267) 736-0576",
+      "email": null,
+      "fallbackRoute": null,
+      "fallbackUrl": "http://www.alliedroofingsolutions.com/pa",
+      "source": "google_places",
+      "confidence": "high",
+      "checkedSources": [
+        "google_places",
+        "yelp",
+        "bbb",
+        "facebook"
+      ],
+      "matchedName": "Allied Roofing Solutions",
+      "matchedAddress": "4163 E Swamp Rd, Doylestown, PA 18902, USA",
+      "rating": 4.9,
+      "reviewCount": 26,
+      "lastCheckedAt": "2026-04-22T17:10:11.225Z",
+      "summary": "found",
+      "paths": [
+        {
+          "method": "phone",
+          "value": "(267) 736-0576",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "website",
+          "value": "https://www.hugedomains.com/domain_profile.cfm?d=alliedroof.com",
+          "source": "website",
+          "verified": false,
+          "confidence": "low",
+          "rank": 20,
+          "label": "Website contact page"
+        }
+      ],
+      "detail": "verified_phone_found_google_places",
+      "skippedSources": [
+        "yelp_skipped_no_key",
+        "bbb_skipped_no_endpoint",
+        "facebook_skipped_no_endpoint"
+      ]
+    },
+    "contactResolutionCheckedAt": "2026-04-22T17:10:11.225Z",
+    "contactPhone": "(267) 736-0576",
+    "contactName": "Allied Roofing Solutions"
   },
   "domain:alpharoofingkc.com": {
     "key": "domain:alpharoofingkc.com",
@@ -2878,7 +3081,7 @@
       "location": "Blue Springs"
     },
     "createdAt": "2026-04-20T17:47:37.485Z",
-    "updatedAt": "2026-04-20T17:47:47.434Z",
+    "updatedAt": "2026-04-22T17:10:12.060Z",
     "latest": {
       "inspect_website": {
         "tool": "inspect_website",
@@ -3191,7 +3394,57 @@
         "sourceTool": "generate_opportunity_summary"
       }
     ],
-    "lastCheckedAt": "2026-04-20T17:47:47.434Z"
+    "lastCheckedAt": "2026-04-20T17:47:47.434Z",
+    "statusHistory": [],
+    "contactResolution": {
+      "phone": "(251) 379-9712",
+      "email": null,
+      "fallbackRoute": null,
+      "fallbackUrl": "https://americanroofingco.com/alabama",
+      "source": "google_places",
+      "confidence": "high",
+      "checkedSources": [
+        "google_places",
+        "yelp",
+        "bbb",
+        "facebook"
+      ],
+      "matchedName": "American Roofing & Construction",
+      "matchedAddress": "2889 Sollie Rd #520, Mobile, AL 36695, USA",
+      "rating": 4.8,
+      "reviewCount": 233,
+      "lastCheckedAt": "2026-04-22T17:10:11.341Z",
+      "summary": "found",
+      "paths": [
+        {
+          "method": "phone",
+          "value": "(251) 379-9712",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "website",
+          "value": "https://www.americanroofingkc.com/",
+          "source": "website",
+          "verified": false,
+          "confidence": "low",
+          "rank": 20,
+          "label": "Website contact page"
+        }
+      ],
+      "detail": "verified_phone_found_google_places",
+      "skippedSources": [
+        "yelp_skipped_no_key",
+        "bbb_skipped_no_endpoint",
+        "facebook_skipped_no_endpoint"
+      ]
+    },
+    "contactResolutionCheckedAt": "2026-04-22T17:10:11.341Z",
+    "contactPhone": "(251) 379-9712",
+    "contactName": "American Roofing & Construction"
   },
   "domain:apexroofkc.com": {
     "key": "domain:apexroofkc.com",
@@ -3500,7 +3753,7 @@
       "location": "Liberty"
     },
     "createdAt": "2026-04-20T17:47:48.354Z",
-    "updatedAt": "2026-04-20T17:47:57.892Z",
+    "updatedAt": "2026-04-22T17:10:11.882Z",
     "latest": {
       "inspect_website": {
         "tool": "inspect_website",
@@ -3831,7 +4084,44 @@
         "sourceTool": "generate_opportunity_summary"
       }
     ],
-    "lastCheckedAt": "2026-04-20T17:47:57.892Z"
+    "lastCheckedAt": "2026-04-20T17:47:57.892Z",
+    "statusHistory": [],
+    "contactResolution": {
+      "phone": null,
+      "email": null,
+      "fallbackRoute": "contact_page",
+      "fallbackUrl": "https://www.arrowroofingservicesllc.com/",
+      "source": "google_places",
+      "confidence": "low",
+      "checkedSources": [
+        "google_places",
+        "yelp",
+        "bbb",
+        "facebook"
+      ],
+      "matchedName": "Arrow Roofing Services",
+      "lastCheckedAt": "2026-04-22T17:10:11.522Z",
+      "summary": "fallback",
+      "paths": [
+        {
+          "method": "website",
+          "value": "https://www.arrowroofing.com/",
+          "source": "website",
+          "verified": false,
+          "confidence": "low",
+          "rank": 20,
+          "label": "Website contact page"
+        }
+      ],
+      "detail": "contact_page_only",
+      "skippedSources": [
+        "yelp_skipped_no_key",
+        "bbb_skipped_no_endpoint",
+        "facebook_skipped_no_endpoint"
+      ]
+    },
+    "contactResolutionCheckedAt": "2026-04-22T17:10:11.522Z",
+    "contactName": "Arrow Roofing Services"
   },
   "domain:artisanroofkc.com": {
     "key": "domain:artisanroofkc.com",
@@ -4146,7 +4436,7 @@
       "location": "Gladstone"
     },
     "createdAt": "2026-04-20T17:47:59.823Z",
-    "updatedAt": "2026-04-21T20:15:22.332Z",
+    "updatedAt": "2026-04-22T17:10:15.391Z",
     "latest": {
       "inspect_website": {
         "tool": "inspect_website",
@@ -4497,7 +4787,56 @@
     ],
     "callAttempts": 0,
     "consecutiveNoAnswers": 0,
-    "escalationStage": 0
+    "escalationStage": 0,
+    "contactResolution": {
+      "phone": "(205) 777-1693",
+      "email": null,
+      "fallbackRoute": null,
+      "fallbackUrl": "https://atlasroofingal.com/",
+      "source": "google_places",
+      "confidence": "high",
+      "checkedSources": [
+        "google_places",
+        "yelp",
+        "bbb",
+        "facebook"
+      ],
+      "matchedName": "Atlas Roofing & Exteriors",
+      "matchedAddress": "2301 Moody Pkwy Ste 7, Moody, AL 35004, USA",
+      "rating": 5,
+      "reviewCount": 15,
+      "lastCheckedAt": "2026-04-22T17:10:14.679Z",
+      "summary": "found",
+      "paths": [
+        {
+          "method": "phone",
+          "value": "(205) 777-1693",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "website",
+          "value": "https://atlasroofingandsiding.com/",
+          "source": "website",
+          "verified": false,
+          "confidence": "low",
+          "rank": 20,
+          "label": "Website contact page"
+        }
+      ],
+      "detail": "verified_phone_found_google_places",
+      "skippedSources": [
+        "yelp_skipped_no_key",
+        "bbb_skipped_no_endpoint",
+        "facebook_skipped_no_endpoint"
+      ]
+    },
+    "contactResolutionCheckedAt": "2026-04-22T17:10:14.679Z",
+    "contactPhone": "(205) 777-1693",
+    "contactName": "Atlas Roofing & Exteriors"
   },
   "domain:bealroofing.com": {
     "key": "domain:bealroofing.com",
@@ -5120,7 +5459,7 @@
       "location": "Raytown"
     },
     "createdAt": "2026-04-20T17:48:17.321Z",
-    "updatedAt": "2026-04-20T17:48:26.540Z",
+    "updatedAt": "2026-04-22T17:10:12.585Z",
     "latest": {
       "inspect_website": {
         "tool": "inspect_website",
@@ -5451,7 +5790,64 @@
         "sourceTool": "generate_opportunity_summary"
       }
     ],
-    "lastCheckedAt": "2026-04-20T17:48:26.540Z"
+    "lastCheckedAt": "2026-04-20T17:48:26.540Z",
+    "statusHistory": [],
+    "contactResolution": {
+      "phone": "(816) 680-6996",
+      "email": null,
+      "fallbackRoute": null,
+      "fallbackUrl": "https://www.cookroofingbranson.com/",
+      "source": "google_places",
+      "confidence": "high",
+      "checkedSources": [
+        "google_places",
+        "yelp",
+        "bbb",
+        "facebook"
+      ],
+      "matchedName": "Cook Roofing Company",
+      "matchedAddress": "5615 Raytown Rd APT C, Raytown, MO 64133, USA",
+      "lastCheckedAt": "2026-04-22T17:10:11.888Z",
+      "summary": "found",
+      "paths": [
+        {
+          "method": "phone",
+          "value": "(816) 680-6996",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "phone",
+          "value": "(816) 579-0450",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "website",
+          "value": "https://bakerroofingco.com/",
+          "source": "website",
+          "verified": false,
+          "confidence": "low",
+          "rank": 20,
+          "label": "Website contact page"
+        }
+      ],
+      "detail": "verified_phone_found_google_places",
+      "skippedSources": [
+        "yelp_skipped_no_key",
+        "bbb_skipped_no_endpoint",
+        "facebook_skipped_no_endpoint"
+      ]
+    },
+    "contactResolutionCheckedAt": "2026-04-22T17:10:11.888Z",
+    "contactPhone": "(816) 680-6996",
+    "contactName": "Cook Roofing Company"
   },
   "domain:bridgerroofing.com": {
     "key": "domain:bridgerroofing.com",
@@ -5462,7 +5858,7 @@
       "location": "Grandview"
     },
     "createdAt": "2026-04-20T17:48:26.262Z",
-    "updatedAt": "2026-04-20T18:23:25.516Z",
+    "updatedAt": "2026-04-22T23:20:36.602Z",
     "latest": {
       "inspect_website": {
         "tool": "inspect_website",
@@ -5773,7 +6169,307 @@
         "sourceTool": "generate_opportunity_summary"
       }
     ],
-    "lastCheckedAt": "2026-04-20T17:48:36.399Z"
+    "lastCheckedAt": "2026-04-20T17:48:36.399Z",
+    "statusHistory": [
+      {
+        "status": "FOLLOW_UP",
+        "changedAt": "2026-04-22T22:21:43.852Z",
+        "changedBy": "dylan"
+      },
+      {
+        "status": "FOLLOW_UP",
+        "changedAt": "2026-04-22T22:21:44.699Z",
+        "changedBy": "dylan"
+      },
+      {
+        "status": "INTERESTED",
+        "changedAt": "2026-04-22T22:21:46.004Z",
+        "changedBy": "dylan"
+      },
+      {
+        "status": "INTERESTED",
+        "changedAt": "2026-04-22T22:21:46.492Z",
+        "changedBy": "dylan"
+      },
+      {
+        "status": "EMAILED",
+        "changedAt": "2026-04-22T22:21:47.923Z",
+        "changedBy": "dylan"
+      },
+      {
+        "status": "VOICEMAIL",
+        "changedAt": "2026-04-22T22:21:48.448Z",
+        "changedBy": "dylan"
+      },
+      {
+        "status": "CONTACTED",
+        "changedAt": "2026-04-22T22:21:48.838Z",
+        "changedBy": "dylan"
+      },
+      {
+        "status": "CONTACTED",
+        "changedAt": "2026-04-22T22:36:25.586Z",
+        "changedBy": "dylan"
+      },
+      {
+        "status": "CONTACTED",
+        "changedAt": "2026-04-22T22:36:28.274Z",
+        "changedBy": "dylan"
+      },
+      {
+        "status": "CONTACTED",
+        "changedAt": "2026-04-22T22:42:44.217Z",
+        "changedBy": "dylan"
+      },
+      {
+        "status": "CONTACTED",
+        "changedAt": "2026-04-22T22:42:45.681Z",
+        "changedBy": "dylan"
+      },
+      {
+        "status": "READY_TO_CALL",
+        "changedAt": "2026-04-22T22:54:33.401Z",
+        "changedBy": "dylan"
+      },
+      {
+        "status": "READY_TO_CALL",
+        "changedAt": "2026-04-22T22:54:34.464Z",
+        "changedBy": "dylan"
+      },
+      {
+        "status": "READY_TO_CALL",
+        "changedAt": "2026-04-22T22:54:38.112Z",
+        "changedBy": "dylan"
+      },
+      {
+        "status": "VOICEMAIL",
+        "changedAt": "2026-04-22T22:54:45.104Z",
+        "changedBy": "dylan"
+      },
+      {
+        "status": "EMAILED",
+        "changedAt": "2026-04-22T22:54:47.861Z",
+        "changedBy": "dylan"
+      },
+      {
+        "status": "VOICEMAIL",
+        "changedAt": "2026-04-22T22:54:50.540Z",
+        "changedBy": "dylan"
+      },
+      {
+        "status": "VOICEMAIL",
+        "changedAt": "2026-04-22T22:54:52.601Z",
+        "changedBy": "dylan"
+      },
+      {
+        "status": "READY_TO_CALL",
+        "changedAt": "2026-04-22T22:54:54.467Z",
+        "changedBy": "dylan"
+      }
+    ],
+    "contactResolution": {
+      "phone": "(816) 966-1101",
+      "email": null,
+      "fallbackRoute": null,
+      "fallbackUrl": "https://www.pyramidroofingkc.com/#utm_source=google&utm_medium=organic&utm_campaign=gbp",
+      "source": "google_places",
+      "confidence": "high",
+      "checkedSources": [
+        "google_places",
+        "yelp",
+        "bbb",
+        "facebook"
+      ],
+      "matchedName": "Pyramid Roofing Company, Inc.",
+      "matchedAddress": "13800 S U.S. 71 Hwy, Grandview, MO 64030, USA",
+      "rating": 4.5,
+      "reviewCount": 347,
+      "lastCheckedAt": "2026-04-22T17:10:14.038Z",
+      "summary": "found",
+      "paths": [
+        {
+          "method": "phone",
+          "value": "(816) 966-1101",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "website",
+          "value": "https://bridgerroofing.com/",
+          "source": "website",
+          "verified": false,
+          "confidence": "low",
+          "rank": 20,
+          "label": "Website contact page"
+        }
+      ],
+      "detail": "verified_phone_found_google_places",
+      "skippedSources": [
+        "yelp_skipped_no_key",
+        "bbb_skipped_no_endpoint",
+        "facebook_skipped_no_endpoint"
+      ]
+    },
+    "contactResolutionCheckedAt": "2026-04-22T17:10:14.038Z",
+    "contactPhone": "(816) 966-1101",
+    "contactName": "Pyramid Roofing Company, Inc.",
+    "lastAction": {
+      "type": "scan_viewed",
+      "outcome": "call_mode",
+      "performedBy": "dylan",
+      "performedAt": "2026-04-22T23:20:36.602Z"
+    },
+    "dealActions": [
+      {
+        "type": "site_opened",
+        "outcome": "proof",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T18:11:54.117Z"
+      },
+      {
+        "type": "scan_viewed",
+        "outcome": "proof",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T18:12:15.378Z"
+      },
+      {
+        "type": "scan_viewed",
+        "outcome": "proof",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T18:12:16.683Z"
+      },
+      {
+        "type": "scan_viewed",
+        "outcome": "proof",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T18:12:17.260Z"
+      },
+      {
+        "type": "scan_viewed",
+        "outcome": "proof",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T18:12:17.815Z"
+      },
+      {
+        "type": "scan_viewed",
+        "outcome": "proof",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T18:12:18.662Z"
+      },
+      {
+        "type": "scan_viewed",
+        "outcome": "proof",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T18:16:24.725Z"
+      },
+      {
+        "type": "scan_viewed",
+        "outcome": "proof",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T18:16:25.336Z"
+      },
+      {
+        "type": "scan_viewed",
+        "outcome": "proof",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T18:16:25.856Z"
+      },
+      {
+        "type": "scan_viewed",
+        "outcome": "proof",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T18:16:26.518Z"
+      },
+      {
+        "type": "scan_viewed",
+        "outcome": "proof",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T18:16:27.286Z"
+      },
+      {
+        "type": "scan_viewed",
+        "outcome": "proof",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T18:16:28.062Z"
+      },
+      {
+        "type": "scan_viewed",
+        "outcome": "proof",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T18:24:24.145Z"
+      },
+      {
+        "type": "scan_viewed",
+        "outcome": "proof",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T18:37:45.346Z"
+      },
+      {
+        "type": "scan_viewed",
+        "outcome": "proof",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T20:06:01.520Z"
+      },
+      {
+        "type": "call_started",
+        "outcome": "dialed",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T20:09:58.719Z"
+      },
+      {
+        "type": "call_started",
+        "outcome": "dialed",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T21:11:24.153Z"
+      },
+      {
+        "type": "scan_viewed",
+        "outcome": "audit_snapshot",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T22:21:52.907Z"
+      },
+      {
+        "type": "phone_copied",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T22:39:48.017Z"
+      },
+      {
+        "type": "phone_copied",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T22:39:49.436Z"
+      },
+      {
+        "type": "scan_viewed",
+        "outcome": "audit_snapshot",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T22:59:34.278Z"
+      },
+      {
+        "type": "scan_viewed",
+        "outcome": "call_mode",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T23:20:34.737Z"
+      },
+      {
+        "type": "scan_viewed",
+        "outcome": "call_mode",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T23:20:35.802Z"
+      },
+      {
+        "type": "scan_viewed",
+        "outcome": "call_mode",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T23:20:36.602Z"
+      }
+    ],
+    "callAttempts": 0,
+    "consecutiveNoAnswers": 0,
+    "escalationStage": 0,
+    "status": "READY_TO_CALL"
   },
   "domain:buckeyeroofkc.com": {
     "key": "domain:buckeyeroofkc.com",
@@ -7304,7 +8000,7 @@
       "location": "Kansas City"
     },
     "createdAt": "2026-04-20T17:48:45.526Z",
-    "updatedAt": "2026-04-20T17:48:55.514Z",
+    "updatedAt": "2026-04-22T17:11:56.987Z",
     "latest": {
       "inspect_website": {
         "tool": "inspect_website",
@@ -7611,7 +8307,71 @@
         "sourceTool": "generate_opportunity_summary"
       }
     ],
-    "lastCheckedAt": "2026-04-20T17:48:55.514Z"
+    "lastCheckedAt": "2026-04-20T17:48:55.514Z",
+    "statusHistory": [],
+    "contactResolution": {
+      "phone": null,
+      "email": null,
+      "fallbackRoute": null,
+      "fallbackUrl": null,
+      "source": "none",
+      "confidence": "none",
+      "checkedSources": [
+        "google_places",
+        "yelp",
+        "bbb",
+        "facebook"
+      ],
+      "lastCheckedAt": "2026-04-22T17:11:56.410Z",
+      "summary": "empty",
+      "paths": [
+        {
+          "method": "website",
+          "value": "https://citywideroofing.com",
+          "source": "website",
+          "verified": false,
+          "confidence": "low",
+          "rank": 20,
+          "label": "Website contact page"
+        }
+      ],
+      "detail": "no_threshold_match",
+      "skippedSources": [
+        "yelp_skipped_no_key",
+        "bbb_skipped_no_endpoint",
+        "facebook_skipped_no_endpoint"
+      ]
+    },
+    "contactResolutionCheckedAt": "2026-04-22T17:11:56.410Z",
+    "lastAction": {
+      "type": "contact_search_expanded",
+      "outcome": "assistant",
+      "performedBy": "dylan",
+      "performedAt": "2026-04-22T17:11:56.417Z"
+    },
+    "dealActions": [
+      {
+        "type": "contact_search_started",
+        "outcome": "assistant",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T17:11:50.186Z"
+      },
+      {
+        "type": "contact_search_started",
+        "outcome": "assistant",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T17:11:53.510Z"
+      },
+      {
+        "type": "contact_search_expanded",
+        "outcome": "assistant",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T17:11:56.417Z"
+      }
+    ],
+    "callAttempts": 0,
+    "consecutiveNoAnswers": 0,
+    "escalationStage": 0
   },
   "domain:classicroofkc.com": {
     "key": "domain:classicroofkc.com",
@@ -8844,7 +9604,7 @@
       "location": "Blue Springs"
     },
     "createdAt": "2026-04-20T17:48:56.022Z",
-    "updatedAt": "2026-04-20T17:49:04.491Z",
+    "updatedAt": "2026-04-22T17:10:12.768Z",
     "latest": {
       "inspect_website": {
         "tool": "inspect_website",
@@ -9173,7 +9933,66 @@
         "sourceTool": "generate_opportunity_summary"
       }
     ],
-    "lastCheckedAt": "2026-04-20T17:49:04.491Z"
+    "lastCheckedAt": "2026-04-20T17:49:04.491Z",
+    "statusHistory": [],
+    "contactResolution": {
+      "phone": "(941) 271-4935",
+      "email": null,
+      "fallbackRoute": null,
+      "fallbackUrl": "https://covenantrooffl.com/roofing-sw-florida-the-sarasota-metro-area/",
+      "source": "google_places",
+      "confidence": "high",
+      "checkedSources": [
+        "google_places",
+        "yelp",
+        "bbb",
+        "facebook"
+      ],
+      "matchedName": "Covenant Roofing & Construction, Inc.®",
+      "matchedAddress": "510 6th Ave E, Bradenton, FL 34208, USA",
+      "rating": 4.7,
+      "reviewCount": 297,
+      "lastCheckedAt": "2026-04-22T17:10:12.067Z",
+      "summary": "found",
+      "paths": [
+        {
+          "method": "phone",
+          "value": "(941) 271-4935",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "phone",
+          "value": "(513) 216-1059",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "website",
+          "value": "https://covenantroof.com/",
+          "source": "website",
+          "verified": false,
+          "confidence": "low",
+          "rank": 20,
+          "label": "Website contact page"
+        }
+      ],
+      "detail": "verified_phone_found_google_places",
+      "skippedSources": [
+        "yelp_skipped_no_key",
+        "bbb_skipped_no_endpoint",
+        "facebook_skipped_no_endpoint"
+      ]
+    },
+    "contactResolutionCheckedAt": "2026-04-22T17:10:12.067Z",
+    "contactPhone": "(941) 271-4935",
+    "contactName": "Covenant Roofing & Construction, Inc.®"
   },
   "domain:crownroofkc.com": {
     "key": "domain:crownroofkc.com",
@@ -9792,7 +10611,7 @@
       "location": "Gladstone"
     },
     "createdAt": "2026-04-20T17:49:06.456Z",
-    "updatedAt": "2026-04-20T17:49:16.852Z",
+    "updatedAt": "2026-04-22T17:10:13.222Z",
     "latest": {
       "inspect_website": {
         "tool": "inspect_website",
@@ -10123,7 +10942,66 @@
         "sourceTool": "generate_opportunity_summary"
       }
     ],
-    "lastCheckedAt": "2026-04-20T17:49:16.852Z"
+    "lastCheckedAt": "2026-04-20T17:49:16.852Z",
+    "statusHistory": [],
+    "contactResolution": {
+      "phone": "(937) 439-0554",
+      "email": null,
+      "fallbackRoute": null,
+      "fallbackUrl": "https://dgroofingcontractor.com/",
+      "source": "google_places",
+      "confidence": "high",
+      "checkedSources": [
+        "google_places",
+        "yelp",
+        "bbb",
+        "facebook"
+      ],
+      "matchedName": "D&G Roofing and Restoration",
+      "matchedAddress": "2431 Vienna Pkwy, Dayton, OH 45459, USA",
+      "rating": 4.9,
+      "reviewCount": 265,
+      "lastCheckedAt": "2026-04-22T17:10:12.592Z",
+      "summary": "found",
+      "paths": [
+        {
+          "method": "phone",
+          "value": "(937) 439-0554",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "phone",
+          "value": "(512) 410-1899",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "website",
+          "value": "https://www.dgroofing.com/",
+          "source": "website",
+          "verified": false,
+          "confidence": "low",
+          "rank": 20,
+          "label": "Website contact page"
+        }
+      ],
+      "detail": "verified_phone_found_google_places",
+      "skippedSources": [
+        "yelp_skipped_no_key",
+        "bbb_skipped_no_endpoint",
+        "facebook_skipped_no_endpoint"
+      ]
+    },
+    "contactResolutionCheckedAt": "2026-04-22T17:10:12.592Z",
+    "contactPhone": "(937) 439-0554",
+    "contactName": "D&G Roofing and Restoration"
   },
   "domain:diamondroofkc.com": {
     "key": "domain:diamondroofkc.com",
@@ -10440,7 +11318,7 @@
       "location": "Liberty"
     },
     "createdAt": "2026-04-20T17:49:17.275Z",
-    "updatedAt": "2026-04-20T17:49:28.388Z",
+    "updatedAt": "2026-04-22T17:10:13.405Z",
     "latest": {
       "inspect_website": {
         "tool": "inspect_website",
@@ -10773,7 +11651,42 @@
         "sourceTool": "generate_opportunity_summary"
       }
     ],
-    "lastCheckedAt": "2026-04-20T17:49:28.388Z"
+    "lastCheckedAt": "2026-04-20T17:49:28.388Z",
+    "statusHistory": [],
+    "contactResolution": {
+      "phone": null,
+      "email": null,
+      "fallbackRoute": null,
+      "fallbackUrl": null,
+      "source": "none",
+      "confidence": "none",
+      "checkedSources": [
+        "google_places",
+        "yelp",
+        "bbb",
+        "facebook"
+      ],
+      "lastCheckedAt": "2026-04-22T17:10:12.714Z",
+      "summary": "empty",
+      "paths": [
+        {
+          "method": "website",
+          "value": "https://www.eagleeyeroof.com/",
+          "source": "website",
+          "verified": false,
+          "confidence": "low",
+          "rank": 20,
+          "label": "Website contact page"
+        }
+      ],
+      "detail": "no_threshold_match",
+      "skippedSources": [
+        "yelp_skipped_no_key",
+        "bbb_skipped_no_endpoint",
+        "facebook_skipped_no_endpoint"
+      ]
+    },
+    "contactResolutionCheckedAt": "2026-04-22T17:10:12.714Z"
   },
   "domain:eastsideroofkc.com": {
     "key": "domain:eastsideroofkc.com",
@@ -12616,7 +13529,7 @@
       "location": "Raytown"
     },
     "createdAt": "2026-04-20T17:49:52.513Z",
-    "updatedAt": "2026-04-20T17:50:00.947Z",
+    "updatedAt": "2026-04-22T17:10:13.450Z",
     "latest": {
       "inspect_website": {
         "tool": "inspect_website",
@@ -12945,7 +13858,66 @@
         "sourceTool": "generate_opportunity_summary"
       }
     ],
-    "lastCheckedAt": "2026-04-20T17:50:00.947Z"
+    "lastCheckedAt": "2026-04-20T17:50:00.947Z",
+    "statusHistory": [],
+    "contactResolution": {
+      "phone": "(816) 579-0450",
+      "email": null,
+      "fallbackRoute": null,
+      "fallbackUrl": "https://www.jparoofing.com/",
+      "source": "google_places",
+      "confidence": "high",
+      "checkedSources": [
+        "google_places",
+        "yelp",
+        "bbb",
+        "facebook"
+      ],
+      "matchedName": "JPA Roofing",
+      "matchedAddress": "6616 Raytown Rd, Raytown, MO 64133, USA",
+      "rating": 4.9,
+      "reviewCount": 339,
+      "lastCheckedAt": "2026-04-22T17:10:12.775Z",
+      "summary": "found",
+      "paths": [
+        {
+          "method": "phone",
+          "value": "(816) 579-0450",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "phone",
+          "value": "(816) 744-1373",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "website",
+          "value": "https://firstrateroof.com/",
+          "source": "website",
+          "verified": false,
+          "confidence": "low",
+          "rank": 20,
+          "label": "Website contact page"
+        }
+      ],
+      "detail": "verified_phone_found_google_places",
+      "skippedSources": [
+        "yelp_skipped_no_key",
+        "bbb_skipped_no_endpoint",
+        "facebook_skipped_no_endpoint"
+      ]
+    },
+    "contactResolutionCheckedAt": "2026-04-22T17:10:12.775Z",
+    "contactPhone": "(816) 579-0450",
+    "contactName": "JPA Roofing"
   },
   "domain:fivestardroofkc.com": {
     "key": "domain:fivestardroofkc.com",
@@ -14172,7 +15144,7 @@
       "location": "Prairie Village"
     },
     "createdAt": "2026-04-20T17:50:06.693Z",
-    "updatedAt": "2026-04-20T17:50:17.053Z",
+    "updatedAt": "2026-04-22T17:10:14.032Z",
     "latest": {
       "inspect_website": {
         "tool": "inspect_website",
@@ -14505,7 +15477,66 @@
         "sourceTool": "generate_opportunity_summary"
       }
     ],
-    "lastCheckedAt": "2026-04-20T17:50:17.053Z"
+    "lastCheckedAt": "2026-04-20T17:50:17.053Z",
+    "statusHistory": [],
+    "contactResolution": {
+      "phone": "(833) 227-8679",
+      "email": null,
+      "fallbackRoute": null,
+      "fallbackUrl": "https://www.goodfaithroofing.com/",
+      "source": "google_places",
+      "confidence": "high",
+      "checkedSources": [
+        "google_places",
+        "yelp",
+        "bbb",
+        "facebook"
+      ],
+      "matchedName": "Good Faith Roofing",
+      "matchedAddress": "701 Market St, St. Louis, MO 63101, USA",
+      "rating": 5,
+      "reviewCount": 23,
+      "lastCheckedAt": "2026-04-22T17:10:13.229Z",
+      "summary": "found",
+      "paths": [
+        {
+          "method": "phone",
+          "value": "(833) 227-8679",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "phone",
+          "value": "(816) 419-2187",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "website",
+          "value": "https://goodfaithenergy.com/roofing/",
+          "source": "website",
+          "verified": false,
+          "confidence": "low",
+          "rank": 20,
+          "label": "Website contact page"
+        }
+      ],
+      "detail": "verified_phone_found_google_places",
+      "skippedSources": [
+        "yelp_skipped_no_key",
+        "bbb_skipped_no_endpoint",
+        "facebook_skipped_no_endpoint"
+      ]
+    },
+    "contactResolutionCheckedAt": "2026-04-22T17:10:13.229Z",
+    "contactPhone": "(833) 227-8679",
+    "contactName": "Good Faith Roofing"
   },
   "domain:greatplainsroof.com": {
     "key": "domain:greatplainsroof.com",
@@ -16368,7 +17399,7 @@
       "location": "Overland Park"
     },
     "createdAt": "2026-04-20T17:50:28.277Z",
-    "updatedAt": "2026-04-20T17:50:37.356Z",
+    "updatedAt": "2026-04-22T17:10:14.125Z",
     "latest": {
       "inspect_website": {
         "tool": "inspect_website",
@@ -16699,7 +17730,57 @@
         "sourceTool": "generate_opportunity_summary"
       }
     ],
-    "lastCheckedAt": "2026-04-20T17:50:37.356Z"
+    "lastCheckedAt": "2026-04-20T17:50:37.356Z",
+    "statusHistory": [],
+    "contactResolution": {
+      "phone": "(515) 800-9810",
+      "email": null,
+      "fallbackRoute": null,
+      "fallbackUrl": "https://heartlandroofingandsiding.com/roofing/ames/?utm_source=google&utm_medium=organic&utm_campaign=google_business_profile_ames&utm_content=website_button",
+      "source": "google_places",
+      "confidence": "high",
+      "checkedSources": [
+        "google_places",
+        "yelp",
+        "bbb",
+        "facebook"
+      ],
+      "matchedName": "Heartland Roofing, Siding, and Solar",
+      "matchedAddress": "137 Lynn Ave, Ames, IA 50014, USA",
+      "rating": 4.6,
+      "reviewCount": 11,
+      "lastCheckedAt": "2026-04-22T17:10:13.439Z",
+      "summary": "found",
+      "paths": [
+        {
+          "method": "phone",
+          "value": "(515) 800-9810",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "website",
+          "value": "https://www.heartlandroof.com/",
+          "source": "website",
+          "verified": false,
+          "confidence": "low",
+          "rank": 20,
+          "label": "Website contact page"
+        }
+      ],
+      "detail": "verified_phone_found_google_places",
+      "skippedSources": [
+        "yelp_skipped_no_key",
+        "bbb_skipped_no_endpoint",
+        "facebook_skipped_no_endpoint"
+      ]
+    },
+    "contactResolutionCheckedAt": "2026-04-22T17:10:13.439Z",
+    "contactPhone": "(515) 800-9810",
+    "contactName": "Heartland Roofing, Siding, and Solar"
   },
   "domain:hilltoproofkc.com": {
     "key": "domain:hilltoproofkc.com",
@@ -18218,7 +19299,7 @@
       "location": "Raymore"
     },
     "createdAt": "2026-04-20T17:50:48.076Z",
-    "updatedAt": "2026-04-20T17:50:57.604Z",
+    "updatedAt": "2026-04-22T17:10:14.104Z",
     "latest": {
       "inspect_website": {
         "tool": "inspect_website",
@@ -18529,7 +19610,42 @@
         "sourceTool": "generate_opportunity_summary"
       }
     ],
-    "lastCheckedAt": "2026-04-20T17:50:57.604Z"
+    "lastCheckedAt": "2026-04-20T17:50:57.604Z",
+    "statusHistory": [],
+    "contactResolution": {
+      "phone": null,
+      "email": null,
+      "fallbackRoute": null,
+      "fallbackUrl": null,
+      "source": "none",
+      "confidence": "none",
+      "checkedSources": [
+        "google_places",
+        "yelp",
+        "bbb",
+        "facebook"
+      ],
+      "lastCheckedAt": "2026-04-22T17:10:13.471Z",
+      "summary": "empty",
+      "paths": [
+        {
+          "method": "website",
+          "value": "https://integrityroofsystems.com/",
+          "source": "website",
+          "verified": false,
+          "confidence": "low",
+          "rank": 20,
+          "label": "Website contact page"
+        }
+      ],
+      "detail": "no_threshold_match",
+      "skippedSources": [
+        "yelp_skipped_no_key",
+        "bbb_skipped_no_endpoint",
+        "facebook_skipped_no_endpoint"
+      ]
+    },
+    "contactResolutionCheckedAt": "2026-04-22T17:10:13.471Z"
   },
   "domain:ironshieldroof.com": {
     "key": "domain:ironshieldroof.com",
@@ -18540,7 +19656,7 @@
       "location": "Grandview"
     },
     "createdAt": "2026-04-20T17:50:55.458Z",
-    "updatedAt": "2026-04-21T18:52:33.737Z",
+    "updatedAt": "2026-04-22T17:10:14.783Z",
     "latest": {
       "inspect_website": {
         "tool": "inspect_website",
@@ -18861,7 +19977,74 @@
     ],
     "callAttempts": 0,
     "consecutiveNoAnswers": 0,
-    "escalationStage": 0
+    "escalationStage": 0,
+    "contactResolution": {
+      "phone": "(888) 476-6337",
+      "email": null,
+      "fallbackRoute": null,
+      "fallbackUrl": "http://ironshieldroofing.com/",
+      "source": "google_places",
+      "confidence": "high",
+      "checkedSources": [
+        "google_places",
+        "yelp",
+        "bbb",
+        "facebook"
+      ],
+      "matchedName": "Iron Shield Roofing",
+      "matchedAddress": "11458 Winterburn Rd NW, Edmonton, AB T5S 2Y3, Canada",
+      "rating": 4.7,
+      "reviewCount": 74,
+      "lastCheckedAt": "2026-04-22T17:10:14.136Z",
+      "summary": "found",
+      "paths": [
+        {
+          "method": "phone",
+          "value": "(888) 476-6337",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "phone",
+          "value": "(260) 410-6312",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "phone",
+          "value": "(479) 337-4766",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "website",
+          "value": "https://ironshieldroof.com/",
+          "source": "website",
+          "verified": false,
+          "confidence": "low",
+          "rank": 20,
+          "label": "Website contact page"
+        }
+      ],
+      "detail": "verified_phone_found_google_places",
+      "skippedSources": [
+        "yelp_skipped_no_key",
+        "bbb_skipped_no_endpoint",
+        "facebook_skipped_no_endpoint"
+      ]
+    },
+    "contactResolutionCheckedAt": "2026-04-22T17:10:14.136Z",
+    "contactPhone": "(888) 476-6337",
+    "contactName": "Iron Shield Roofing"
   },
   "domain:jkroofingkc.com": {
     "key": "domain:jkroofingkc.com",
@@ -19476,7 +20659,7 @@
       "location": "Kansas City"
     },
     "createdAt": "2026-04-20T17:51:04.219Z",
-    "updatedAt": "2026-04-21T22:47:56.738Z",
+    "updatedAt": "2026-04-22T17:11:33.732Z",
     "latest": {
       "inspect_website": {
         "tool": "inspect_website",
@@ -19785,7 +20968,7 @@
       "type": "contact_search_started",
       "outcome": "assistant",
       "performedBy": "dylan",
-      "performedAt": "2026-04-21T22:47:56.738Z"
+      "performedAt": "2026-04-22T17:11:32.717Z"
     },
     "dealActions": [
       {
@@ -19897,11 +21080,102 @@
         "outcome": "assistant",
         "performedBy": "dylan",
         "performedAt": "2026-04-21T22:47:56.738Z"
+      },
+      {
+        "type": "contact_search_started",
+        "outcome": "assistant",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T16:19:12.669Z"
+      },
+      {
+        "type": "scan_viewed",
+        "outcome": "proof",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T16:22:46.377Z"
+      },
+      {
+        "type": "scan_viewed",
+        "outcome": "proof",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T16:22:47.354Z"
+      },
+      {
+        "type": "scan_viewed",
+        "outcome": "proof",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T16:22:59.365Z"
+      },
+      {
+        "type": "contact_search_started",
+        "outcome": "assistant",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T16:28:40.537Z"
+      },
+      {
+        "type": "contact_search_started",
+        "outcome": "assistant",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T16:29:03.605Z"
+      },
+      {
+        "type": "contact_search_started",
+        "outcome": "assistant",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-22T17:11:32.717Z"
       }
     ],
     "callAttempts": 0,
     "consecutiveNoAnswers": 0,
-    "escalationStage": 0
+    "escalationStage": 0,
+    "contactResolution": {
+      "phone": "(816) 207-5000",
+      "email": null,
+      "fallbackRoute": null,
+      "fallbackUrl": "http://www.kansascityflatroof.com/",
+      "source": "google_places",
+      "confidence": "high",
+      "checkedSources": [
+        "google_places",
+        "yelp",
+        "bbb",
+        "facebook"
+      ],
+      "matchedName": "Kansas City Flat Roof Co. LLC",
+      "matchedAddress": "107 W 9th St 2nd floor, Kansas City, MO 64105, USA",
+      "rating": 5,
+      "reviewCount": 11,
+      "lastCheckedAt": "2026-04-22T17:11:32.707Z",
+      "summary": "found",
+      "paths": [
+        {
+          "method": "phone",
+          "value": "(816) 207-5000",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "website",
+          "value": "https://kcroofpros.com",
+          "source": "website",
+          "verified": false,
+          "confidence": "low",
+          "rank": 20,
+          "label": "Website contact page"
+        }
+      ],
+      "detail": "verified_phone_found_google_places",
+      "skippedSources": [
+        "yelp_skipped_no_key",
+        "bbb_skipped_no_endpoint",
+        "facebook_skipped_no_endpoint"
+      ]
+    },
+    "contactResolutionCheckedAt": "2026-04-22T17:11:32.707Z",
+    "contactPhone": "(816) 207-5000",
+    "contactName": "Kansas City Flat Roof Co. LLC"
   },
   "domain:kcroofingnrepair.com": {
     "key": "domain:kcroofingnrepair.com",
@@ -21450,7 +22724,7 @@
       "location": "Liberty"
     },
     "createdAt": "2026-04-21T00:25:45.859Z",
-    "updatedAt": "2026-04-21T00:25:56.192Z",
+    "updatedAt": "2026-04-22T17:10:14.671Z",
     "latest": {
       "inspect_website": {
         "tool": "inspect_website",
@@ -21763,7 +23037,75 @@
         "sourceTool": "generate_opportunity_summary"
       }
     ],
-    "lastCheckedAt": "2026-04-21T00:25:56.192Z"
+    "lastCheckedAt": "2026-04-21T00:25:56.192Z",
+    "statusHistory": [],
+    "contactResolution": {
+      "phone": "(816) 415-3551",
+      "email": null,
+      "fallbackRoute": null,
+      "fallbackUrl": "https://www.libertyroofingkc.com/",
+      "source": "google_places",
+      "confidence": "high",
+      "checkedSources": [
+        "google_places",
+        "yelp",
+        "bbb",
+        "facebook"
+      ],
+      "matchedName": "Liberty Roofing Siding Gutters & Windows",
+      "matchedAddress": "109 S Main St, Liberty, MO 64068, USA",
+      "rating": 4.7,
+      "reviewCount": 148,
+      "lastCheckedAt": "2026-04-22T17:10:14.116Z",
+      "summary": "found",
+      "paths": [
+        {
+          "method": "phone",
+          "value": "(816) 415-3551",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "phone",
+          "value": "(816) 897-4064",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "phone",
+          "value": "(913) 375-6655",
+          "source": "google_places",
+          "verified": true,
+          "confidence": "high",
+          "rank": 1,
+          "label": "Google Business Profile phone"
+        },
+        {
+          "method": "website",
+          "value": "https://libertyroofingco.com/",
+          "source": "website",
+          "verified": false,
+          "confidence": "low",
+          "rank": 20,
+          "label": "Website contact page"
+        }
+      ],
+      "detail": "verified_phone_found_google_places",
+      "skippedSources": [
+        "yelp_skipped_no_key",
+        "bbb_skipped_no_endpoint",
+        "facebook_skipped_no_endpoint"
+      ]
+    },
+    "contactResolutionCheckedAt": "2026-04-22T17:10:14.116Z",
+    "contactPhone": "(816) 415-3551",
+    "contactName": "Liberty Roofing Siding Gutters & Windows"
   },
   "domain:lifetimeroofkc.com": {
     "key": "domain:lifetimeroofkc.com",
