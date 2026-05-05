@@ -1,8 +1,7 @@
 // Meridian AI — file-based company snapshot persistence.
 //
 // JSON file at data/companySnapshots.json keyed by companyKey() (see
-// lib/mcp/types.ts). Mirrors the atomic-write pattern used by alertStore
-// and negotiationStore.
+// lib/mcp/types.ts). Atomic writes via safeWriteJson.
 //
 // Phase 1 seeded: latest/history per tool.
 // Phase 2 extends (additive, backwards-compatible):
@@ -121,6 +120,54 @@ export type CompanySnapshot = {
   // the snapshot store decoupled from the module types.
   trade?: string;
   serviceBucket?: string;
+  // ── Phase 12: paid-ad presence detection ──────────────────────────────
+  // Observable intent signal: is this company actively running paid ads
+  // on Google or Meta? Populated by the `check_paid_presence` tool.
+  // `null` on any axis means "unknown" (prefer null over a false positive).
+  paidPresence?: PaidPresence;
+  paidPresenceCheckedAt?: string;  // ISO — when check_paid_presence last ran
+  // Operator-entered override. Strictly separate from detector output;
+  // the detector NEVER writes this field. Set by setPaidPresenceOverride
+  // (e.g. when a rep verifies ads on a call and wants the signal to
+  // persist across detector re-runs). Not yet read by scoring.
+  paidPresenceOverride?: PaidPresenceOverride;
+};
+
+export type PaidPresenceConfidence = "high" | "medium" | "low";
+
+// Per-source status:
+//   "confirmed" — detector reached the endpoint and confirmed presence
+//                 or absence of a matching advertiser.
+//   "unknown"   — detector skipped (no credentials, short-circuit flag)
+//                 or the match was below the confidence threshold.
+//   "error"     — detector reached a problem state (network / HTTP non-2xx /
+//                 unparsable response). Implies manual verification needed.
+export type PaidPresenceSourceStatus = "confirmed" | "unknown" | "error";
+
+export type PaidPresence = {
+  googleAds: boolean | null;
+  metaAds: boolean | null;
+  confidence: PaidPresenceConfidence;
+  asOf: string;                // ISO timestamp of the detection run
+  evidenceUrls: string[];      // real links used for verification
+  googleDetail?: string;       // short human-readable detector summary
+  metaDetail?: string;
+  googleStatus?: PaidPresenceSourceStatus;
+  metaStatus?: PaidPresenceSourceStatus;
+  // Convenience flag: true when at least one axis is non-"confirmed".
+  // The UI uses this to prompt the rep to open the evidenceUrls and
+  // verify manually, then optionally call setPaidPresenceOverride.
+  manualVerificationRequired?: boolean;
+};
+
+export type PaidPresenceOverride = {
+  googleAds?: boolean | null;
+  metaAds?: boolean | null;
+  confidence?: PaidPresenceConfidence;
+  note?: string;
+  evidenceUrls?: string[];
+  updatedAt: string;           // ISO
+  updatedBy?: string;          // operator userId (when known)
 };
 
 const STORE_PATH = path.join(process.cwd(), "data", "companySnapshots.json");
@@ -500,6 +547,81 @@ async function upsertContactResolutionUnsafe(
   all[key] = next;
   await writeAll(all);
   return next;
+}
+
+// ── Phase 12: paid-ad presence persistence ────────────────────────────
+// Additive. Writes a fresh PaidPresence snapshot keyed on the company.
+// Operator-curated fields are not touched. Never lifts into any other
+// slot; closeability scoring reads this field directly.
+
+export async function upsertPaidPresence(
+  company: CompanyRef,
+  presence: PaidPresence,
+): Promise<CompanySnapshot> {
+  return serialize(() => upsertPaidPresenceUnsafe(company, presence));
+}
+
+async function upsertPaidPresenceUnsafe(
+  company: CompanyRef,
+  presence: PaidPresence,
+): Promise<CompanySnapshot> {
+  const all = await readAll();
+  const key = companyKey(company);
+  const now = new Date().toISOString();
+  const existing = all[key] ? ensureShape(all[key]) : freshSnapshot(company, now);
+
+  // Detector is never allowed to touch paidPresenceOverride — that slot
+  // is strictly operator-owned.
+  const next: CompanySnapshot = {
+    ...existing,
+    company: { ...existing.company, ...company },
+    paidPresence: presence,
+    paidPresenceCheckedAt: presence.asOf ?? now,
+    updatedAt: now,
+  };
+
+  all[key] = next;
+  await writeAll(all);
+  return next;
+}
+
+// Operator-only writer for the override slot. The detector must never
+// call this. Future scoring can prefer the override when present, but
+// for now the override is purely durable annotation — nothing reads it.
+export async function setPaidPresenceOverride(
+  company: CompanyRef,
+  override: PaidPresenceOverride,
+): Promise<CompanySnapshot> {
+  return serialize(async () => {
+    const all = await readAll();
+    const key = companyKey(company);
+    const now = new Date().toISOString();
+    const existing = all[key] ? ensureShape(all[key]) : freshSnapshot(company, now);
+    const next: CompanySnapshot = {
+      ...existing,
+      company: { ...existing.company, ...company },
+      paidPresenceOverride: { ...override, updatedAt: override.updatedAt ?? now },
+      updatedAt: now,
+    };
+    all[key] = next;
+    await writeAll(all);
+    return next;
+  });
+}
+
+export async function clearPaidPresenceOverride(company: CompanyRef): Promise<CompanySnapshot | null> {
+  return serialize(async () => {
+    const all = await readAll();
+    const key = companyKey(company);
+    const existing = all[key];
+    if (!existing) return null;
+    const { paidPresenceOverride: _drop, ...rest } = ensureShape(existing);
+    void _drop;
+    const next: CompanySnapshot = { ...rest, updatedAt: new Date().toISOString() };
+    all[key] = next;
+    await writeAll(all);
+    return next;
+  });
 }
 
 // ── Phase 6: manual contact overrides ──────────────────────────────────

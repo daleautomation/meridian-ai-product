@@ -347,6 +347,16 @@
       "outcome": "call_mode",
       "note": "",
       "id": "1f287d05-eaf3-46ba-9dcb-fd698b741196"
+    },
+    {
+      "companyKey": "domain:bridgerroofing.com",
+      "companyName": "Bridger Roofing",
+      "performedAt": "2026-04-27T07:35:08.553Z",
+      "activityType": "scan_viewed",
+      "performedBy": "dylan",
+      "outcome": "audit_snapshot",
+      "note": "",
+      "id": "204a3f43-b63e-4db3-88fe-2828e860d4cc"
     }
   ]
 }

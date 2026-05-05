@@ -4,8 +4,8 @@ import { palette, publicContent, brand } from "../lib/theme";
 import MeridianMark from "./MeridianMark";
 
 export default function AboutPage({ isAuthenticated }) {
-  const entryHref = isAuthenticated ? "/dashboard" : "/login";
-  const entryLabel = isAuthenticated ? "Enter Platform" : "Sign In";
+  const entryHref = isAuthenticated ? "/operator" : "/login";
+  const entryLabel = isAuthenticated ? "Enter workspace" : "Log in";
 
   return (
     <div style={S.root}>
@@ -24,9 +24,9 @@ export default function AboutPage({ isAuthenticated }) {
       {/* Hero */}
       <section style={S.heroSection}>
         <div style={S.sectionLabel}>About Meridian</div>
-        <h1 style={S.pageTitle}>Decision intelligence for high-value acquisitions</h1>
+        <h1 style={S.pageTitle}>Who to call first.</h1>
         <p style={S.lead}>
-          Meridian AI is a modular decision engine. It ingests from dozens of sources, scores every opportunity on real economics and trust, and produces one clear action per item. Built for operators who need speed, clarity, and edge.
+          Meridian ranks your trade leads by who is most ready to close — and tells you what to say. Built for trade operators who need clarity, speed, and a clean call list.
         </p>
       </section>
 
@@ -35,9 +35,9 @@ export default function AboutPage({ isAuthenticated }) {
         <div style={S.sectionLabel}>How it works</div>
         <div style={S.stepGrid}>
           {[
-            { n: "1", t: "Source", d: "Ingests from marketplaces, community listings, public records, FSBO, and private sellers. Prioritizes fresh, mispriced, and distressed opportunities." },
-            { n: "2", t: "Score", d: "Every item is scored on net economics, trust, valuation confidence, and execution risk. No signal is taken at face value." },
-            { n: "3", t: "Decide", d: "The engine compresses each opportunity into one dominant action: execute, probe, wait, or walk. With a full acquisition plan attached." },
+            { n: "1", t: "Source", d: "Pulls leads from your trade's sources: business directories, website scans, and review platforms." },
+            { n: "2", t: "Score", d: "Scores every lead on intent, problem severity, reachability, and timing. Plain numbers, plain reasons." },
+            { n: "3", t: "Decide", d: "Tells you who to call first, why, and what to say. One ranked list. No guessing." },
           ].map(s => (
             <div key={s.n} style={S.card}>
               <div style={S.stepNum}>{s.n}</div>
@@ -48,9 +48,9 @@ export default function AboutPage({ isAuthenticated }) {
         </div>
       </section>
 
-      {/* Live Modules */}
+      {/* Modules */}
       <section style={S.section}>
-        <div style={S.sectionLabel}>Live modules</div>
+        <div style={S.sectionLabel}>Modules</div>
         <div style={S.moduleGrid}>
           {publicContent.about.moduleCapabilities.map(mod => (
             <div key={mod.label} style={S.card}>
@@ -63,20 +63,6 @@ export default function AboutPage({ isAuthenticated }) {
               ))}
             </div>
           ))}
-        </div>
-        <div style={S.detailGrid}>
-          <div>
-            <div style={S.cardTitle}>Luxury Goods</div>
-            <p style={S.body}>
-              Sources watches and high-end collectibles from eBay, Chrono24, Facebook Marketplace, Reddit, and private sellers. Scores on net margin after platform friction, trust-filters on seller history and authenticity, and ranks by liquidity-adjusted annualized return.
-            </p>
-          </div>
-          <div>
-            <div style={S.cardTitle}>Homes</div>
-            <p style={S.body}>
-              Sources off-market residential deals from public records, FSBO listings, and aggregator feeds. Scores on equity spread against ARV, risk-adjusts for condition and rehab scope, and detects distress signals from price drops, stale DOM, and seller motivation keywords.
-            </p>
-          </div>
         </div>
       </section>
 

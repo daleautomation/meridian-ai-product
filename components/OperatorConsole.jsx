@@ -2,8 +2,78 @@
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { palette } from "../lib/theme";
+import SourceReadiness from "./SourceReadiness";
+import LaborTechServicesPanel from "./LaborTechServicesPanel";
+import {
+  filterCalendarTasks,
+  summarizeVisibility,
+  DEFAULT_CALENDAR_VISIBILITY,
+  VISIBILITY_LABEL_MAP,
+} from "../lib/calendar/calendarVisibility";
+import { getService as getServiceCatalogEntry } from "../lib/services/serviceCatalog";
+import { getTradeColor, TRADE_COLOR_ORDER } from "../lib/modules/tradeColors";
 import { getTradeModule, getServiceBucket, TRADE_DEFAULT } from "../lib/modules/trades";
 import { buildCallQueue, summarizeQueue } from "../lib/scoring/callQueue";
+import CalendarCommandCenter, { SelectedLeadPanel } from "./CalendarCommandCenter";
+import LeadContextStrip from "./LeadContextStrip";
+import LeadEmailAction from "./LeadEmailAction";
+import ContactStrategyPanel from "./ContactStrategyPanel";
+import { WORKFLOW, SHELL_GRID } from "./workflowLayout";
+import LeadWorkflowDrawer from "./LeadWorkflowDrawer";
+import { buildTasksFromLeads } from "../lib/calendar/tasks";
+import {
+  deriveOutcomeEventsFromPipelineMap,
+  combineLearningAdjustments,
+} from "../lib/calendar/outcomeLearning";
+import { rememberOutcomeEvents, loadOutcomeEvents, mergeOutcomeEvents } from "../lib/calendar/outcomeMemory";
+import { scopeKey as makeScopeKey } from "../lib/calendar/intelligenceScope";
+import { buildTeamLearningInput } from "../lib/calendar/teamIntelligence";
+import { buildOperatorInsights } from "../lib/calendar/insightEngine";
+import { optimizeWorkflow } from "../lib/calendar/workflowEngine";
+import {
+  createWorkflowFeedbackEvent,
+  workflowFeedbackToOutcomeEvent,
+  applyFeedbackToTasks,
+} from "../lib/calendar/workflowFeedback";
+import {
+  loadWorkflowFeedback,
+  rememberWorkflowFeedback,
+} from "../lib/calendar/workflowFeedbackMemory";
+import { buildWorkflowRuleLearning } from "../lib/calendar/workflowRuleLearning";
+import { buildMarketAwareLearning } from "../lib/calendar/marketIntelligence";
+import { buildGlobalIntelligence } from "../lib/calendar/globalIntelligence";
+import { scoreLeadTask as scoreLeadTaskCanonical } from "../lib/calendar/leadScore";
+import { TRADE_MODULES, TRADE_MODULE_ORDER, isTradeId } from "../lib/modules/tradeConfigs";
+import { buildPortfolioStack } from "../lib/modules/portfolioStack";
+import { filterLeadsForTrade } from "../lib/modules/tradeFilter";
+import { getTradeSourceReadiness } from "../lib/modules/tradeSources";
+import { buildBucketPortfolio } from "../lib/modules/bucketPortfolio";
+import { buildTopOpportunity } from "../lib/modules/topOpportunity";
+import { prioritizeServiceAngles } from "../lib/modules/anglePrioritization";
+import { primaryBucketForLead } from "../lib/modules/bucketClassifier";
+import { buildOpportunitySystem } from "../lib/modules/opportunitySystem";
+import {
+  getActionableContact,
+  formatTelHref,
+  formatSmsHref,
+  formatMailtoHref,
+  formatMoney,
+  leadOpportunityValue,
+} from "../lib/leads/leadActions";
+import { useOutcomes, useDecisionFlow, leadKeyOf } from "../lib/leads/outcomes";
+import { generateCallScript } from "../lib/leads/scriptEngine";
+import { bucketPerformanceMap } from "../lib/leads/decisionEngine";
+import {
+  useDeals,
+  buildLeadIndex,
+  DEAL_STAGE_LABELS,
+  sortDealsForStage,
+} from "../lib/leads/deals";
+
+// Internal-only diagnostics flag. Off in production by default; never
+// renders UI. When on, the dev console log gains classification
+// counters for cross-market pattern + rule discovery.
+const ENABLE_INTERNAL_GLOBAL_INTELLIGENCE = process.env.NODE_ENV !== "production";
 
 // ── MCP ───────────────────────────────────────────────────────────────
 
@@ -40,10 +110,10 @@ function scoreLabelColor(score) {
 // ── Opportunity classification (replaces numeric score) ───────────────
 
 const OPP_META = {
-  "CALL NOW": { dot: "🔴", headline: "CALL NOW — HIGH CONVERSION PROBABILITY", color: palette.danger, bg: "#FEF2F2", border: "#FECACA" },
-  "TODAY":    { dot: "🟡", headline: "TODAY — STRONG FIT",                     color: palette.warning, bg: palette.warningBg, border: "#FDE68A" },
-  "MONITOR":  { dot: "⚪", headline: "MONITOR — HOLD FOR NOW",                  color: palette.textSecondary, bg: palette.surfaceHover, border: palette.border },
-  "PASS":     { dot: "⚫", headline: "PASS — NOT A FIT",                        color: palette.textTertiary, bg: palette.surfaceHover, border: palette.border },
+  "CALL NOW": { dot: "", headline: "Call now",        color: palette.danger,        bg: "#FEF2F2",            border: "#FECACA" },
+  "TODAY":    { dot: "", headline: "Call this week",  color: palette.warning,       bg: palette.warningBg,    border: "#FDE68A" },
+  "MONITOR":  { dot: "", headline: "Watch",           color: palette.textSecondary, bg: palette.surfaceHover, border: palette.border },
+  "PASS":     { dot: "", headline: "Skip",            color: palette.textTertiary,  bg: palette.surfaceHover, border: palette.border },
 };
 
 function opportunityLabel(lead) {
@@ -77,15 +147,22 @@ function opportunityView(lead) {
     const confidence = est.opportunityEstimateConfidence || "LOW";
     const band = est.opportunityEstimateBand;
     const reason = est.opportunityEstimateReason || "";
-    let display;
-    if (band) display = band;
-    else if (confidence === "MEDIUM") display = "Broad estimate only";
-    else display = "Estimate unavailable";
+    // Any numeric band the engine emits today is a hardcoded heuristic
+    // ($30K–$80K/mo × weakness-driven leak %), not a per-company
+    // forecast. Surfacing those numbers erodes rep credibility on a
+    // skeptical buyer. Replace with "Sized on the call" and let the
+    // rep discover actual monthly lead volume in discovery.
+    const display = band
+      ? "Sized on the call"
+      : confidence === "MEDIUM"
+      ? "Revenue impact requires current lead volume"
+      : "Estimate unavailable";
     return {
       level,
       confidence,
       display,
       hasBand: !!band,
+      bandIsNeutralized: !!band,
       reason,
       revenueImpact: Array.isArray(est.revenueImpactSummary) ? est.revenueImpactSummary : [],
       outcome: est.realWorldOutcome || "",
@@ -1154,6 +1231,12 @@ function LeadRow({ lead, index, isSelected, onSelect, sectionBucket }) {
   const t = ROW_TIER_STYLE[tier];
   const baseBg = index % 2 === 1 ? t.stripeBg : t.baseBg;
   const opp = opportunityMeta(tier);
+  const decision = lead.decision || null;
+  const phone = lead.contacts?.primaryPhone || null;
+
+  // Click guard: prevent the row's onSelect when interacting with the
+  // primary Call button.
+  const stop = (e) => { e.stopPropagation(); };
 
   return (
     <div
@@ -1178,23 +1261,241 @@ function LeadRow({ lead, index, isSelected, onSelect, sectionBucket }) {
           <span style={S.rowName}>{lead.name}</span>
           {lead.location && <span style={S.rowLoc}>{lead.location}</span>}
         </div>
-        <div style={S.rowReason}>{reason}</div>
+        {decision ? (
+          <>
+            <div style={S.rowReason}>{decision.reason}</div>
+            <div style={{
+              fontSize: "12px",
+              color: "#475569",
+              fontStyle: "italic",
+              lineHeight: 1.45,
+              marginTop: "4px",
+            }}>
+              “{decision.suggestedOpening}”
+            </div>
+          </>
+        ) : (
+          <div style={S.rowReason}>{reason}</div>
+        )}
       </div>
 
       <div style={S.rowRight}>
-        <span style={{
-          ...S.oppPill,
-          color: opp.color,
-          background: opp.bg,
-          border: `1px solid ${opp.border}`,
-        }}>
-          <span style={S.oppDot}>{opp.dot}</span>
-          {tier}
-        </span>
+        {decision ? (
+          <span style={{
+            ...S.oppPill,
+            color: opp.color,
+            background: opp.bg,
+            border: `1px solid ${opp.border}`,
+          }}>
+            {decision.bucket} · {decision.score}
+          </span>
+        ) : (
+          <span style={{
+            ...S.oppPill,
+            color: opp.color,
+            background: opp.bg,
+            border: `1px solid ${opp.border}`,
+          }}>
+            <span style={S.oppDot}>{opp.dot}</span>
+            {opp.headline ?? tier}
+          </span>
+        )}
+        {phone ? (
+          <a
+            href={telHref(phone)}
+            onClick={stop}
+            style={{
+              fontSize: "11px",
+              fontWeight: 700,
+              color: palette.blue,
+              background: palette.bluePale,
+              border: `1px solid ${palette.blueBorder}`,
+              padding: "5px 10px",
+              borderRadius: "999px",
+              textDecoration: "none",
+              marginTop: "6px",
+              alignSelf: "flex-end",
+            }}
+          >
+            Call
+          </a>
+        ) : null}
       </div>
     </div>
   );
 }
+
+// ── Decision-first summary (replaces CloseabilitySummary on the detail card).
+// Reads only lead.decision (lib/scoring/decision.ts) plus lightly-derived
+// "Last checked" and "Source" — no operator-speak axes.
+function DecisionSummary({ lead }) {
+  const dec = lead?.decision;
+  if (!dec) return null;
+  const accent =
+    dec.bucket === "Call now" ? "#B91C1C"
+    : dec.bucket === "Call this week" ? "#B45309"
+    : dec.bucket === "Watch" ? "#64748B"
+    : "#94A3B8";
+  const lastChecked = lead.lastChecked || lead.websiteProof?.last_checked || null;
+  const source = lead.contacts?.source || lead.source || null;
+  return (
+    <div
+      style={{
+        border: `1px solid ${accent}33`,
+        borderLeftWidth: "3px",
+        borderLeftStyle: "solid",
+        borderLeftColor: accent,
+        background: "#FAFBFC",
+        borderRadius: "8px",
+        padding: "12px 14px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "8px",
+      }}
+    >
+      <div style={{ display: "flex", gap: "10px", alignItems: "baseline", flexWrap: "wrap" }}>
+        <span style={{
+          fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em",
+          textTransform: "uppercase", color: accent,
+        }}>
+          {dec.bucket} · Ready to close {dec.score}
+        </span>
+      </div>
+      <div style={{ fontSize: "13px", color: "#1A1A2E", lineHeight: 1.5 }}>
+        <strong style={{ color: "#1A1A2E" }}>Why this lead.</strong> {dec.reason}
+      </div>
+      {dec.suggestedOpening ? (
+        <div style={{ fontSize: "13px", color: "#1A1A2E", lineHeight: 1.5, fontStyle: "italic" }}>
+          <strong style={{ color: "#1A1A2E", fontStyle: "normal" }}>Suggested opening.</strong> “{dec.suggestedOpening}”
+        </div>
+      ) : null}
+      {(lastChecked || source) && (
+        <div style={{ fontSize: "11px", color: "#64748B", display: "flex", gap: "12px", flexWrap: "wrap" }}>
+          {source ? <span><strong style={{ color: "#1A1A2E" }}>Source.</strong> {source}</span> : null}
+          {lastChecked ? <span><strong style={{ color: "#1A1A2E" }}>Last checked.</strong> {String(lastChecked).split("T")[0]}</span> : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// LEGACY — kept temporarily; no longer rendered on the lead card.
+// Detail uses DecisionSummary above.
+// Small inline chip strip for the three closeability axes. Reuses
+// existing oppPill styling footprint so the row stays compact.
+function CloseabilityChips({ closeability }) {
+  const { intent, leak, reach } = closeability;
+  const chip = (label, level, tone) => (
+    <span
+      title={`${label}: ${level}`}
+      style={{
+        fontSize: "9.5px",
+        fontWeight: 700,
+        letterSpacing: "0.04em",
+        padding: "2px 7px",
+        borderRadius: "999px",
+        color: tone.color,
+        background: tone.bg,
+        border: `1px solid ${tone.border}`,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {label} · {level}
+    </span>
+  );
+  const intentTone = CLOSEABILITY_TONE.intent[intent.level] ?? CLOSEABILITY_TONE.neutral;
+  const leakTone = CLOSEABILITY_TONE.leak[leak.level] ?? CLOSEABILITY_TONE.neutral;
+  const reachTone = CLOSEABILITY_TONE.reach[reach.level] ?? CLOSEABILITY_TONE.neutral;
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: "5px",
+        marginTop: "5px",
+        flexWrap: "wrap",
+      }}
+    >
+      {chip("Intent", intent.level, intentTone)}
+      {chip("Leak", leak.level, leakTone)}
+      {chip("Reach", reach.level, reachTone)}
+    </div>
+  );
+}
+
+// Detail-level closeability strip — one-line bucketReason + three
+// axis reasons. Renders at the very top of the lead detail card.
+function CloseabilitySummary({ closeability }) {
+  const { bucket, score, bucketReason, intent, leak, reach, timing, disqualificationReason } = closeability;
+  const accent =
+    bucket === "CALL NOW" ? "#B91C1C"
+    : bucket === "TODAY" ? "#B45309"
+    : bucket === "MONITOR" ? "#64748B"
+    : "#94A3B8";
+  return (
+    <div
+      style={{
+        border: `1px solid ${accent}33`,
+        borderLeftWidth: "3px",
+        borderLeftStyle: "solid",
+        borderLeftColor: accent,
+        background: "#FAFBFC",
+        borderRadius: "8px",
+        padding: "10px 12px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "4px",
+      }}
+    >
+      <div style={{ display: "flex", gap: "8px", alignItems: "baseline", flexWrap: "wrap" }}>
+        <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: accent }}>
+          {(OPP_META[bucket]?.headline ?? bucket)} · Ready to close {score}
+        </span>
+        <span style={{ fontSize: "12px", color: "#1A1A2E", lineHeight: 1.4 }}>
+          {bucketReason}
+        </span>
+      </div>
+      <div style={{ fontSize: "11px", color: "#64748B", lineHeight: 1.45 }}>
+        <strong style={{ color: "#1A1A2E" }}>Intent</strong> · {intent.level} — {intent.reason}
+      </div>
+      <div style={{ fontSize: "11px", color: "#64748B", lineHeight: 1.45 }}>
+        <strong style={{ color: "#1A1A2E" }}>Leak</strong> · {leak.level} — {leak.reason}
+      </div>
+      <div style={{ fontSize: "11px", color: "#64748B", lineHeight: 1.45 }}>
+        <strong style={{ color: "#1A1A2E" }}>Reach</strong> · {reach.level} — {reach.reason}
+      </div>
+      {timing.level !== "None" && (
+        <div style={{ fontSize: "11px", color: "#64748B", lineHeight: 1.45 }}>
+          <strong style={{ color: "#1A1A2E" }}>Timing</strong> · {timing.level} — {timing.reason}
+        </div>
+      )}
+      {disqualificationReason && (
+        <div style={{ fontSize: "11px", color: "#B91C1C", lineHeight: 1.45 }}>
+          <strong>Disqualified</strong> · {disqualificationReason}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const CLOSEABILITY_TONE = {
+  neutral: { color: "#64748B", bg: "#F1F5F9", border: "#E2E8F0" },
+  intent: {
+    Strong:  { color: "#047857", bg: "#ECFDF5", border: "#A7F3D0" },
+    Weak:    { color: "#B45309", bg: "#FFFBEB", border: "#FDE68A" },
+    Unknown: { color: "#64748B", bg: "#F1F5F9", border: "#E2E8F0" },
+  },
+  leak: {
+    High:    { color: "#B91C1C", bg: "#FEF2F2", border: "#FECACA" },
+    Medium:  { color: "#B45309", bg: "#FFFBEB", border: "#FDE68A" },
+    Low:     { color: "#64748B", bg: "#F1F5F9", border: "#E2E8F0" },
+    None:    { color: "#94A3B8", bg: "#F8FAFC", border: "#E2E8F0" },
+  },
+  reach: {
+    Verified: { color: "#047857", bg: "#ECFDF5", border: "#A7F3D0" },
+    Weak:     { color: "#B45309", bg: "#FFFBEB", border: "#FDE68A" },
+    Missing:  { color: "#B91C1C", bg: "#FEF2F2", border: "#FECACA" },
+  },
+};
 
 // ── CRM presentation helpers ──────────────────────────────────────────
 // Pure formatting functions used by the embedded CRM surfaces (Timeline
@@ -1258,7 +1559,7 @@ function timelineLabel(a) {
 
 // ── Expanded Detail ───────────────────────────────────────────────────
 
-function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact }) {
+function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwitchTab, hunterAvailable = false }) {
   const leadKey = lead.key;
 
   const [script, setScript] = useState(() => {
@@ -1780,23 +2081,44 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact }) {
 
   return (
     <div style={S.detail}>
+      {/* Cross-tab context strip — identical visual identity in
+          Today, All Leads, and History so the user reads them as
+          one system. Renders at the very top of the detail view. */}
+      <LeadContextStrip
+        companyName={lead.name}
+        trade={lead.trade ? (getTradeModule(lead.trade)?.label ?? lead.trade) : null}
+        location={lead.location}
+        sourceTab="all-leads"
+        statusInput={lead}
+        onSwitchTab={onSwitchTab}
+      />
+      <ContactStrategyPanel lead={lead} />
+      {lead.decision && <DecisionSummary lead={lead} />}
       {/* 0. NEXT ACTION — command-center card above the header. Tells the
           rep exactly what to do next + the reason + confidence, and
           launches Call Mode when the action is CALL NOW / FOLLOW UP. */}
-      {lead.nextAction && (
-        <NextActionBlock
-          nextAction={lead.nextAction}
-          canCall={!!lead.contacts?.primaryPhone}
-          onEnterCallMode={() => setShowCallMode(true)}
-          onCall={() => {
-            copyText(lead.contacts?.primaryPhone || "").catch(() => {});
-            logOutreach("call_started", "next_action");
-          }}
-          phoneHref={lead.contacts?.primaryPhone ? telHref(lead.contacts.primaryPhone) : null}
-          mailtoHref={lead.contacts?.primaryEmail ? buildQuickMailto(lead.contacts.primaryEmail) : null}
-          onOpenScan={() => { setShowScanModal(true); logOutreach("scan_viewed", "next_action"); }}
-        />
-      )}
+      {lead.nextAction && (() => {
+        // Prefer the Hunter-verified email when present so the email
+        // button always uses the strongest available address. The
+        // tooltip surfaces "Verified email (Hunter)" when sourced.
+        const bestEmail = lead.verifiedEmail || lead.contacts?.primaryEmail || null;
+        const emailIsHunter = lead.emailSource === "hunter";
+        return (
+          <NextActionBlock
+            nextAction={lead.nextAction}
+            canCall={!!lead.contacts?.primaryPhone}
+            onEnterCallMode={() => setShowCallMode(true)}
+            onCall={() => {
+              copyText(lead.contacts?.primaryPhone || "").catch(() => {});
+              logOutreach("call_started", "next_action");
+            }}
+            phoneHref={lead.contacts?.primaryPhone ? telHref(lead.contacts.primaryPhone) : null}
+            mailtoHref={bestEmail ? buildQuickMailto(bestEmail) : null}
+            mailtoTooltip={emailIsHunter ? "Verified email (Hunter)" : (bestEmail ? `Email ${bestEmail}` : undefined)}
+            onOpenScan={() => { setShowScanModal(true); logOutreach("scan_viewed", "next_action"); }}
+          />
+        );
+      })()}
 
       {/* 1. COMPANY HEADER CARD — single bordered card with company
           meta on the left, prominent phone + Call Now on the right, and
@@ -1838,7 +2160,7 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact }) {
               <div style={S.companyHeaderRight}>
                 {hasPhoneAtHeader ? (
                   <>
-                    <div style={S.companyHeaderPhoneLabel}>Primary Phone</div>
+                    <div style={S.companyHeaderPhoneLabel} title="Verified phone">Primary Phone</div>
                     <div style={S.companyHeaderPhone}>{lead.contacts.primaryPhone}</div>
                     {/* Paired CTA group — primary Call Now + secondary Call
                         Script, aligned horizontally at the same height so
@@ -1861,6 +2183,17 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact }) {
                       >
                         {showScript ? "Hide Script" : "📝 Call Script"}
                       </button>
+                      <LeadEmailAction
+                        email={lead.contacts?.primaryEmail ?? lead.email ?? null}
+                        verifiedEmail={lead.verifiedEmail ?? null}
+                        emailSource={lead.emailSource ?? null}
+                        emailConfidence={lead.emailConfidence ?? null}
+                        companyName={lead.name}
+                        hunterAvailable={hunterAvailable}
+                        lead={lead}
+                        onUpdate={onUpdate}
+                        size="md"
+                      />
                     </div>
                   </>
                 ) : (
@@ -1882,6 +2215,17 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact }) {
                       >
                         {showScript ? "Hide Script" : "📝 Call Script"}
                       </button>
+                      <LeadEmailAction
+                        email={lead.contacts?.primaryEmail ?? lead.email ?? null}
+                        verifiedEmail={lead.verifiedEmail ?? null}
+                        emailSource={lead.emailSource ?? null}
+                        emailConfidence={lead.emailConfidence ?? null}
+                        companyName={lead.name}
+                        hunterAvailable={hunterAvailable}
+                        lead={lead}
+                        onUpdate={onUpdate}
+                        size="md"
+                      />
                     </div>
                   </>
                 )}
@@ -2466,17 +2810,13 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact }) {
                 )}
                 {callSupportTool === "pricing" && (
                   <div style={S.callSupportPanel}>
-                    <div style={S.callSupportPanelTitle}>Pricing Guide</div>
-                    {lead.valueEstimate ? (
-                      <ul style={S.callSupportPanelList}>
-                        {lead.valueEstimate.monthlyLeadLoss && <li><strong>Monthly lead loss:</strong> {lead.valueEstimate.monthlyLeadLoss}</li>}
-                        {lead.valueEstimate.annualUpside && <li><strong>Annual upside:</strong> {lead.valueEstimate.annualUpside}</li>}
-                        {lead.valueEstimate.estimatedContractValue && <li><strong>Estimated contract value:</strong> {lead.valueEstimate.estimatedContractValue}</li>}
-                        {lead.valueEstimate.reasoning && <li>{lead.valueEstimate.reasoning}</li>}
-                      </ul>
-                    ) : (
-                      <div style={S.callSupportPanelEmpty}>No value estimate on this lead yet — run a refresh to generate one.</div>
-                    )}
+                    <div style={S.callSupportPanelTitle}>Pricing Guide — size on the call</div>
+                    <ul style={S.callSupportPanelList}>
+                      <li>Ask: <em>“What are you spending per month on lead generation today, and where’s it going?”</em></li>
+                      <li>Ask: <em>“Roughly how many jobs do you close per month from online leads?”</em></li>
+                      <li>Use their number, not ours. A quoted dollar band without their input will erode credibility on a skeptical buyer.</li>
+                      {lead.valueEstimate?.reasoning && <li style={{ color: palette.textSecondary }}>Engine note: {lead.valueEstimate.reasoning}</li>}
+                    </ul>
                   </div>
                 )}
                 {callSupportTool === "rebuild" && (
@@ -2677,7 +3017,10 @@ function CallMode({
 
   const c = lead.contacts || {};
   const phone = c.primaryPhone;
-  const email = c.primaryEmail;
+  // Prefer the Hunter-verified email when present; emailSource drives
+  // the tooltip on the email button below.
+  const email = lead.verifiedEmail || c.primaryEmail;
+  const emailIsHunter = lead.emailSource === "hunter";
   const tradeKey = lead.trade || TRADE_DEFAULT;
   const trade = getTradeModule(tradeKey);
   const bucket = getServiceBucket(tradeKey, lead.serviceBucket);
@@ -2890,9 +3233,19 @@ function CallMode({
             <div style={S.callModeSideSection}>
               <div style={S.callModeSectionLabel}>Quick links</div>
               <div style={S.callModeLinkRow}>
-                {mailto && (
-                  <a href={mailto} style={S.callModeLinkBtn}>Send Email</a>
-                )}
+                <LeadEmailAction
+                  email={lead.contacts?.primaryEmail ?? null}
+                  verifiedEmail={lead.verifiedEmail ?? null}
+                  emailSource={lead.emailSource ?? null}
+                  emailConfidence={lead.emailConfidence ?? null}
+                  companyName={lead.name}
+                  hunterAvailable={false}
+                  size="md"
+                  labelOverride="Send Email"
+                />
+                {/* Call Mode opts out of Find Email — the moment is for
+                    dialing, not enrichment side-quests. The detail panel
+                    surfaces Find Email when needed. */}
                 {siteUrl && (
                   <a href={siteUrl} target="_blank" rel="noopener noreferrer" style={S.callModeLinkBtn}>Open Website</a>
                 )}
@@ -3205,17 +3558,24 @@ function NextActionBlock({ nextAction, canCall, onEnterCallMode, mailtoHref }) {
       background: meta.bg,
       borderLeft: `4px solid ${meta.accent}`,
     }}>
-      {/* LEFT — Next Action label + decorated pill */}
+      {/* LEFT — Next Action label + decorated pill.
+          The "CALL NOW — …" pill is intentionally suppressed: the blue
+          Call Now buttons on the calendar cards and detail header are
+          the canonical action surface. Other action variants (FOLLOW
+          UP / EMAIL FIRST / REVIEW SITE FIRST / SKIP FOR NOW) keep
+          their decorated chip — they communicate distinct guidance. */}
       <div style={S.nextActionBarLeft}>
         <span style={S.nextActionLabel}>Next Action</span>
-        <div style={{
-          ...S.nextActionChip,
-          color: meta.accent,
-          borderColor: meta.accent,
-          background: palette.surface,
-        }}>
-          {decorated}
-        </div>
+        {action !== "CALL NOW" ? (
+          <div style={{
+            ...S.nextActionChip,
+            color: meta.accent,
+            borderColor: meta.accent,
+            background: palette.surface,
+          }}>
+            {decorated}
+          </div>
+        ) : null}
       </div>
 
       {/* CENTER — one clean sentence explaining why */}
@@ -3746,8 +4106,14 @@ function DecisionCore({
                     strings like "Broad estimate only" are never shown. */}
                 {oppView.hasBand && (
                   <div style={S.oppEstimateRow}>
-                    <span style={S.oppEstimateLabel}>Est. inbound loss</span>
-                    <span style={{ ...S.oppEstimateValue, color: palette.danger }}>
+                    <span style={S.oppEstimateLabel}>
+                      {oppView.bandIsNeutralized ? "Revenue impact" : "Est. inbound loss"}
+                    </span>
+                    <span style={{
+                      ...S.oppEstimateValue,
+                      color: oppView.bandIsNeutralized ? palette.textSecondary : palette.danger,
+                      fontWeight: oppView.bandIsNeutralized ? 500 : S.oppEstimateValue.fontWeight,
+                    }}>
                       {oppView.display}
                     </span>
                   </div>
@@ -4540,7 +4906,7 @@ function CallPlanSection({ lead }) {
 // existing AI endpoint with the lead as context. Keeps one latest
 // response visible so the panel stays compact — no full chat history,
 // no parallel state system.
-function AssistantChat({ lead }) {
+function AssistantChat({ lead, workspace }) {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [answer, setAnswer] = useState(null);  // { text?: string, error?: string }
@@ -4552,22 +4918,35 @@ function AssistantChat({ lead }) {
     const message = input.trim();
     setBusy(true);
     setAnswer(null);
-    // Tight context block — enough for the assistant to be specific
-    // without flooding the prompt.
+    // Structured LeadContext — the assistant decides from this shape.
+    const decision = lead.decision || null;
+    const issuesArr = Array.isArray(lead.websiteProof?.issues) ? lead.websiteProof.issues : [];
+    const scanIssues = issuesArr
+      .slice(0, 5)
+      .map((i) => (typeof i === "string" ? i : (i.headline || i.label || i.description || i.reason || "")))
+      .filter(Boolean);
+    const weakSignals = [];
+    if (!lead.contacts?.primaryPhone) weakSignals.push("No verified phone");
+    if (!lead.contacts?.primaryEmail) weakSignals.push("No verified email");
+    if (!(lead.resolvedBusinessUrl || lead.domain)) weakSignals.push("No website on file");
+    if (!lead.lastChecked && !lead.websiteProof?.last_checked) weakSignals.push("Never scanned");
     const context = {
-      name: lead.name,
-      location: lead.location,
-      bucket: lead.bucket,
-      topIssues: (lead.websiteProof?.issues ?? []).slice(0, 3).map((i) => ({
-        code: i.code, description: i.description, severity: i.severity,
-      })),
-      revenueImpact: lead.opportunityEstimate?.revenueImpactSummary ?? [],
-      outcome: lead.opportunityEstimate?.realWorldOutcome,
-      contactsOnFile: {
-        phone: !!lead.contacts?.primaryPhone,
-        email: !!lead.contacts?.primaryEmail,
-        source: lead.contacts?.source,
-      },
+      companyName: lead.name,
+      workspaceSlug: workspace?.slug || "",
+      moduleId: workspace?.defaultModule || lead.trade || "roofing",
+      bucket: decision?.bucket || "",
+      score: typeof decision?.score === "number" ? decision.score : 0,
+      reason: decision?.reason || "",
+      suggestedOpening: decision?.suggestedOpening || "",
+      website: lead.resolvedBusinessUrl || lead.domain || lead.websiteProof?.homepage_url || undefined,
+      phone: lead.contacts?.primaryPhone || undefined,
+      email: lead.contacts?.primaryEmail || undefined,
+      status: lead.accountSnapshot?.status || undefined,
+      lastChecked: lead.lastChecked || lead.websiteProof?.last_checked || undefined,
+      scanIssues,
+      source: lead.contacts?.source || undefined,
+      weakSignals,
+      salesStrategy: lead.salesStrategy || undefined,
     };
     try {
       const res = await fetch("/api/ai/chat", {
@@ -4600,10 +4979,10 @@ function AssistantChat({ lead }) {
   }
 
   const suggestions = [
-    "Summarize the biggest issue",
-    "Give me a stronger opener",
-    "What should I say if they say referrals?",
-    "Why is this CALL NOW?",
+    "Why does this lead matter?",
+    "Give me a stronger opening",
+    "What objections should I expect?",
+    "What signal is weakest here?",
   ];
 
   return (
@@ -4652,9 +5031,10 @@ function AssistantChat({ lead }) {
   );
 }
 
-function AiPanel({ selectedLead, findTask, onStartFindContact }) {
+function AiPanel({ selectedLead, findTask, onStartFindContact, workspace }) {
   const [logFlash, setLogFlash] = useState(null);
   const logTimerRef = useRef(null);
+  // (id attached in render below for responsive CSS hook)
 
   async function logAttempt() {
     if (!selectedLead) return;
@@ -4676,7 +5056,7 @@ function AiPanel({ selectedLead, findTask, onStartFindContact }) {
   }
 
   return (
-    <div style={S.ai}>
+    <div id="meridian-ai" style={S.ai}>
       <div style={S.aiHead}>
         <span style={S.aiTitle}>Assistant</span>
         {selectedLead && <span style={S.aiCtx}>{selectedLead.name}</span>}
@@ -4699,7 +5079,7 @@ function AiPanel({ selectedLead, findTask, onStartFindContact }) {
             />
             {logFlash && <div style={S.statusCalm}>{logFlash}</div>}
             <CallPlanSection lead={selectedLead} />
-            <AssistantChat lead={selectedLead} />
+            <AssistantChat lead={selectedLead} workspace={workspace} />
           </>
         )}
       </div>
@@ -4714,9 +5094,9 @@ function TodayDashboard({ summary, onStartQueue, onStartFollowUps, onStartEmails
   return (
     <div style={S.todayStrip}>
       <div style={{ ...S.todayCard, ...S.todayCardAccent }}>
-        <span style={S.todayLabel}>Leads to Call Today</span>
+        <span style={S.todayLabel}>Suggested Calls Today</span>
         <span style={S.todayCount}>{summary.callNow}</span>
-        <span style={S.todayHint}>Best new opportunities</span>
+        <span style={S.todayHint}>Top-ranked leads, not yet started</span>
         <button
           type="button"
           onClick={onStartQueue}
@@ -4727,31 +5107,3232 @@ function TodayDashboard({ summary, onStartQueue, onStartFollowUps, onStartEmails
         </button>
       </div>
       <div style={S.todayCard}>
-        <span style={S.todayLabel}>Follow Ups — High Intent</span>
+        <span style={S.todayLabel}>Recommended Follow Ups</span>
         <span style={S.todayCount}>{summary.followUp}</span>
-        <span style={S.todayHint}>Warm leads ready to close</span>
+        <span style={S.todayHint}>Leads the system flags for a second pass</span>
         <button
           type="button"
           onClick={onStartFollowUps}
           style={summary.followUp > 0 ? S.todayBtnMuted : S.todayBtnDisabled}
           disabled={summary.followUp === 0}
         >
-          Close Deals (Follow Ups)
+          Review Follow Ups
         </button>
       </div>
       <div style={S.todayCard}>
-        <span style={S.todayLabel}>Emails to Send</span>
+        <span style={S.todayLabel}>Suggested Emails</span>
         <span style={S.todayCount}>{summary.emailFirst}</span>
-        <span style={S.todayHint}>Lower-friction outreach</span>
+        <span style={S.todayHint}>Lower-friction first touch</span>
         <button
           type="button"
           onClick={onStartEmails}
           style={summary.emailFirst > 0 ? S.todayBtnMuted : S.todayBtnDisabled}
           disabled={summary.emailFirst === 0}
         >
-          Send Emails
+          Review Emails
         </button>
       </div>
+    </div>
+  );
+}
+
+// ── Trade module selector ─────────────────────────────────────────────
+// Compact strip above the Calendar Command Center. Premium and minimal:
+// six text buttons in one row, no icons, no dropdowns, no redesign.
+
+function TradeModuleSelector({ selectedTradeId, onSelect }) {
+  // "all" is a synthetic option for the All Trades calendar view —
+  // not a real TRADE_MODULES entry, so we render it inline.
+  const items = [
+    { id: "all", label: "All Trades" },
+    ...TRADE_MODULE_ORDER.map((tid) => ({ id: tid, label: TRADE_MODULES[tid]?.label ?? tid })),
+  ];
+  return (
+    <div
+      role="group"
+      aria-label="Trade context"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "4px",
+        flexWrap: "wrap",
+      }}
+    >
+      {items.map(({ id: tid, label }) => {
+        const cfg = TRADE_MODULES[tid];
+        const active = tid === selectedTradeId;
+        return (
+          <button
+            key={tid}
+            type="button"
+            onClick={() => onSelect(tid)}
+            aria-pressed={active}
+            onMouseEnter={(e) => {
+              if (!active) e.currentTarget.style.color = palette.textPrimary;
+            }}
+            onMouseLeave={(e) => {
+              if (!active) e.currentTarget.style.color = palette.textSecondary;
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.outline = "2px solid rgba(37,99,235,0.30)";
+              e.currentTarget.style.outlineOffset = "2px";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.outline = "none";
+              e.currentTarget.style.outlineOffset = "0";
+            }}
+            style={{
+              fontSize: "12px",
+              fontWeight: active ? 600 : 500,
+              padding: "4px 8px",
+              borderRadius: "8px",
+              cursor: "pointer",
+              color: active ? palette.blue : palette.textSecondary,
+              background: active ? palette.bluePale : "transparent",
+              border: "none",
+              whiteSpace: "nowrap",
+              transition: "all 180ms cubic-bezier(0.4, 0, 0.2, 1)",
+            }}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Trade Leads Portfolio ─────────────────────────────────────────────
+// Trade-aware Leads view. Renders the same prioritization the Operator
+// rail uses, but as a portfolio: Focus Now / Build Next / Monitor with
+// the actual lead rows under each ready angle. Empty trades surface a
+// calm import path instead of recycling roofing leads.
+
+// Per-angle copy for the redesigned cards. When an angle is missing
+// here we fall back to the trade module's own johnServiceAngle.
+const ANGLE_COPY = {
+  website_conversion: {
+    why: "Their site makes it hard to request a quote.",
+    sell: "Fix the quote path + mobile conversion.",
+  },
+  no_website_presence: {
+    why: "No website at all — they're invisible to half their buyers.",
+    sell: "Sell a one-pager you can ship this week.",
+  },
+  local_seo_visibility: {
+    why: "Buyers search nearby and they don't show up.",
+    sell: "Own the local pack with city + neighborhood pages.",
+  },
+  review_reputation: {
+    why: "Reviews are killing them before the call ever happens.",
+    sell: "Review automation that lifts the rating fast.",
+  },
+  emergency_service_visibility: {
+    why: "Emergency searches go to whoever shows up first — not them.",
+    sell: "Emergency landing page + paid presence to grab the call.",
+  },
+  storm_response: {
+    why: "Storm money closes in 48 hours and they're missing the window.",
+    sell: "Storm page + paid search ready before the next event.",
+  },
+  estimate_followup: {
+    why: "Quotes go out, no one follows up — deals walk.",
+    sell: "Day-3 / day-7 follow-up cadence on autopilot.",
+  },
+  seasonal_demand: {
+    why: "Demand cycle is coming and they're not ready for it.",
+    sell: "Seasonal landing page + dispatch ready before the spike.",
+  },
+  maintenance_memberships: {
+    why: "Recurring revenue is sitting on the table.",
+    sell: "Stand up a membership program with a clean signup path.",
+  },
+  financing_visibility: {
+    why: "Buyers want a $/month, they only see a sticker price.",
+    sell: "$/mo CTA + financing copy on every install page.",
+  },
+  portfolio_visibility: {
+    why: "The work is good — the portfolio doesn't prove it.",
+    sell: "Rebuild the portfolio with shots that match the work.",
+  },
+  quote_request_funnel: {
+    why: "Visitors land, then bail before the quote.",
+    sell: "Cleaner landing page + 30-second quote form.",
+  },
+  project_photography: {
+    why: "Real projects, amateur photos.",
+    sell: "Monthly project shoot + before/after curation.",
+  },
+  niche_specialty_positioning: {
+    why: "Their specialty work reads like everyone else's.",
+    sell: "Premium positioning on a dedicated niche page.",
+  },
+  service_page_gaps: {
+    why: "High-intent searches hit pages that don't exist.",
+    sell: "One landing page per service, intent-matched CTA.",
+  },
+  commercial_maintenance: {
+    why: "Property managers send RFPs to whoever they remember — they don't.",
+    sell: "Commercial maintenance page + RFP intake.",
+  },
+  project_pipeline_visibility: {
+    why: "Active projects, but owners can't see them anywhere.",
+    sell: "Pipeline page + project ledger that builds trust.",
+  },
+  investor_owner_outreach: {
+    why: "Owner outreach is ad hoc — no page closing the loop.",
+    sell: "Investor capability page + clean follow-up flow.",
+  },
+  bid_opportunity_tracking: {
+    why: "RFPs land in an inbox, never in a pipeline.",
+    sell: "Bid intake form + opportunity tracker.",
+  },
+  case_study_presence: {
+    why: "Wins exist; nothing online proves them.",
+    sell: "Case-study pipeline with results up top.",
+  },
+  reputation_authority: {
+    why: "Authority signals are too thin for the deal size.",
+    sell: "Authority page + press / partner logo bar.",
+  },
+};
+
+function angleCopy(a) {
+  const c = ANGLE_COPY[a.bucketId];
+  return {
+    why: c?.why ?? "Real gap on this lead — you can sell into it.",
+    sell: c?.sell ?? a.johnServiceAngle ?? "Tight offer aimed at this gap.",
+  };
+}
+
+// ── Lead state classifier ─────────────────────────────────────────────
+//
+// Single source of truth for "what state is this lead in?" — drives
+// every count surfaced on the trade panel header. Pure / deterministic;
+// reads only fields already on the lead + the pipeline overlay.
+//
+// States (mutually exclusive, one per lead):
+//   ready_to_call — actionable today; high closeability + contact info,
+//                   no follow-up scheduled, not yet contacted
+//   in_progress   — already contacted (CALLED / VOICEMAIL / EMAILED / etc.)
+//   follow_up     — has a scheduled follow-up date or FOLLOW_UP status
+//   closed        — terminal state (won / lost / disqualified / not_qualified)
+function classifyLeadState(lead, pipelineMap) {
+  if (!lead) return "ready_to_call";
+  const id = lead.key ?? lead.id ?? null;
+  const pipe = (id && pipelineMap) ? pipelineMap[id] : null;
+  const rawStatus = (pipe?.status ?? lead?.crm?.status ?? lead?.status ?? "")
+    .toString()
+    .toUpperCase();
+
+  // Terminal — closed.
+  if (
+    rawStatus === "CLOSED_WON" || rawStatus === "WON" ||
+    rawStatus === "CLOSED_LOST" || rawStatus === "LOST" ||
+    rawStatus === "DISQUALIFIED" || rawStatus === "NOT_QUALIFIED" ||
+    rawStatus === "SKIPPED"
+  ) {
+    return "closed";
+  }
+
+  // Follow-up — explicit status OR a scheduled future action.
+  if (rawStatus === "FOLLOW_UP" || rawStatus === "INTERESTED" || rawStatus === "QUALIFIED") {
+    return "follow_up";
+  }
+  if (typeof pipe?.nextActionDate === "string" && pipe.nextActionDate.length > 0) {
+    return "follow_up";
+  }
+  if (typeof pipe?.followUpAt === "string" && pipe.followUpAt.length > 0) {
+    return "follow_up";
+  }
+
+  // In progress — already contacted in some form.
+  if (
+    rawStatus === "CONTACTED" || rawStatus === "CALLED" ||
+    rawStatus === "VOICEMAIL" || rawStatus === "EMAILED" ||
+    rawStatus === "PITCHED"
+  ) {
+    return "in_progress";
+  }
+
+  // Default: ready to call. The system always encourages action;
+  // fresh / uncontacted leads get the most actionable bucket.
+  return "ready_to_call";
+}
+
+// Aggregate counts across a lead pool. Returns { total, readyToCall,
+// inProgress, followUp, closed } — all derived from real lead data,
+// no placeholders, no static numbers.
+function aggregateLeadStates(leads, pipelineMap) {
+  const counts = { total: 0, readyToCall: 0, inProgress: 0, followUp: 0, closed: 0 };
+  if (!Array.isArray(leads)) return counts;
+  for (const lead of leads) {
+    counts.total += 1;
+    const state = classifyLeadState(lead, pipelineMap);
+    if (state === "ready_to_call") counts.readyToCall += 1;
+    else if (state === "in_progress") counts.inProgress += 1;
+    else if (state === "follow_up") counts.followUp += 1;
+    else if (state === "closed") counts.closed += 1;
+  }
+  return counts;
+}
+
+function TradeLeadsPortfolio({
+  user,
+  selectedTradeId,
+  tradeLabel,
+  onSelectTrade,
+  tradeScopedLeads,
+  prioritizedAngles,
+  leadsByAngle,
+  tradeReadiness,
+  onImport,
+  importState,
+  selectedServiceAngleId,
+  onSelectServiceAngle,
+  onClearServiceAngle,
+  onOpenOperator,
+  // Cross-tab selection — when supplied, lead rows in the workspace
+  // become clickable and the parent's selectedKey state drives the
+  // active row's highlight + the right-side LeadDetail panel.
+  selectedLeadKey,
+  onSelectLead,
+  // Pipeline overlay — drives the lead-state classifier so the trade
+  // panel header counts (Ready to call / In progress / Follow-up)
+  // reflect actual lead state, not bucket coverage.
+  pipelineMap,
+}) {
+  // Outcome capture (Booked / Follow Up / Dead / No Answer) lives here
+  // — local-state-first, persisted to localStorage, ready to swap for
+  // a server endpoint later.
+  const outcomes = useOutcomes();
+  // More Opportunities is collapsed by default — pure execution-first
+  // surface. Open via disclosure.
+  const [showMoreOpportunities, setShowMoreOpportunities] = useState(false);
+  // Lead-state counts — derived from real lead data via the
+  // canonical classifier. Replaces the prior "plays ready / need
+  // leads" labels (which counted bucket coverage, not leads).
+  const leadStateCounts = useMemo(
+    () => aggregateLeadStates(tradeScopedLeads, pipelineMap),
+    [tradeScopedLeads, pipelineMap],
+  );
+  const total = leadStateCounts.total;
+  const readyToCallCount = leadStateCounts.readyToCall;
+  const inProgressCount = leadStateCounts.inProgress;
+  const followUpCount = leadStateCounts.followUp;
+  // Bucket-coverage stat used elsewhere in the UI (not the header).
+  const readyCount = prioritizedAngles.filter((a) => a.count > 0).length;
+  const missingCount = prioritizedAngles.length - readyCount;
+  const topAngle = prioritizedAngles.find((a) => a.count > 0) ?? null;
+  const activeAngle = selectedServiceAngleId
+    ? prioritizedAngles.find((a) => a.bucketId === selectedServiceAngleId) ?? null
+    : null;
+  // Featured angle in the workspace: real selection wins; otherwise
+  // the top Focus Now angle previews. Selecting in state requires a
+  // user click — never mutated implicitly.
+  const featuredAngle =
+    activeAngle ??
+    prioritizedAngles.find((a) => a.priorityLabel === "Focus Now" && a.count > 0) ??
+    topAngle ??
+    prioritizedAngles[0] ??
+    null;
+
+  const focusAngles = prioritizedAngles.filter((a) => a.priorityLabel === "Focus Now");
+  const buildAngles = prioritizedAngles.filter((a) => a.priorityLabel === "Build Next");
+  const monitorAngles = prioritizedAngles.filter((a) => a.priorityLabel === "Monitor");
+
+  const tierStats = (list) => ({
+    angles: list.length,
+    leads: list.reduce((s, x) => s + x.count, 0),
+  });
+  const focusStats = tierStats(focusAngles);
+  const buildStats = tierStats(buildAngles);
+  const monitorStats = tierStats(monitorAngles);
+
+  // The decision engine is the single producer of "what's next." No
+  // separate global-deal heuristic. callBucket routes the operator to
+  // the Calls tab with the requested bucket pinned.
+  const callBucket = (bucketId) => {
+    if (typeof onSelectServiceAngle === "function" && selectedServiceAngleId !== bucketId) {
+      onSelectServiceAngle(bucketId);
+    }
+    if (typeof onOpenOperator === "function") onOpenOperator();
+  };
+
+  // Opportunity system — config-driven, tiered bucket layout. Pure
+  // derivation from the existing prioritization + leadsByAngle. The
+  // engine still owns ranking; this layer owns presentation grouping.
+  // `meaningfulOnly` hides leadless / low-revenue buckets so the
+  // operator only sees opportunities they can actually work today.
+  const opportunitySystem = useMemo(
+    () => buildOpportunitySystem(prioritizedAngles, leadsByAngle, selectedTradeId, { meaningfulOnly: true }),
+    [prioritizedAngles, leadsByAngle, selectedTradeId],
+  );
+
+  // The decision engine lives at the root and feeds the Calls tab.
+  // Opportunities only needs bucket performance to power the perf chips.
+
+  // Per-bucket performance for the bucket cards' performance chips.
+  const bucketPerformance = useMemo(() => {
+    const potentialMap = new Map();
+    for (const t of opportunitySystem.tiers) {
+      for (const b of t.buckets) potentialMap.set(b.bucketId, b.revenuePotential);
+    }
+    return bucketPerformanceMap(outcomes.events, potentialMap, outcomes.now);
+  }, [opportunitySystem, outcomes.events, outcomes.now]);
+
+  return (
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
+      gap: "16px",
+      maxWidth: "1280px",
+      margin: "0 auto",
+      width: "100%",
+    }}>
+      {/* Opportunities tab is the discovery surface only. No money
+          meter, no Call Now bar — execution lives in Calls. The user
+          picks a bucket here and the centralized callBucket(id)
+          handler routes them to Calls with that bucket pinned. */}
+
+      {/* Trade pills — visually secondary, kept for trade switching */}
+      <div>
+        <TradeModuleSelector selectedTradeId={selectedTradeId} onSelect={onSelectTrade} />
+      </div>
+
+      {/* ─────────── TIER 2 · NEXT BEST PLAY ─────────── */}
+      {featuredAngle && (
+        <NextBestPlay
+          angle={featuredAngle}
+          leadsByAngle={leadsByAngle}
+          isActive={!!activeAngle && activeAngle.bucketId === featuredAngle.bucketId}
+          onStartCalling={() => callBucket(featuredAngle.bucketId)}
+        />
+      )}
+
+      {/* Portfolio Command Header — drives import + Calls entry. */}
+      <div style={{
+        padding: "24px 28px",
+        borderRadius: "16px",
+        background: "linear-gradient(180deg, #FFFFFF, #F8FAFC)",
+        border: `1px solid ${palette.borderLight}`,
+        boxShadow: "0 1px 2px rgba(15,23,42,0.04), 0 6px 18px -6px rgba(15,23,42,0.06)",
+        display: "flex",
+        flexDirection: "column",
+        gap: "16px",
+      }}>
+        <div style={{
+          display: "flex",
+          alignItems: "flex-end",
+          justifyContent: "space-between",
+          gap: "16px",
+          flexWrap: "wrap",
+        }}>
+          <div>
+            <div style={{
+              fontSize: "10px", fontWeight: 700, letterSpacing: "0.10em",
+              color: palette.blue, textTransform: "uppercase",
+            }}>
+              Lead pipeline
+            </div>
+            <div style={{ fontSize: "26px", fontWeight: 700, color: palette.textPrimary, marginTop: "4px", lineHeight: 1.15 }}>
+              {tradeLabel} Leads
+            </div>
+            {/* Four real counts derived from the lead-state classifier.
+                No placeholders; every number reflects actual leads in
+                the trade-scoped pool. */}
+            <div style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "10px 18px",
+              alignItems: "baseline",
+              fontSize: "13px",
+              color: palette.textSecondary,
+              marginTop: "8px",
+            }}>
+              {activeAngle ? (
+                <span>
+                  <strong style={{ color: palette.textPrimary }}>{activeAngle.bucketLabel}</strong>
+                  {" · "}
+                  {activeAngle.count} lead{activeAngle.count === 1 ? "" : "s"} ready to call
+                </span>
+              ) : (
+                <>
+                  <span>
+                    <strong style={{ color: palette.textPrimary, fontSize: "14px" }}>{total}</strong>
+                    {" "}lead{total === 1 ? "" : "s"}
+                  </span>
+                  <span>
+                    <strong style={{ color: palette.success, fontSize: "14px" }}>{readyToCallCount}</strong>
+                    {" "}ready to call
+                  </span>
+                  <span>
+                    <strong style={{ color: palette.blue, fontSize: "14px" }}>{inProgressCount}</strong>
+                    {" "}in progress
+                  </span>
+                  <span>
+                    <strong style={{ color: palette.textPrimary, fontSize: "14px" }}>{followUpCount}</strong>
+                    {" "}follow-up scheduled
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            {total === 0 && (
+              <button
+                type="button"
+                onClick={onImport}
+                disabled={importState?.loading}
+                style={{
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: palette.blue,
+                  background: palette.bluePale,
+                  border: `1px solid ${palette.blueBorder}`,
+                  borderRadius: "10px",
+                  padding: "10px 16px",
+                  cursor: importState?.loading ? "default" : "pointer",
+                  opacity: importState?.loading ? 0.7 : 1,
+                  transition: "all 180ms cubic-bezier(0.4, 0, 0.2, 1)",
+                }}
+              >
+                {importState?.loading ? `Adding ${tradeLabel} leads…` : `Add ${tradeLabel} leads`}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onOpenOperator}
+              style={{
+                fontSize: "13px",
+                fontWeight: 600,
+                color: "#fff",
+                background: palette.blue,
+                border: "none",
+                borderRadius: "10px",
+                padding: "10px 18px",
+                cursor: "pointer",
+                boxShadow: "0 1px 2px rgba(37,99,235,0.25), 0 6px 18px -6px rgba(37,99,235,0.4)",
+                transition: "all 180ms cubic-bezier(0.4, 0, 0.2, 1)",
+              }}
+            >
+              Start calling →
+            </button>
+          </div>
+        </div>
+
+        {/* Selection chips */}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={onClearServiceAngle}
+            aria-pressed={!selectedServiceAngleId}
+            style={{
+              fontSize: "12px",
+              fontWeight: 600,
+              padding: "6px 14px",
+              borderRadius: "999px",
+              cursor: "pointer",
+              color: !selectedServiceAngleId ? palette.blue : palette.textSecondary,
+              background: !selectedServiceAngleId ? palette.bluePale : "transparent",
+              border: `1px solid ${!selectedServiceAngleId ? palette.blueBorder : palette.borderLight}`,
+              whiteSpace: "nowrap",
+              transition: "all 180ms cubic-bezier(0.4, 0, 0.2, 1)",
+            }}
+          >
+            All Angles
+          </button>
+          {activeAngle && (
+            <button
+              type="button"
+              onClick={onClearServiceAngle}
+              style={{
+                fontSize: "12px",
+                fontWeight: 600,
+                padding: "6px 14px",
+                borderRadius: "999px",
+                cursor: "pointer",
+                color: palette.blue,
+                background: palette.bluePale,
+                border: `1px solid ${palette.blueBorder}`,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {activeAngle.bucketLabel}
+              <span aria-hidden="true" style={{ fontSize: "14px", lineHeight: 1 }}>×</span>
+            </button>
+          )}
+        </div>
+
+        {/* Sticky banner: Operator linkage when an angle is active */}
+        {activeAngle && (
+          <div style={{
+            padding: "10px 14px",
+            borderRadius: "10px",
+            background: palette.bluePale,
+            border: `1px solid ${palette.blueBorder}`,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "12px",
+            flexWrap: "wrap",
+          }}>
+            <div style={{ fontSize: "12px", color: palette.textPrimary, fontWeight: 500 }}>
+              You&apos;re working on <span style={{ fontWeight: 700, color: palette.blue }}>{activeAngle.bucketLabel}</span>.
+            </div>
+            <button
+              type="button"
+              onClick={onOpenOperator}
+              style={{
+                fontSize: "12px",
+                fontWeight: 600,
+                color: palette.blue,
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Start calling →
+            </button>
+          </div>
+        )}
+      </div>
+
+      {importState?.message && (
+        <div style={{
+          padding: "10px 14px",
+          fontSize: "12px",
+          borderRadius: "10px",
+          color: importState.kind === "error" ? palette.danger : palette.success,
+          background: importState.kind === "error" ? palette.dangerBg : palette.successBg,
+          border: `1px solid ${importState.kind === "error" ? "#FECACA" : "#BBF7D0"}`,
+        }}>
+          {importState.message}
+        </div>
+      )}
+
+      {total === 0 && (
+        <div style={{
+          padding: "28px 28px",
+          borderRadius: "14px",
+          background: palette.surface,
+          border: `1px solid ${palette.borderLight}`,
+          boxShadow: "0 1px 2px rgba(15,23,42,0.03)",
+        }}>
+          <div style={{ fontSize: "16px", fontWeight: 700, color: palette.textPrimary, marginBottom: "6px" }}>
+            No {tradeLabel} leads yet.
+          </div>
+          <div style={{ fontSize: "13px", color: palette.textSecondary, lineHeight: 1.55, maxWidth: "560px" }}>
+            Each play below is a way to make money once you have leads. Add some {tradeLabel} companies and you can start calling today.
+          </div>
+          {tradeReadiness?.missingEnvVars?.length ? (
+            <div style={{ fontSize: "12px", color: palette.textTertiary, marginTop: "10px" }}>
+              Connect <code style={{
+                fontFamily: "ui-monospace, SFMono-Regular, monospace",
+                fontSize: "11px",
+                background: palette.surfaceHover,
+                padding: "2px 6px",
+                borderRadius: "4px",
+              }}>{tradeReadiness.missingEnvVars[0]}</code> to activate automated sourcing.
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {/* ─────────── TIER 3 · MORE OPPORTUNITIES (collapsed) ─────────── */}
+      {prioritizedAngles.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <button
+            type="button"
+            onClick={() => setShowMoreOpportunities((v) => !v)}
+            aria-expanded={showMoreOpportunities}
+            style={{
+              alignSelf: "flex-start",
+              fontSize: "12px",
+              fontWeight: 600,
+              color: palette.textSecondary,
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              padding: "4px 0",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              letterSpacing: "0.02em",
+            }}
+          >
+            More ways to make money {showMoreOpportunities ? "↑" : "↓"}
+            <span style={{ color: palette.textTertiary, fontWeight: 500 }}>
+              {(() => {
+                const n = opportunitySystem.tiers.reduce(
+                  (s, t) => s + t.buckets.filter((b) => b.ready).length, 0,
+                );
+                return n > 0 ? ` · ${n} ready` : "";
+              })()}
+            </span>
+          </button>
+
+          {showMoreOpportunities && (
+            <>
+              <OpportunitySystem
+                system={opportunitySystem}
+                selectedServiceAngleId={selectedServiceAngleId}
+                onCallBucket={callBucket}
+                bucketPerformance={bucketPerformance}
+              />
+
+              {/* Working surface — full lead browser for the active angle. */}
+              {featuredAngle && (
+                <FeaturedAngleWorkspace
+                  angle={featuredAngle}
+                  isActive={!!activeAngle && activeAngle.bucketId === featuredAngle.bucketId}
+                  leads={leadsByAngle?.[featuredAngle.bucketId] ?? []}
+                  onSelect={() => onSelectServiceAngle?.(featuredAngle.bucketId)}
+                  onOpenOperator={onOpenOperator}
+                  selectedTradeId={selectedTradeId}
+                  selectedLeadKey={selectedLeadKey}
+                  onSelectLead={onSelectLead}
+                />
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Single lead-key helper lives in lib/leads/decisionEngine.ts
+// (`leadKeyOf`). Re-exported via lib/leads/outcomes.ts. Use that.
+
+// ── MoneyExecutionBar ─────────────────────────────────────────────────
+// Tier 1A surface. Premium white/off-white card. Big money number.
+// Daily target + calls left to hit pace. Quick Mode toggle on the right.
+// Secondary stats (ranked / contacted / closed) sit small + muted so the
+// dollars dominate.
+// ── DealsPipeline ─────────────────────────────────────────────────────
+// Premium pipeline tab. Reads from useDeals (outcomes + manual
+// mutations) and renders: pipeline summary strip + 4-column board +
+// detail drawer. No fabricated data — every deal exists because the
+// user logged a real outcome.
+function DealsPipeline({ dealsHook, onCallDeal, onLeadSelected, onSwitchTab }) {
+  const onGoToCalls = () => onCallDeal?.(null);
+  const { deals, summary, moveDealStage, addDealNote, markDealWon, markDealLost, setDealNextAction } = dealsHook;
+  const [openDealId, setOpenDealId] = useState(null);
+  const [filter, setFilter] = useState("all"); // all | due | high | needs_followup | no_phone | won | lost
+  const [search, setSearch] = useState("");
+
+  // Cross-tab bridge — when a deal is opened, also notify the parent so
+  // selectedKey (used by the All Leads tab) tracks the same lead. Pure
+  // pass-through; the parent decides how to react.
+  const handleOpenDealId = useCallback((id) => {
+    setOpenDealId(id);
+    if (typeof onLeadSelected === "function") {
+      const d = id ? deals.find((x) => x.id === id) : null;
+      if (d) onLeadSelected(d);
+    }
+  }, [deals, onLeadSelected]);
+
+  const now = new Date();
+  const todayStr = (() => {
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  })();
+
+  const visibleDeals = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return deals.filter((d) => {
+      if (q) {
+        const hay = `${d.companyName} ${d.trade ?? ""} ${d.bucketLabel ?? ""} ${d.notes.map((n) => n.text).join(" ")}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      switch (filter) {
+        case "due":
+          return d.followUpOn && d.followUpOn <= todayStr && d.stage !== "lost" && d.stage !== "closed_won";
+        case "high":
+          return d.estimatedValue >= 5000 && d.stage !== "lost";
+        case "needs_followup":
+          return !!d.followUpOn && d.stage !== "lost" && d.stage !== "closed_won";
+        case "no_phone":
+          return !d.contact?.phone && d.stage !== "lost";
+        case "won":
+          return d.stage === "closed_won";
+        case "lost":
+          return d.stage === "lost";
+        default:
+          return true;
+      }
+    });
+  }, [deals, filter, search, todayStr]);
+
+  const stageGroups = useMemo(() => {
+    const groups = {
+      closing_soon: [],
+      in_progress: [],
+      new: [],
+      lost: [],
+    };
+    for (const d of visibleDeals) {
+      if (d.stage === "closed_won") continue; // surfaced via Won Today metric
+      groups[d.stage].push(d);
+    }
+    for (const k of Object.keys(groups)) {
+      groups[k] = sortDealsForStage(groups[k], now);
+    }
+    return groups;
+  }, [visibleDeals, now]);
+
+  const openDeal = openDealId ? deals.find((d) => d.id === openDealId) ?? null : null;
+
+  const isEmpty = deals.length === 0;
+
+  const filterTabs = [
+    { id: "all", label: "All" },
+    { id: "due", label: "Due today" },
+    { id: "high", label: "High value" },
+    { id: "needs_followup", label: "Needs follow-up" },
+    { id: "no_phone", label: "No phone" },
+    { id: "won", label: "Won" },
+    { id: "lost", label: "Lost" },
+  ];
+
+  return (
+    <div style={{
+      display: "flex", flexDirection: "column", gap: "16px",
+      maxWidth: "1280px", margin: "0 auto", width: "100%",
+    }}>
+      <DealsPipelineSummary
+        summary={summary}
+        onCallDeal={onCallDeal}
+        onOpenDeal={handleOpenDealId}
+      />
+
+      {/* Filters + search */}
+      {!isEmpty && (
+        <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+            {filterTabs.map((t) => {
+              const active = filter === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setFilter(t.id)}
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: active ? 700 : 500,
+                    color: active ? palette.blue : palette.textSecondary,
+                    background: active ? palette.bluePale : "transparent",
+                    border: `1px solid ${active ? palette.blueBorder : palette.borderLight}`,
+                    borderRadius: "999px",
+                    padding: "6px 12px",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    transition: "all 180ms cubic-bezier(0.4, 0, 0.2, 1)",
+                  }}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ flex: "1 1 220px", minWidth: 0 }}>
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search companies"
+              style={{
+                width: "100%",
+                fontSize: "13px",
+                color: palette.textPrimary,
+                background: palette.surface,
+                border: `1px solid ${palette.borderLight}`,
+                borderRadius: "10px",
+                padding: "9px 12px",
+                outline: "none",
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {isEmpty ? (
+        <DealsEmpty onGoToCalls={onGoToCalls} />
+      ) : (
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+          gap: "14px",
+          alignItems: "start",
+        }}>
+          <DealsStageColumn
+            stage="closing_soon"
+            tone={palette.success}
+            deals={stageGroups.closing_soon}
+            emptyText="Nothing close yet. Keep calling."
+            now={now}
+            onOpenDeal={handleOpenDealId}
+          />
+          <DealsStageColumn
+            stage="in_progress"
+            tone={palette.blue}
+            deals={stageGroups.in_progress}
+            emptyText="No conversations going yet."
+            now={now}
+            onOpenDeal={handleOpenDealId}
+          />
+          <DealsStageColumn
+            stage="new"
+            tone={palette.textSecondary}
+            deals={stageGroups.new}
+            emptyText="Nothing new yet."
+            now={now}
+            onOpenDeal={handleOpenDealId}
+          />
+          <DealsStageColumn
+            stage="lost"
+            tone={palette.textTertiary}
+            deals={stageGroups.lost}
+            emptyText="No lost deals yet."
+            now={now}
+            onOpenDeal={handleOpenDealId}
+            muted
+          />
+        </div>
+      )}
+
+      {openDeal && (
+        <DealDetailPanel
+          deal={openDeal}
+          onClose={() => setOpenDealId(null)}
+          onCallDeal={onCallDeal}
+          onMoveStage={(stage) => moveDealStage(openDeal.id, stage)}
+          onAddNote={(note) => addDealNote(openDeal.id, note)}
+          onMarkWon={() => markDealWon(openDeal.id)}
+          onMarkLost={() => markDealLost(openDeal.id)}
+          onSetNextAction={(text) => setDealNextAction(openDeal.id, text)}
+          onSwitchTab={onSwitchTab}
+        />
+      )}
+    </div>
+  );
+}
+
+function DealsPipelineSummary({ summary, onCallDeal, onOpenDeal }) {
+  const totalLabel = formatMoney(summary.totalActiveValue) ?? "$0";
+  const wonLabel = formatMoney(summary.wonToday) ?? "$0";
+  const next = summary.nextFollowUp;
+  return (
+    <div style={{
+      padding: "18px 22px",
+      borderRadius: "16px",
+      background: "linear-gradient(180deg, #FFFFFF, #F8FAFC)",
+      border: `1px solid ${palette.borderLight}`,
+      boxShadow: "0 1px 2px rgba(15,23,42,0.04), 0 6px 18px -6px rgba(15,23,42,0.06)",
+      display: "flex",
+      flexDirection: "column",
+      gap: "14px",
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: "16px", flexWrap: "wrap" }}>
+        <div>
+          <div style={{
+            fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em",
+            color: palette.textTertiary, textTransform: "uppercase",
+          }}>
+            Pipeline
+          </div>
+          <div style={{
+            fontSize: "32px", fontWeight: 800, color: palette.textPrimary,
+            marginTop: "2px", lineHeight: 1.1, letterSpacing: "-0.01em",
+            fontVariantNumeric: "tabular-nums",
+          }}>
+            {totalLabel} <span style={{ fontSize: "16px", fontWeight: 600, color: palette.textSecondary }}>active value</span>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: "14px", flexWrap: "wrap", fontVariantNumeric: "tabular-nums" }}>
+          <PipelineMetric label="Closing soon" value={summary.byStage.closing_soon.value} count={summary.byStage.closing_soon.count} tone={palette.success} />
+          <PipelineMetric label="In progress" value={summary.byStage.in_progress.value} count={summary.byStage.in_progress.count} tone={palette.blue} />
+          <PipelineMetric label="New" value={summary.byStage.new.value} count={summary.byStage.new.count} tone={palette.textSecondary} />
+          <PipelineMetric label="Won today" value={summary.wonToday} count={summary.byStage.closed_won.count} tone={palette.success} highlight />
+        </div>
+      </div>
+      {next ? (
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", flexWrap: "wrap",
+          padding: "10px 14px",
+          borderRadius: "12px",
+          background: next.due === "late" ? "rgba(220,38,38,0.06)" : palette.bluePale,
+          border: `1px solid ${next.due === "late" ? "#FECACA" : palette.blueBorder}`,
+        }}>
+          <div style={{ fontSize: "13px", color: palette.textPrimary, lineHeight: 1.4 }}>
+            <span style={{
+              fontSize: "10px", fontWeight: 800, letterSpacing: "0.14em",
+              color: next.due === "late" ? palette.danger : palette.blue,
+              textTransform: "uppercase", marginRight: "8px",
+            }}>
+              {next.due === "late" ? "Late · Next follow-up" : "Next follow-up"}
+            </span>
+            <span style={{ fontWeight: 700 }}>{next.deal.companyName}</span>
+            <span style={{ color: palette.textSecondary }}> · {next.deal.nextAction}</span>
+          </div>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <button
+              type="button"
+              onClick={() => onOpenDeal?.(next.deal.id)}
+              style={{
+                fontSize: "12px", fontWeight: 600, color: palette.blue,
+                background: "transparent", border: `1px solid ${palette.blueBorder}`,
+                borderRadius: "8px", padding: "6px 12px", cursor: "pointer",
+              }}
+            >
+              Open
+            </button>
+            <button
+              type="button"
+              onClick={() => onCallDeal?.(next.deal)}
+              style={{
+                fontSize: "12px", fontWeight: 700, color: "#fff",
+                background: palette.blue, border: "none",
+                borderRadius: "8px", padding: "6px 14px", cursor: "pointer",
+                boxShadow: "0 1px 2px rgba(37,99,235,0.25)",
+              }}
+            >
+              Call again →
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div style={{ fontSize: "12px", color: palette.textTertiary }}>
+          You&apos;re caught up.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PipelineMetric({ label, value, count, tone, highlight = false }) {
+  const v = formatMoney(value) ?? "$0";
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1px", minWidth: "80px" }}>
+      <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.10em", color: palette.textTertiary, textTransform: "uppercase" }}>
+        {label}
+      </span>
+      <span style={{
+        fontSize: "16px", fontWeight: 800, color: highlight ? tone : palette.textPrimary,
+        letterSpacing: "-0.01em",
+      }}>
+        {v}
+      </span>
+      <span style={{ fontSize: "11px", color: palette.textTertiary }}>
+        {count} deal{count === 1 ? "" : "s"}
+      </span>
+    </div>
+  );
+}
+
+function DealsStageColumn({ stage, tone, deals, emptyText, now, onOpenDeal, muted = false }) {
+  return (
+    <div style={{
+      display: "flex", flexDirection: "column", gap: "10px",
+      opacity: muted ? 0.85 : 1,
+    }}>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "8px" }}>
+        <div style={{
+          fontSize: "10px", fontWeight: 800, letterSpacing: "0.14em",
+          color: tone, textTransform: "uppercase",
+        }}>
+          {DEAL_STAGE_LABELS[stage]}
+        </div>
+        <div style={{ fontSize: "11px", color: palette.textTertiary, fontVariantNumeric: "tabular-nums" }}>
+          {deals.length} · {formatMoney(deals.reduce((s, d) => s + d.estimatedValue, 0)) ?? "$0"}
+        </div>
+      </div>
+      {deals.length === 0 ? (
+        <div style={{
+          fontSize: "12px", color: palette.textTertiary, fontStyle: "italic",
+          padding: "14px 12px",
+          borderRadius: "10px",
+          background: palette.surface,
+          border: `1px dashed ${palette.borderLight}`,
+        }}>
+          {emptyText}
+        </div>
+      ) : (
+        deals.map((d) => (
+          <DealCard key={d.id} deal={d} now={now} onOpen={() => onOpenDeal?.(d.id)} muted={muted} />
+        ))
+      )}
+    </div>
+  );
+}
+
+function DealCard({ deal, now, onOpen, muted = false }) {
+  const ev = formatMoney(deal.estimatedValue);
+  const due = (() => {
+    if (!deal.followUpOn) return null;
+    const today = (() => {
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, "0");
+      const d = String(now.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    })();
+    const tomorrow = (() => {
+      const d = new Date(now); d.setDate(d.getDate() + 1);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    })();
+    if (deal.followUpOn === today) return { label: "Due today", color: palette.danger, bg: "rgba(220,38,38,0.08)" };
+    if (deal.followUpOn === tomorrow) return { label: "Due tomorrow", color: palette.blue, bg: palette.bluePale };
+    if (deal.followUpOn < today) return { label: "Late", color: palette.danger, bg: "rgba(220,38,38,0.10)" };
+    return null;
+  })();
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen?.(); } }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.boxShadow = "0 1px 2px rgba(15,23,42,0.04), 0 12px 28px -10px rgba(15,23,42,0.16)";
+        e.currentTarget.style.transform = "translateY(-1px)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.boxShadow = "0 1px 2px rgba(15,23,42,0.03)";
+        e.currentTarget.style.transform = "translateY(0)";
+      }}
+      style={{
+        padding: "14px 16px",
+        borderRadius: "12px",
+        background: palette.surface,
+        border: `1px solid ${palette.borderLight}`,
+        boxShadow: "0 1px 2px rgba(15,23,42,0.03)",
+        display: "flex", flexDirection: "column", gap: "8px",
+        cursor: "pointer",
+        transition: "all 180ms cubic-bezier(0.4, 0, 0.2, 1)",
+        opacity: muted ? 0.75 : 1,
+        outline: "none",
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "8px" }}>
+        <div style={{
+          fontSize: "14px", fontWeight: 700, color: palette.textPrimary,
+          lineHeight: 1.2,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          flex: 1, minWidth: 0,
+        }}>
+          {deal.companyName}
+        </div>
+        {ev && (
+          <span style={{
+            fontSize: "12px", fontWeight: 700,
+            color: palette.success,
+            fontVariantNumeric: "tabular-nums",
+            whiteSpace: "nowrap",
+          }}>
+            ~{ev}
+          </span>
+        )}
+      </div>
+      {deal.bucketLabel && (
+        <div style={{
+          fontSize: "11px", color: palette.textTertiary, fontWeight: 500,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}>
+          {deal.bucketLabel}
+        </div>
+      )}
+      {deal.lastAction && (
+        <div style={{ fontSize: "12px", color: palette.textSecondary, lineHeight: 1.4 }}>
+          <span style={{ fontWeight: 600, color: palette.textPrimary }}>Last:</span> {deal.lastAction}
+        </div>
+      )}
+      <div style={{ fontSize: "12px", color: palette.textSecondary, lineHeight: 1.4 }}>
+        <span style={{ fontWeight: 600, color: palette.textPrimary }}>Next:</span> {deal.nextAction}
+      </div>
+      {due && (
+        <span style={{
+          alignSelf: "flex-start",
+          fontSize: "10px", fontWeight: 700, letterSpacing: "0.06em",
+          color: due.color, textTransform: "uppercase",
+          padding: "2px 8px",
+          borderRadius: "999px",
+          background: due.bg,
+          border: `1px solid ${due.color === palette.danger ? "#FECACA" : palette.blueBorder}`,
+        }}>
+          {due.label}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function DealDetailPanel({ deal, onClose, onCallDeal, onMoveStage, onAddNote, onMarkWon, onMarkLost, onSetNextAction, onSwitchTab }) {
+  const [noteText, setNoteText] = useState("");
+  const [nextActionDraft, setNextActionDraft] = useState(deal.nextAction);
+  const tel = deal.contact?.phone ? `tel:${deal.contact.phone.replace(/[^\d+]/g, "")}` : null;
+  return (
+    <div
+      onClick={onClose}
+      role="presentation"
+      style={{
+        position: "fixed", inset: 0, background: "rgba(15,23,42,0.32)",
+        zIndex: 1100, display: "flex", justifyContent: "flex-end",
+      }}
+    >
+      <aside
+        onClick={(e) => e.stopPropagation()}
+        role="dialog" aria-modal="true" aria-label={`Deal: ${deal.companyName}`}
+        style={{
+          width: "min(440px, 100%)", height: "100%",
+          background: palette.surface,
+          boxShadow: "-12px 0 30px rgba(15,23,42,0.10)",
+          borderLeft: `1px solid ${palette.border}`,
+          display: "flex", flexDirection: "column",
+          overflowY: "auto",
+        }}
+      >
+        <header style={{
+          padding: "18px 22px",
+          borderBottom: `1px solid ${palette.borderLight}`,
+          display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px",
+        }}>
+          <div>
+            <div style={{
+              fontSize: "10px", fontWeight: 800, letterSpacing: "0.14em",
+              color: palette.blue, textTransform: "uppercase",
+            }}>
+              {DEAL_STAGE_LABELS[deal.stage]}
+            </div>
+            <div style={{ fontSize: "20px", fontWeight: 700, color: palette.textPrimary, marginTop: "2px", lineHeight: 1.2 }}>
+              {deal.companyName}
+            </div>
+            <div style={{ fontSize: "12px", color: palette.textSecondary, marginTop: "4px" }}>
+              {formatMoney(deal.estimatedValue) ?? "$0"} · {Math.round((deal.closeProbability ?? 0) * 100)}% chance
+              {deal.bucketLabel ? ` · ${deal.bucketLabel}` : ""}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              fontSize: "20px", color: palette.textTertiary,
+              background: "transparent", border: "none", cursor: "pointer",
+              padding: "0 4px", lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
+        </header>
+
+        <div style={{ padding: "18px 22px", display: "flex", flexDirection: "column", gap: "18px", flex: 1 }}>
+          {/* Cross-tab context strip — identical visual identity in
+              Today, All Leads, and History so the user reads them as
+              one system. Sits at the top of the deal detail body. */}
+          <LeadContextStrip
+            companyName={deal.companyName}
+            trade={deal.trade ?? null}
+            location={deal.location ?? null}
+            sourceTab="history"
+            statusInput={deal}
+            onSwitchTab={onSwitchTab}
+          />
+          {/* Next action */}
+          <section>
+            <div style={DETAIL_EYEBROW}>Next action</div>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <input
+                type="text"
+                value={nextActionDraft}
+                onChange={(e) => setNextActionDraft(e.target.value)}
+                style={{
+                  flex: 1, fontSize: "13px",
+                  color: palette.textPrimary,
+                  background: palette.surfaceHover,
+                  border: `1px solid ${palette.borderLight}`,
+                  borderRadius: "10px", padding: "10px 12px",
+                  outline: "none",
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => onSetNextAction?.(nextActionDraft)}
+                disabled={!nextActionDraft.trim() || nextActionDraft === deal.nextAction}
+                style={{
+                  fontSize: "12px", fontWeight: 700,
+                  color: !nextActionDraft.trim() || nextActionDraft === deal.nextAction ? palette.textTertiary : palette.blue,
+                  background: palette.bluePale,
+                  border: `1px solid ${palette.blueBorder}`,
+                  borderRadius: "10px", padding: "8px 12px",
+                  cursor: !nextActionDraft.trim() || nextActionDraft === deal.nextAction ? "default" : "pointer",
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </section>
+
+          {/* Primary action — route to the Calls tab. The Calls tab is
+              the only place outcomes are recorded so the user lands
+              there ready to dial with the script primed. */}
+          <section style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <div style={DETAIL_EYEBROW}>Next call</div>
+            <button
+              type="button"
+              onClick={() => onCallDeal?.(deal)}
+              disabled={!tel}
+              style={{
+                ...DETAIL_PRIMARY_BTN,
+                opacity: tel ? 1 : 0.5,
+                cursor: tel ? "pointer" : "not-allowed",
+              }}
+            >
+              {tel ? "Call again →" : "No phone on file"}
+            </button>
+            {/* History deals: show Email when present; never offer
+                Find Email here (the deal already happened — enrichment
+                belongs to active leads in Today / All Leads). */}
+            <LeadEmailAction
+              email={deal.contact?.email ?? null}
+              verifiedEmail={deal.contact?.verifiedEmail ?? null}
+              emailSource={deal.contact?.emailSource ?? null}
+              emailConfidence={deal.contact?.emailConfidence ?? null}
+              companyName={deal.companyName}
+              hunterAvailable={false}
+              allowFindEmail={false}
+              size="md"
+            />
+          </section>
+
+          {/* Stage actions */}
+          <section style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <div style={DETAIL_EYEBROW}>Move stage</div>
+            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+              {["closing_soon", "in_progress", "new"].map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => onMoveStage?.(s)}
+                  style={{
+                    fontSize: "11px", fontWeight: deal.stage === s ? 700 : 500,
+                    color: deal.stage === s ? palette.blue : palette.textSecondary,
+                    background: deal.stage === s ? palette.bluePale : "transparent",
+                    border: `1px solid ${deal.stage === s ? palette.blueBorder : palette.borderLight}`,
+                    borderRadius: "999px", padding: "6px 12px", cursor: "pointer",
+                  }}
+                >
+                  {DEAL_STAGE_LABELS[s]}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={onMarkWon}
+                style={{
+                  fontSize: "11px", fontWeight: 700,
+                  color: palette.success, background: palette.successBg,
+                  border: "1px solid #BBF7D0", borderRadius: "999px",
+                  padding: "6px 12px", cursor: "pointer",
+                }}
+              >
+                Mark won
+              </button>
+              <button
+                type="button"
+                onClick={() => { if (typeof window === "undefined" || window.confirm("Mark this deal as not a fit?")) onMarkLost?.(); }}
+                style={{
+                  fontSize: "11px", fontWeight: 700,
+                  color: palette.danger, background: palette.dangerBg,
+                  border: "1px solid #FECACA", borderRadius: "999px",
+                  padding: "6px 12px", cursor: "pointer",
+                }}
+              >
+                Not a fit
+              </button>
+            </div>
+          </section>
+
+          {/* Add note */}
+          <section style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <div style={DETAIL_EYEBROW}>Add note</div>
+            <textarea
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              rows={2}
+              placeholder="Anything worth remembering for next call…"
+              style={{
+                fontSize: "13px", color: palette.textPrimary,
+                background: palette.surfaceHover,
+                border: `1px solid ${palette.borderLight}`,
+                borderRadius: "10px", padding: "10px 12px",
+                outline: "none", resize: "none", lineHeight: 1.4,
+                fontFamily: "inherit",
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => { onAddNote?.(noteText); setNoteText(""); }}
+              disabled={!noteText.trim()}
+              style={{
+                alignSelf: "flex-start",
+                fontSize: "11px", fontWeight: 700,
+                color: !noteText.trim() ? palette.textTertiary : "#fff",
+                background: !noteText.trim() ? palette.surfaceHover : palette.blue,
+                border: "none", borderRadius: "10px", padding: "8px 14px",
+                cursor: !noteText.trim() ? "default" : "pointer",
+              }}
+            >
+              Add note
+            </button>
+          </section>
+
+          {deal.notes.length > 0 && (
+            <section>
+              <div style={DETAIL_EYEBROW}>Notes</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                {deal.notes.slice().reverse().map((n, i) => (
+                  <div key={`note-${i}`} style={{
+                    fontSize: "12px", color: palette.textPrimary, lineHeight: 1.5,
+                    padding: "8px 10px",
+                    borderRadius: "8px",
+                    background: palette.surfaceHover,
+                    border: `1px solid ${palette.borderLight}`,
+                  }}>
+                    {n.text}
+                    <div style={{ fontSize: "10px", color: palette.textTertiary, marginTop: "2px" }}>
+                      {new Date(n.at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Timeline */}
+          <section>
+            <div style={DETAIL_EYEBROW}>Timeline</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              {deal.history.slice().reverse().map((h, i) => (
+                <div key={`h-${i}`} style={{
+                  fontSize: "12px", color: palette.textSecondary, lineHeight: 1.4,
+                  padding: "6px 0",
+                  borderTop: i === 0 ? "none" : `1px solid ${palette.borderLight}`,
+                }}>
+                  <div style={{ fontSize: "10px", color: palette.textTertiary, marginBottom: "2px" }}>
+                    {new Date(h.at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                  </div>
+                  {h.summary}
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function DealsEmpty({ onGoToCalls }) {
+  return (
+    <div style={{
+      padding: "32px 28px",
+      borderRadius: "16px",
+      background: palette.surface,
+      border: `1px dashed ${palette.borderLight}`,
+      display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "10px",
+    }}>
+      <div style={{ fontSize: "16px", fontWeight: 700, color: palette.textPrimary }}>
+        No deals yet.
+      </div>
+      <div style={{ fontSize: "13px", color: palette.textSecondary, lineHeight: 1.55, maxWidth: "480px" }}>
+        Start calling and your pipeline will build itself. Every outcome you log becomes a deal here.
+      </div>
+      <button
+        type="button"
+        onClick={onGoToCalls}
+        style={{
+          marginTop: "6px",
+          fontSize: "13px", fontWeight: 700,
+          color: "#fff", background: palette.blue,
+          border: "none", borderRadius: "10px",
+          padding: "10px 16px", cursor: "pointer",
+          boxShadow: "0 1px 2px rgba(37,99,235,0.25), 0 6px 14px -6px rgba(37,99,235,0.45)",
+        }}
+      >
+        Go to Calls →
+      </button>
+    </div>
+  );
+}
+
+const DETAIL_EYEBROW = {
+  fontSize: "10px", fontWeight: 700, letterSpacing: "0.10em",
+  color: palette.textTertiary, textTransform: "uppercase",
+  marginBottom: "6px",
+};
+const DETAIL_PRIMARY_BTN = {
+  fontSize: "13px", fontWeight: 700,
+  color: "#fff", background: palette.blue,
+  border: "none", borderRadius: "10px",
+  padding: "10px 16px", cursor: "pointer",
+  textDecoration: "none",
+  letterSpacing: "0.02em",
+  boxShadow: "0 1px 2px rgba(37,99,235,0.25), 0 6px 14px -6px rgba(37,99,235,0.45)",
+};
+
+// MoneyExecutionBar — currently unused. Money signals live on Deals
+// (pipeline summary) and Calls (queueRemaining + outcome confirmation).
+// Kept for future Calls-tab top strip; not mounted today.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function MoneyExecutionBar({ userName, bookedToday, target, callsLeft, callsMadeToday, contactedCount, closedCount, quickMode, onToggleQuickMode }) {
+  const bookedLabel = formatMoney(bookedToday) ?? "$0";
+  const targetLabel = formatMoney(target) ?? "—";
+  const progress = target > 0 ? Math.min(1, bookedToday / target) : 0;
+  return (
+    <div style={{
+      padding: "18px 22px",
+      borderRadius: "16px",
+      background: "linear-gradient(180deg, #FFFFFF, #F8FAFC)",
+      border: `1px solid ${palette.borderLight}`,
+      boxShadow: "0 1px 2px rgba(15,23,42,0.04), 0 6px 18px -6px rgba(15,23,42,0.06)",
+      display: "flex",
+      alignItems: "center",
+      gap: "20px",
+      flexWrap: "wrap",
+    }}>
+      <div style={{ flex: "1 1 320px", minWidth: 0 }}>
+        <div style={{
+          fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em",
+          color: palette.textTertiary, textTransform: "uppercase",
+        }}>
+          Today{userName ? ` · ${userName}` : ""}
+        </div>
+        <div style={{
+          fontSize: "32px", fontWeight: 800, color: palette.textPrimary,
+          marginTop: "2px", lineHeight: 1.1, letterSpacing: "-0.01em",
+          fontVariantNumeric: "tabular-nums",
+        }}>
+          {bookedLabel} booked today
+          <span style={{
+            fontSize: "16px", fontWeight: 600, color: palette.textSecondary,
+            marginLeft: "8px",
+          }}>
+            / {targetLabel} goal
+          </span>
+        </div>
+        <div style={{
+          height: "4px",
+          background: palette.surfaceHover,
+          borderRadius: "999px",
+          overflow: "hidden",
+          marginTop: "10px",
+          maxWidth: "320px",
+        }}>
+          <div style={{
+            width: `${Math.round(progress * 100)}%`,
+            height: "100%",
+            background: progress >= 1 ? palette.success : palette.blue,
+            transition: "width 320ms cubic-bezier(0.4, 0, 0.2, 1)",
+          }} />
+        </div>
+        <div style={{
+          fontSize: "12px", color: palette.textSecondary,
+          marginTop: "6px", fontWeight: 500,
+        }}>
+          {callsLeft > 0
+            ? <>{callsLeft} more call{callsLeft === 1 ? "" : "s"} to hit your goal</>
+            : target > 0 && bookedToday >= target
+              ? <span style={{ color: palette.success, fontWeight: 600 }}>Goal hit. Keep going. ✓</span>
+              : <>Make your first call to start the day.</>}
+        </div>
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+        <div style={{
+          display: "flex", flexDirection: "column", gap: "2px",
+          fontSize: "11px", color: palette.textTertiary, lineHeight: 1.45,
+          fontVariantNumeric: "tabular-nums",
+        }}>
+          <span>Calls made: <span style={{ color: palette.textSecondary, fontWeight: 600 }}>{callsMadeToday}</span></span>
+          <span>Reached: <span style={{ color: palette.textSecondary, fontWeight: 600 }}>{contactedCount}</span></span>
+          <span>Booked: <span style={{ color: palette.textSecondary, fontWeight: 600 }}>{closedCount}</span></span>
+        </div>
+        <button
+          type="button"
+          onClick={() => onToggleQuickMode?.(!quickMode)}
+          aria-pressed={quickMode}
+          title="Hides everything except the call and the log."
+          style={{
+            fontSize: "12px",
+            fontWeight: 700,
+            color: quickMode ? "#fff" : palette.textPrimary,
+            background: quickMode ? palette.blue : palette.surface,
+            border: `1px solid ${quickMode ? palette.blue : palette.borderLight}`,
+            borderRadius: "999px",
+            padding: "8px 14px",
+            cursor: "pointer",
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+            boxShadow: quickMode ? "0 1px 2px rgba(37,99,235,0.25), 0 6px 14px -6px rgba(37,99,235,0.45)" : "none",
+            transition: "all 180ms cubic-bezier(0.4, 0, 0.2, 1)",
+          }}
+        >
+          {quickMode ? "Just calling · ON" : "Just calling"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
+// ── NextBestPlay ──────────────────────────────────────────────────────
+// Tier 2. Single decisive recommendation that replaces "pick a lane."
+// Surfaces the angle name + revenue potential + ready company count +
+// one-line why + a single primary CTA. Hidden in Quick Mode.
+function NextBestPlay({ angle, leadsByAngle, isActive, onStartCalling }) {
+  const leads = leadsByAngle?.[angle.bucketId] ?? [];
+  const ready = angle.count > 0;
+  const copy = angleCopy(angle);
+  // Sum probability-adjusted opportunity for this angle's ready leads.
+  const angleValue = useMemo(() => {
+    let s = 0;
+    for (const l of leads) {
+      const v = leadOpportunityValue(l);
+      if (v) s += v;
+    }
+    return s;
+  }, [leads]);
+  const valueLabel = formatMoney(angleValue);
+
+  return (
+    <div style={{
+      padding: "18px 22px",
+      borderRadius: "16px",
+      background: palette.surface,
+      border: `1px solid ${palette.borderLight}`,
+      borderLeft: `4px solid ${palette.blue}`,
+      boxShadow: "0 1px 2px rgba(15,23,42,0.04), 0 8px 22px -8px rgba(15,23,42,0.10)",
+      display: "flex",
+      alignItems: "center",
+      gap: "20px",
+      flexWrap: "wrap",
+    }}>
+      <div style={{ flex: "1 1 360px", minWidth: 0 }}>
+        <div style={{
+          fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em",
+          color: palette.textTertiary, textTransform: "uppercase",
+        }}>
+          Where to start
+        </div>
+        <div style={{
+          fontSize: "20px", fontWeight: 700, color: palette.textPrimary,
+          marginTop: "4px", lineHeight: 1.2,
+        }}>
+          {angle.bucketLabel}
+        </div>
+        <div style={{
+          display: "flex", alignItems: "center", gap: "10px", marginTop: "6px", flexWrap: "wrap",
+          fontSize: "12px", color: palette.textSecondary, fontWeight: 500,
+        }}>
+          {valueLabel && (
+            <span style={{ color: palette.success, fontWeight: 700 }}>
+              ~{valueLabel} up for grabs
+            </span>
+          )}
+          <span>· {angle.count} compan{angle.count === 1 ? "y" : "ies"} waiting for a call</span>
+          {isActive && <span style={{ color: palette.blue, fontWeight: 600 }}>· You&apos;re working on this</span>}
+        </div>
+        <div style={{
+          fontSize: "13px", color: palette.textSecondary, marginTop: "8px",
+          lineHeight: 1.5,
+          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+        }}>
+          {copy.why}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={onStartCalling}
+        disabled={!ready}
+        style={{
+          fontSize: "14px",
+          fontWeight: 700,
+          color: "#fff",
+          background: ready ? palette.blue : "rgba(37,99,235,0.45)",
+          border: "none",
+          borderRadius: "12px",
+          padding: "13px 22px",
+          cursor: ready ? "pointer" : "not-allowed",
+          boxShadow: ready ? "0 1px 2px rgba(37,99,235,0.25), 0 8px 22px -6px rgba(37,99,235,0.55)" : "none",
+          letterSpacing: "0.04em",
+          textTransform: "uppercase",
+          whiteSpace: "nowrap",
+        }}
+      >
+        Start with these calls →
+      </button>
+    </div>
+  );
+}
+
+function PriorityTierCard({ label, tone, stats, meaning }) {
+  const toneColor =
+    tone === "focus" ? palette.blue
+    : tone === "build" ? "#6D28D9"
+    : palette.textTertiary;
+  return (
+    <div style={{
+      padding: "16px 18px",
+      borderRadius: "14px",
+      background: palette.surface,
+      border: `1px solid ${palette.borderLight}`,
+      borderLeft: `3px solid ${toneColor}`,
+      boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
+      display: "flex",
+      flexDirection: "column",
+      gap: "6px",
+    }}>
+      <div style={{
+        fontSize: "10px", fontWeight: 700, letterSpacing: "0.10em",
+        color: toneColor, textTransform: "uppercase",
+      }}>
+        {label}
+      </div>
+      <div style={{ fontSize: "22px", fontWeight: 700, color: palette.textPrimary }}>
+        {stats.angles} play{stats.angles === 1 ? "" : "s"}
+      </div>
+      <div style={{ fontSize: "12px", color: palette.textSecondary }}>
+        {stats.leads} lead{stats.leads === 1 ? "" : "s"} ready to call
+      </div>
+      <div style={{ fontSize: "11px", color: palette.textTertiary, fontStyle: "italic", marginTop: "2px" }}>
+        {meaning}
+      </div>
+    </div>
+  );
+}
+
+// ── AskAIPanel ──────────────────────────────────────────────────────
+// Right-side slide-over. Pulls a deal coach response from /api/ai/deal-coach
+// (server-side, ANTHROPIC_API_KEY-gated). Renders three sections:
+// improved pitch, objection handling, angle expansion. Additive only —
+// never displaces the existing FeaturedAngleWorkspace UI.
+
+// Compact secondary button used for pitch interactions (Copy, Shorten,
+// More aggressive). Stays consistent with the panel's quiet UI ladder.
+function pitchActionButtonStyle({ active = false, busy = false } = {}) {
+  return {
+    fontSize: "11px",
+    fontWeight: 600,
+    color: active ? palette.success : busy ? palette.textTertiary : palette.blue,
+    background: active ? palette.successBg : palette.bluePale,
+    border: `1px solid ${active ? "#BBF7D0" : palette.blueBorder}`,
+    borderRadius: "8px",
+    padding: "6px 10px",
+    cursor: busy ? "default" : "pointer",
+    whiteSpace: "nowrap",
+    transition: "all 180ms cubic-bezier(0.4, 0, 0.2, 1)",
+    opacity: busy ? 0.7 : 1,
+  };
+}
+
+function AskAIPanel({ open, onClose, topOpportunity, angle, tradeId }) {
+  const [state, setState] = useState({ loading: false, error: null, data: null });
+  const [messages, setMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState(null);
+  const [pitchActionBusy, setPitchActionBusy] = useState(null); // "shorten" | "aggressive" | null
+  const [pitchCopyState, setPitchCopyState] = useState(null);   // "copied" | null
+  const scrollRef = useRef(null);
+
+  // Reset on close so reopening triggers a fresh load against the
+  // current (possibly newly selected) lead.
+  useEffect(() => {
+    if (!open) {
+      setState({ loading: false, error: null, data: null });
+      setMessages([]);
+      setChatInput("");
+      setChatLoading(false);
+      setChatError(null);
+      setPitchActionBusy(null);
+      setPitchCopyState(null);
+    }
+  }, [open]);
+
+  // Whenever the structured pitch arrives, seed the chat thread with
+  // a synthesized "system" turn so the operator sees the brief and the
+  // model gets the prior context on every follow-up.
+  useEffect(() => {
+    if (!state.data) return;
+    const summary = [
+      state.data.summary ? `Best move: ${state.data.summary}` : null,
+      state.data.pitch.length ? `Pitch:\n${state.data.pitch.join("\n")}` : null,
+      state.data.objections.length
+        ? `Objection handling:\n${state.data.objections.map((o) => `- “${o.objection}” → ${o.response}`).join("\n")}`
+        : null,
+      state.data.angles.length
+        ? `Alternative angles:\n${state.data.angles.map((a) => `- ${a}`).join("\n")}`
+        : null,
+    ].filter(Boolean).join("\n\n");
+    setMessages(summary ? [{ role: "system", content: summary }] : []);
+  }, [state.data]);
+
+  // Auto-scroll the chat container to the bottom on every new turn /
+  // loading state so the operator always sees the latest message.
+  useEffect(() => {
+    if (!open) return;
+    const node = scrollRef.current;
+    if (!node) return;
+    requestAnimationFrame(() => {
+      node.scrollTop = node.scrollHeight;
+    });
+  }, [open, messages, chatLoading, state.data]);
+
+  // Esc to close.
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e) => { if (e.key === "Escape") onClose?.(); };
+    if (typeof window !== "undefined") {
+      window.addEventListener("keydown", onKey);
+      return () => window.removeEventListener("keydown", onKey);
+    }
+    return undefined;
+  }, [open, onClose]);
+
+  // Fire the request when the panel opens with a real top opportunity.
+  useEffect(() => {
+    if (!open || !topOpportunity || !tradeId) return;
+    let cancelled = false;
+    setState({ loading: true, error: null, data: null });
+    (async () => {
+      try {
+        const res = await fetch("/api/ai/deal-coach", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            lead: topOpportunity.lead,
+            bucketId: topOpportunity.bucketId,
+            bucketLabel: angle?.bucketLabel,
+            reasons: topOpportunity.lead?.classifierReasons ?? [],
+            script: topOpportunity.script,
+            tradeId,
+            tradeLabel: TRADE_MODULES[tradeId]?.label ?? tradeId,
+            johnServiceAngle: angle?.johnServiceAngle,
+            why: topOpportunity.why,
+            value: topOpportunity.value,
+            actionLabel: topOpportunity.actionLabel,
+          }),
+        });
+        const json = await res.json().catch(() => null);
+        if (cancelled) return;
+        if (!res.ok || !json?.ok) {
+          const error = json?.error || `Request failed (${res.status})`;
+          const friendly = typeof error === "string" && error.toLowerCase().includes("anthropic_api_key")
+            ? "ANTHROPIC_API_KEY is missing. Add it to .env.local and restart the dev server."
+            : error;
+          setState({ loading: false, error: friendly, data: null });
+          return;
+        }
+        setState({
+          loading: false,
+          error: null,
+          data: {
+            summary: typeof json.summary === "string" ? json.summary : "",
+            pitch: Array.isArray(json.pitch) ? json.pitch : [],
+            objections: Array.isArray(json.objections) ? json.objections : [],
+            angles: Array.isArray(json.angles) ? json.angles : [],
+          },
+        });
+      } catch (err) {
+        if (cancelled) return;
+        setState({
+          loading: false,
+          error: `Request failed: ${err instanceof Error ? err.message : "unknown error"}`,
+          data: null,
+        });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [open, topOpportunity, angle, tradeId]);
+
+  const handleChatSubmit = async (e) => {
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
+    const text = chatInput.trim();
+    if (!text || chatLoading || !topOpportunity || !tradeId) return;
+    const nextMessages = [...messages, { role: "user", content: text }];
+    setMessages(nextMessages);
+    setChatInput("");
+    setChatLoading(true);
+    setChatError(null);
+    try {
+      const res = await fetch("/api/ai/deal-coach", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lead: topOpportunity.lead,
+          bucketId: topOpportunity.bucketId,
+          bucketLabel: angle?.bucketLabel,
+          reasons: topOpportunity.lead?.classifierReasons ?? [],
+          script: topOpportunity.script,
+          tradeId,
+          tradeLabel: TRADE_MODULES[tradeId]?.label ?? tradeId,
+          johnServiceAngle: angle?.johnServiceAngle,
+          why: topOpportunity.why,
+          value: topOpportunity.value,
+          actionLabel: topOpportunity.actionLabel,
+          messages: nextMessages,
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        const error = json?.error || `Request failed (${res.status})`;
+        const friendly = typeof error === "string" && error.toLowerCase().includes("anthropic_api_key")
+          ? "ANTHROPIC_API_KEY is missing. Add it to .env.local and restart the dev server."
+          : error;
+        setChatError(friendly);
+        return;
+      }
+      const reply = typeof json.reply === "string" && json.reply.trim().length > 0
+        ? json.reply.trim()
+        : "(no reply)";
+      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+    } catch (err) {
+      setChatError(err instanceof Error ? err.message : "Request failed");
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  // Copy the current pitch to the clipboard. No fabrication — just the
+  // lines already shown in the panel. Shows transient "Copied" feedback.
+  const handleCopyPitch = async () => {
+    if (!state.data?.pitch?.length) return;
+    const text = state.data.pitch.join("\n");
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+      }
+      setPitchCopyState("copied");
+      setTimeout(() => setPitchCopyState(null), 1400);
+    } catch {
+      setPitchCopyState(null);
+    }
+  };
+
+  // Re-call the chat branch with a tight instruction to rewrite the
+  // current pitch. We surface the result as a chat assistant turn so
+  // the original brief stays intact and the operator can compare.
+  const handlePitchAction = async (action) => {
+    if (!topOpportunity || !tradeId) return;
+    if (pitchActionBusy || chatLoading) return;
+    if (!state.data?.pitch?.length) return;
+    const instruction = action === "shorten"
+      ? "Rewrite the pitch as ONE sentence. Plain operator voice. No filler. Return just the sentence."
+      : "Rewrite the pitch to be more direct and urgent. 2 short lines max. End on a question. Return just the rewritten pitch.";
+    const userTurn = action === "shorten" ? "Shorten the pitch to one sentence." : "Make the pitch more direct and urgent.";
+    const nextMessages = [...messages, { role: "user", content: userTurn }];
+    setMessages(nextMessages);
+    setPitchActionBusy(action);
+    setChatError(null);
+    try {
+      const res = await fetch("/api/ai/deal-coach", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lead: topOpportunity.lead,
+          bucketId: topOpportunity.bucketId,
+          bucketLabel: angle?.bucketLabel,
+          reasons: topOpportunity.lead?.classifierReasons ?? [],
+          script: topOpportunity.script,
+          tradeId,
+          tradeLabel: TRADE_MODULES[tradeId]?.label ?? tradeId,
+          johnServiceAngle: angle?.johnServiceAngle,
+          why: topOpportunity.why,
+          value: topOpportunity.value,
+          actionLabel: topOpportunity.actionLabel,
+          messages: [...nextMessages, { role: "user", content: instruction }],
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        const error = json?.error || `Request failed (${res.status})`;
+        setChatError(error);
+        return;
+      }
+      const reply = typeof json.reply === "string" && json.reply.trim().length > 0
+        ? json.reply.trim()
+        : "(no reply)";
+      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+    } catch (err) {
+      setChatError(err instanceof Error ? err.message : "Request failed");
+    } finally {
+      setPitchActionBusy(null);
+    }
+  };
+
+  if (!open) return null;
+  const lead = topOpportunity?.lead ?? null;
+  const company = lead?.name ?? lead?.companyName ?? "this deal";
+
+  return (
+    <div
+      onClick={onClose}
+      role="presentation"
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(15,23,42,0.32)",
+        zIndex: 1100,
+        display: "flex",
+        justifyContent: "flex-end",
+      }}
+    >
+      <aside
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="AI deal coach"
+        style={{
+          width: "min(440px, 100%)",
+          height: "100%",
+          background: palette.surface,
+          boxShadow: "-12px 0 30px rgba(15,23,42,0.10)",
+          borderLeft: `1px solid ${palette.border}`,
+          display: "flex",
+          flexDirection: "column",
+          overflowY: "auto",
+        }}
+      >
+        <header style={{
+          padding: "18px 22px",
+          borderBottom: `1px solid ${palette.borderLight}`,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: "12px",
+        }}>
+          <div>
+            <div style={{
+              fontSize: "10px", fontWeight: 800, letterSpacing: "0.14em",
+              color: palette.blue, textTransform: "uppercase",
+            }}>
+              AI Deal Coach
+            </div>
+            <div style={{ fontSize: "16px", fontWeight: 700, color: palette.textPrimary, marginTop: "2px", lineHeight: 1.25 }}>
+              {company}
+            </div>
+            {angle?.bucketLabel && (
+              <div style={{ fontSize: "11px", color: palette.textTertiary, marginTop: "2px" }}>
+                Angle: {angle.bucketLabel}
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close AI panel"
+            style={{
+              fontSize: "18px",
+              fontWeight: 600,
+              color: palette.textTertiary,
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              padding: "0 4px",
+              lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
+        </header>
+
+        <div
+          ref={scrollRef}
+          style={{
+            padding: "18px 22px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "18px",
+            flex: 1,
+            overflowY: "auto",
+            minHeight: 0,
+          }}
+        >
+          {state.loading && (
+            <div style={{ fontSize: "13px", color: palette.textSecondary }}>
+              Thinking through this deal…
+            </div>
+          )}
+          {state.error && (
+            <div style={{
+              padding: "10px 12px",
+              borderRadius: "10px",
+              background: palette.dangerBg,
+              border: "1px solid #FECACA",
+              color: palette.danger,
+              fontSize: "12px",
+            }}>
+              {state.error}
+            </div>
+          )}
+
+          {state.data && (
+            <>
+              {state.data.summary && (
+                <section>
+                  <div style={{
+                    padding: "12px 14px",
+                    borderRadius: "10px",
+                    background: "linear-gradient(180deg, rgba(37,99,235,0.10), rgba(37,99,235,0.02))",
+                    border: `1px solid ${palette.blueBorder}`,
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    color: palette.textPrimary,
+                    lineHeight: 1.5,
+                  }}>
+                    {state.data.summary}
+                  </div>
+                </section>
+              )}
+              {state.data.pitch.length > 0 && (
+                <section>
+                  <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.10em", color: palette.textTertiary, textTransform: "uppercase", marginBottom: "8px" }}>
+                    Improved pitch
+                  </div>
+                  <ul style={{
+                    margin: 0,
+                    paddingLeft: "18px",
+                    fontSize: "13px",
+                    color: palette.textPrimary,
+                    lineHeight: 1.55,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "6px",
+                  }}>
+                    {state.data.pitch.map((line, i) => (
+                      <li key={`pitch-${i}`}>{line}</li>
+                    ))}
+                  </ul>
+                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "10px" }}>
+                    <button
+                      type="button"
+                      onClick={handleCopyPitch}
+                      disabled={!state.data.pitch.length}
+                      style={pitchActionButtonStyle({ active: pitchCopyState === "copied" })}
+                    >
+                      {pitchCopyState === "copied" ? "Copied ✓" : "Copy pitch"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePitchAction("shorten")}
+                      disabled={!!pitchActionBusy || chatLoading}
+                      style={pitchActionButtonStyle({ busy: pitchActionBusy === "shorten" })}
+                    >
+                      {pitchActionBusy === "shorten" ? "Shortening…" : "Shorten"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePitchAction("aggressive")}
+                      disabled={!!pitchActionBusy || chatLoading}
+                      style={pitchActionButtonStyle({ busy: pitchActionBusy === "aggressive" })}
+                    >
+                      {pitchActionBusy === "aggressive" ? "Sharpening…" : "More aggressive"}
+                    </button>
+                  </div>
+                </section>
+              )}
+
+              {state.data.objections.length > 0 && (
+                <section>
+                  <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.10em", color: palette.textTertiary, textTransform: "uppercase", marginBottom: "8px" }}>
+                    Objection handling
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {state.data.objections.map((o, i) => (
+                      <div key={`obj-${i}`} style={{
+                        padding: "10px 12px",
+                        borderRadius: "10px",
+                        background: palette.surface,
+                        border: `1px solid ${palette.borderLight}`,
+                      }}>
+                        <div style={{ fontSize: "12px", fontWeight: 600, color: palette.textPrimary, marginBottom: "4px" }}>
+                          “{o.objection}”
+                        </div>
+                        <div style={{ fontSize: "12px", color: palette.textSecondary, lineHeight: 1.5 }}>
+                          {o.response}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {state.data.angles.length > 0 && (
+                <section>
+                  <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.10em", color: palette.textTertiary, textTransform: "uppercase", marginBottom: "8px" }}>
+                    Angle expansion
+                  </div>
+                  <ul style={{
+                    margin: 0,
+                    paddingLeft: "18px",
+                    fontSize: "13px",
+                    color: palette.textPrimary,
+                    lineHeight: 1.55,
+                  }}>
+                    {state.data.angles.map((a, i) => (
+                      <li key={`angle-${i}`} style={{ marginBottom: "6px" }}>{a}</li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+            </>
+          )}
+
+          {/* Chat thread — appears below the static brief once it loads. */}
+          {state.data && (
+            <section>
+              <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.10em", color: palette.textTertiary, textTransform: "uppercase", marginBottom: "8px" }}>
+                Ask follow-up
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {messages
+                  .filter((m) => m.role !== "system")
+                  .map((m, i) => (
+                    <div
+                      key={`chat-${i}`}
+                      style={{
+                        alignSelf: m.role === "user" ? "flex-end" : "flex-start",
+                        maxWidth: "92%",
+                        padding: "9px 12px",
+                        borderRadius: "10px",
+                        fontSize: "13px",
+                        lineHeight: 1.5,
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                        background: m.role === "user" ? palette.bluePale : palette.surfaceHover,
+                        border: `1px solid ${m.role === "user" ? palette.blueBorder : palette.borderLight}`,
+                        color: palette.textPrimary,
+                      }}
+                    >
+                      {m.content}
+                    </div>
+                  ))}
+                {chatLoading && (
+                  <div style={{
+                    alignSelf: "flex-start",
+                    maxWidth: "92%",
+                    padding: "9px 12px",
+                    borderRadius: "10px",
+                    fontSize: "13px",
+                    color: palette.textSecondary,
+                    background: palette.surfaceHover,
+                    border: `1px solid ${palette.borderLight}`,
+                    fontStyle: "italic",
+                  }}>
+                    Thinking…
+                  </div>
+                )}
+                {chatError && (
+                  <div style={{
+                    padding: "9px 12px",
+                    borderRadius: "10px",
+                    background: palette.dangerBg,
+                    border: "1px solid #FECACA",
+                    color: palette.danger,
+                    fontSize: "12px",
+                  }}>
+                    {chatError}
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+        </div>
+
+        {/* Chat input — sits between content and footer, never covers it. */}
+        {state.data && (
+          <form
+            onSubmit={handleChatSubmit}
+            style={{
+              padding: "10px 14px",
+              borderTop: `1px solid ${palette.borderLight}`,
+              display: "flex",
+              gap: "8px",
+              alignItems: "flex-end",
+              background: palette.surface,
+            }}
+          >
+            <textarea
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleChatSubmit();
+                }
+              }}
+              placeholder="Ask a follow-up about this deal…"
+              rows={1}
+              style={{
+                flex: 1,
+                resize: "none",
+                fontSize: "13px",
+                fontFamily: "inherit",
+                color: palette.textPrimary,
+                background: palette.surfaceHover,
+                border: `1px solid ${palette.borderLight}`,
+                borderRadius: "10px",
+                padding: "10px 12px",
+                outline: "none",
+                lineHeight: 1.4,
+                maxHeight: "120px",
+                minHeight: "38px",
+              }}
+            />
+            <button
+              type="submit"
+              disabled={chatLoading || chatInput.trim().length === 0}
+              style={{
+                fontSize: "13px",
+                fontWeight: 600,
+                color: "#fff",
+                background: chatLoading || chatInput.trim().length === 0 ? "rgba(37,99,235,0.45)" : palette.blue,
+                border: "none",
+                borderRadius: "10px",
+                padding: "10px 16px",
+                cursor: chatLoading || chatInput.trim().length === 0 ? "default" : "pointer",
+                whiteSpace: "nowrap",
+                transition: "all 180ms cubic-bezier(0.4, 0, 0.2, 1)",
+              }}
+            >
+              Send
+            </button>
+          </form>
+        )}
+
+        <footer style={{
+          padding: "12px 22px",
+          borderTop: `1px solid ${palette.borderLight}`,
+          fontSize: "11px",
+          color: palette.textTertiary,
+          fontStyle: "italic",
+        }}>
+          Generated by the AI deal coach using only the lead signals already on file.
+        </footer>
+      </aside>
+    </div>
+  );
+}
+
+function FeaturedAngleWorkspace({ angle, isActive, leads, onSelect, onOpenOperator, selectedTradeId, selectedLeadKey, onSelectLead }) {
+  const ready = angle.count > 0;
+  const topOpportunity = useMemo(
+    () => (ready && selectedTradeId ? buildTopOpportunity(angle.bucketId, leads, selectedTradeId) : null),
+    [ready, angle.bucketId, leads, selectedTradeId],
+  );
+  const [aiOpen, setAiOpen] = useState(false);
+  const copy = angleCopy(angle);
+  const toneColor =
+    angle.priorityLabel === "Focus Now" ? palette.blue
+    : angle.priorityLabel === "Build Next" ? "#6D28D9"
+    : palette.textTertiary;
+
+  // Search + filter state (component-local).
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [visibleCount, setVisibleCount] = useState(10);
+
+  // Reset when the featured angle id changes.
+  useEffect(() => {
+    setQuery("");
+    setFilter("all");
+    setVisibleCount(10);
+  }, [angle?.bucketId]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return leads.filter((lead) => {
+      if (q.length > 0) {
+        const haystack = `${lead.name ?? ""} ${lead.location ?? ""} ${lead.address ?? ""} ${lead.website ?? ""}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      const hasWebsite = !!(lead.website || lead.websiteUrl || lead.domain);
+      const hasPhone = !!(lead.phone || lead.contacts?.primaryPhone);
+      if (filter === "website") return hasWebsite;
+      if (filter === "phone") return hasPhone;
+      if (filter === "needs_contact") return !hasWebsite && !hasPhone;
+      return true;
+    });
+  }, [leads, query, filter]);
+
+  const visible = filtered.slice(0, visibleCount);
+  const more = Math.max(0, filtered.length - visible.length);
+
+  const filterTabs = [
+    { id: "all", label: "All" },
+    { id: "website", label: "Website found" },
+    { id: "phone", label: "Phone found" },
+    { id: "needs_contact", label: "Needs contact" },
+  ];
+
+  return (
+    <div style={{
+      padding: "24px 28px",
+      borderRadius: "16px",
+      background: isActive
+        ? "linear-gradient(180deg, rgba(37,99,235,0.04), #FFFFFF)"
+        : palette.surface,
+      border: `1px solid ${isActive ? palette.blueBorder : palette.borderLight}`,
+      borderLeft: `4px solid ${toneColor}`,
+      boxShadow: isActive
+        ? "0 1px 2px rgba(15,23,42,0.04), 0 14px 40px -10px rgba(37,99,235,0.18)"
+        : "0 1px 2px rgba(15,23,42,0.04), 0 6px 18px -6px rgba(15,23,42,0.06)",
+      display: "flex",
+      flexDirection: "column",
+      gap: "16px",
+    }}>
+      <div style={{
+        display: "flex",
+        justifyContent: "space-between",
+        gap: "16px",
+        flexWrap: "wrap",
+        alignItems: "flex-start",
+      }}>
+        <div style={{ flex: "1 1 380px", minWidth: 0 }}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: "8px",
+            fontSize: "10px", fontWeight: 700, letterSpacing: "0.10em",
+            color: toneColor, textTransform: "uppercase",
+          }}>
+            {priorityLabelText(angle.priorityLabel)}
+            {isActive && <span style={{ color: palette.blue }}>· You&apos;re working this</span>}
+          </div>
+          <div style={{ fontSize: "22px", fontWeight: 700, color: palette.textPrimary, marginTop: "4px", lineHeight: 1.2 }}>
+            {angle.bucketLabel}
+          </div>
+          <div style={{ fontSize: "13px", color: palette.textSecondary, marginTop: "4px" }}>
+            {ready ? `${angle.count} lead${angle.count === 1 ? "" : "s"} ready to call` : "No leads yet"}
+          </div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
+          <button
+            type="button"
+            onClick={onSelect}
+            style={{
+              fontSize: "13px",
+              fontWeight: 600,
+              color: isActive ? palette.blue : "#fff",
+              background: isActive ? palette.bluePale : palette.blue,
+              border: `1px solid ${isActive ? palette.blueBorder : palette.blue}`,
+              borderRadius: "10px",
+              padding: "10px 18px",
+              cursor: "pointer",
+              boxShadow: isActive ? "none" : "0 1px 2px rgba(37,99,235,0.25), 0 6px 18px -6px rgba(37,99,235,0.4)",
+              transition: "all 180ms cubic-bezier(0.4, 0, 0.2, 1)",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {isActive ? "You're working these ✓" : "Start with these leads →"}
+          </button>
+          {isActive && (
+            <button
+              type="button"
+              onClick={onOpenOperator}
+              style={{
+                fontSize: "12px",
+                fontWeight: 600,
+                color: palette.blue,
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                padding: "2px 0",
+              }}
+            >
+              Start calling →
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Next Deal — decisive execution block. Order: company →
+          why this works → expected outcome → say this → action. */}
+      {topOpportunity && (
+        <div style={{
+          padding: "20px 22px",
+          borderRadius: "14px",
+          background: "linear-gradient(180deg, rgba(37,99,235,0.08), rgba(37,99,235,0.02))",
+          border: `1px solid ${palette.blueBorder}`,
+          boxShadow: "0 1px 2px rgba(15,23,42,0.04), 0 14px 40px -10px rgba(37,99,235,0.22)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "14px",
+        }}>
+          {/* 1. Eyebrow + Company */}
+          <div>
+            <div style={{
+              fontSize: "10px", fontWeight: 800, letterSpacing: "0.14em",
+              color: palette.blue, textTransform: "uppercase",
+            }}>
+              Best call right now
+            </div>
+            <div style={{ fontSize: "24px", fontWeight: 700, color: palette.textPrimary, marginTop: "4px", lineHeight: 1.15 }}>
+              {topOpportunity.lead.name ?? topOpportunity.lead.companyName ?? "Unnamed"}
+            </div>
+            {(topOpportunity.lead.address || topOpportunity.lead.location) && (
+              <div style={{ fontSize: "12px", color: palette.textTertiary, marginTop: "2px" }}>
+                {topOpportunity.lead.address ?? topOpportunity.lead.location}
+              </div>
+            )}
+          </div>
+
+          {/* 2. Why call them */}
+          <div>
+            <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.10em", color: palette.textTertiary, textTransform: "uppercase", marginBottom: "4px" }}>
+              Why call them
+            </div>
+            <div style={{ fontSize: "14px", color: palette.textPrimary, lineHeight: 1.5 }}>
+              {topOpportunity.why}
+            </div>
+          </div>
+
+          {/* 3. What it's worth */}
+          <div>
+            <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.10em", color: palette.textTertiary, textTransform: "uppercase", marginBottom: "4px" }}>
+              What it&apos;s worth
+            </div>
+            <div style={{ fontSize: "14px", color: palette.textPrimary, fontWeight: 600, lineHeight: 1.5 }}>
+              {topOpportunity.value}
+            </div>
+          </div>
+
+          {/* 4. Say this */}
+          <div style={{
+            padding: "12px 14px",
+            borderRadius: "10px",
+            background: palette.surface,
+            border: `1px solid ${palette.borderLight}`,
+            fontSize: "13px",
+            color: palette.textPrimary,
+            lineHeight: 1.55,
+          }}>
+            <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.10em", color: palette.textTertiary, textTransform: "uppercase", marginBottom: "4px" }}>
+              Say this
+            </div>
+            “{topOpportunity.script}.”
+          </div>
+
+          {/* 5. Primary action + AI assist */}
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+            <button
+              type="button"
+              onClick={onSelect}
+              style={{
+                fontSize: "14px",
+                fontWeight: 700,
+                color: "#fff",
+                background: palette.blue,
+                border: "none",
+                borderRadius: "10px",
+                padding: "12px 22px",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                boxShadow: "0 1px 2px rgba(37,99,235,0.25), 0 8px 22px -6px rgba(37,99,235,0.55)",
+                transition: "all 180ms cubic-bezier(0.4, 0, 0.2, 1)",
+                letterSpacing: "0.02em",
+              }}
+            >
+              {topOpportunity.actionLabel} →
+            </button>
+            <button
+              type="button"
+              onClick={() => setAiOpen(true)}
+              style={{
+                fontSize: "13px",
+                fontWeight: 600,
+                color: palette.blue,
+                background: palette.bluePale,
+                border: `1px solid ${palette.blueBorder}`,
+                borderRadius: "10px",
+                padding: "11px 18px",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                transition: "all 180ms cubic-bezier(0.4, 0, 0.2, 1)",
+              }}
+            >
+              Get help with this call
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* AI Deal Coach slide-over — additive layer, never replaces UI. */}
+      <AskAIPanel
+        open={aiOpen}
+        onClose={() => setAiOpen(false)}
+        topOpportunity={topOpportunity}
+        angle={angle}
+        tradeId={selectedTradeId}
+      />
+
+      {/* Why + Sell */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+        gap: "12px",
+      }}>
+        <div style={{
+          padding: "12px 14px",
+          borderRadius: "10px",
+          background: palette.surfaceHover,
+          border: `1px solid ${palette.borderLight}`,
+        }}>
+          <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.08em", color: palette.textTertiary, textTransform: "uppercase", marginBottom: "4px" }}>
+            Why this matters
+          </div>
+          <div style={{ fontSize: "13px", color: palette.textPrimary, lineHeight: 1.5 }}>
+            {copy.why}
+          </div>
+        </div>
+        <div style={{
+          padding: "12px 14px",
+          borderRadius: "10px",
+          background: palette.surfaceHover,
+          border: `1px solid ${palette.borderLight}`,
+        }}>
+          <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.08em", color: palette.textTertiary, textTransform: "uppercase", marginBottom: "4px" }}>
+            What LaborTech sells
+          </div>
+          <div style={{ fontSize: "13px", color: palette.textPrimary, lineHeight: 1.5 }}>
+            {copy.sell}
+          </div>
+        </div>
+      </div>
+
+      {/* Lead browser */}
+      {ready ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "12px",
+            flexWrap: "wrap",
+          }}>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => { setQuery(e.target.value); setVisibleCount(10); }}
+              placeholder={`Search ${angle.bucketLabel.toLowerCase()} leads`}
+              style={{
+                flex: "1 1 240px",
+                fontSize: "13px",
+                padding: "8px 12px",
+                borderRadius: "8px",
+                border: `1px solid ${palette.borderLight}`,
+                background: palette.surface,
+                color: palette.textPrimary,
+                outline: "none",
+                minWidth: 0,
+              }}
+            />
+            <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+              {filterTabs.map((tab) => {
+                const active = filter === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => { setFilter(tab.id); setVisibleCount(10); }}
+                    aria-pressed={active}
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: active ? 600 : 500,
+                      padding: "6px 10px",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      color: active ? palette.blue : palette.textSecondary,
+                      background: active ? palette.bluePale : "transparent",
+                      border: `1px solid ${active ? palette.blueBorder : palette.borderLight}`,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div style={{
+            border: `1px solid ${palette.borderLight}`,
+            borderRadius: "12px",
+            overflow: "hidden",
+            background: palette.surface,
+          }}>
+            {visible.length === 0 ? (
+              <div style={{ padding: "20px", fontSize: "13px", color: palette.textSecondary, textAlign: "center" }}>
+                No leads match this filter.
+              </div>
+            ) : (
+              visible.map((lead, i) => {
+                const meta = [];
+                if (typeof lead.rating === "number" && lead.rating > 0) meta.push(`${lead.rating.toFixed(1)} ★`);
+                const reviews = typeof lead.reviewCount === "number" ? lead.reviewCount : (typeof lead.reviews === "number" ? lead.reviews : null);
+                if (typeof reviews === "number" && reviews >= 0) meta.push(`${reviews} review${reviews === 1 ? "" : "s"}`);
+                if (lead.website || lead.websiteUrl || lead.domain) meta.push("website");
+                if (lead.phone || lead.contacts?.primaryPhone) meta.push("phone");
+                if (lead.source === "google_places") meta.push("Google Places");
+                const rowKey = lead.key ?? lead.id ?? lead.name ?? i;
+                const isSelected = selectedLeadKey != null && lead.key === selectedLeadKey;
+                const clickable = typeof onSelectLead === "function" && !!lead.key;
+                return (
+                  <div
+                    key={rowKey}
+                    role={clickable ? "button" : undefined}
+                    tabIndex={clickable ? 0 : undefined}
+                    onClick={clickable ? () => onSelectLead(lead.key) : undefined}
+                    onKeyDown={clickable ? (e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onSelectLead(lead.key);
+                      }
+                    } : undefined}
+                    onMouseEnter={(e) => {
+                      if (isSelected) return;
+                      e.currentTarget.style.background = "rgba(37,99,235,0.04)";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (isSelected) return;
+                      e.currentTarget.style.background = "transparent";
+                    }}
+                    style={{
+                      // Premium row spacing — single source of rhythm.
+                      // Active row gets the same blue rail the workflow
+                      // panels use, plus a soft glow so the eye lands
+                      // on it mid-scroll.
+                      padding: "14px 18px",
+                      borderTop: i === 0 ? "none" : `1px solid ${palette.borderLight}`,
+                      borderLeft: isSelected ? `2px solid #2563EB` : "2px solid transparent",
+                      background: isSelected ? "rgba(37,99,235,0.06)" : "transparent",
+                      boxShadow: isSelected
+                        ? "inset 0 0 0 1px rgba(37,99,235,0.15)"
+                        : "none",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: "14px",
+                      alignItems: "baseline",
+                      cursor: clickable ? "pointer" : "default",
+                      transition: "background 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms ease",
+                    }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{
+                        fontSize: "13px",
+                        fontWeight: isSelected ? 700 : 600,
+                        color: palette.textPrimary,
+                        letterSpacing: "-0.005em",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}>
+                        {lead.name ?? lead.companyName ?? "Unnamed"}
+                        {isSelected ? (
+                          <span style={{
+                            marginLeft: "10px",
+                            fontSize: "9px",
+                            fontWeight: 800,
+                            letterSpacing: "0.12em",
+                            color: palette.blue,
+                            textTransform: "uppercase",
+                            verticalAlign: "1px",
+                          }}>
+                            Active
+                          </span>
+                        ) : null}
+                      </div>
+                      {(lead.address || lead.location) && (
+                        <div style={{ fontSize: "11px", color: palette.textTertiary, marginTop: "3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {lead.address ?? lead.location}
+                        </div>
+                      )}
+                    </div>
+                    {meta.length > 0 && (
+                      <div style={{
+                        fontSize: "11px",
+                        color: palette.textTertiary,
+                        textAlign: "right",
+                        whiteSpace: "nowrap",
+                        fontVariantNumeric: "tabular-nums",
+                      }}>
+                        {meta.join(" · ")}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {(more > 0 || visibleCount > 10) && (
+            <div style={{ display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap" }}>
+              {more > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount((v) => v + 20)}
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: palette.blue,
+                    background: "transparent",
+                    border: `1px solid ${palette.blueBorder}`,
+                    borderRadius: "8px",
+                    padding: "8px 16px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Show 20 more ({more} remaining)
+                </button>
+              )}
+              {visibleCount > 10 && (
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount(10)}
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: palette.textSecondary,
+                    background: "transparent",
+                    border: `1px solid ${palette.borderLight}`,
+                    borderRadius: "8px",
+                    padding: "8px 16px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Show less
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={{ fontSize: "12px", color: palette.textTertiary, fontStyle: "italic" }}>
+          {angle.reason}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Translate the internal priority label into operator-facing copy.
+// Internal: "Focus Now" / "Build Next" / "Monitor".
+// User-facing: "Call first" / "Set up next" / "Wait".
+function priorityLabelText(priorityLabel) {
+  if (priorityLabel === "Focus Now") return "Call first";
+  if (priorityLabel === "Build Next") return "Set up next";
+  if (priorityLabel === "Monitor") return "Wait";
+  return priorityLabel ?? "";
+}
+
+// ── OpportunitySystem ─────────────────────────────────────────────────
+// Config-driven, tiered bucket layout. Renders three sections (Call
+// First / Set Up Next / Wait), each with action-named bucket cards.
+// All grouping + sorting is pre-computed by buildOpportunitySystem;
+// this component is purely presentational.
+function OpportunitySystem({ system, selectedServiceAngleId, onCallBucket, bucketPerformance }) {
+  if (!system || !Array.isArray(system.tiers) || system.tiers.length === 0) return null;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      {system.tiers.map((tier) => (
+        <OpportunityTierSection
+          key={tier.id}
+          tier={tier}
+          isTopTier={tier.id === "call_first"}
+          topBucketId={system.topBucketId}
+          selectedServiceAngleId={selectedServiceAngleId}
+          onCallBucket={onCallBucket}
+          bucketPerformance={bucketPerformance}
+        />
+      ))}
+    </div>
+  );
+}
+
+function OpportunityTierSection({ tier, isTopTier, topBucketId, selectedServiceAngleId, onCallBucket, bucketPerformance }) {
+  if (!tier || !Array.isArray(tier.buckets) || tier.buckets.length === 0) return null;
+  const toneColor = tier.id === "call_first"
+    ? palette.blue
+    : tier.id === "set_up_next"
+      ? "#6D28D9"
+      : palette.textTertiary;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "10px", flexWrap: "wrap" }}>
+        <div>
+          <div style={{
+            fontSize: "10px", fontWeight: 800, letterSpacing: "0.14em",
+            color: toneColor, textTransform: "uppercase",
+          }}>
+            {tier.title}
+          </div>
+          <div style={{ fontSize: "12px", color: palette.textSecondary, marginTop: "2px" }}>
+            {tier.subtitle}
+          </div>
+        </div>
+        {tier.totalLeads > 0 && (
+          <div style={{
+            fontSize: "11px", color: palette.textTertiary, fontWeight: 600,
+            fontVariantNumeric: "tabular-nums",
+          }}>
+            {tier.totalLeads} lead{tier.totalLeads === 1 ? "" : "s"}
+            {tier.totalRevenue > 0 ? ` · ${formatMoney(tier.totalRevenue) ?? ""} potential` : ""}
+          </div>
+        )}
+      </div>
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+        gap: "12px",
+        alignItems: "stretch",
+      }}>
+        {tier.buckets.map((b) => (
+          <OpportunityBucketCard
+            key={b.bucketId}
+            bucket={b}
+            isTop={isTopTier && b.bucketId === topBucketId}
+            isActive={selectedServiceAngleId === b.bucketId}
+            toneColor={toneColor}
+            performance={bucketPerformance?.get(b.bucketId)}
+            onSelect={() => { if (b.ready) onCallBucket?.(b.bucketId); }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function OpportunityBucketCard({ bucket, isTop, isActive, toneColor, onSelect, performance }) {
+  const ready = !!bucket.ready;
+  const moneyLabel = bucket.revenuePotential > 0 ? formatMoney(bucket.revenuePotential) : null;
+  const cta = !ready
+    ? "No leads yet — add leads to unlock this"
+    : isActive
+      ? "You're working this ✓"
+      : "Start with these leads →";
+  const ctaColor = !ready
+    ? palette.textTertiary
+    : palette.blue;
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      aria-pressed={isActive}
+      onClick={() => { if (ready) onSelect?.(); }}
+      onKeyDown={(e) => {
+        if ((e.key === "Enter" || e.key === " ") && ready) {
+          e.preventDefault();
+          onSelect?.();
+        }
+      }}
+      onMouseEnter={(e) => {
+        if (isActive || !ready) return;
+        e.currentTarget.style.boxShadow = "0 1px 2px rgba(15,23,42,0.04), 0 6px 18px -6px rgba(15,23,42,0.10)";
+        e.currentTarget.style.transform = "translateY(-1px)";
+      }}
+      onMouseLeave={(e) => {
+        if (isActive) return;
+        e.currentTarget.style.boxShadow = isTop
+          ? "0 1px 2px rgba(37,99,235,0.18), 0 10px 26px -8px rgba(37,99,235,0.40)"
+          : "0 1px 2px rgba(15,23,42,0.03)";
+        e.currentTarget.style.transform = "translateY(0)";
+      }}
+      style={{
+        padding: "14px 16px",
+        borderRadius: "12px",
+        background: isActive ? palette.bluePale : palette.surface,
+        border: `1px solid ${isActive ? palette.blueBorder : isTop ? palette.blueBorder : palette.borderLight}`,
+        borderLeft: `3px solid ${isTop ? palette.blue : toneColor}`,
+        boxShadow: isActive
+          ? "0 1px 2px rgba(15,23,42,0.04), 0 14px 40px -10px rgba(15,23,42,0.10)"
+          : isTop
+            ? "0 1px 2px rgba(37,99,235,0.18), 0 10px 26px -8px rgba(37,99,235,0.40)"
+            : "0 1px 2px rgba(15,23,42,0.03)",
+        display: "flex",
+        flexDirection: "column",
+        gap: "6px",
+        cursor: ready ? "pointer" : "default",
+        transition: "all 180ms cubic-bezier(0.4, 0, 0.2, 1)",
+        outline: "none",
+        opacity: ready ? 1 : 0.78,
+        minHeight: "172px",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", flexWrap: "wrap" }}>
+        {isTop && (
+          <span style={{
+            fontSize: "9px", fontWeight: 800, letterSpacing: "0.12em",
+            color: "#fff", textTransform: "uppercase",
+            background: palette.blue,
+            padding: "2px 8px",
+            borderRadius: "999px",
+          }}>
+            Best play
+          </span>
+        )}
+        <span style={{
+          fontSize: "11px", fontWeight: 700, letterSpacing: "0.04em",
+          color: ready ? palette.success : palette.textTertiary,
+          whiteSpace: "nowrap",
+          padding: "2px 8px",
+          borderRadius: "999px",
+          background: ready ? palette.successBg : palette.surfaceHover,
+          border: `1px solid ${ready ? "#BBF7D0" : palette.borderLight}`,
+          marginLeft: "auto",
+          fontVariantNumeric: "tabular-nums",
+        }}>
+          {ready ? `${bucket.count} ready` : "No leads yet"}
+        </span>
+      </div>
+
+      <div style={{
+        fontSize: "16px", fontWeight: 700, color: palette.textPrimary,
+        lineHeight: 1.2,
+      }}>
+        {bucket.actionLabel}
+      </div>
+
+      <div style={{
+        fontSize: "12px", color: palette.textSecondary, lineHeight: 1.5,
+        display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+      }}>
+        {bucket.description}
+      </div>
+
+      {moneyLabel && (
+        <div style={{
+          fontSize: "12px", fontWeight: 700, color: palette.success,
+          fontVariantNumeric: "tabular-nums",
+        }}>
+          ~{moneyLabel} up for grabs
+        </div>
+      )}
+
+      {performance && (performance.attemptsAllTime > 0 || performance.closedAllTime > 0) && (
+        <div style={{
+          fontSize: "11px", color: palette.textTertiary, fontWeight: 500,
+          fontVariantNumeric: "tabular-nums",
+        }}>
+          {performance.closedToday > 0
+            ? `${formatMoney(performance.closedToday) ?? "$0"} booked today`
+            : performance.closedAllTime > 0
+              ? `${formatMoney(performance.closedAllTime) ?? "$0"} booked · ${performance.attemptsAllTime} call${performance.attemptsAllTime === 1 ? "" : "s"}`
+              : `${performance.attemptsAllTime} call${performance.attemptsAllTime === 1 ? "" : "s"} made`}
+          {performance.attemptsAllTime >= 5 && performance.conversionRate > 0
+            ? ` · ${Math.round(performance.conversionRate * 100)}% close rate`
+            : ""}
+        </div>
+      )}
+
+      <div style={{
+        fontSize: "11px", fontWeight: 600,
+        color: ctaColor,
+        marginTop: "auto",
+        paddingTop: "6px",
+      }}>
+        {cta}
+      </div>
+    </div>
+  );
+}
+
+function angleToneColor(priorityLabel) {
+  if (priorityLabel === "Focus Now") return palette.blue;
+  if (priorityLabel === "Build Next") return "#6D28D9";
+  return palette.textTertiary;
+}
+
+function AngleAttackLanesGrid({ angles, leadsByAngle, selectedServiceAngleId, onSelectServiceAngle, featuredId }) {
+  // prioritizedAngles is already sorted Focus Now → Build Next → Monitor.
+  // Every card uses identical sizing — no card expands inline. The full
+  // lead browser only renders inside the FeaturedAngleWorkspace above.
+  const visible = angles.filter((a) => a.bucketId !== featuredId);
+  if (visible.length === 0) return null;
+  // Top-2 lead preview is enough for context. Anything more dominates
+  // when one bucket has 68 leads and another has 2.
+  const PREVIEW_LIMIT = 2;
+  const CARD_MIN_HEIGHT = 280;
+  const CARD_MAX_HEIGHT = 280;
+  return (
+    <div style={{
+      display: "grid",
+      // Equal columns regardless of trade or lead distribution.
+      gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+      gridAutoRows: "1fr",
+      gap: "12px",
+      alignItems: "stretch",
+    }}>
+      {visible.map((a) => {
+        const leads = leadsByAngle?.[a.bucketId] ?? [];
+        const ready = a.count > 0;
+        const isActive = selectedServiceAngleId === a.bucketId;
+        const copy = angleCopy(a);
+        const toneColor = angleToneColor(a.priorityLabel);
+        const previewLeads = leads.slice(0, PREVIEW_LIMIT);
+        const more = Math.max(0, leads.length - previewLeads.length);
+        const handleClick = () => {
+          if (typeof onSelectServiceAngle === "function") onSelectServiceAngle(a.bucketId);
+        };
+        return (
+          <div
+            key={a.bucketId}
+            role="button"
+            tabIndex={0}
+            aria-pressed={isActive}
+            onClick={handleClick}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleClick();
+              }
+            }}
+            onMouseEnter={(e) => {
+              if (isActive) return;
+              e.currentTarget.style.boxShadow = "0 1px 2px rgba(15,23,42,0.04), 0 6px 18px -6px rgba(15,23,42,0.08)";
+              e.currentTarget.style.transform = "translateY(-1px)";
+            }}
+            onMouseLeave={(e) => {
+              if (isActive) return;
+              e.currentTarget.style.boxShadow = "0 1px 2px rgba(15,23,42,0.03)";
+              e.currentTarget.style.transform = "translateY(0)";
+            }}
+            style={{
+              padding: "14px 16px",
+              borderRadius: "12px",
+              background: isActive ? palette.bluePale : palette.surface,
+              border: `1px solid ${isActive ? palette.blueBorder : palette.borderLight}`,
+              borderLeft: `3px solid ${toneColor}`,
+              boxShadow: isActive
+                ? "0 1px 2px rgba(15,23,42,0.04), 0 14px 40px -10px rgba(15,23,42,0.10)"
+                : "0 1px 2px rgba(15,23,42,0.03)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "6px",
+              cursor: "pointer",
+              transition: "all 180ms cubic-bezier(0.4, 0, 0.2, 1)",
+              outline: "none",
+              minHeight: `${CARD_MIN_HEIGHT}px`,
+              maxHeight: `${CARD_MAX_HEIGHT}px`,
+              overflow: "hidden",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+              <span style={{
+                fontSize: "9px", fontWeight: 700, letterSpacing: "0.10em",
+                color: toneColor, textTransform: "uppercase",
+                padding: "2px 7px",
+                borderRadius: "999px",
+                background: isActive ? "rgba(255,255,255,0.6)" : palette.surfaceHover,
+                border: `1px solid ${palette.borderLight}`,
+              }}>
+                {priorityLabelText(a.priorityLabel)}
+              </span>
+              <span style={{
+                fontSize: "11px", fontWeight: 700, letterSpacing: "0.04em",
+                color: ready ? palette.success : palette.textTertiary,
+                whiteSpace: "nowrap",
+                padding: "2px 8px",
+                borderRadius: "999px",
+                background: ready ? palette.successBg : palette.surfaceHover,
+                border: `1px solid ${ready ? "#BBF7D0" : palette.borderLight}`,
+                marginLeft: "auto",
+              }}>
+                {ready ? `${a.count} ready` : "No leads yet"}
+              </span>
+            </div>
+
+            <div style={{
+              fontSize: "15px", fontWeight: 700, color: palette.textPrimary, marginTop: "2px",
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>
+              {a.bucketLabel}
+            </div>
+
+            <div style={{
+              fontSize: "12px", color: palette.textSecondary, lineHeight: 1.45,
+              display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+            }}>
+              <span style={{ fontWeight: 600, color: palette.textPrimary }}>Why call: </span>
+              {copy.why}
+            </div>
+            <div style={{
+              fontSize: "12px", color: palette.textSecondary, lineHeight: 1.45,
+              display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+            }}>
+              <span style={{ fontWeight: 600, color: palette.textPrimary }}>Pitch: </span>
+              {copy.sell}
+            </div>
+
+            {previewLeads.length > 0 ? (
+              <div style={{
+                display: "flex", flexDirection: "column", gap: "4px",
+                marginTop: "4px", paddingTop: "8px",
+                borderTop: `1px solid ${palette.borderLight}`,
+                flex: 1, minHeight: 0, overflow: "hidden",
+              }}>
+                <div style={{
+                  fontSize: "10px", fontWeight: 700, letterSpacing: "0.10em",
+                  color: palette.textTertiary, textTransform: "uppercase",
+                }}>
+                  Top lead
+                </div>
+                <div style={{
+                  fontSize: "13px", fontWeight: 600, color: palette.textPrimary,
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }}>
+                  {previewLeads[0].name ?? previewLeads[0].companyName ?? "Unnamed"}
+                </div>
+                {previewLeads[1] && (
+                  <div style={{
+                    fontSize: "12px", color: palette.textSecondary,
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}>
+                    Then call {previewLeads[1].name ?? previewLeads[1].companyName ?? "Unnamed"}
+                  </div>
+                )}
+                {more > 0 && (
+                  <div style={{ fontSize: "11px", color: palette.textTertiary }}>
+                    +{more} more leads
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ flex: 1, minHeight: 0 }} />
+            )}
+
+            <div style={{
+              fontSize: "11px", fontWeight: 600,
+              color: isActive ? palette.blue : (ready ? palette.blue : palette.textTertiary),
+              marginTop: "auto",
+              paddingTop: "6px",
+            }}>
+              {isActive
+                ? "You're working this ✓"
+                : ready
+                  ? "See these leads →"
+                  : "Add leads to use this →"}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -4759,13 +8340,47 @@ function TodayDashboard({ summary, onStartQueue, onStartFollowUps, onStartEmails
 // ── Root ──────────────────────────────────────────────────────────────
 
 export default function OperatorConsole({
-  user, callTheseFirst = [], todayList = [], remaining = [], rest = [],
+  user, workspace, sourceReadiness = [], connectedEnvVars = [], hunterAvailable = false,
+  overflowQueueCount = 0,
+  teamWorkload = null,
+  serviceBucketsByTrade = {},
+  callTheseFirst = [], todayList = [], remaining = [], rest = [],
   totalPipeline = 0, pipelineMap = {}, roi, lastPipelineJob = null,
   pendingReviews, calendarEvents, recentActivities,
 }) {
+  // Rep filter for the calendar (All / Rep 1 / Rep 2). Display-only —
+  // does not change scheduling.
+  const [selectedRepId, setSelectedRepId] = useState("all");
+  // Selected LaborTech service drives the per-trade filtered list.
+  // Cleared when the user switches trades.
+  const [selectedLaborTechServiceId, setSelectedLaborTechServiceId] = useState(null);
+  const workspaceAccent = workspace?.branding?.accentLabel ?? null;
+  // Server-supplied set of connected env-var names. Used by
+  // getTradeSourceReadiness so the UI does not need to read process.env.
+  const connectedEnvSet = useMemo(
+    () => new Set(Array.isArray(connectedEnvVars) ? connectedEnvVars : []),
+    [connectedEnvVars],
+  );
   const [selectedKey, setSelectedKey] = useState(null);
+  // Lifted from CalendarCommandCenter so the selected calendar task
+  // survives a tab switch (Today → All Leads → History → Today). Also
+  // bridges to selectedKey via handleSelectTaskFromCalendar so the
+  // same lead stays selected across tabs. Single source of truth.
+  const [selectedTaskId, setSelectedTaskId] = useState(null);
+  // Workflow UI state — shared across Today AND All Leads so the
+  // exact same interaction model runs from either entry point.
+  // Clicking a lead anywhere triggers the same panels with the same
+  // open/closed state continuity.
+  const [assistantCollapsed, setAssistantCollapsed] = useState(true);
+  const [userClosedAssistant, setUserClosedAssistant] = useState(false);
+  const [deepReportOpen, setDeepReportOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [seeding, setSeeding] = useState(false);
+  // Primary view tab: existing card list ("cards") or weekly Calendar
+  // Command Center ("calendar"). Defaults to cards so the existing surface
+  // is what the user lands on.
+  // Default lands on the operator surface — that's the product.
+  const [activeTab, setActiveTab] = useState("calendar");
   const [findTask, setFindTask] = useState(null); // { leadKey, steps[], cursor, status: "running"|"done", result }
   const [filterHighPriority, setFilterHighPriority] = useState(false);
   // Overlay map: leadKey -> { contacts, resolvedListingUrl, source, confidence, lastCheckedAt, summary }
@@ -4889,6 +8504,955 @@ export default function OperatorConsole({
   const overlaidAllLeads = allLeads.map(applyOverlay);
   const todaySummary = useMemo(() => summarizeQueue(overlaidAllLeads), [overlaidAllLeads]);
 
+  // tradeScopedLeads / tradeReadiness are the single lead pipeline
+  // shared by Operator and Leads. Declared below, after selectedTradeId.
+
+  // Calendar tasks derived from real lead/decision objects. Pass undefined
+  // when there are no real leads so CalendarCommandCenter falls back to
+  // its mock seed (kept only as a demo fallback, never as a primary source).
+  // Selected trade module for the calendar surface. Resolution order:
+  // user.tradeId → user.selectedTrade → persisted localStorage value →
+  // "roofing". User-side overrides always win on the first render so a
+  // server-driven scope wipes a stale local selection. Declared BEFORE
+  // intelligenceScope because the scope memo depends on it.
+  const TRADE_PERSIST_KEY = "meridian.operator.selectedTrade.v1";
+  const initialTrade = (() => {
+    // Today is the master execution surface — it defaults to "all"
+    // (the All Trades master daily plan). Explicit user-provided
+    // tradeId / selectedTrade still wins so a server-driven scope
+    // (e.g. a single-trade tenant) is honoured. Persisted local
+    // selections are intentionally ignored on mount: every time the
+    // operator reopens Today they get the master plan first.
+    if (user?.tradeId === "all") return "all";
+    if (typeof user?.tradeId === "string" && isTradeId(user.tradeId)) return user.tradeId;
+    if (user?.selectedTrade === "all") return "all";
+    if (typeof user?.selectedTrade === "string" && isTradeId(user.selectedTrade)) return user.selectedTrade;
+    return "all";
+  })();
+  const [selectedTradeId, setSelectedTradeId] = useState(initialTrade);
+  // Today re-entry reset. When the operator navigates away from Today
+  // (activeTab !== "calendar") and comes back, reset the trade tab to
+  // All Trades so they always re-enter the master plan. Manual trade
+  // switching while INSIDE Today is preserved — this only fires on
+  // the transition from another tab into "calendar".
+  const prevActiveTabRef = useRef(activeTab);
+  useEffect(() => {
+    const prev = prevActiveTabRef.current;
+    prevActiveTabRef.current = activeTab;
+    if (activeTab === "calendar" && prev !== "calendar") {
+      setSelectedTradeId("all");
+    }
+  }, [activeTab]);
+  // Clear the LaborTech service filter whenever the user switches trade.
+  // Service filter is meaningless in "all" mode — it auto-clears.
+  useEffect(() => { setSelectedLaborTechServiceId(null); }, [selectedTradeId]);
+
+  // Auto-select the strongest bucket on the All Leads tab — the
+  // bucket with the most actionable companies. Runs only when the
+  // user lands on All Leads with nothing selected, and only when the
+  // selected trade has at least one bucket with leads. Respects user
+  // intent: once they pick or clear a bucket manually, this effect
+  // doesn't override it (gated on `selectedLaborTechServiceId == null`).
+  useEffect(() => {
+    if (activeTab !== "cards") return;
+    if (selectedLaborTechServiceId) return;
+    const bundle = serviceBucketsByTrade?.[selectedTradeId];
+    const cards = Array.isArray(bundle?.cards) ? bundle.cards : [];
+    if (cards.length === 0) return;
+    // Strongest = highest count. Ties broken by tier order (primary
+    // > secondary > advanced) which the cards array already honors.
+    const strongest = cards
+      .filter((c) => (c?.count ?? 0) > 0)
+      .sort((a, b) => (b.count ?? 0) - (a.count ?? 0))[0];
+    if (strongest?.serviceId) {
+      setSelectedLaborTechServiceId(strongest.serviceId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, selectedTradeId, serviceBucketsByTrade]);
+  // Persist whenever it changes. SSR-safe via window guard + try/catch.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try { window.localStorage.setItem(TRADE_PERSIST_KEY, selectedTradeId); } catch { /* ignore */ }
+  }, [selectedTradeId]);
+
+  // Active service angle. Default null = "all angles". Operator + Leads
+  // both honor this — clicking an angle in either tab focuses both
+  // surfaces; clicking it again clears. Switching trade resets it.
+  const [selectedServiceAngleId, setSelectedServiceAngleId] = useState(null);
+  useEffect(() => {
+    setSelectedServiceAngleId(null);
+  }, [selectedTradeId]);
+  const handleSelectServiceAngle = useCallback((bucketId) => {
+    setSelectedServiceAngleId((prev) => (prev === bucketId ? null : bucketId));
+  }, []);
+  const handleClearServiceAngle = useCallback(() => {
+    setSelectedServiceAngleId(null);
+  }, []);
+
+  // ── Centralized cross-tab routing ────────────────────────────────────
+  // Two functions are the only way to navigate between tabs. Every
+  // surface uses these — no ad-hoc setActiveTab calls in children.
+  //   callBucket(bucketId): Opportunities → Calls (pin bucket)
+  //   callDeal(deal):       Deals → Calls (pin lead's bucket)
+  const callBucket = useCallback((bucketId) => {
+    if (bucketId && selectedServiceAngleId !== bucketId) {
+      setSelectedServiceAngleId(bucketId);
+    }
+    setActiveTab("calendar");
+  }, [selectedServiceAngleId]);
+  const callDeal = useCallback((deal) => {
+    if (!deal) { setActiveTab("calendar"); return; }
+    if (deal.bucketId && selectedServiceAngleId !== deal.bucketId) {
+      setSelectedServiceAngleId(deal.bucketId);
+    }
+    setActiveTab("calendar");
+  }, [selectedServiceAngleId]);
+
+  // ── Cross-tab selection bridges ──────────────────────────────────────
+  // selectedTaskId (Today) ↔ selectedKey (All Leads) ↔ openDealId (History)
+  // all reference the same underlying lead. These bridges keep them in
+  // sync so a click in one tab is reflected when the user moves to
+  // another. Lookup is by linkedLeadId / leadKey — both resolve to the
+  // canonical `lead.key` used by All Leads' selection state.
+  const handleSelectTaskFromCalendar = useCallback((task) => {
+    if (!task) {
+      setSelectedTaskId(null);
+      return;
+    }
+    setSelectedTaskId(task.id ?? null);
+    const linkedKey = task.linkedLeadId ?? null;
+    if (typeof linkedKey === "string" && linkedKey.length > 0) {
+      // Don't toggle off — a task click should pin the lead, not clear
+      // a previously selected one if they happen to match.
+      setSelectedKey(linkedKey);
+    }
+  }, []);
+
+  // Workflow UI state effects — shared across Today and All Leads.
+  // Reset Deep Report on lead change. Auto-expand assistant on lead
+  // selection (unless user closed it). Auto-expand assistant when
+  // Deep Report opens (the rep needs the coach most while reviewing
+  // the report). Toggle handler tracks user dismissal intent.
+  // ASSIST-MODE ROUTING INTENT (parent-level).
+  //
+  // Today's "Open Assist Mode →" is an EXECUTION INTENT, not a normal
+  // lead selection. The user wants the Operator AND the Intelligence
+  // Panel open in one click. A normal calendar click is a SELECTION
+  // — Assist Mode should reset to give a fresh slate.
+  //
+  // We can't tell those two cases apart from selectedTaskId alone,
+  // so the routing handler stamps a ref BEFORE flipping selectedTaskId
+  // and the effect below honours that stamp. Without this, the parent
+  // effect would race with — and overwrite — CCC's intent-aware
+  // effect (parent effects run after child effects in React, so a
+  // child setDeepReportOpen(true) gets clobbered by an unconditional
+  // parent setDeepReportOpen(false)).
+  const assistIntentRef = useRef(null);
+  useEffect(() => {
+    if (assistIntentRef.current && assistIntentRef.current === selectedTaskId) {
+      assistIntentRef.current = null;
+      setDeepReportOpen(true);
+    } else {
+      setDeepReportOpen(false);
+    }
+  }, [selectedTaskId]);
+  // Single entry point used by Today's Command Queue. Selects the
+  // lead AND opens Assist Mode in the same commit. CCC's
+  // handleOpenAssist forwards to this so the intent ref lives on the
+  // parent — which is the side that owns the unconditional-reset
+  // effect that was clobbering the panel.
+  const handleEnterAssistMode = useCallback((task) => {
+    if (!task) return;
+    const id = task.id ?? null;
+    if (!id) return;
+    assistIntentRef.current = id;
+    if (selectedTaskId === id) {
+      // Already selected — selectedTaskId effect won't fire, so open
+      // Assist Mode directly.
+      assistIntentRef.current = null;
+      setDeepReportOpen(true);
+    } else {
+      setSelectedTaskId(id);
+      // selectedTaskId effect will see the matching ref and open
+      // Assist Mode in the same render commit.
+    }
+  }, [selectedTaskId]);
+  useEffect(() => {
+    if (!selectedTaskId) {
+      setAssistantCollapsed(true);
+      setUserClosedAssistant(false);
+      return;
+    }
+    if (!userClosedAssistant) setAssistantCollapsed(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTaskId]);
+  useEffect(() => {
+    if (!deepReportOpen) return;
+    // Narrow-viewport guard — when Deep Report opens on a tight
+    // screen, collapse the assistant to its 52px rail so it stays
+    // visible without pushing off-viewport. Wider screens get the
+    // full expanded assistant alongside the report.
+    if (typeof window !== "undefined" && window.innerWidth < 1400) {
+      setAssistantCollapsed(true);
+      return;
+    }
+    if (!userClosedAssistant) setAssistantCollapsed(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deepReportOpen]);
+  const handleToggleAssistant = useCallback(() => {
+    setAssistantCollapsed((wasCollapsed) => {
+      const willBeCollapsed = !wasCollapsed;
+      if (willBeCollapsed) setUserClosedAssistant(true);
+      else setUserClosedAssistant(false);
+      return willBeCollapsed;
+    });
+  }, []);
+
+  const handleOpenDealLead = useCallback((deal) => {
+    if (!deal) return;
+    const linkedKey =
+      typeof deal.leadKey === "string" && deal.leadKey.length > 0
+        ? deal.leadKey
+        : (typeof deal.leadId === "string" && deal.leadId.length > 0 ? deal.leadId : null);
+    if (linkedKey) setSelectedKey(linkedKey);
+    // Synthesized call-task id matches lib/calendar/tasks.ts push() shape:
+    //   `lead-${leadId}-call`
+    // Pre-stamping it means switching to the Today tab afterwards lands
+    // with the same task highlighted (when the call task exists).
+    if (linkedKey) setSelectedTaskId(`lead-${linkedKey}-call`);
+  }, []);
+
+  // Cross-tab nav callback — wired into LeadContextStrip "View in X"
+  // links across all three side panels. Plain pass-through to the
+  // existing tab state setter; selection is preserved by the bridges
+  // above so switching never drops the active lead.
+  const handleSwitchTabFromStrip = useCallback((tabKey) => {
+    if (tabKey === "today") setActiveTab("calendar");
+    else if (tabKey === "all-leads") setActiveTab("cards");
+    else if (tabKey === "history") setActiveTab("deals");
+  }, []);
+
+  // Imported leads, keyed by tradeId. Populated by /api/ingestion/trade-leads.
+  // Held in component state only — no persistence yet. When a real
+  // store lands, swap this for a server-backed cache.
+  const [importedLeadsByTrade, setImportedLeadsByTrade] = useState({});
+  const [importState, setImportState] = useState({ loading: false, message: null, kind: null });
+
+  // Combined pool: legacy roofing snapshot + any leads pulled in by
+  // ingestion. filterLeadsForTrade gates by tradeId so HVAC pulls
+  // never bleed into Roofing and vice-versa.
+  const combinedLeadPool = useMemo(() => {
+    const imported = Object.values(importedLeadsByTrade ?? {}).flat();
+    return [...overlaidAllLeads, ...imported];
+  }, [overlaidAllLeads, importedLeadsByTrade]);
+
+  // Single source of truth for whichever trade is selected. Used by
+  // both the Operator (calendar) surface AND the Leads tab.
+  const tradeScopedLeads = useMemo(
+    () => selectedTradeId === "all"
+      ? (combinedLeadPool ?? [])
+      : filterLeadsForTrade(combinedLeadPool, selectedTradeId),
+    [combinedLeadPool, selectedTradeId],
+  );
+  const tradeReadiness = useMemo(
+    () => getTradeSourceReadiness(selectedTradeId, connectedEnvSet),
+    [selectedTradeId, connectedEnvSet],
+  );
+  const bucketPortfolio = useMemo(
+    () => buildBucketPortfolio(tradeScopedLeads, selectedTradeId),
+    [tradeScopedLeads, selectedTradeId],
+  );
+  const prioritizedAngles = useMemo(
+    () => prioritizeServiceAngles(bucketPortfolio, selectedTradeId),
+    [bucketPortfolio, selectedTradeId],
+  );
+
+  // Outcomes + deals live at the root so the Deals tab keeps the same
+  // pipeline visible even while the user is switching trades or
+  // working the Calls tab. Single shared store across tabs.
+  const rootOutcomes = useOutcomes();
+  const rootLeadIndex = useMemo(
+    () => buildLeadIndex(combinedLeadPool, {
+      defaultTrade: TRADE_MODULES[selectedTradeId]?.label ?? null,
+    }),
+    [combinedLeadPool, selectedTradeId],
+  );
+  const rootDeals = useDeals({
+    events: rootOutcomes.events,
+    leadIndex: rootLeadIndex,
+    now: rootOutcomes.now,
+  });
+
+  // Group leads by primary service angle for the Leads tab portfolio view.
+  const leadsByAngle = useMemo(() => {
+    const map = {};
+    for (const lead of tradeScopedLeads) {
+      const primary = primaryBucketForLead(lead, selectedTradeId);
+      const k = primary?.bucketId ?? "_unclassified";
+      (map[k] ??= []).push(lead);
+    }
+    return map;
+  }, [tradeScopedLeads, selectedTradeId]);
+
+  // Operator-side execution pool. When an angle is selected, the
+  // calendar (Right Now / Next Moves / Today's Edge / Later / grid)
+  // operates only on that bucket. Portfolio rollups still use the
+  // full tradeScopedLeads so counts reflect the whole trade.
+  const angleScopedLeads = useMemo(() => {
+    if (!selectedServiceAngleId) return tradeScopedLeads;
+    const matching = leadsByAngle[selectedServiceAngleId] ?? [];
+    return matching;
+  }, [selectedServiceAngleId, leadsByAngle, tradeScopedLeads]);
+  const selectedServiceAngle = useMemo(
+    () => prioritizedAngles.find((a) => a.bucketId === selectedServiceAngleId) ?? null,
+    [prioritizedAngles, selectedServiceAngleId],
+  );
+
+  // Single decision engine — root-level so all tabs share one queue.
+  const rootOpportunitySystem = useMemo(
+    () => buildOpportunitySystem(prioritizedAngles, leadsByAngle, selectedTradeId, { meaningfulOnly: true }),
+    [prioritizedAngles, leadsByAngle, selectedTradeId],
+  );
+  const rootDecisionFlow = useDecisionFlow({
+    outcomes: rootOutcomes,
+    tradeScopedLeads,
+    opportunitySystem: rootOpportunitySystem,
+    tradeId: selectedTradeId,
+    pinnedBucketId: selectedServiceAngleId ?? null,
+  });
+
+  const handleImportTradeLeads = useCallback(async () => {
+    setImportState({ loading: true, message: null, kind: null });
+    try {
+      const res = await fetch("/api/ingestion/trade-leads", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tradeId: selectedTradeId, market: "kansas_city" }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        const error = json?.error || `Import failed (${res.status})`;
+        const friendly = typeof error === "string" && error.toLowerCase().includes("google_places_api_key")
+          ? "Google Places isn't connected on this workspace yet. Ask an admin to wire the source."
+          : error;
+        setImportState({ loading: false, message: friendly, kind: "error" });
+        return;
+      }
+      const incoming = Array.isArray(json.leads) ? json.leads : [];
+      setImportedLeadsByTrade((prev) => ({ ...prev, [selectedTradeId]: incoming }));
+      setImportState({
+        loading: false,
+        kind: "success",
+        message: `Imported ${incoming.length} ${selectedTradeId} lead${incoming.length === 1 ? "" : "s"}.`,
+      });
+      if (process.env.NODE_ENV !== "production") {
+        const bucketCounts = {};
+        for (const lead of incoming) {
+          const primary = primaryBucketForLead(lead, selectedTradeId);
+          const k = primary?.bucketId ?? "_unclassified";
+          bucketCounts[k] = (bucketCounts[k] ?? 0) + 1;
+        }
+        const queries = new Set();
+        for (const lead of incoming) {
+          if (typeof lead?.sourceQuery === "string") queries.add(lead.sourceQuery);
+        }
+        console.info("[ingestion] import complete", {
+          tradeId: selectedTradeId,
+          count: incoming.length,
+          queryCount: queries.size,
+          topNames: incoming.slice(0, 5).map((l) => l?.name).filter(Boolean),
+          bucketCounts,
+        });
+      }
+    } catch (err) {
+      setImportState({
+        loading: false,
+        kind: "error",
+        message: `Import failed: ${(err instanceof Error ? err.message : "unknown error")}`,
+      });
+    }
+  }, [selectedTradeId]);
+
+  // ── Intelligence scope ──
+  // Derived best-effort from props the operator console already has.
+  // Missing fields fall back to stable strings (see normalizeScope) so
+  // single-user / no-session mode still works exactly as before.
+  const intelligenceScope = useMemo(() => ({
+    userId:   user?.id,
+    tenantId: user?.tenantId ?? user?.orgId,
+    clientId: user?.clientId,
+    moduleId: selectedTradeId,
+    marketId: user?.marketId ?? "kc",
+    tradeId:  selectedTradeId,
+    nicheId:  user?.nicheId  ?? "contractor-leads",
+  }), [user, selectedTradeId]);
+  const teamMode = "hybrid";
+
+  // Local feedback state. Hydrated from localStorage on mount and
+  // whenever the scope changes; never required for correctness.
+  const [feedbackEvents, setFeedbackEvents] = useState([]);
+  // Holds the previous bundle's optimized tasks so rule learning can
+  // link feedback events back to the rule that produced each task's
+  // adjustment. Ref (not state) — purely a learning-loop signal, never
+  // affects render directly.
+  const priorOptimizedTasksRef = useRef([]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      setFeedbackEvents(loadWorkflowFeedback(intelligenceScope));
+    } catch {
+      setFeedbackEvents([]);
+    }
+  }, [intelligenceScope]);
+
+  const handleTaskFeedback = useCallback((task, feedbackType, reason) => {
+    if (!task || !task.id) return;
+    const event = createWorkflowFeedbackEvent(task, feedbackType, reason);
+    if (!event) return;
+    let updated = [event];
+    if (typeof window !== "undefined") {
+      try {
+        updated = rememberWorkflowFeedback(event, intelligenceScope);
+      } catch {
+        updated = [event, ...feedbackEvents];
+      }
+    } else {
+      updated = [event, ...feedbackEvents];
+    }
+    setFeedbackEvents(updated);
+    // Cross-feed into outcome learning when a lead is linked.
+    const outcome = workflowFeedbackToOutcomeEvent(event, intelligenceScope);
+    if (outcome) {
+      try {
+        rememberOutcomeEvents([outcome], intelligenceScope);
+      } catch {
+        // best-effort; UI stays consistent even if persistence fails
+      }
+    }
+  }, [intelligenceScope, feedbackEvents]);
+
+  const calendarBundle = useMemo(() => {
+    // MASTER DAILY EXECUTION PLAN.
+    //
+    // The schedule is built from the FULL combined lead pool — every
+    // trade's leads compete for slots in one ranked list. Trade tabs
+    // are filtered views of this same master schedule (filtering
+    // happens downstream in the calendarTasks memo). Switching tabs
+    // never reschedules a lead; it only changes which subset is
+    // displayed. This is what gives All Trades up to 20 calls/day
+    // distributed across Roofing, HVAC, Carpentry, Painting,
+    // Plumbing, and Electrical, with each per-trade tab showing
+    // only its own slice of the same plan.
+    const masterPool = combinedLeadPool ?? [];
+    if (masterPool.length === 0) {
+      return { tasks: undefined, insights: [] };
+    }
+
+    // Current-session outcome view (cheap, derived from pipelineMap).
+    // Tagged with scope at derivation time so persisted events stay
+    // portable across user/client/tenant aggregation later.
+    const currentEvents = deriveOutcomeEventsFromPipelineMap(pipelineMap, {
+      scope: intelligenceScope,
+    });
+
+    // Persistent memory: load on the client only. SSR / build returns [].
+    let storedUserEvents = [];
+    if (typeof window !== "undefined") {
+      try {
+        storedUserEvents = loadOutcomeEvents(intelligenceScope);
+        rememberOutcomeEvents(currentEvents, intelligenceScope);
+      } catch {
+        storedUserEvents = [];
+      }
+    }
+    const mergedUserEvents = mergeOutcomeEvents(storedUserEvents, currentEvents);
+
+    // Team intelligence aggregation. Today client/tenant streams are not
+    // wired to a backend; the abstraction is in place so the existing
+    // single-user pipeline keeps working unchanged while server-backed
+    // streams can flow in later without further UI changes.
+    const teamResult = buildTeamLearningInput({
+      userEvents: mergedUserEvents,
+      clientEvents: [],
+      tenantEvents: [],
+      mode: teamMode,
+    });
+
+    const learningAdjustments = combineLearningAdjustments(teamResult.events, {
+      useRecencyWeighting: true,
+    });
+
+    // Market-aware learning splits the merged event pool into a local
+    // (module + market + trade + niche) profile and a broader (module +
+    // trade) profile. Local always dominates; broader gently fills gaps
+    // when local evidence is light. Pattern + rule weights below are
+    // sourced from the market-aware blend, not the raw global pool.
+    const marketAwareLearning = buildMarketAwareLearning({
+      events: teamResult.events,
+      leads: masterPool,
+      feedbackEvents,
+      tasks: priorOptimizedTasksRef.current,
+      scope: intelligenceScope,
+      broaderEvents: teamResult.events,
+      broaderFeedbackEvents: feedbackEvents,
+    });
+    const patternAdjustments = marketAwareLearning.patternAdjustments;
+
+    // Master plan: NEVER pin tradeId here. Every task keeps its own
+    // per-lead trade so the calendarTasks memo can filter by trade
+    // at display time without re-running the schedule.
+    const tradeIdForTasks = undefined;
+    if (typeof console !== "undefined" && selectedTradeId === "all") {
+      const tradesPresent = new Set();
+      for (const l of angleScopedLeads ?? []) {
+        const t = (l && (l.trade || l.tradeId || l.category || l.moduleId)) ?? "unknown";
+        tradesPresent.add(String(t).toLowerCase());
+      }
+      console.log(
+        `[all-trades-debug] rawLeads=${(angleScopedLeads ?? []).length} ` +
+        `trades=${Array.from(tradesPresent).join(",") || "none"}`,
+      );
+    }
+    // eslint-disable-next-line no-console
+    console.log(
+      `[debug-tasks] OperatorConsole selectedTrade="${selectedTradeId}" ` +
+      `combinedLeadPool=${combinedLeadPool.length} ` +
+      `tradeScopedLeads=${tradeScopedLeads.length} ` +
+      `angleScopedLeads=${angleScopedLeads.length} ` +
+      `selectedServiceAngleId="${selectedServiceAngleId ?? ""}" ` +
+      `tradeIdForTasks="${tradeIdForTasks ?? ""}"`,
+    );
+    const baseTasks = buildTasksFromLeads(masterPool, {
+      pipelineMap,
+      learningAdjustments,
+      patternAdjustments,
+      tradeId: tradeIdForTasks,
+    });
+    // eslint-disable-next-line no-console
+    console.log(
+      `[debug-tasks] OperatorConsole baseTasks=${baseTasks.length} ` +
+      `selectedTrade="${selectedTradeId}"`,
+    );
+
+    // Insights describe the underlying state — generate them from the
+    // base tasks before the workflow engine reshuffles priority. Market
+    // differences ride alongside so up to one market insight can show.
+    const insights = buildOperatorInsights({
+      events: teamResult.events,
+      patternAdjustments,
+      tasks: baseTasks,
+      marketDifferences: marketAwareLearning.marketDifferences,
+    });
+
+    // Rule-trust learner — uses the prior bundle's optimized task list
+    // (which carries workflowPrimaryRuleId / workflowRuleIds) to link
+    // feedback events back to the rule that produced their adjustment.
+    // Kept for the dev log; the rule weights actually fed to the engine
+    // are the market-aware blend so KC roofing can trust rules differently
+    // than Dallas HVAC.
+    const ruleLearning = buildWorkflowRuleLearning(
+      feedbackEvents,
+      priorOptimizedTasksRef.current,
+    );
+    const effectiveRuleWeights = marketAwareLearning.ruleWeights;
+
+    // Workflow engine consumes base tasks, insights, and adapted rule
+    // weights to produce the optimized, re-ranked task list used by the
+    // calendar + Execute Now + Capital Allocation surfaces.
+    const workflowResult = optimizeWorkflow({
+      tasks: baseTasks,
+      insights,
+      ruleWeights: effectiveRuleWeights,
+    });
+    // Apply any persisted operator feedback on top of the engine's
+    // optimized list. Feedback never deletes tasks — only restores
+    // priority, promotes, defers, or annotates.
+    const tasks = applyFeedbackToTasks(workflowResult.tasks, feedbackEvents);
+    // Persist this bundle's optimized tasks so the next render's rule
+    // learner can link feedback to the correct rule.
+    priorOptimizedTasksRef.current = workflowResult.tasks;
+
+    if (process.env.NODE_ENV !== "production") {
+      const ids = tasks.map((t) => t.id);
+      const dupes = ids.filter((id, i) => ids.indexOf(id) !== i);
+      const adjustedLeadIds = Object.keys(learningAdjustments);
+      const topAdjusted = [...adjustedLeadIds]
+        .sort((a, b) =>
+          Math.abs(learningAdjustments[b].probabilityDelta) -
+          Math.abs(learningAdjustments[a].probabilityDelta),
+        )
+        .slice(0, 5);
+      const patternKeys = Object.keys(patternAdjustments);
+      const topPatterns = [...patternKeys]
+        .sort((a, b) =>
+          Math.abs(patternAdjustments[b].probabilityDelta) -
+          Math.abs(patternAdjustments[a].probabilityDelta),
+        )
+        .slice(0, 5);
+      console.debug("[CalendarCommandCenter]", {
+        leads: tradeScopedLeads.length,
+        tasksGenerated: tasks.length,
+        duplicateIds: dupes,
+        scopeKey: makeScopeKey(intelligenceScope),
+        teamIntelligenceMode: teamResult.mode,
+        userEvents: teamResult.sourceCounts.user,
+        clientEvents: teamResult.sourceCounts.client,
+        tenantEvents: teamResult.sourceCounts.tenant,
+        finalTeamEvents: teamResult.events.length,
+        currentOutcomeEvents: currentEvents.length,
+        storedOutcomeEvents: storedUserEvents.length,
+        mergedOutcomeEvents: mergedUserEvents.length,
+        directLearningAdjustments: adjustedLeadIds.length,
+        patternAdjustments: patternKeys.length,
+        topAdjustedLeadIds: topAdjusted,
+        topPatternKeys: topPatterns,
+        insightsGenerated: insights.length,
+        insightIds: insights.map((i) => i.id),
+        insightCategories: insights.map((i) => i.category),
+        insightConfidence: insights.map((i) => i.confidence),
+        workflowAdjustments: workflowResult.adjustments.length,
+        workflowAdjustedTaskIds: tasks
+          .filter((t) => t.workflowAdjusted)
+          .map((t) => t.id),
+        workflowAdjustmentReasons: workflowResult.adjustments.map((a) => a.reason),
+        workflowFeedbackEvents: feedbackEvents.length,
+        feedbackAdjustedTaskIds: tasks
+          .filter((t) => t.feedbackApplied)
+          .map((t) => t.id),
+        feedbackOutcomeEventsCreated: feedbackEvents.filter((f) => !!f.leadId).length,
+        ruleLearningStats: Object.keys(ruleLearning.stats).filter(
+          (k) => ruleLearning.stats[k].totalSignals > 0,
+        ).length,
+        ruleWeights: ruleLearning.ruleWeights,
+        topRuleTrustReasons: Object.entries(ruleLearning.stats)
+          .filter(([, s]) => s.totalSignals > 0)
+          .sort((a, b) => Math.abs(b[1].weightMultiplier - 1) - Math.abs(a[1].weightMultiplier - 1))
+          .slice(0, 5)
+          .map(([k, s]) => ({ ruleId: k, weight: s.weightMultiplier, reason: s.reason })),
+        marketContextKey: marketAwareLearning.contextKey,
+        localMarketEventCount: marketAwareLearning.localEventCount,
+        broaderMarketEventCount: marketAwareLearning.broaderEventCount,
+        marketConfidence: marketAwareLearning.marketConfidence,
+        marketDifferences: marketAwareLearning.marketDifferences.length,
+        marketBlendMode: marketAwareLearning.blendMode,
+      });
+
+      // Trade-module diagnostics — confirms trade selection, bucket
+      // attachment, and a tiny portfolio summary across leads.
+      {
+        const tradeLabel = TRADE_MODULES[selectedTradeId]?.label ?? selectedTradeId;
+        const totalTasksWithBucket = tasks.filter((t) => !!t.serviceBucketId).length;
+        const bucketCounts = {};
+        for (const t of tasks) {
+          if (!t.serviceBucketId) continue;
+          bucketCounts[t.serviceBucketId] = (bucketCounts[t.serviceBucketId] ?? 0) + 1;
+        }
+        const rightNowBucket = (() => {
+          // tasks are already workflow-adjusted + canonical-sorted, so the
+          // first non-done task is the same one Right Now will pick.
+          const decisionTask = tasks.find((t) => t && t.status !== "done");
+          if (!decisionTask) return null;
+          return decisionTask.serviceBucketId
+            ? `${decisionTask.tradeLabel ?? ""} · ${decisionTask.serviceBucketLabel ?? decisionTask.serviceBucketId}`
+            : null;
+        })();
+        const portfolioStackSummary = buildPortfolioStack(tradeScopedLeads).map((s) => ({
+          tradeId: s.tradeId,
+          totalLeads: s.totalLeads,
+          buckets: s.buckets.map((b) => ({ id: b.bucketId, count: b.count })),
+        }));
+        console.debug("[TradeModule]", {
+          selectedTradeId,
+          tradeLabel,
+          totalTasksWithBucket,
+          bucketCounts,
+          rightNowBucket,
+          portfolioStackSummary,
+        });
+      }
+
+      // Canonical scoring agreement check — confirms Execute Now,
+      // Capital Allocation, and Top 3 are voting for the same tasks.
+      {
+        let topExecute = null, topAlloc = null, topTask = null;
+        let topExecuteScore = -1, topAllocScore = -1, topTaskScoreVal = -1;
+        let topExecuteBreakdown = null;
+        for (const t of tasks) {
+          if (!t || t.status === "done") continue;
+          const s = scoreLeadTaskCanonical(t);
+          if (s.executeScore > topExecuteScore) {
+            topExecuteScore = s.executeScore;
+            topExecute = t.id;
+            topExecuteBreakdown = s.breakdown;
+          }
+          if (s.allocationScore > topAllocScore) {
+            topAllocScore = s.allocationScore;
+            topAlloc = t.id;
+          }
+          if (s.taskScore > topTaskScoreVal) {
+            topTaskScoreVal = s.taskScore;
+            topTask = t.id;
+          }
+        }
+        console.debug("[CanonicalScoring]", {
+          topExecuteTaskId: topExecute,
+          topAllocationTaskId: topAlloc,
+          topTaskScoreTaskId: topTask,
+          allAgree: topExecute === topAlloc && topAlloc === topTask,
+          executeBreakdown: topExecuteBreakdown,
+        });
+      }
+
+      if (ENABLE_INTERNAL_GLOBAL_INTELLIGENCE) {
+        const globalDiscovery = buildGlobalIntelligence({
+          events: teamResult.events,
+          leads: angleScopedLeads,
+          feedbackEvents,
+          tasks: priorOptimizedTasksRef.current,
+        });
+        console.debug("[GlobalIntelligence]", {
+          globalMarketsAnalyzed: globalDiscovery.diagnostics.marketsAnalyzed,
+          universalPatternKeys: globalDiscovery.universalPatternKeys,
+          marketSpecificPatternKeys: globalDiscovery.marketSpecificPatternKeys,
+          noisyPatternKeys: globalDiscovery.noisyPatternKeys,
+          emergingPatternKeys: globalDiscovery.emergingPatternKeys,
+          universalRuleIds: globalDiscovery.universalRuleIds,
+          marketSpecificRuleIds: globalDiscovery.marketSpecificRuleIds,
+          noisyRuleIds: globalDiscovery.noisyRuleIds,
+          emergingRuleIds: globalDiscovery.emergingRuleIds,
+        });
+      }
+    }
+    return {
+      tasks: tasks.length > 0 ? tasks : undefined,
+      insights,
+    };
+    // Master plan deps: combinedLeadPool drives the schedule. Trade
+    // and angle filters are applied downstream (calendarTasks memo)
+    // so changing a tab doesn't rebuild the schedule.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [combinedLeadPool, pipelineMap, intelligenceScope, feedbackEvents]);
+  const rawCalendarTasks = calendarBundle.tasks;
+  const operatorInsights = calendarBundle.insights;
+
+  // ── Calendar visibility (Outlook-style toggles) ──────────────────────
+  // Display-only filter. Does not touch buildGlobalLeadSchedule, the
+  // overflow queue, or any task-generation path. Each toggle scopes
+  // which task category the calendar renders.
+  const [calendarVisibility, setCalendarVisibility] = useState(DEFAULT_CALENDAR_VISIBILITY);
+  const toggleVisibility = useCallback((key) => {
+    setCalendarVisibility((v) => ({ ...v, [key]: !v[key] }));
+  }, []);
+  // Lead → primary LaborTech service map. Driven by each lead's
+  // decision.primaryOpportunity (server-attached). Used to color-code
+  // calendar tasks by service-need.
+  const primaryServiceByLeadKey = useMemo(() => {
+    const map = new Map();
+    const collect = (l) => {
+      if (!l) return;
+      const sid = l.decision?.primaryOpportunity?.services?.[0]?.id;
+      if (l.key && sid) map.set(l.key, sid);
+    };
+    [...callTheseFirst, ...todayList, ...remaining, ...rest].forEach(collect);
+    return map;
+  }, [callTheseFirst, todayList, remaining, rest]);
+
+  // Service-filter aware calendar tasks. When a LaborTech service is
+  // selected, only tasks whose linked lead is in that service's lead
+  // list pass through. Visibility filter applies on top. Each task is
+  // also stamped with primaryServiceId + service color metadata so the
+  // calendar grid can color-code cards.
+  const calendarTasks = useMemo(() => {
+    let pool = rawCalendarTasks ?? [];
+    // MASTER → trade filter. The calendar bundle now schedules across
+    // every trade (master plan, ≤ MAX_TOTAL_CALLS_PER_DAY per business
+    // day). Per-trade tabs are filtered views: switching trades does
+    // NOT rebuild the schedule, only reduces which scheduled tasks
+    // render. selectedTradeId === "all" passes the whole master plan
+    // through.
+    if (selectedTradeId && selectedTradeId !== "all") {
+      const wanted = String(selectedTradeId).toLowerCase();
+      pool = pool.filter((t) => {
+        const tid = (t?.tradeId ?? t?.trade ?? t?.category ?? "").toString().toLowerCase();
+        return tid === wanted;
+      });
+    }
+    if (selectedRepId && selectedRepId !== "all") {
+      pool = pool.filter((t) => !t?.assignedRepId || t.assignedRepId === selectedRepId);
+    }
+    if (selectedLaborTechServiceId) {
+      const tradeBundle = serviceBucketsByTrade?.[selectedTradeId];
+      const list = tradeBundle?.leadsByService?.[selectedLaborTechServiceId] ?? [];
+      const allowed = new Set(list.map((e) => e.leadKey));
+      pool = pool.filter((t) => {
+        const k = t?.linkedLeadId;
+        return typeof k === "string" && allowed.has(k);
+      });
+      if (typeof console !== "undefined") {
+        console.log(
+          `[calendar-service-filter] trade=${selectedTradeId} ` +
+          `service=${selectedLaborTechServiceId} scheduledVisible=${pool.length}`,
+        );
+      }
+    }
+    // Enrich each task with color metadata.
+    // Service fields (serviceShortLabel / serviceColor / serviceAccent /
+    // primaryServiceId) ALWAYS hold the LaborTech service bucket — they
+    // are never overwritten with the trade short label, in either view.
+    // In All Trades mode we additionally stamp dedicated trade fields
+    // (tradeShortLabel / tradeColor / tradeAccent / tradePill / tradeText)
+    // so the calendar card can render a separate trade chip alongside
+    // the service chip without one ever masking the other.
+    const allTradesMode = selectedTradeId === "all";
+    pool = pool.map((t) => {
+      const sid = t?.linkedLeadId ? primaryServiceByLeadKey.get(t.linkedLeadId) ?? "lead_generation" : null;
+      const serviceCfg = sid ? getServiceCatalogEntry(sid) : null;
+      const tradeCfg = allTradesMode ? getTradeColor(t?.tradeId) : null;
+      const next = { ...t };
+      // Service bucket — preserved exactly across views so Reviews
+      // stays yellow, SEO stays green, Website Conversion stays blue.
+      if (serviceCfg) {
+        next.primaryServiceId = sid;
+        next.serviceShortLabel = serviceCfg.shortLabel;
+        next.serviceColor = serviceCfg.calendarColor;
+        next.serviceAccent = serviceCfg.calendarAccent;
+      } else if (
+        typeof t?.serviceShortLabel === "string" &&
+        t.serviceShortLabel.startsWith("trade:") === false
+      ) {
+        // Keep whatever service stamping was already on the task; do
+        // nothing. Fall through to trade-stamping below.
+      }
+      // Trade stamping — separate field family. Never touches service.
+      if (tradeCfg) {
+        next.tradeShortLabel = tradeCfg.shortLabel;
+        next.tradeColor = tradeCfg.border;
+        next.tradeAccent = tradeCfg.background;
+        next.tradePill = tradeCfg.pill;
+        next.tradeText = tradeCfg.text;
+      }
+      // Audit — catches any upstream regression where a trade slug
+      // ever ends up living inside the service field.
+      if (
+        typeof console !== "undefined" &&
+        typeof next.serviceShortLabel === "string" &&
+        next.serviceShortLabel.startsWith("trade:")
+      ) {
+        // eslint-disable-next-line no-console
+        console.log(
+          `[label-audit-warning] lead="${next?.linkedCompany ?? next?.id ?? "?"}" ` +
+          `issue="service overwritten by trade label"`,
+        );
+      }
+      if (
+        allTradesMode &&
+        typeof console !== "undefined" &&
+        !next.serviceShortLabel
+      ) {
+        // eslint-disable-next-line no-console
+        console.log(
+          `[label-audit-warning] lead="${next?.linkedCompany ?? next?.id ?? "?"}" ` +
+          `issue="missing service bucket in all trades"`,
+        );
+      }
+      return next;
+    });
+    if (allTradesMode && typeof console !== "undefined") {
+      const tradeCounts = {};
+      for (const t of pool) {
+        const tid = t?.tradeId || "unknown";
+        tradeCounts[tid] = (tradeCounts[tid] ?? 0) + 1;
+      }
+      console.log(
+        `[all-trades-debug] selectedTrade=all visible=${pool.length} ` +
+        `trades=${Object.keys(tradeCounts).length}`,
+      );
+      console.log(
+        `[calendar-trade-view] mode=all visible=${pool.length} ` +
+        `trades=${Object.keys(tradeCounts).length}`,
+      );
+      Object.entries(tradeCounts).forEach(([tid, count]) => {
+        console.log(`[calendar-trade-color] trade=${tid} count=${count}`);
+      });
+    }
+    return filterCalendarTasks(pool, calendarVisibility);
+  }, [rawCalendarTasks, calendarVisibility, selectedLaborTechServiceId, selectedTradeId, serviceBucketsByTrade, primaryServiceByLeadKey, selectedRepId]);
+
+  // Workflow-task lookup for the All Leads inline panels — finds the
+  // matching call task in calendarTasks by linkedLeadId so the same
+  // SelectedLeadPanel + Assistant + Deep Report mount with real task
+  // context. Falls back to the synthesized id `lead-<key>-call` if no
+  // match (rare; means buildTasksFromLeads didn't admit this lead).
+  const selectedTaskFromLead = useMemo(() => {
+    if (!selectedKey) return null;
+    const list = Array.isArray(rawCalendarTasks) ? rawCalendarTasks : [];
+    const direct = list.find((t) => t?.linkedLeadId === selectedKey);
+    if (direct) return direct;
+    // Synthesize a minimal task so the inline panels still render
+    // when the calendar didn't produce one.
+    const lead = selectedLead;
+    if (!lead) return null;
+    return {
+      id: `lead-${selectedKey}-call`,
+      title: `Call ${lead.name ?? "lead"}`,
+      category: "priority",
+      priority: "medium",
+      status: "todo",
+      linkedLeadId: selectedKey,
+      linkedCompany: lead.name ?? null,
+      linkedLocation: lead.location ?? null,
+      phone: lead.contacts?.primaryPhone ?? null,
+      email: lead.contacts?.primaryEmail ?? null,
+      verifiedEmail: lead.verifiedEmail ?? null,
+      emailSource: lead.emailSource ?? null,
+      emailConfidence: lead.emailConfidence ?? null,
+      // Carry both the slug (tradeId) and the label. Service-fit and
+      // trade-filter logic prefer the slug; the human label is used
+      // for display in the panel header. Without this, the synthesised
+      // path could fall back inconsistently when the label differs
+      // from the canonical lowercase trade key.
+      tradeId: typeof lead.trade === "string" ? lead.trade : null,
+      tradeLabel: lead.trade ? (TRADE_MODULES[lead.trade]?.label ?? lead.trade) : null,
+      laborTechScan: lead.laborTechScan ?? null,
+    };
+  }, [selectedKey, rawCalendarTasks, selectedLead]);
+
+  // Legend entries — only services that appear in the visible tasks.
+  const calendarServiceLegend = useMemo(() => {
+    const seen = new Map();
+    for (const t of calendarTasks) {
+      const sid = t?.primaryServiceId;
+      if (!sid || seen.has(sid)) continue;
+      const cfg = getServiceCatalogEntry(sid);
+      if (!cfg) continue;
+      seen.set(sid, {
+        id: sid,
+        shortLabel: cfg.shortLabel,
+        color: cfg.calendarColor,
+        accent: cfg.calendarAccent,
+      });
+    }
+    const list = Array.from(seen.values());
+    if (typeof console !== "undefined" && list.length > 0) {
+      console.log(
+        `[calendar-service-colors] services=${list.map((s) => s.id).join(",")} count=${list.length}`,
+      );
+    }
+    return list;
+  }, [calendarTasks]);
+
+  const serviceFilterLabel = useMemo(() => {
+    if (!selectedLaborTechServiceId) return null;
+    const tradeBundle = serviceBucketsByTrade?.[selectedTradeId];
+    const card = tradeBundle?.cards?.find((c) => c.serviceId === selectedLaborTechServiceId);
+    return card?.label ?? selectedLaborTechServiceId;
+  }, [selectedLaborTechServiceId, selectedTradeId, serviceBucketsByTrade]);
+  const visibilitySummary = useMemo(
+    () => summarizeVisibility(calendarVisibility),
+    [calendarVisibility],
+  );
+
   const startQueue = (filter, label) => {
     const leads = buildCallQueue(overlaidAllLeads, filter);
     if (leads.length === 0) return;
@@ -4909,18 +9473,135 @@ export default function OperatorConsole({
 
   return (
     <div style={S.root}>
-      <header style={S.header}>
+      <header id="meridian-header" style={S.header}>
         <div style={S.headerLeft}>
           <div style={S.logo}>M</div>
           <div>
-            <div style={S.hTitle}>Meridian AI</div>
-            <div style={S.hSub}>LaborTech, KC Roofing</div>
+            <div style={S.hTitle}>Meridian</div>
+            <div style={S.hSub}>
+              {workspaceAccent ? workspaceAccent : "Who to call first"}
+            </div>
+            {Array.isArray(sourceReadiness) && sourceReadiness.length > 0 && (
+              <div style={{ marginTop: "8px" }}>
+                <SourceReadiness items={sourceReadiness} compact />
+              </div>
+            )}
+            {teamWorkload ? (
+              <div
+                role="group"
+                aria-label="Team workload"
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "10px",
+                  alignItems: "center",
+                  marginTop: "6px",
+                  padding: "4px 10px",
+                  fontSize: "11px",
+                  color: palette.textSecondary,
+                  background: palette.surface,
+                  border: `1px solid ${palette.borderLight}`,
+                  borderRadius: "999px",
+                  width: "fit-content",
+                }}
+              >
+                <span style={{ fontWeight: 700, color: palette.textPrimary }}>
+                  {selectedTradeId === "all" ? "All Trades · " : ""}Scheduled {teamWorkload.scheduled} · {teamWorkload.horizonWeeks}w
+                </span>
+                {typeof teamWorkload.thisWeek === "number" ? (
+                  <span>
+                    This week: <strong style={{ color: palette.textPrimary }}>{teamWorkload.thisWeek}</strong>
+                  </span>
+                ) : null}
+                {typeof teamWorkload.today === "number" ? (
+                  <span>
+                    Today: <strong style={{ color: palette.textPrimary }}>{teamWorkload.today}</strong>
+                  </span>
+                ) : null}
+                {teamWorkload.perRep.map((r) => (
+                  <span key={r.id}>
+                    {r.name} today: <strong style={{ color: palette.textPrimary }}>{r.today ?? 0}</strong>
+                    <span style={{ color: palette.textTertiary }}> / {r.total} total</span>
+                  </span>
+                ))}
+                <span style={{ color: palette.textTertiary }}>
+                  Overflow {teamWorkload.overflow} · weekends skipped {teamWorkload.weekendSkips}
+                </span>
+                <span style={{ display: "inline-flex", gap: "4px", alignItems: "center" }}>
+                  {[{ id: "all", name: "All" }, ...teamWorkload.perRep].map((r) => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => setSelectedRepId(r.id)}
+                      aria-pressed={selectedRepId === r.id}
+                      style={{
+                        fontSize: "10px",
+                        fontWeight: 700,
+                        padding: "2px 8px",
+                        borderRadius: "999px",
+                        border: `1px solid ${selectedRepId === r.id ? palette.blueBorder : palette.border}`,
+                        background: selectedRepId === r.id ? palette.bluePale : palette.surfaceHover,
+                        color: selectedRepId === r.id ? palette.blue : palette.textSecondary,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {r.name}
+                    </button>
+                  ))}
+                </span>
+              </div>
+            ) : null}
+            {overflowQueueCount > 0 && (
+              <div
+                title="Leads waiting in the overflow queue. They roll into the schedule as calls get marked done."
+                style={{
+                  marginTop: "6px",
+                  display: "inline-block",
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  color: palette.textSecondary,
+                  background: palette.surfaceHover,
+                  border: `1px solid ${palette.border}`,
+                  borderRadius: "999px",
+                  padding: "3px 10px",
+                }}
+              >
+                Overflow: {overflowQueueCount} lead{overflowQueueCount === 1 ? "" : "s"} waiting
+              </div>
+            )}
           </div>
         </div>
-        <div style={S.headerRight}>
-          <span style={S.stat}>{top25} ranked</span>
-          <span style={S.stat}>{roi?.contacted ?? 0} contacted</span>
-          <span style={S.stat}>{roi?.closedWon ?? 0} closed</span>
+        <nav style={S.tabBar} aria-label="Primary view">
+          <button
+            type="button"
+            onClick={() => setActiveTab("calendar")}
+            style={activeTab === "calendar" ? S.tabBtnActive : S.tabBtn}
+          >
+            Today
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("cards")}
+            style={activeTab === "cards" ? S.tabBtnActive : S.tabBtn}
+          >
+            All Leads
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("deals")}
+            style={activeTab === "deals" ? S.tabBtnActive : S.tabBtn}
+          >
+            History
+          </button>
+        </nav>
+        <div className="meridian-stats" style={S.headerRight}>
+          {activeTab !== "calendar" && (
+            <>
+              <span className="meridian-stats-optional" style={S.stat}>{top25} ranked</span>
+              <span className="meridian-stats-optional" style={S.stat}>{roi?.contacted ?? 0} contacted</span>
+              <span className="meridian-stats-optional" style={S.stat}>{roi?.closedWon ?? 0} closed</span>
+            </>
+          )}
           <span style={S.userName}>{user.name}</span>
         </div>
       </header>
@@ -4930,47 +9611,400 @@ export default function OperatorConsole({
           including the View Scan modal. refreshKey stays in scope only so
           future effects can depend on it; React reconciliation re-renders
           children on prop change without the remount sledgehammer. */}
-      <div style={S.body}>
-        <main style={S.main}>
-          {!hasData ? (
-            <div style={S.empty}>
-              <div style={{ fontSize: "15px", color: palette.textSecondary, marginBottom: "12px" }}>
-                No leads in pipeline yet.
-              </div>
-              <button onClick={handleSeed} disabled={seeding} style={S.btnPrimary}>
-                {seeding ? "Importing" : "Import KC Roofing Companies"}
-              </button>
+      <div id="meridian-body" style={S.body}>
+        {activeTab === "deals" ? (
+          <main id="meridian-main" style={{ ...S.main, padding: "20px 24px 40px" }}>
+            <DealsPipeline
+              dealsHook={rootDeals}
+              onCallDeal={callDeal}
+              onLeadSelected={handleOpenDealLead}
+              onSwitchTab={handleSwitchTabFromStrip}
+            />
+          </main>
+        ) : activeTab === "calendar" ? (
+          <main id="meridian-main" style={{ ...S.main, padding: 0 }}>
+            {/* Carousel removed — the left Today Focus rail (Right Now +
+                Up Next + Momentum) is now the single execution surface.
+                Decision flow state is still computed in case other surfaces
+                need it; the floating priority card no longer renders. */}
+            <div
+              role="group"
+              aria-label="Calendar visibility"
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: "6px",
+                padding: "6px 10px",
+                marginBottom: "6px",
+                background: palette.surface,
+                border: `1px solid ${palette.borderLight}`,
+                borderRadius: "8px",
+                fontSize: "11px",
+                color: palette.textSecondary,
+              }}
+            >
+              <span style={{ fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", marginRight: "4px", color: palette.textTertiary }}>Show</span>
+              {Object.entries(VISIBILITY_LABEL_MAP).map(([k, label]) => {
+                const on = !!calendarVisibility[k];
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => toggleVisibility(k)}
+                    aria-pressed={on}
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: 600,
+                      padding: "3px 9px",
+                      borderRadius: "999px",
+                      border: `1px solid ${on ? palette.blueBorder : palette.border}`,
+                      background: on ? palette.bluePale : palette.surfaceHover,
+                      color: on ? palette.blue : palette.textSecondary,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+              <span style={{ marginLeft: "auto", color: palette.textTertiary }}>{visibilitySummary}</span>
             </div>
-          ) : (
-            <>
-              <TodayDashboard
-                summary={todaySummary}
-                onStartQueue={handleStartCallQueue}
-                onStartFollowUps={handleStartFollowUps}
-                onStartEmails={handleStartEmails}
-              />
-              <CommandCenter
-                calendarEvents={calendarEvents}
-                allLeads={allLeads}
-                onStartCalls={handleStartCalls}
-                onToggleFilter={toggleFilter}
-                filterHighPriority={filterHighPriority}
-              />
+            {selectedTradeId === "all" ? (
+              <div
+                role="group"
+                aria-label="LaborTech trade legend"
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "6px 10px",
+                  marginBottom: "6px",
+                  background: palette.surface,
+                  border: `1px solid ${palette.borderLight}`,
+                  borderRadius: "8px",
+                  fontSize: "11px",
+                  color: palette.textSecondary,
+                }}
+              >
+                <span style={{
+                  fontWeight: 700, letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  color: palette.textTertiary,
+                  marginRight: "4px",
+                }}>
+                  LaborTech Trades
+                </span>
+                {TRADE_COLOR_ORDER.map((tid) => {
+                  const c = getTradeColor(tid);
+                  if (!c) return null;
+                  return (
+                    <span
+                      key={tid}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        padding: "2px 8px",
+                        borderRadius: "999px",
+                        background: c.background,
+                        border: `1px solid ${c.pill}`,
+                        color: c.text,
+                        fontWeight: 600,
+                      }}
+                    >
+                      <span style={{
+                        width: "7px", height: "7px", borderRadius: "50%",
+                        background: c.border, display: "inline-block",
+                      }} />
+                      {c.shortLabel}
+                    </span>
+                  );
+                })}
+              </div>
+            ) : calendarServiceLegend.length > 0 ? (
+              <div
+                role="group"
+                aria-label="LaborTech service legend"
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "6px 10px",
+                  marginBottom: "6px",
+                  background: palette.surface,
+                  border: `1px solid ${palette.borderLight}`,
+                  borderRadius: "8px",
+                  fontSize: "11px",
+                  color: palette.textSecondary,
+                }}
+              >
+                <span style={{
+                  fontWeight: 700, letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  color: palette.textTertiary,
+                  marginRight: "4px",
+                }}>
+                  LaborTech Services
+                </span>
+                {calendarServiceLegend.map((s) => (
+                  <span
+                    key={s.id}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      padding: "2px 8px",
+                      borderRadius: "999px",
+                      background: s.accent,
+                      border: `1px solid ${s.color}33`,
+                      color: s.color,
+                      fontWeight: 600,
+                    }}
+                  >
+                    <span style={{
+                      width: "7px",
+                      height: "7px",
+                      borderRadius: "50%",
+                      background: s.color,
+                      display: "inline-block",
+                    }} />
+                    {s.shortLabel}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+            {serviceFilterLabel ? (
+              <div
+                role="status"
+                aria-live="polite"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  flexWrap: "wrap",
+                  padding: "6px 12px",
+                  marginBottom: "6px",
+                  background: palette.bluePale,
+                  border: `1px solid ${palette.blueBorder}`,
+                  borderRadius: "8px",
+                  fontSize: "12px",
+                  color: palette.textPrimary,
+                }}
+              >
+                <span style={{ fontWeight: 600, color: palette.blue }}>
+                  Showing scheduled {TRADE_MODULES[selectedTradeId]?.label ?? selectedTradeId} leads needing {serviceFilterLabel}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedLaborTechServiceId(null)}
+                  style={{
+                    marginLeft: "auto",
+                    fontSize: "11px",
+                    fontWeight: 600,
+                    color: palette.blue,
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: "2px 0",
+                  }}
+                >
+                  Clear service filter
+                </button>
+              </div>
+            ) : null}
+            <CalendarCommandCenter
+              tasks={calendarTasks}
+              insights={operatorInsights}
+              onTaskFeedback={handleTaskFeedback}
+              tradeId={selectedTradeId}
+              tradeLabel={TRADE_MODULES[selectedTradeId]?.label ?? "Roofing"}
+              tradeReadiness={tradeReadiness}
+              hasTradeLeads={tradeScopedLeads.length > 0}
+              selectedServiceAngleId={selectedServiceAngleId}
+              selectedServiceAngleLabel={selectedServiceAngle?.bucketLabel ?? null}
+              onClearServiceAngle={handleClearServiceAngle}
+              onSelectServiceAngle={handleSelectServiceAngle}
+              hasAngleLeads={angleScopedLeads.length > 0}
+              bucketPortfolio={bucketPortfolio}
+              prioritizedAngles={prioritizedAngles}
+              onImportTradeLeads={handleImportTradeLeads}
+              importState={importState}
+              selectedTaskId={selectedTaskId}
+              onSelectTask={handleSelectTaskFromCalendar}
+              onSwitchTab={handleSwitchTabFromStrip}
+              selectedLead={selectedLead}
+              onLeadUpdate={handleUpdate}
+              hunterAvailable={hunterAvailable}
+              assistantCollapsed={assistantCollapsed}
+              onToggleAssistant={handleToggleAssistant}
+              deepReportOpen={deepReportOpen}
+              onDeepReportOpen={() => setDeepReportOpen(true)}
+              onDeepReportClose={() => setDeepReportOpen(false)}
+              onEnterAssistMode={handleEnterAssistMode}
+              tradeSlot={(
+                <TradeModuleSelector
+                  selectedTradeId={selectedTradeId}
+                  onSelect={setSelectedTradeId}
+                />
+              )}
+            />
+          </main>
+        ) : (
+          // Unified Leads tab: every trade (roofing included) renders the
+          // same TradeLeadsPortfolio. Service Angles are the primary
+          // grouping; the legacy roofing CRM list has been retired in
+          // favor of the trade-aware portfolio. Operator + Leads now read
+          // from the exact same `tradeScopedLeads` source.
+          //
+          // Layout: left = lead lists (existing portfolio + services
+          // panels), right = LeadDetail when a lead is selected. Mirrors
+          // the Today layout (calendar grid + selected-lead rail) so the
+          // user reads All Leads as the same surface, not a separate one.
+          <main id="meridian-main" style={{
+            ...S.main,
+            padding: "20px 24px 40px",
+            display: "grid",
+            // Background workspace (lead list) takes full width when
+            // no lead is selected. When the workflow opens, the right
+            // slot expands to host Operator + (Deep Report) + Assistant
+            // inline. Auto column lets the right side size to its
+            // shared WORKFLOW constants without overflowing the page.
+            gridTemplateColumns: !selectedTaskFromLead
+              ? SHELL_GRID.noLead
+              : (deepReportOpen ? SHELL_GRID.deep : SHELL_GRID.closed),
+            transition: WORKFLOW.shellTransition,
+            gap: WORKFLOW.shellGap,
+            alignItems: "start",
+          }}>
+            <div style={{
+              minWidth: 0,
+              display: "flex",
+              flexDirection: "column",
+              gap: "16px",
+            }}>
+            {(() => {
+              const tradeBundle = serviceBucketsByTrade?.[selectedTradeId];
+              if (!tradeBundle || !Array.isArray(tradeBundle.cards) || tradeBundle.cards.length === 0) {
+                return null;
+              }
+              const tradeLabel = TRADE_MODULES[selectedTradeId]?.label ?? selectedTradeId;
+              const filteredLeads = selectedLaborTechServiceId
+                ? (tradeBundle.leadsByService?.[selectedLaborTechServiceId] ?? [])
+                : [];
+              return (
+                <LaborTechServicesPanel
+                  tradeLabel={tradeLabel}
+                  tradeId={selectedTradeId}
+                  buckets={tradeBundle.cards}
+                  filteredLeads={filteredLeads}
+                  selectedServiceId={selectedLaborTechServiceId}
+                  selectedLeadKey={selectedKey}
+                  onSelectLead={(leadKey) => {
+                setSelectedKey(leadKey);
+                // Cross-tab bridge — route through handleEnterAssistMode
+                // so the bucket-card click opens Operator + Intelligence
+                // Panel together (parity with Today's card click).
+                if (typeof leadKey === "string" && leadKey.length > 0) {
+                  const taskId = `lead-${leadKey}-call`;
+                  const list = Array.isArray(rawCalendarTasks) ? rawCalendarTasks : [];
+                  const direct = list.find((t) => t?.linkedLeadId === leadKey);
+                  handleEnterAssistMode(direct ?? { id: taskId });
+                }
+              }}
+                  onSelectService={(sid) => {
+                    setSelectedLaborTechServiceId(sid);
+                    if (typeof console !== "undefined") {
+                      const visible = (tradeBundle.leadsByService?.[sid] ?? []).length;
+                      console.log(`[service-filter] trade=${selectedTradeId} service=${sid} visible=${visible}`);
+                    }
+                  }}
+                  onClearService={() => setSelectedLaborTechServiceId(null)}
+                />
+              );
+            })()}
+            {selectedLaborTechServiceId ? null : (
+            <TradeLeadsPortfolio
+              user={user}
+              selectedTradeId={selectedTradeId}
+              tradeLabel={TRADE_MODULES[selectedTradeId]?.label ?? selectedTradeId}
+              onSelectTrade={setSelectedTradeId}
+              tradeScopedLeads={tradeScopedLeads}
+              prioritizedAngles={prioritizedAngles}
+              leadsByAngle={leadsByAngle}
+              tradeReadiness={tradeReadiness}
+              onImport={handleImportTradeLeads}
+              importState={importState}
+              selectedServiceAngleId={selectedServiceAngleId}
+              onSelectServiceAngle={handleSelectServiceAngle}
+              onClearServiceAngle={handleClearServiceAngle}
+              onOpenOperator={() => setActiveTab("calendar")}
+              selectedLeadKey={selectedKey}
+              onSelectLead={(leadKey) => {
+                setSelectedKey(leadKey);
+                // Cross-tab bridge: same click → Operator + Intelligence
+                // Panel parity as Today's calendar card click. We route
+                // through handleEnterAssistMode so the assistIntentRef
+                // is armed BEFORE selectedTaskId flips — otherwise the
+                // parent's reset effect would close Assist Mode in the
+                // same commit.
+                if (typeof leadKey === "string" && leadKey.length > 0) {
+                  const taskId = `lead-${leadKey}-call`;
+                  const list = Array.isArray(rawCalendarTasks) ? rawCalendarTasks : [];
+                  const direct = list.find((t) => t?.linkedLeadId === leadKey);
+                  handleEnterAssistMode(direct ?? { id: taskId });
+                }
+              }}
+              pipelineMap={pipelineMap}
+            />
+            )}
+            </div>
 
-              {(() => {
-                const todayPlan = allLeads.filter((l) => l.forceAction);
-                if (todayPlan.length === 0) return null;
-                return <ListSection bucket="CALL NOW" title="🔥 OVERDUE — IMMEDIATE ACTION REQUIRED" leads={withOverlays(todayPlan)} selectedKey={selectedKey} onSelect={handleSelect} user={user} onUpdate={handleUpdate} findTask={findTask} onStartFindContact={startFindContact} />;
-              })()}
-
-              <ListSection bucket="CALL NOW" title="🔥 CALL NOW — HIGH CONVERSION PROBABILITY" leads={withOverlays(highPriFilter(callTheseFirst.filter((l) => !l.forceAction)))} selectedKey={selectedKey} onSelect={handleSelect} user={user} onUpdate={handleUpdate} findTask={findTask} onStartFindContact={startFindContact} />
-              <ListSection bucket="TODAY" title="🟡 TODAY — STRONG FIT" leads={withOverlays(highPriFilter(todayList))} selectedKey={selectedKey} onSelect={handleSelect} user={user} onUpdate={handleUpdate} findTask={findTask} onStartFindContact={startFindContact} />
-              {!filterHighPriority && <ListSection bucket="MONITOR" title="⚪ MONITOR — THIS WEEK" leads={withOverlays(remaining)} selectedKey={selectedKey} onSelect={handleSelect} user={user} onUpdate={handleUpdate} findTask={findTask} onStartFindContact={startFindContact} />}
-              {!filterHighPriority && rest.length > 0 && <ListSection bucket="PASS" title="⚫ PIPELINE — BACKLOG" leads={withOverlays(rest)} selectedKey={selectedKey} onSelect={handleSelect} user={user} onUpdate={handleUpdate} findTask={findTask} onStartFindContact={startFindContact} />}
-            </>
-          )}
-        </main>
-        <AiPanel selectedLead={selectedLead} findTask={findTask} onStartFindContact={startFindContact} />
+            {/* Right: inline workflow — SAME panels as Today.
+                Operator Panel + (optional) Deep Report + Assistant
+                mount inline alongside the lead list whenever a lead
+                is selected, using the lifted parent state so the
+                experience is identical across both surfaces. The
+                static "No lead selected" placeholder is gone — when
+                nothing is selected the right column simply doesn't
+                render and the list takes the full row. */}
+            <LeadWorkflowDrawer
+              selectedTask={selectedTaskFromLead}
+              deepReportOpen={deepReportOpen}
+              onDeepReportOpen={() => setDeepReportOpen(true)}
+              onDeepReportClose={() => setDeepReportOpen(false)}
+              assistantCollapsed={assistantCollapsed}
+              onToggleAssistant={handleToggleAssistant}
+              onEnterAssistMode={handleEnterAssistMode}
+              tradeLabel={selectedTaskFromLead?.tradeLabel ?? null}
+              operatorPanel={selectedTaskFromLead ? (
+                <SelectedLeadPanel
+                  task={selectedTaskFromLead}
+                  now={new Date()}
+                  tradeLabel={selectedTaskFromLead?.tradeLabel ?? null}
+                  onClose={() => { setSelectedKey(null); setSelectedTaskId(null); }}
+                  onMutate={() => {}}
+                  onOpen={() => {}}
+                  callMode="idle"
+                  onEnterCallMode={() => {}}
+                  onExitCallMode={() => {}}
+                  onRecordOutcome={() => {}}
+                  callsCompletedToday={0}
+                  queueRemaining={0}
+                  currentNote=""
+                  onChangeNote={() => {}}
+                  onSwitchTab={handleSwitchTabFromStrip}
+                  selectedLead={selectedLead}
+                  onLeadUpdate={handleUpdate}
+                  hunterAvailable={hunterAvailable}
+                  onOpenDeepReport={() => setDeepReportOpen(true)}
+                />
+              ) : null}
+            />
+          </main>
+        )}
       </div>
 
       {queueState && (
@@ -4993,8 +10027,12 @@ export default function OperatorConsole({
 const S = {
   root: { minHeight: "100vh", background: palette.bg, color: palette.textPrimary, fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', sans-serif" },
 
-  header: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 24px", borderBottom: `1px solid ${palette.border}`, background: palette.surface },
+  header: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 24px", borderBottom: `1px solid ${palette.border}`, background: palette.surface, gap: "16px" },
   headerLeft: { display: "flex", alignItems: "center", gap: "10px" },
+
+  tabBar: { display: "flex", alignItems: "center", gap: "4px", padding: "3px", background: palette.surfaceHover, borderRadius: "9px", border: `1px solid ${palette.border}` },
+  tabBtn: { padding: "6px 14px", fontSize: "12px", fontWeight: 500, color: palette.textSecondary, background: "transparent", border: "1px solid transparent", borderRadius: "7px", cursor: "pointer", letterSpacing: "0.01em", whiteSpace: "nowrap" },
+  tabBtnActive: { padding: "6px 14px", fontSize: "12px", fontWeight: 600, color: palette.blue, background: palette.surface, border: `1px solid ${palette.blueBorder}`, borderRadius: "7px", cursor: "pointer", letterSpacing: "0.01em", whiteSpace: "nowrap", boxShadow: "0 1px 2px rgba(15,23,42,0.05)" },
   logo: { width: "28px", height: "28px", borderRadius: "7px", background: palette.blue, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", fontWeight: 700 },
   hTitle: { fontSize: "14px", fontWeight: 600 },
   hSub: { fontSize: "11px", color: palette.textTertiary },
@@ -5002,8 +10040,15 @@ const S = {
   stat: { fontSize: "11px", color: palette.textTertiary },
   userName: { fontSize: "12px", color: palette.textSecondary, fontWeight: 500 },
 
-  body: { display: "flex", height: "calc(100vh - 51px)" },
-  main: { flex: 1, overflowY: "auto", padding: "24px 28px" },
+  // SCROLL PHILOSOPHY — single page-level vertical scroll. Body uses
+  // min-height (NOT height) so content extends beyond viewport and
+  // the document scrolls naturally. overflowY: visible is explicit
+  // so no parent ever traps vertical movement. Horizontal is hidden
+  // at the body level. Operator / Deep Report / Assistant own their
+  // own internal scroll for long content via max-height + overflowY:
+  // auto inside the sticky drawer.
+  body: { display: "flex", minHeight: "calc(100vh - 51px)", overflowX: "hidden", overflowY: "visible" },
+  main: { flex: 1, minWidth: 0, overflowX: "hidden", overflowY: "visible", padding: "24px 28px" },
 
   commandCenter: { padding: "14px 18px", background: palette.surface, borderRadius: "10px", border: `1px solid ${palette.border}`, marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px", boxShadow: palette.shadow },
   commandLeft: { display: "flex", flexDirection: "column", minWidth: 0 },
@@ -5106,12 +10151,13 @@ const S = {
     letterSpacing: "0.01em", marginBottom: "4px",
   },
   companyHeaderCallBtn: {
-    background: palette.success, color: "#fff", border: "none",
+    background: palette.bluePale, color: palette.blue,
+    border: `1px solid ${palette.blueBorder}`,
     height: "44px", padding: "0 20px", borderRadius: "8px",
     fontSize: "14px", fontWeight: 700, letterSpacing: "0.02em",
     cursor: "pointer", textDecoration: "none",
     display: "inline-flex", alignItems: "center",
-    boxShadow: "0 2px 4px rgba(22,163,74,0.25)",
+    boxShadow: "0 2px 4px rgba(37,99,235,0.10)",
   },
   companyHeaderCallBtnMuted: {
     background: palette.textPrimary, color: "#fff", border: "none",
@@ -6279,7 +11325,7 @@ const S = {
   // Primary console buttons — large, shadowed
   btnConsolePrimary: { background: palette.blue, color: "#fff", border: "none", padding: "11px 22px", borderRadius: "8px", fontSize: "13px", fontWeight: 600, cursor: "pointer", textDecoration: "none", display: "inline-flex", alignItems: "center", boxShadow: "0 2px 4px rgba(37,99,235,0.22), 0 1px 2px rgba(37,99,235,0.14)", minWidth: "100px", justifyContent: "center" },
   btnConsolePrimaryActive: { background: palette.textPrimary, color: "#fff", border: "none", padding: "11px 22px", borderRadius: "8px", fontSize: "13px", fontWeight: 600, cursor: "pointer", boxShadow: "0 2px 4px rgba(15,23,42,0.18)", minWidth: "100px" },
-  btnConsoleCallGreen: { background: palette.success, color: "#fff", border: "none", padding: "11px 22px", borderRadius: "8px", fontSize: "13px", fontWeight: 600, cursor: "pointer", textDecoration: "none", display: "inline-flex", alignItems: "center", boxShadow: "0 2px 4px rgba(22,163,74,0.25), 0 1px 2px rgba(22,163,74,0.16)", minWidth: "100px", justifyContent: "center" },
+  btnConsoleCallGreen: { background: palette.bluePale, color: palette.blue, border: `1px solid ${palette.blueBorder}`, padding: "11px 22px", borderRadius: "8px", fontSize: "13px", fontWeight: 700, cursor: "pointer", textDecoration: "none", display: "inline-flex", alignItems: "center", boxShadow: "0 2px 4px rgba(37,99,235,0.10)", minWidth: "100px", justifyContent: "center" },
   btnConsoleDisabled: { background: "#E2E8F0", color: palette.textTertiary, border: "none", padding: "11px 22px", borderRadius: "8px", fontSize: "13px", fontWeight: 500, cursor: "not-allowed", minWidth: "100px" },
 
   // Secondary console buttons — outlined, consistent width

@@ -1,6 +1,10 @@
-// Meridian AI — tenant config (local dev)
+// Meridian — tenant config (local dev)
 // NOTE: Passwords are plaintext for local development only.
 // Replace with hashed credentials before any non-local deployment.
+//
+// `workspaces` lists the workspace slugs (config/workspaces.ts) the user
+// can enter. A user with one workspace is routed straight in; multiple
+// workspaces trigger the picker.
 
 export type ModuleId = "roofing";
 
@@ -10,6 +14,7 @@ export type Tenant = {
   password: string;
   modules: ModuleId[];
   geo: string[];
+  workspaces: string[];
 };
 
 export type PublicUser = {
@@ -17,6 +22,7 @@ export type PublicUser = {
   name: string;
   modules: ModuleId[];
   geo: string[];
+  workspaces: string[];
 };
 
 export const TENANTS: Record<string, Tenant> = {
@@ -26,6 +32,7 @@ export const TENANTS: Record<string, Tenant> = {
     password: "dylan",
     modules: ["roofing"],
     geo: [],
+    workspaces: ["labortech"],
   },
   john: {
     id: "john",
@@ -33,6 +40,7 @@ export const TENANTS: Record<string, Tenant> = {
     password: "john",
     modules: ["roofing"],
     geo: [],
+    workspaces: ["labortech"],
   },
   labortech: {
     id: "labortech",
@@ -40,11 +48,12 @@ export const TENANTS: Record<string, Tenant> = {
     password: "labortech",
     modules: ["roofing"],
     geo: [],
+    workspaces: ["labortech"],
   },
 };
 
 export function toPublicUser(t: Tenant): PublicUser {
-  return { id: t.id, name: t.name, modules: t.modules, geo: t.geo };
+  return { id: t.id, name: t.name, modules: t.modules, geo: t.geo, workspaces: t.workspaces };
 }
 
 export function getTenantById(id: string): Tenant | null {

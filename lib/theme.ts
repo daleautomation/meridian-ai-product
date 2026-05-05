@@ -25,7 +25,7 @@ export const palette = {
 
   // ── Borders ──
   border:       "#E6ECF5",       // soft blue-gray
-  borderLight:  "#F1F5F9",       // barely-there
+  borderLight:  "#EDF1F7",       // soft hairline — visible but quiet
   borderAccent: "rgba(37,99,235,0.20)",
 
   // ── Semantic ──
@@ -55,11 +55,64 @@ export const palette = {
 } as const;
 
 export const brand = {
-  name: "Meridian AI",
-  tagline: "Roofing Engine",
-  positioning: "Close more deals. Faster.",
+  name: "Meridian",
+  tagline: "Who to call first",
+  positioning: "Who to call first.",
 } as const;
 
 // Legacy exports for backward compat
 export const modules = {} as const;
-export const publicContent = {} as const;
+
+export const publicContent = {
+  hero: {
+    headline: "Who to call first.",
+    subline: "Meridian ranks your trade leads by who is most ready to close — and tells you what to say.",
+    trust: "Built for roofing operators. HVAC, plumbing, and remodeling rolling out next.",
+    ctaSecondary: "How it works",
+  },
+  modules: {
+    title: "Modules",
+    items: [
+      { id: "roofing",    label: "Roofing",    status: "LIVE",         desc: "Live trade module. Ranks roofing leads by readiness to close." },
+      { id: "hvac",       label: "HVAC",       status: "Coming soon",  desc: "Heating and cooling operators. Sources wiring next." },
+      { id: "plumbing",   label: "Plumbing",   status: "Coming soon",  desc: "Plumbing operators. Sources wiring next." },
+      { id: "remodeling", label: "Remodeling", status: "Coming soon",  desc: "Remodelers and carpenters. Sources wiring next." },
+    ],
+    footer: "One platform. One workflow. New trades added as their data sources are wired.",
+  },
+  about: {
+    moduleCapabilities: [
+      { label: "Roofing",    capabilities: ["Live ranked call list", "Website + reviews scan", "Plain-English call reasons", "Status pipeline + activity log"] },
+      { label: "HVAC",       capabilities: ["Coming soon"] },
+      { label: "Plumbing",   capabilities: ["Coming soon"] },
+      { label: "Remodeling", capabilities: ["Coming soon"] },
+    ],
+  },
+  pricing: {
+    title: "Pricing",
+    subtext: "Pay for what you use. No long contracts.",
+    tiers: [],
+    footer: "Contact us for a build quote.",
+  },
+  roadmap: {
+    items: [
+      "HVAC module — sources wiring",
+      "Plumbing module — sources wiring",
+      "Remodeling module — sources wiring",
+    ],
+  },
+  demo: {
+    title: "See it on your data",
+    desc: "Bring a list of leads. We'll show you who to call first.",
+    timing: "30-minute walkthrough",
+    href: "mailto:hello@meridian.ai",
+    cta: "Request demo",
+  },
+  requestModule: {
+    title: "Need another trade?",
+    desc: "Tell us which trade and which sources you have access to.",
+    timing: "Reply within 1 business day",
+    href: "mailto:hello@meridian.ai",
+    cta: "Request module",
+  },
+} as const;

@@ -41,8 +41,8 @@ function LoginForm() {
   return (
     <div style={styles.root}>
       <form onSubmit={onSubmit} style={styles.card}>
-        <div style={styles.brand}>MERIDIAN AI</div>
-        <div style={styles.sub}>Roofing Engine — LaborTech Solutions</div>
+        <div style={styles.brand}>MERIDIAN</div>
+        <div style={styles.sub}>Sign in to your workspace</div>
         <label style={styles.label}>USERNAME</label>
         <input
           autoFocus
@@ -70,23 +70,26 @@ function LoginForm() {
 
 const styles: Record<string, React.CSSProperties> = {
   root: {
-    minHeight: "100vh",
+    minHeight: "100dvh",
     background: "#FAFBFC",
     color: "#1A1A2E",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    padding: "24px 16px",
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', sans-serif",
   },
   card: {
-    width: "340px",
-    padding: "36px 32px",
+    width: "100%",
+    maxWidth: "340px",
+    padding: "32px 24px",
     background: "#FFFFFF",
     border: "1px solid #E2E8F0",
     borderRadius: "14px",
     boxShadow: "0 4px 6px rgba(0,0,0,0.04), 0 10px 15px rgba(0,0,0,0.03)",
     display: "flex",
     flexDirection: "column",
+    boxSizing: "border-box",
   },
   brand: {
     fontSize: "18px",
@@ -111,11 +114,13 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#FAFBFC",
     border: "1px solid #E2E8F0",
     borderRadius: "8px",
-    padding: "10px 12px",
+    padding: "12px 12px",
     color: "#1A1A2E",
-    fontSize: "14px",
+    fontSize: "16px",
     fontFamily: "inherit",
     outline: "none",
+    width: "100%",
+    boxSizing: "border-box",
   },
   error: {
     marginTop: "14px",
@@ -124,14 +129,15 @@ const styles: Record<string, React.CSSProperties> = {
   },
   btn: {
     marginTop: "24px",
-    padding: "11px 12px",
+    padding: "14px 12px",
     borderRadius: "8px",
     background: "#2563EB",
     color: "#FFFFFF",
     border: "none",
-    fontSize: "14px",
+    fontSize: "15px",
     fontWeight: 600,
     cursor: "pointer",
+    minHeight: "44px",
   },
 };
 

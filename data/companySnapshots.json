@@ -4431,12 +4431,12 @@
     "key": "domain:atlasexteriors.com",
     "company": {
       "name": "Atlas Roofing & Exteriors",
-      "domain": "https://atlasexteriors.com",
+      "domain": "atlasexteriors.com",
       "url": "https://atlasexteriors.com",
-      "location": "Gladstone"
+      "location": "Gladstone, MO"
     },
     "createdAt": "2026-04-20T17:47:59.823Z",
-    "updatedAt": "2026-04-22T17:10:15.391Z",
+    "updatedAt": "2026-04-24T19:42:58.553Z",
     "latest": {
       "inspect_website": {
         "tool": "inspect_website",
@@ -4836,7 +4836,23 @@
     },
     "contactResolutionCheckedAt": "2026-04-22T17:10:14.679Z",
     "contactPhone": "(205) 777-1693",
-    "contactName": "Atlas Roofing & Exteriors"
+    "contactName": "Atlas Roofing & Exteriors",
+    "paidPresence": {
+      "googleAds": null,
+      "metaAds": null,
+      "confidence": "low",
+      "asOf": "2026-04-24T19:42:58.469Z",
+      "evidenceUrls": [
+        "https://adstransparency.google.com/?region=US&query=Atlas%20Roofing%20%26%20Exteriors",
+        "https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=US&q=Atlas%20Roofing%20%26%20Exteriors&search_type=keyword_unordered"
+      ],
+      "googleDetail": "Google Ads Transparency returned HTTP 400. RPC request schema rejected (likely drift). Manual verify at evidence URL.",
+      "metaDetail": "Meta Ad Library: no token configured. Set META_AD_LIBRARY_TOKEN or verify manually at evidence URL.",
+      "googleStatus": "error",
+      "metaStatus": "unknown",
+      "manualVerificationRequired": true
+    },
+    "paidPresenceCheckedAt": "2026-04-24T19:42:58.469Z"
   },
   "domain:bealroofing.com": {
     "key": "domain:bealroofing.com",
@@ -5858,7 +5874,7 @@
       "location": "Grandview"
     },
     "createdAt": "2026-04-20T17:48:26.262Z",
-    "updatedAt": "2026-04-22T23:20:36.602Z",
+    "updatedAt": "2026-04-27T07:35:08.562Z",
     "latest": {
       "inspect_website": {
         "tool": "inspect_website",
@@ -6172,61 +6188,6 @@
     "lastCheckedAt": "2026-04-20T17:48:36.399Z",
     "statusHistory": [
       {
-        "status": "FOLLOW_UP",
-        "changedAt": "2026-04-22T22:21:43.852Z",
-        "changedBy": "dylan"
-      },
-      {
-        "status": "FOLLOW_UP",
-        "changedAt": "2026-04-22T22:21:44.699Z",
-        "changedBy": "dylan"
-      },
-      {
-        "status": "INTERESTED",
-        "changedAt": "2026-04-22T22:21:46.004Z",
-        "changedBy": "dylan"
-      },
-      {
-        "status": "INTERESTED",
-        "changedAt": "2026-04-22T22:21:46.492Z",
-        "changedBy": "dylan"
-      },
-      {
-        "status": "EMAILED",
-        "changedAt": "2026-04-22T22:21:47.923Z",
-        "changedBy": "dylan"
-      },
-      {
-        "status": "VOICEMAIL",
-        "changedAt": "2026-04-22T22:21:48.448Z",
-        "changedBy": "dylan"
-      },
-      {
-        "status": "CONTACTED",
-        "changedAt": "2026-04-22T22:21:48.838Z",
-        "changedBy": "dylan"
-      },
-      {
-        "status": "CONTACTED",
-        "changedAt": "2026-04-22T22:36:25.586Z",
-        "changedBy": "dylan"
-      },
-      {
-        "status": "CONTACTED",
-        "changedAt": "2026-04-22T22:36:28.274Z",
-        "changedBy": "dylan"
-      },
-      {
-        "status": "CONTACTED",
-        "changedAt": "2026-04-22T22:42:44.217Z",
-        "changedBy": "dylan"
-      },
-      {
-        "status": "CONTACTED",
-        "changedAt": "2026-04-22T22:42:45.681Z",
-        "changedBy": "dylan"
-      },
-      {
         "status": "READY_TO_CALL",
         "changedAt": "2026-04-22T22:54:33.401Z",
         "changedBy": "dylan"
@@ -6239,26 +6200,6 @@
       {
         "status": "READY_TO_CALL",
         "changedAt": "2026-04-22T22:54:38.112Z",
-        "changedBy": "dylan"
-      },
-      {
-        "status": "VOICEMAIL",
-        "changedAt": "2026-04-22T22:54:45.104Z",
-        "changedBy": "dylan"
-      },
-      {
-        "status": "EMAILED",
-        "changedAt": "2026-04-22T22:54:47.861Z",
-        "changedBy": "dylan"
-      },
-      {
-        "status": "VOICEMAIL",
-        "changedAt": "2026-04-22T22:54:50.540Z",
-        "changedBy": "dylan"
-      },
-      {
-        "status": "VOICEMAIL",
-        "changedAt": "2026-04-22T22:54:52.601Z",
         "changedBy": "dylan"
       },
       {
@@ -6318,9 +6259,9 @@
     "contactName": "Pyramid Roofing Company, Inc.",
     "lastAction": {
       "type": "scan_viewed",
-      "outcome": "call_mode",
+      "outcome": "audit_snapshot",
       "performedBy": "dylan",
-      "performedAt": "2026-04-22T23:20:36.602Z"
+      "performedAt": "2026-04-27T07:35:08.562Z"
     },
     "dealActions": [
       {
@@ -6414,32 +6355,10 @@
         "performedAt": "2026-04-22T20:06:01.520Z"
       },
       {
-        "type": "call_started",
-        "outcome": "dialed",
-        "performedBy": "dylan",
-        "performedAt": "2026-04-22T20:09:58.719Z"
-      },
-      {
-        "type": "call_started",
-        "outcome": "dialed",
-        "performedBy": "dylan",
-        "performedAt": "2026-04-22T21:11:24.153Z"
-      },
-      {
         "type": "scan_viewed",
         "outcome": "audit_snapshot",
         "performedBy": "dylan",
         "performedAt": "2026-04-22T22:21:52.907Z"
-      },
-      {
-        "type": "phone_copied",
-        "performedBy": "dylan",
-        "performedAt": "2026-04-22T22:39:48.017Z"
-      },
-      {
-        "type": "phone_copied",
-        "performedBy": "dylan",
-        "performedAt": "2026-04-22T22:39:49.436Z"
       },
       {
         "type": "scan_viewed",
@@ -6464,6 +6383,12 @@
         "outcome": "call_mode",
         "performedBy": "dylan",
         "performedAt": "2026-04-22T23:20:36.602Z"
+      },
+      {
+        "type": "scan_viewed",
+        "outcome": "audit_snapshot",
+        "performedBy": "dylan",
+        "performedAt": "2026-04-27T07:35:08.562Z"
       }
     ],
     "callAttempts": 0,
@@ -23402,5 +23327,66 @@
       }
     ],
     "lastCheckedAt": "2026-04-21T00:26:33.393Z"
+  },
+  "domain:eriehome.com": {
+    "key": "domain:eriehome.com",
+    "company": {
+      "name": "Erie Home",
+      "domain": "eriehome.com",
+      "location": "Erie, PA"
+    },
+    "createdAt": "2026-04-24T19:35:05.213Z",
+    "updatedAt": "2026-04-24T19:42:58.457Z",
+    "latest": {},
+    "history": [],
+    "statusHistory": [],
+    "notes": [],
+    "scoreHistory": [],
+    "paidPresence": {
+      "googleAds": null,
+      "metaAds": null,
+      "confidence": "low",
+      "asOf": "2026-04-24T19:42:58.249Z",
+      "evidenceUrls": [
+        "https://adstransparency.google.com/?region=US&query=Erie%20Home",
+        "https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=US&q=Erie%20Home&search_type=keyword_unordered"
+      ],
+      "googleDetail": "Google Ads Transparency returned HTTP 400. RPC request schema rejected (likely drift). Manual verify at evidence URL.",
+      "metaDetail": "Meta Ad Library: no token configured. Set META_AD_LIBRARY_TOKEN or verify manually at evidence URL.",
+      "googleStatus": "error",
+      "metaStatus": "unknown",
+      "manualVerificationRequired": true
+    },
+    "paidPresenceCheckedAt": "2026-04-24T19:42:58.249Z"
+  },
+  "name:thislongunlikelycompanynameshouldnotmatch roofing": {
+    "key": "name:thislongunlikelycompanynameshouldnotmatch roofing",
+    "company": {
+      "name": "Thislongunlikelycompanynameshouldnotmatch Roofing",
+      "location": "Kansas City, MO"
+    },
+    "createdAt": "2026-04-24T19:35:05.394Z",
+    "updatedAt": "2026-04-24T19:42:58.610Z",
+    "latest": {},
+    "history": [],
+    "statusHistory": [],
+    "notes": [],
+    "scoreHistory": [],
+    "paidPresence": {
+      "googleAds": null,
+      "metaAds": null,
+      "confidence": "low",
+      "asOf": "2026-04-24T19:42:58.561Z",
+      "evidenceUrls": [
+        "https://adstransparency.google.com/?region=US&query=Thislongunlikelycompanynameshouldnotmatch%20Roofing",
+        "https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=US&q=Thislongunlikelycompanynameshouldnotmatch%20Roofing&search_type=keyword_unordered"
+      ],
+      "googleDetail": "Google Ads Transparency returned HTTP 400. RPC request schema rejected (likely drift). Manual verify at evidence URL.",
+      "metaDetail": "Meta Ad Library: no token configured. Set META_AD_LIBRARY_TOKEN or verify manually at evidence URL.",
+      "googleStatus": "error",
+      "metaStatus": "unknown",
+      "manualVerificationRequired": true
+    },
+    "paidPresenceCheckedAt": "2026-04-24T19:42:58.561Z"
   }
 }

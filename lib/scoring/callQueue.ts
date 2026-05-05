@@ -1,4 +1,8 @@
-// Meridian AI — Call Queue helper.
+// LEGACY COMPATIBILITY ONLY.
+// Do not use this for new ingestion, UI, or decision logic.
+// New code must use lib/scoring/decision.ts.
+//
+// Meridian — Call Queue helper.
 //
 // Produces a priority-ordered list of leads for a rep to work through
 // top-to-bottom. Uses *only* fields the engine already computed

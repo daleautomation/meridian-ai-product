@@ -75,15 +75,18 @@ function PricingSection() {
   );
 }
 
-function moduleHref(moduleId, isAuthenticated) {
-  const target = `/dashboard?module=${moduleId}`;
-  if (isAuthenticated) return target;
-  return `/login?next=${encodeURIComponent(target)}`;
+function moduleHref(_moduleId, isAuthenticated) {
+  // Modules live inside an authenticated workspace. Public visitors are
+  // routed to login; the post-login redirect resolves their workspace.
+  if (isAuthenticated) return "/operator";
+  return "/login?next=/operator";
 }
 
+const REQUEST_ACCESS_HREF = "mailto:hello@meridian.ai?subject=Meridian%20access%20request";
+
 export default function WelcomePage({ isAuthenticated }) {
-  const entryHref = isAuthenticated ? "/dashboard" : "/login";
-  const entryLabel = isAuthenticated ? "Enter Platform" : "Log In";
+  const entryHref = isAuthenticated ? "/operator" : "/login";
+  const entryLabel = isAuthenticated ? "Enter workspace" : "Log in";
 
   return (
     <div style={S.root}>
@@ -106,7 +109,7 @@ export default function WelcomePage({ isAuthenticated }) {
         <p style={S.heroSub}>{publicContent.hero.subline}</p>
         <p style={S.heroTrust}>{publicContent.hero.trust}</p>
         <div style={S.heroCtas}>
-          <a href="/about" style={S.ctaSecondary}>{publicContent.hero.ctaSecondary}</a>
+          <a href={REQUEST_ACCESS_HREF} style={S.ctaSecondary}>Request access</a>
           <a href={entryHref} style={S.ctaPrimary}>{entryLabel}</a>
         </div>
       </section>
@@ -136,7 +139,7 @@ export default function WelcomePage({ isAuthenticated }) {
               <p style={S.moduleDesc}>{mod.desc}</p>
               <div style={{ flex: 1 }} />
               <span style={S.moduleCta}>
-                {isAuthenticated ? "Enter Module →" : "Log In to Enter →"}
+                {isAuthenticated ? "Open workspace →" : "Log in to enter →"}
               </span>
             </a>
           ))}

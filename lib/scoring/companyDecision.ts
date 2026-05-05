@@ -1,4 +1,8 @@
-// Meridian AI — company decision & ranking engine.
+// INTERNAL ENGINE INPUT — do not consume from the UI.
+// User-facing surfaces must read lib/scoring/decision.ts (LeadDecision).
+// This module produces the raw CompanyDecision that decision.ts wraps.
+//
+// Meridian — company decision & ranking engine.
 //
 // Pure function. Given a persisted CompanySnapshot, produces a transparent,
 // weighted decision: score (0–100), opportunity level, recommended action,

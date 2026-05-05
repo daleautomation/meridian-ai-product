@@ -16,14 +16,8 @@ import { listCompaniesTool } from "./tools/listCompanies";
 import { decideCompanyTool } from "./tools/decideCompany";
 import { rankCompaniesTool } from "./tools/rankCompanies";
 import { explainRankingTool } from "./tools/explainRanking";
-import { createReviewTool } from "./tools/createReview";
-import { listPendingReviewsTool } from "./tools/listPendingReviews";
-import { resolveReviewTool } from "./tools/resolveReview";
 import { findStaleCompaniesTool } from "./tools/findStaleCompanies";
 import { refreshCompanyTool } from "./tools/refreshCompany";
-import { recordEvalTool } from "./tools/recordEval";
-import { listEvalsTool } from "./tools/listEvals";
-import { evalSummaryTool } from "./tools/evalSummary";
 import { knowledgeAddTool } from "./tools/knowledgeAdd";
 import { knowledgeSearchTool } from "./tools/knowledgeSearch";
 import { generatePitchTool } from "./tools/generatePitch";
@@ -44,6 +38,7 @@ import { createFollowUpTool } from "./tools/createFollowUp";
 import { completeFollowUpTool } from "./tools/completeFollowUp";
 import { listFollowUpsTool } from "./tools/listFollowUps";
 import { clearCompanyActivityTool } from "./tools/clearCompanyActivity";
+import { checkPaidPresenceTool } from "./tools/checkPaidPresence";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const TOOLS: ToolDefinition<any, any>[] = [
@@ -62,17 +57,9 @@ const TOOLS: ToolDefinition<any, any>[] = [
   rankCompaniesTool,
   // Phase 4 — trust/evidence (head-to-head explanation)
   explainRankingTool,
-  // Phase 5 — human review checkpoints
-  createReviewTool,
-  listPendingReviewsTool,
-  resolveReviewTool,
   // Phase 6 — refresh / recheck
   findStaleCompaniesTool,
   refreshCompanyTool,
-  // Phase 7 — evaluation ledger (MVP, human-in-the-loop)
-  recordEvalTool,
-  listEvalsTool,
-  evalSummaryTool,
   // Phase 8 — retrieval-ready knowledge base (minimal, vector-compatible interface)
   knowledgeAddTool,
   knowledgeSearchTool,
@@ -101,6 +88,8 @@ const TOOLS: ToolDefinition<any, any>[] = [
   listFollowUpsTool,
   // CRM scoped reset — per-company activity wipe (confirm-gated)
   clearCompanyActivityTool,
+  // Paid-ad presence (intent signal; not wired into scoring yet)
+  checkPaidPresenceTool,
 ];
 
 const TOOL_INDEX = new Map(TOOLS.map((t) => [t.name, t]));

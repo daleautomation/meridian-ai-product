@@ -26,3 +26,91 @@ html, body {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
+
+/* Drawer panel entry — Deep Report uses this when sliding in
+   beside the Operator panel. Pure opacity + transform, never
+   width/height. */
+@keyframes meridian-panel-enter {
+  from { opacity: 0; transform: translateX(14px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Operator panel entry — first into view (0ms) when a lead is
+   selected. Subtle 10px slide + fade, premium Apple ease. */
+@keyframes meridian-operator-enter {
+  from { opacity: 0; transform: translateX(10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Assistant panel entry — staggered ~40ms after Operator (the
+   0-18% hold encodes the delay across a 220ms run) so the user
+   reads "operator opened, assistant joined" as one motion. */
+@keyframes meridian-assistant-enter {
+  0%, 18%  { opacity: 0; transform: translateX(8px); }
+  100%     { opacity: 1; transform: translateX(0); }
+}
+
+/* Deep Report reveal — kept for backward compatibility. */
+@keyframes meridian-deep-reveal {
+  0%, 30%  { opacity: 0; transform: translateX(-18px); }
+  100%     { opacity: 1; transform: translateX(0); }
+}
+
+/* Intelligence Panel entry — staggered ~80ms after Operator so the
+   operator has time to "land" on the lead before Intel slides in
+   from the right. Reads as: lead arrives → context arrives. The
+   0–28% hold encodes the delay across a 280ms run. Operator does
+   not move or scale; only Intel animates. */
+@keyframes meridian-intel-enter {
+  0%, 28% { opacity: 0; transform: translateX(20px); }
+  100%    { opacity: 1; transform: translateX(0); }
+}
+
+/* Just-routed highlight — fires for ~1.2s on the calendar TaskCard
+   that the user just routed into from Today's Command Queue. Pulses
+   the card's box-shadow so the eye lands on the right lead even
+   though the calendar may have just scrolled. */
+@keyframes meridian-just-routed {
+  0%   { box-shadow: 0 0 0 0 rgba(37,99,235,0.55); }
+  40%  { box-shadow: 0 0 0 6px rgba(37,99,235,0.20); }
+  100% { box-shadow: 0 0 0 0 rgba(37,99,235,0.00); }
+}
+[data-just-routed="true"] {
+  animation: meridian-just-routed 1200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Mobile pilot safety — only kicks in below 820px. Overrides the
+   inline-style desktop layout so the body stacks vertically and the
+   AI rail drops below the main list instead of squeezing it. The !important
+   flags are necessary because OperatorConsole styles are inline. */
+@media (max-width: 820px) {
+  #meridian-body {
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: calc(100dvh - 51px) !important;
+  }
+  #meridian-main {
+    padding: 14px 14px !important;
+    overflow: visible !important;
+    width: 100% !important;
+  }
+  #meridian-ai {
+    width: 100% !important;
+    border-left: none !important;
+    border-top: 1px solid #E2E8F0 !important;
+  }
+  #meridian-header {
+    padding: 10px 14px !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+  }
+  #meridian-header .meridian-stats {
+    gap: 10px !important;
+    flex-wrap: wrap !important;
+  }
+}
+@media (max-width: 520px) {
+  #meridian-header .meridian-stats-optional {
+    display: none !important;
+  }
+}

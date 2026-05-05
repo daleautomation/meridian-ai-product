@@ -1,4 +1,7 @@
-// Meridian AI — Next Action engine.
+// INTERNAL ENGINE INPUT — do not consume from the UI.
+// User-facing surfaces must read lib/scoring/decision.ts (LeadDecision).
+//
+// Meridian — Next Action engine.
 //
 // Single deterministic function: CompanyDecision → NextAction. The UI reads
 // `decision.nextAction` directly; no branching in view code. Uses only
