@@ -24,6 +24,13 @@ import {
 } from "../lib/calendar/executeNow";
 import { compareLeadTasks } from "../lib/calendar/leadScore";
 import { getLaborTechServiceFit, buildServiceFitBreakdown } from "../lib/scan/serviceFit";
+import {
+  EXECUTION_OUTCOME_STATUSES,
+  getDefaultExecutionOutcome,
+  loadExecutionOutcome,
+  saveExecutionOutcome,
+  updateExecutionOutcome,
+} from "../lib/execution/executionOutcome";
 import { explainTaskAction, explainTaskPriority } from "../lib/calendar/taskExplain";
 import LeadContextStrip from "./LeadContextStrip";
 import LeadEmailAction from "./LeadEmailAction";
@@ -2720,6 +2727,283 @@ function ServiceFitOperatorSection({ task, onOpenDeepReport }) {
   );
 }
 
+// ── Field-test diagnostics panel (dev-only) ─────────────────────────
+//
+// Renders only in development; compares expected 20/day vs actual
+// counts for the 6 field-test days. Pure read-only over tasksByDay.
+// Removes itself in production builds via NODE_ENV check.
+function FieldTestDiagnosticsPanel({ tasksByDay, dataTotal }) {
+  if (typeof process !== "undefined" && process.env && process.env.NODE_ENV === "production") {
+    return null;
+  }
+  const EXPECTED = [
+    { day: "2026-05-07", label: "Thu May 7" },
+    { day: "2026-05-08", label: "Fri May 8" },
+    { day: "2026-05-11", label: "Mon May 11" },
+    { day: "2026-05-12", label: "Tue May 12" },
+    { day: "2026-05-13", label: "Wed May 13" },
+    { day: "2026-05-14", label: "Thu May 14" },
+  ];
+  const callsFor = (k) => {
+    const list = tasksByDay?.[k] ?? [];
+    return list.filter((t) => {
+      const id = t?.id ?? ""; const title = t?.title ?? "";
+      return id.endsWith("-call") || title.startsWith("Call ");
+    }).length;
+  };
+  const totalCalls = EXPECTED.reduce((sum, e) => sum + callsFor(e.day), 0);
+  return (
+    <section
+      data-debug="field-test-diagnostics"
+      style={{
+        background: "#FFFBEB",
+        border: "1px solid #FDE68A",
+        borderRadius: "10px",
+        padding: "10px 14px",
+        marginBottom: "12px",
+        fontSize: "11px",
+        color: "#92400E",
+        fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+      }}
+    >
+      <div style={{
+        fontSize: "9px", fontWeight: 800, letterSpacing: "0.12em",
+        color: "#B45309", textTransform: "uppercase", marginBottom: "6px",
+      }}>
+        Field-test diagnostics (dev-only)
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: "8px" }}>
+        {EXPECTED.map((e) => {
+          const actual = callsFor(e.day);
+          const ok = actual === 20;
+          return (
+            <div key={e.day} style={{
+              padding: "6px 8px",
+              borderRadius: "6px",
+              background: ok ? "#DCFCE7" : actual > 0 ? "#FEF3C7" : "#FEE2E2",
+              border: `1px solid ${ok ? "#BBF7D0" : actual > 0 ? "#FDE68A" : "#FECACA"}`,
+              color: ok ? "#15803D" : actual > 0 ? "#92400E" : "#991B1B",
+            }}>
+              <div style={{ fontSize: "9px", fontWeight: 700, opacity: 0.75 }}>{e.label}</div>
+              <div style={{ fontSize: "13px", fontWeight: 800, letterSpacing: "0.02em" }}>
+                {actual} <span style={{ opacity: 0.5, fontWeight: 600 }}>/ 20</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ fontSize: "10px", marginTop: "6px", opacity: 0.85 }}>
+        data total = {dataTotal} · calls in field-test window = {totalCalls} of 120 expected ·
+        {totalCalls < 120 ? ` LEAD POOL SHORTAGE: only ${totalCalls} call tasks reached the calendar.` : " full window populated."}
+      </div>
+    </section>
+  );
+}
+
+// ── Execution Outcome panel ─────────────────────────────────────────
+//
+// Lightweight operator memory rendered inside SelectedLeadPanel. NOT
+// a CRM — six controls, one localStorage map. Captures what happened
+// after the lead was worked so the field-test data + commission
+// attribution conversation have real evidence.
+function ExecutionOutcomePanel({ taskId }) {
+  const [outcome, setOutcome] = useState(() => getDefaultExecutionOutcome());
+
+  // Load on mount + whenever the operator switches leads.
+  useEffect(() => {
+    if (!taskId) {
+      setOutcome(getDefaultExecutionOutcome());
+      return;
+    }
+    const loaded = loadExecutionOutcome(taskId);
+    setOutcome(loaded ?? getDefaultExecutionOutcome());
+  }, [taskId]);
+
+  if (!taskId) return null;
+
+  const apply = (patch) => {
+    const next = updateExecutionOutcome(outcome, patch);
+    setOutcome(next);
+    saveExecutionOutcome(taskId, next);
+  };
+
+  const QUICK_BUTTONS = [
+    { label: "Called",        status: "Called",        tone: { fg: palette.blue,    bg: palette.bluePale,    border: palette.blueBorder } },
+    { label: "Interested",    status: "Interested",    tone: { fg: palette.success, bg: palette.successBg,   border: "#BBF7D0" } },
+    { label: "Follow Up",     status: "Follow Up",     tone: { fg: palette.blue,    bg: palette.bluePale,    border: palette.blueBorder } },
+    { label: "Proposal Sent", status: "Proposal Sent", tone: { fg: palette.blue,    bg: palette.bluePale,    border: palette.blueBorder } },
+    { label: "Won",           status: "Closed Won",    tone: { fg: "#15803D",       bg: "#F0FDF4",           border: "#BBF7D0" } },
+    { label: "Lost",          status: "Closed Lost",   tone: { fg: palette.danger,  bg: palette.dangerBg,    border: "#FECACA" } },
+  ];
+
+  const lastActionRel = (() => {
+    if (!outcome.lastActionAt) return null;
+    const d = new Date(outcome.lastActionAt);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  })();
+
+  return (
+    <section style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+      <div style={{
+        display: "flex",
+        alignItems: "baseline",
+        justifyContent: "space-between",
+        gap: "8px",
+      }}>
+        <div style={SECTION_EYEBROW}>Execution outcome</div>
+        <div style={{
+          fontSize: "10px",
+          fontWeight: 700,
+          letterSpacing: "0.06em",
+          color: palette.blue,
+          textTransform: "uppercase",
+        }}>
+          Tracked through Meridian
+        </div>
+      </div>
+
+      {/* Status pill row */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
+        {EXECUTION_OUTCOME_STATUSES.map((s) => {
+          const isActive = outcome.status === s;
+          return (
+            <button
+              key={s}
+              type="button"
+              onClick={() => apply({ status: s })}
+              style={{
+                fontSize: "10px",
+                fontWeight: 700,
+                letterSpacing: "0.04em",
+                color: isActive ? "#fff" : palette.textSecondary,
+                background: isActive ? palette.blue : palette.surfaceHover,
+                border: `1px solid ${isActive ? palette.blue : palette.borderLight}`,
+                borderRadius: "999px",
+                padding: "3px 9px",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                transition: "background 200ms cubic-bezier(0.22, 1, 0.36, 1)",
+              }}
+            >
+              {s}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Quick buttons row */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
+        {QUICK_BUTTONS.map((b) => (
+          <button
+            key={b.label}
+            type="button"
+            onClick={() => apply({ status: b.status })}
+            style={{
+              fontSize: "11px",
+              fontWeight: 800,
+              letterSpacing: "0.02em",
+              color: b.tone.fg,
+              background: b.tone.bg,
+              border: `1px solid ${b.tone.border}`,
+              borderRadius: "8px",
+              padding: "5px 10px",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {b.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Notes */}
+      <textarea
+        rows={2}
+        value={outcome.notes}
+        onChange={(e) => setOutcome((prev) => ({ ...prev, notes: e.target.value }))}
+        onBlur={() => apply({ notes: outcome.notes })}
+        placeholder="Notes from this call…"
+        style={{
+          fontSize: "12px",
+          fontFamily: "inherit",
+          color: palette.textPrimary,
+          background: palette.surface,
+          border: `1px solid ${palette.borderLight}`,
+          borderRadius: "8px",
+          padding: "8px 10px",
+          outline: "none",
+          resize: "vertical",
+          lineHeight: 1.45,
+        }}
+      />
+
+      {/* Estimated value + Next follow-up */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+        <label style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+          <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.06em", color: palette.textTertiary, textTransform: "uppercase" }}>
+            Estimated value
+          </span>
+          <input
+            type="number"
+            min={0}
+            step={100}
+            value={outcome.estimatedValue ?? ""}
+            onChange={(e) => {
+              const v = e.target.value === "" ? null : Number(e.target.value);
+              setOutcome((prev) => ({ ...prev, estimatedValue: Number.isFinite(v) ? v : null }));
+            }}
+            onBlur={() => apply({ estimatedValue: outcome.estimatedValue })}
+            placeholder="$"
+            style={{
+              fontSize: "12px",
+              fontFamily: "inherit",
+              color: palette.textPrimary,
+              background: palette.surface,
+              border: `1px solid ${palette.borderLight}`,
+              borderRadius: "8px",
+              padding: "6px 9px",
+              outline: "none",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          />
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+          <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.06em", color: palette.textTertiary, textTransform: "uppercase" }}>
+            Next follow-up
+          </span>
+          <input
+            type="date"
+            value={outcome.nextFollowupDate ?? ""}
+            onChange={(e) => apply({ nextFollowupDate: e.target.value || null })}
+            style={{
+              fontSize: "12px",
+              fontFamily: "inherit",
+              color: palette.textPrimary,
+              background: palette.surface,
+              border: `1px solid ${palette.borderLight}`,
+              borderRadius: "8px",
+              padding: "6px 9px",
+              outline: "none",
+            }}
+          />
+        </label>
+      </div>
+
+      {/* Saved timestamp */}
+      {lastActionRel ? (
+        <div style={{
+          fontSize: "10px",
+          color: palette.textTertiary,
+          letterSpacing: "0.02em",
+        }}>
+          Saved {lastActionRel} · {outcome.attributionSource}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 // SelectedLeadPanel — replaces Today Focus when an operator clicks a
 // task on the calendar. Reads only fields already on TaskItem; never
 // fabricates phone numbers, scripts, or revenue. Action buttons mutate
@@ -2747,10 +3031,8 @@ export function SelectedLeadPanel({
   // Report panel; this prop must always be supplied by the parent.
   onOpenDeepReport,
 }) {
-  const [callPopoverOpen, setCallPopoverOpen] = useState(false);
-  // Reset the popover when the selected task changes — never carry it
-  // across leads.
-  useEffect(() => { setCallPopoverOpen(false); }, [task?.id]);
+  // Popover state removed — Call Now now fires tel: directly. No
+  // intermediate confirmation step on a desktop operator workflow.
   const status = executionStatusFor(task);
   const action = explainTaskAction(task);
   const overdue = isOverdue(task, now);
@@ -2863,18 +3145,10 @@ export function SelectedLeadPanel({
 
   return (
     <>
-    {callMode === "active" ? (
-      <div
-        aria-hidden="true"
-        style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(15,23,42,0.32)",
-          zIndex: 30,
-          pointerEvents: "none",
-        }}
-      />
-    ) : null}
+    {/* Modal scrim removed — Call Mode is an execution state, not a
+        modal interruption. The action zone itself now gains a calm
+        blue highlight via the panel boxShadow ladder below when
+        callMode === "active". */}
     <aside style={{
       width: "360px",
       flexShrink: 0,
@@ -3233,164 +3507,69 @@ export function SelectedLeadPanel({
             already open. A redundant button here just slowed the
             flow. Call Now / Mark Contacted / Move to Follow Up /
             Kill Lead are unchanged. */}
-        {/* Call Now — same blue style family. Click toggles the phone
-            popover (the only place the number is shown) AND enters
-            Call Mode so the outcome capture appears below. */}
-        <button
-          type="button"
-          onClick={() => {
-            if (!telHref) return;
-            setCallPopoverOpen((v) => !v);
+        {/* Call Now — direct execution. Click fires tel: immediately
+            (no popover gate), enters Call Mode, marks the lead
+            in_progress, and stamps the Execution Outcome status to
+            "Called" so the persistent outcome map matches reality.
+            The phone number renders inline below for visibility on
+            desktop softphone setups. Single click, single intent. */}
+        <a
+          href={telHref ?? undefined}
+          onClick={(e) => {
+            if (!telHref) { e.preventDefault(); return; }
             if (callMode !== "active" && typeof onEnterCallMode === "function") {
               onEnterCallMode(task);
             }
+            if (typeof onMutate === "function") onMutate(task.id, { status: "in_progress" });
+            if (typeof onOpen === "function") onOpen(task);
+            // Stamp the persisted Execution Outcome so the queue chip
+            // reflects the call without needing a second click.
+            if (task?.id) {
+              try {
+                const next = updateExecutionOutcome(loadExecutionOutcome(task.id), { status: "Called" });
+                saveExecutionOutcome(task.id, next);
+              } catch { /* fail silent */ }
+            }
           }}
-          disabled={!telHref}
-          aria-label={telHref ? `Call ${company}` : "Call unavailable"}
-          aria-haspopup="dialog"
-          aria-expanded={callPopoverOpen}
-          onMouseEnter={(e) => {
-            if (!telHref) return;
-            e.currentTarget.style.transform = "translateY(-1px)";
-            e.currentTarget.style.boxShadow = "0 6px 18px -8px rgba(37,99,235,0.55), 0 1px 2px rgba(37,99,235,0.20)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "";
-            e.currentTarget.style.boxShadow = telHref
-              ? "0 4px 12px rgba(59,130,246,0.25)"
-              : "none";
-          }}
+          aria-label={telHref ? `Call ${company} now` : "Call unavailable"}
+          aria-disabled={!telHref}
+          onFocus={applyFocusRing}
+          onBlur={clearFocusRing}
           style={{
             width: "100%",
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            gap: "6px",
+            gap: "8px",
             fontSize: "13px",
             fontWeight: 800,
             color: telHref ? "#FFFFFF" : palette.textTertiary,
             background: telHref ? palette.blue : palette.surfaceHover,
-            border: telHref
-              ? `1px solid ${palette.blue}`
-              : `1px solid ${palette.borderLight}`,
+            border: telHref ? `1px solid ${palette.blue}` : `1px solid ${palette.borderLight}`,
             borderRadius: "10px",
-            padding: "10px 12px",
+            padding: "11px 12px",
             cursor: telHref ? "pointer" : "not-allowed",
-            transition: EASE,
+            transition: "background 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms ease",
             letterSpacing: "0.02em",
-            boxShadow: telHref ? "0 4px 12px rgba(59,130,246,0.25)" : "none",
+            boxShadow: telHref ? "0 1px 2px rgba(37,99,235,0.20), 0 8px 22px -8px rgba(37,99,235,0.45)" : "none",
+            textDecoration: "none",
+            pointerEvents: telHref ? "auto" : "none",
           }}
-          onFocus={applyFocusRing}
-          onBlur={clearFocusRing}
         >
-          {telHref ? "Call Now" : "Call unavailable"}
-        </button>
-        {callPopoverOpen && telHref ? (
-          <div
-            role="dialog"
-            aria-modal="false"
-            aria-label="Call this lead"
-            onKeyDown={(e) => { if (e.key === "Escape") setCallPopoverOpen(false); }}
-            style={{
-              position: "absolute",
-              top: "100%",
-              right: 0,
-              left: 0,
-              marginTop: "8px",
-              padding: "12px 14px",
-              background: palette.surface,
-              border: `1px solid ${palette.borderLight}`,
-              borderRadius: "12px",
-              boxShadow:
-                "0 1px 2px rgba(15,23,42,0.04), 0 14px 40px -10px rgba(15,23,42,0.18)",
-              zIndex: 60,
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
-            }}
-          >
-            <div style={{
-              fontSize: "10px", fontWeight: 800, letterSpacing: "0.12em",
-              color: palette.textTertiary, textTransform: "uppercase",
-            }}>
-              Call this lead
-            </div>
-            <div style={{ fontSize: "13px", fontWeight: 700, color: palette.textPrimary, lineHeight: 1.3 }}>
-              {company}
-            </div>
-            <div style={{
-              fontSize: "16px", fontWeight: 700, color: palette.textPrimary,
+          <span>{telHref ? "Call Now" : "Call unavailable"}</span>
+          {telHref && phoneDisplay ? (
+            <span style={{
+              fontSize: "12px",
+              fontWeight: 700,
+              opacity: 0.9,
+              fontVariantNumeric: "tabular-nums",
+              letterSpacing: "0.04em",
               fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-              fontVariantNumeric: "tabular-nums", letterSpacing: "0.02em",
             }}>
-              {phoneDisplay}
-            </div>
-            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-              <button
-                type="button"
-                onClick={() => {
-                  if (typeof navigator !== "undefined" && navigator.clipboard && phoneDisplay) {
-                    navigator.clipboard.writeText(phoneDisplay).catch(() => {});
-                  }
-                }}
-                style={{
-                  fontSize: "12px", fontWeight: 700,
-                  color: palette.textPrimary,
-                  background: palette.surfaceHover,
-                  border: `1px solid ${palette.borderLight}`,
-                  borderRadius: "10px",
-                  padding: "8px 12px",
-                  cursor: "pointer",
-                  letterSpacing: "0.02em",
-                }}
-              >
-                Copy Number
-              </button>
-              <a
-                href={telHref}
-                onClick={(e) => {
-                  if (typeof onMutate === "function") onMutate(task.id, { status: "in_progress" });
-                  // Close after the dialer hand-off (the anchor still
-                  // fires the tel: protocol).
-                  setCallPopoverOpen(false);
-                  if (typeof onOpen === "function") onOpen(task);
-                  // eslint-disable-next-line no-unused-expressions
-                  e;
-                }}
-                style={{
-                  fontSize: "12px", fontWeight: 800,
-                  color: "#fff",
-                  background: palette.blue,
-                  border: `1px solid ${palette.blue}`,
-                  borderRadius: "10px",
-                  padding: "8px 12px",
-                  textDecoration: "none",
-                  letterSpacing: "0.02em",
-                  boxShadow: "0 4px 12px rgba(59,130,246,0.25)",
-                }}
-              >
-                Open Dialer
-              </a>
-              <button
-                type="button"
-                onClick={() => setCallPopoverOpen(false)}
-                style={{
-                  marginLeft: "auto",
-                  fontSize: "12px", fontWeight: 600,
-                  color: palette.textSecondary,
-                  background: "transparent",
-                  border: `1px solid ${palette.borderLight}`,
-                  borderRadius: "10px",
-                  padding: "8px 12px",
-                  cursor: "pointer",
-                  letterSpacing: "0.02em",
-                }}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        ) : null}
+              · {phoneDisplay}
+            </span>
+          ) : null}
+        </a>
         {/* Call Mode outcome capture. Only renders while a call is
             in progress. Outcome buttons mutate the task + auto-load
             the next lead via onRecordOutcome. */}
@@ -3548,6 +3727,11 @@ export function SelectedLeadPanel({
           </button>
         </div>
       </div>
+
+      <Divider />
+
+      <ExecutionOutcomePanel taskId={task.id} />
+
     </aside>
     </>
   );
@@ -4612,6 +4796,26 @@ export default function CalendarCommandCenter({
     handleTaskMutation(current.id, patch);
     setCallsCompletedToday((c) => c + 1);
 
+    // Bridge the Call Mode outcome into the persistent Execution
+    // Outcome layer. One state path: every call mode outcome is also
+    // a status the Today queue + commission-attribution log read.
+    try {
+      const statusMap = {
+        connected_interested:     "Interested",
+        connected_not_interested: "Closed Lost",
+        no_answer:                "Called",
+        wrong_number:             "Closed Lost",
+        callback_needed:          "Follow Up",
+      };
+      const targetStatus = statusMap[outcomeId] ?? "Called";
+      const outcomeNotes = note;
+      const merged = updateExecutionOutcome(loadExecutionOutcome(current.id), {
+        status: targetStatus,
+        notes: outcomeNotes || undefined,
+      });
+      saveExecutionOutcome(current.id, merged);
+    } catch { /* fail silent */ }
+
     // Pick next — first item in callQueue that isn't the one we just
     // recorded and whose effective status is still open. callQueue
     // hasn't re-derived yet in this tick, so filter inline.
@@ -4649,14 +4853,37 @@ export default function CalendarCommandCenter({
 
   const tasksByDay = useMemo(() => {
     const map = {};
+    let droppedNoAnchor = 0;
     for (const t of data) {
       const a = taskAnchorIso(t);
-      if (!a) continue;
+      if (!a) { droppedNoAnchor++; continue; }
       const k = dayKey(new Date(a));
       (map[k] ??= []).push(t);
     }
     for (const k of Object.keys(map)) {
       map[k] = rankTasks(map[k], now);
+    }
+    // ── Stage 5 diagnostic: tasksByDay grouping ─────────────────
+    if (typeof console !== "undefined") {
+      try {
+        const callOnly = {};
+        for (const [k, list] of Object.entries(map)) {
+          const calls = list.filter((t) => {
+            const id = t?.id ?? ""; const title = t?.title ?? "";
+            return id.endsWith("-call") || title.startsWith("Call ");
+          });
+          callOnly[k] = calls.length;
+        }
+        const expected = ["2026-05-07","2026-05-08","2026-05-11","2026-05-12","2026-05-13","2026-05-14"];
+        const expectedVsActual = expected.map((d) => `${d}:exp20/act${callOnly[d] ?? 0}`).join(" ");
+        // eslint-disable-next-line no-console
+        console.log(
+          `[stage5-tasksByDay] dataTotal=${data.length} droppedNoAnchor=${droppedNoAnchor} ` +
+          `dayKeys=${Object.keys(map).length} ` +
+          `callsByDay=${JSON.stringify(callOnly)} ` +
+          `field-test=${expectedVsActual}`,
+        );
+      } catch { /* ignore */ }
     }
     return map;
   }, [data, now]);
@@ -5139,6 +5366,7 @@ export default function CalendarCommandCenter({
                   onOpenAssist={handleOpenAssist}
                   leadByKey={null}
                 />
+                <FieldTestDiagnosticsPanel tasksByDay={tasksByDay} dataTotal={data.length} />
               </>
             );
           })() : null}

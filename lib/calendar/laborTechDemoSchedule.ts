@@ -20,6 +20,13 @@
 
 import type { TaskItem, TaskPriority } from "./tasks";
 import { serviceFitConfidenceScore } from "../scan/serviceFit";
+// Recurring-ingestion architecture: the demo schedule is now also
+// expressible as an IngestionBatch. Existing scheduler logic is
+// untouched; the import is exported below so a future cron-driven
+// ingestion run can call buildBatchSlotIso(nextWeekBatch, idx)
+// instead of buildDemoSlotIso(idx) without changing the operator
+// surface.
+export { LABORTECH_DEMO_BATCH, buildBatchSlotIso, projectIngestionWindow, buildNextWeekBatch, namespacedTaskId, stripBatchNamespace } from "./ingestionBatch";
 
 export const LABORTECH_DEMO_ROLLOUT_ENABLED = true;
 
@@ -267,6 +274,85 @@ export function applyLaborTechDemoSchedule(tasks: TaskItem[]): TaskItem[] {
     ...t,
     dueDate: buildDemoSlotIso(idx),
   }));
+
+  // ── Stage 1 diagnostic: applyLaborTechDemoSchedule ─────────────
+  // Counts call tasks IN, by-day distribution OUT, sample slot ISOs.
+  // Helps trace whether the disappearing-leads bug is upstream
+  // (lead pool too small) or downstream (filter / grouping).
+  if (typeof console !== "undefined") {
+    try {
+      const byDay = new Map<string, number>();
+      const sampleTaskIds: Array<{ id: string; dueDate: string }> = [];
+      for (const t of rescheduled) {
+        if (!t.dueDate) continue;
+        const d = new Date(t.dueDate);
+        if (Number.isNaN(d.getTime())) continue;
+        const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        byDay.set(k, (byDay.get(k) ?? 0) + 1);
+        if (sampleTaskIds.length < 5) sampleTaskIds.push({ id: t.id ?? "", dueDate: t.dueDate });
+      }
+      // eslint-disable-next-line no-console
+      console.log(
+        `[stage1-scheduler] callsIn=${calls.length} ` +
+        `strong=${strong.length} weak=${weak.length} ` +
+        `boosted=${boosted.length} rescheduled=${rescheduled.length} ` +
+        `byDay=${JSON.stringify(Object.fromEntries(Array.from(byDay.entries()).sort()))} ` +
+        `sample=${JSON.stringify(sampleTaskIds)} ` +
+        `slot0=${rescheduled[0]?.dueDate ?? "—"} ` +
+        `slot19=${rescheduled[19]?.dueDate ?? "—"} ` +
+        `slot20=${rescheduled[20]?.dueDate ?? "—"} ` +
+        `slot40=${rescheduled[40]?.dueDate ?? "—"} ` +
+        `slot60=${rescheduled[60]?.dueDate ?? "—"} ` +
+        `slot80=${rescheduled[80]?.dueDate ?? "—"} ` +
+        `slot100=${rescheduled[100]?.dueDate ?? "—"} ` +
+        `slot119=${rescheduled[119]?.dueDate ?? "—"}`,
+      );
+    } catch { /* ignore */ }
+  }
+
+  // ── Field-test debug log ────────────────────────────────────────
+  // One concise summary per build: leads/day, weekend skip count
+  // (always 0 — buildDemoSlotIso is the only date assignor), first
+  // and last lead per day, overflow count beyond Day 5 (Thursday
+  // May 14, 2026). Pure read-only — no mutation.
+  if (typeof console !== "undefined") {
+    try {
+      const FIELD_TEST_DAYS = 6; // May 7, 8, 11, 12, 13, 14 (Thu→Thu)
+      const TOTAL_FIELD_SLOTS = MAX_TOTAL_CALLS_PER_DAY * FIELD_TEST_DAYS;
+      const inWindow = rescheduled.slice(0, TOTAL_FIELD_SLOTS);
+      const overflow = rescheduled.length - inWindow.length;
+      const byDay = new Map<string, TaskItem[]>();
+      for (const t of inWindow) {
+        if (!t.dueDate) continue;
+        const d = new Date(t.dueDate);
+        if (Number.isNaN(d.getTime())) continue;
+        const dayKey = d.toISOString().slice(0, 10);
+        const arr = byDay.get(dayKey) ?? [];
+        arr.push(t);
+        byDay.set(dayKey, arr);
+      }
+      let weekendCount = 0;
+      const summary: Array<{ day: string; count: number; first: string; last: string }> = [];
+      for (const [dayKey, list] of Array.from(byDay.entries()).sort()) {
+        const d = new Date(dayKey + "T12:00:00");
+        const dow = d.getDay();
+        if (dow === 0 || dow === 6) weekendCount += list.length;
+        const first = list[0]?.linkedCompany ?? list[0]?.title ?? "(unknown)";
+        const last  = list[list.length - 1]?.linkedCompany ?? list[list.length - 1]?.title ?? "(unknown)";
+        summary.push({ day: dayKey, count: list.length, first, last });
+      }
+      // eslint-disable-next-line no-console
+      console.log(
+        `[field-test-schedule] window=Thu-May-7 → Thu-May-14 ` +
+        `slots/day=${MAX_TOTAL_CALLS_PER_DAY} ` +
+        `total-calls=${rescheduled.length} ` +
+        `in-window=${inWindow.length} ` +
+        `overflow-beyond-window=${overflow} ` +
+        `weekend-leads=${weekendCount} ` +
+        `days=${JSON.stringify(summary)}`,
+      );
+    } catch { /* logging failure is non-fatal */ }
+  }
 
   // Day-1 floor (Thursday May 7 @ 09:00 local) — applied to non-call
   // tasks whose dueDate would otherwise land before the rollout start.

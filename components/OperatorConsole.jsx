@@ -9028,7 +9028,38 @@ export default function OperatorConsole({
       learningAdjustments,
       patternAdjustments,
       tradeId: tradeIdForTasks,
+      // Field-test pipeline: master plan needs at least 120 callable
+      // tasks (20/day × 6 days) plus overflow into subsequent weeks
+      // for recurring ingestion. The legacy default cap of 60 was the
+      // exact reason Tue May 12 → Fri May 15 rendered empty. Lifting
+      // here in the consumer rather than changing the default keeps
+      // back-compat for any other callers.
+      maxLeads: 600,
     });
+    // ── Stage 2 diagnostic: post-buildTasksFromLeads ────────────
+    if (typeof console !== "undefined") {
+      try {
+        const callTasks = baseTasks.filter((t) => {
+          const id = t?.id ?? "";
+          const title = t?.title ?? "";
+          return id.endsWith("-call") || title.startsWith("Call ");
+        });
+        const byDay = new Map();
+        for (const t of callTasks) {
+          if (!t?.dueDate) continue;
+          const d = new Date(t.dueDate);
+          if (Number.isNaN(d.getTime())) continue;
+          const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+          byDay.set(k, (byDay.get(k) ?? 0) + 1);
+        }
+        // eslint-disable-next-line no-console
+        console.log(
+          `[stage2-buildTasksFromLeads] masterPool=${masterPool.length} ` +
+          `baseTasks=${baseTasks.length} callTasks=${callTasks.length} ` +
+          `byDay=${JSON.stringify(Object.fromEntries(Array.from(byDay.entries()).sort()))}`,
+        );
+      } catch { /* ignore */ }
+    }
     // eslint-disable-next-line no-console
     console.log(
       `[debug-tasks] OperatorConsole baseTasks=${baseTasks.length} ` +
@@ -9265,6 +9296,31 @@ export default function OperatorConsole({
   // calendar grid can color-code cards.
   const calendarTasks = useMemo(() => {
     let pool = rawCalendarTasks ?? [];
+    // ── Stage 3 diagnostic: rawCalendarTasks BEFORE trade filter ──
+    if (typeof console !== "undefined") {
+      try {
+        const callTasks = (pool ?? []).filter((t) => {
+          const id = t?.id ?? ""; const title = t?.title ?? "";
+          return id.endsWith("-call") || title.startsWith("Call ");
+        });
+        const byDay = new Map();
+        for (const t of callTasks) {
+          if (!t?.dueDate) continue;
+          const d = new Date(t.dueDate);
+          if (Number.isNaN(d.getTime())) continue;
+          const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+          byDay.set(k, (byDay.get(k) ?? 0) + 1);
+        }
+        // eslint-disable-next-line no-console
+        console.log(
+          `[stage3-rawCalendarTasks] total=${pool.length} callTasks=${callTasks.length} ` +
+          `selectedTradeId=${selectedTradeId} ` +
+          `selectedRepId=${selectedRepId ?? "—"} ` +
+          `selectedLaborTechServiceId=${selectedLaborTechServiceId ?? "—"} ` +
+          `byDay=${JSON.stringify(Object.fromEntries(Array.from(byDay.entries()).sort()))}`,
+        );
+      } catch { /* ignore */ }
+    }
     // MASTER → trade filter. The calendar bundle now schedules across
     // every trade (master plan, ≤ MAX_TOTAL_CALLS_PER_DAY per business
     // day). Per-trade tabs are filtered views: switching trades does
@@ -9376,7 +9432,33 @@ export default function OperatorConsole({
         console.log(`[calendar-trade-color] trade=${tid} count=${count}`);
       });
     }
-    return filterCalendarTasks(pool, calendarVisibility);
+    const finalPool = filterCalendarTasks(pool, calendarVisibility);
+    // ── Stage 4 diagnostic: calendarTasks AFTER all filters ─────
+    if (typeof console !== "undefined") {
+      try {
+        const callTasks = finalPool.filter((t) => {
+          const id = t?.id ?? ""; const title = t?.title ?? "";
+          return id.endsWith("-call") || title.startsWith("Call ");
+        });
+        const byDay = new Map();
+        for (const t of callTasks) {
+          if (!t?.dueDate) continue;
+          const d = new Date(t.dueDate);
+          if (Number.isNaN(d.getTime())) continue;
+          const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+          byDay.set(k, (byDay.get(k) ?? 0) + 1);
+        }
+        const expected = ["2026-05-07","2026-05-08","2026-05-11","2026-05-12","2026-05-13","2026-05-14"];
+        const expectedVsActual = expected.map((d) => `${d}:exp20/act${byDay.get(d) ?? 0}`).join(" ");
+        // eslint-disable-next-line no-console
+        console.log(
+          `[stage4-calendarTasks] total=${finalPool.length} callTasks=${callTasks.length} ` +
+          `byDay=${JSON.stringify(Object.fromEntries(Array.from(byDay.entries()).sort()))} ` +
+          `field-test=${expectedVsActual}`,
+        );
+      } catch { /* ignore */ }
+    }
+    return finalPool;
   }, [rawCalendarTasks, calendarVisibility, selectedLaborTechServiceId, selectedTradeId, serviceBucketsByTrade, primaryServiceByLeadKey, selectedRepId]);
 
   // Workflow-task lookup for the All Leads inline panels — finds the

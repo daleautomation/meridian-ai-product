@@ -8,9 +8,10 @@
 // hands the user off into the calendar + Intelligence Panel surface.
 // Display only — never touches scoring, scheduling, or AI.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { palette } from "../lib/theme";
 import { getLaborTechServiceFit } from "../lib/scan/serviceFit";
+import { loadAllExecutionOutcomes } from "../lib/execution/executionOutcome";
 
 // Today is the PRIORITY layer — rank, confidence, urgency only.
 // Pain framing lives in the Operator. Tactical "how" lives in the
@@ -44,6 +45,19 @@ export default function TodayExecutionPlan({
   // Brief "just routed" state on the queue row itself — mirrors the
   // calendar card's pulse so the eye reads the launch as one motion.
   const [routingTaskId, setRoutingTaskId] = useState(null);
+  // Read execution outcomes once on mount; refresh on storage events
+  // so cross-tab edits surface in the queue. Keyed by task.id.
+  const [outcomeMap, setOutcomeMap] = useState({});
+  useEffect(() => {
+    setOutcomeMap(loadAllExecutionOutcomes());
+    if (typeof window === "undefined") return undefined;
+    const onStorage = (e) => {
+      if (e.key && e.key !== "meridian.executionOutcomes.v1") return;
+      setOutcomeMap(loadAllExecutionOutcomes());
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
   // Focused vs full view. Default is the top 6 ranked leads; the
   // user expands to see the rest of the day.
   const [expanded, setExpanded] = useState(false);
@@ -180,6 +194,17 @@ export default function TodayExecutionPlan({
           const company = task.linkedCompany ?? "Unknown lead";
           const fit = getLaborTechServiceFit(task);
           const fitLabel = fit?.primaryServiceLabel ?? null;
+          const outcome = task.id ? outcomeMap[task.id] : null;
+          const outcomeStatus = outcome && outcome.status !== "Not Contacted" ? outcome.status : null;
+          const outcomeTone = (() => {
+            if (!outcomeStatus) return null;
+            if (outcomeStatus === "Closed Won")  return { fg: "#15803D",      bg: "#F0FDF4",        border: "#BBF7D0" };
+            if (outcomeStatus === "Closed Lost") return { fg: palette.danger, bg: palette.dangerBg, border: "#FECACA" };
+            if (outcomeStatus === "Interested" || outcomeStatus === "Qualified" || outcomeStatus === "Proposal Sent") {
+              return { fg: palette.success, bg: palette.successBg, border: "#BBF7D0" };
+            }
+            return { fg: palette.blue, bg: palette.bluePale, border: palette.blueBorder };
+          })();
 
           const isRouting = routingTaskId === task.id;
           return (
@@ -287,6 +312,25 @@ export default function TodayExecutionPlan({
                       }}
                     >
                       {fitLabel}
+                    </span>
+                  ) : null}
+                  {outcomeStatus && outcomeTone ? (
+                    <span
+                      title="Execution outcome — tracked through Meridian"
+                      style={{
+                        fontSize: "10px",
+                        fontWeight: 800,
+                        letterSpacing: "0.06em",
+                        padding: "2px 9px",
+                        borderRadius: "999px",
+                        color: outcomeTone.fg,
+                        background: outcomeTone.bg,
+                        border: `1px solid ${outcomeTone.border}`,
+                        whiteSpace: "nowrap",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {outcomeStatus}
                     </span>
                   ) : null}
                 </div>
