@@ -2733,6 +2733,13 @@ function ServiceFitOperatorSection({ task, onOpenDeepReport }) {
 // counts for the 6 field-test days. Pure read-only over tasksByDay.
 // Removes itself in production builds via NODE_ENV check.
 function FieldTestDiagnosticsPanel({ tasksByDay, dataTotal }) {
+  // Client-only render to avoid SSR hydration mismatch. The panel
+  // depends on runtime calendar task data + dev-only flags; rendering
+  // it on the server would inevitably diverge from the client paint.
+  // After mount we honor the production guard, then render normally.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  if (!mounted) return null;
   if (typeof process !== "undefined" && process.env && process.env.NODE_ENV === "production") {
     return null;
   }
