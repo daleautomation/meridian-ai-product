@@ -17,6 +17,7 @@ import {
   loadWorkspaceLeads,
   SOURCE_BACKED_MODULES,
 } from "../../lib/ingestion/loadWorkspaceLeads";
+import { cachedLoadWorkspaceLeads } from "../../lib/ingestion/cache/cachedWorkspaceLeads";
 import type { NormalizedLead } from "../../lib/leads/normalizedLead";
 import { buildGlobalLeadSchedule, buildRollingTeamSchedule } from "../../lib/scheduling/leadSchedule";
 import { DEFAULT_TEAM_SCHEDULE_CONFIG } from "../../lib/scheduling/teamScheduleConfig";
@@ -131,21 +132,22 @@ async function renderOperatorPage({
     `modules="${moduleLoadList.join(",")}" ` +
     `googleKeyPresent=${!!(process.env.GOOGLE_PLACES_API_KEY || process.env.GOOGLE_API_KEY)}`,
   );
+  // Cache-first ingestion. Uses cachedLoadWorkspaceLeads which
+  // checks the persistent ingestion cache before hitting Google
+  // Places. Cache key: workspaceSlug + moduleId + today's batchId
+  // (YYYY-MM-DD). TTL defaults to 24h; stale entries trigger a
+  // refresh; failed refresh returns stale-if-available. See
+  // lib/ingestion/cache/ for the storage strategy + production
+  // durability notes.
   const decidedByModule = await Promise.all(
-    moduleLoadList.map(async (mid) => ({
-      mid,
-      // Field-test ingestion ceiling. Google Places single-query
-      // returns ~20 results; their pagination supports up to 60 via
-      // three page tokens. 60 × 6 trade modules = 360 raw leads,
-      // comfortably above the 120-call Thu→Thu field-test target.
-      // Above 60 requires multi-query paginated ingestion — out of
-      // scope for tonight.
-      leads: await loadWorkspaceLeads({
+    moduleLoadList.map(async (mid) => {
+      const result = await cachedLoadWorkspaceLeads({
         workspaceSlug: workspace.slug,
         moduleId: mid,
         limit: 60,
-      }),
-    })),
+      });
+      return { mid, leads: result.leads, cacheStatus: result.status, storeId: result.diagnostics.storeId };
+    }),
   );
   const decided = (decidedByModule ?? []).flatMap((g) => g?.leads ?? []);
   // eslint-disable-next-line no-console
@@ -155,15 +157,15 @@ async function renderOperatorPage({
   );
   // ── Field-test ingestion summary ────────────────────────────────
   // Lightweight, non-spammy server log surfacing the upstream lead
-  // ceiling for the live field test. Mirrors the client-side
-  // [stage1-scheduler] / [stage4-calendarTasks] logs so the full
-  // pipeline is observable end-to-end.
+  // ceiling for the live field test + per-module cache status.
+  // Mirrors the client-side [stage1-scheduler] / [stage4-calendarTasks]
+  // logs so the full pipeline is observable end-to-end.
   // eslint-disable-next-line no-console
   console.log(
     `[field-test-ingestion] perModuleCap=60 modules=${moduleLoadList.length} ` +
     `aggregate=${decided.length} expected≥120 ` +
     `googleKeyPresent=${!!(process.env.GOOGLE_PLACES_API_KEY || process.env.GOOGLE_API_KEY)} ` +
-    `byModule={${decidedByModule.map((g) => `${g.mid}:${g.leads.length}`).join(",")}}`,
+    `byModule={${decidedByModule.map((g) => `${g.mid}:${g.leads.length}(${g.cacheStatus})`).join(",")}}`,
   );
 
   // Global schedule: every trade's leads merge into ONE pool so the
