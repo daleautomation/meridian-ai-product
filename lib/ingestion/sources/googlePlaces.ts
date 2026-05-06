@@ -279,7 +279,12 @@ export async function ingestFromGooglePlaces(
   opts: IngestOptions,
 ): Promise<NormalizedLead[]> {
   try {
-  const limit = Math.max(1, Math.min(50, opts.limit ?? 5));
+  // Field-test ingestion ceiling — matches the per-module cap set in
+  // app/operator/page.tsx. Each unit is one Google Places textSearch
+  // request (one seed entry → one query); the seed-file length per
+  // module is the practical upper bound. 60 × 6 modules = 360 raw
+  // leads max — comfortably above the 120-call Thu→Thu target.
+  const limit = Math.max(1, Math.min(60, opts.limit ?? 5));
   const key = getKey();
   // eslint-disable-next-line no-console
   console.log(

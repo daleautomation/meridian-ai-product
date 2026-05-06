@@ -134,10 +134,16 @@ async function renderOperatorPage({
   const decidedByModule = await Promise.all(
     moduleLoadList.map(async (mid) => ({
       mid,
+      // Field-test ingestion ceiling. Google Places single-query
+      // returns ~20 results; their pagination supports up to 60 via
+      // three page tokens. 60 × 6 trade modules = 360 raw leads,
+      // comfortably above the 120-call Thu→Thu field-test target.
+      // Above 60 requires multi-query paginated ingestion — out of
+      // scope for tonight.
       leads: await loadWorkspaceLeads({
         workspaceSlug: workspace.slug,
         moduleId: mid,
-        limit: 25,
+        limit: 60,
       }),
     })),
   );
@@ -146,6 +152,18 @@ async function renderOperatorPage({
   console.log(
     `[debug-admitted] aggregate count=${decided.length} ` +
     `byModule=${decidedByModule.map((g) => `${g.mid}:${g.leads.length}`).join(",")}`,
+  );
+  // ── Field-test ingestion summary ────────────────────────────────
+  // Lightweight, non-spammy server log surfacing the upstream lead
+  // ceiling for the live field test. Mirrors the client-side
+  // [stage1-scheduler] / [stage4-calendarTasks] logs so the full
+  // pipeline is observable end-to-end.
+  // eslint-disable-next-line no-console
+  console.log(
+    `[field-test-ingestion] perModuleCap=60 modules=${moduleLoadList.length} ` +
+    `aggregate=${decided.length} expected≥120 ` +
+    `googleKeyPresent=${!!(process.env.GOOGLE_PLACES_API_KEY || process.env.GOOGLE_API_KEY)} ` +
+    `byModule={${decidedByModule.map((g) => `${g.mid}:${g.leads.length}`).join(",")}}`,
   );
 
   // Global schedule: every trade's leads merge into ONE pool so the
