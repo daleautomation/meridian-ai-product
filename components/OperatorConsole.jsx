@@ -10002,17 +10002,29 @@ export default function OperatorConsole({
               gap: "16px",
             }}>
             {(() => {
-              const tradeBundle = serviceBucketsByTrade?.[selectedTradeId];
-              if (!tradeBundle || !Array.isArray(tradeBundle.cards) || tradeBundle.cards.length === 0) {
-                return null;
-              }
-              const tradeLabel = TRADE_MODULES[selectedTradeId]?.label ?? selectedTradeId;
+              // Build the trade strip's option list from the workspace's
+              // bucket map. Trades with zero cards are still shown so
+              // the operator can see the vertical exists but is empty —
+              // never silently disappear a trade.
+              const availableTrades = Object.keys(serviceBucketsByTrade ?? {}).map((id) => ({
+                id,
+                label: TRADE_MODULES[id]?.label ?? id,
+              }));
+              if (availableTrades.length === 0) return null;
               return (
                 <AllLeadsBucketOverview
                   workspaceSlug={workspace?.slug ?? ""}
                   trade={selectedTradeId}
-                  tradeLabel={tradeLabel}
-                  bundle={tradeBundle}
+                  serviceBucketsByTrade={serviceBucketsByTrade}
+                  availableTrades={availableTrades}
+                  onTradeChange={(newTradeId) => {
+                    // Only fires for real trade picks — the "All Trades"
+                    // virtual selection is internal to the component
+                    // and never propagates here.
+                    if (typeof setSelectedTradeId === "function") {
+                      setSelectedTradeId(newTradeId);
+                    }
+                  }}
                   onSelectLead={(leadKey) => {
                     setSelectedKey(leadKey);
                     if (typeof leadKey === "string" && leadKey.length > 0) {

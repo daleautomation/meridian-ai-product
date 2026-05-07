@@ -2,28 +2,39 @@
 
 // Meridian — All Leads strategic planning surface.
 //
-// Two-state component:
+// Three-state navigable surface:
 //
-//  1. OVERVIEW (default landing for a trade tab inside All Leads):
-//     • headline counters (total, ready to call, follow-up, in progress)
-//     • service-bucket grid — one card per LaborTech service tier
-//       (primary / secondary / advanced) with lead count, top lead,
-//       top reason, "View leads" CTA
-//     • trade-level actions: View all leads, Start prioritized calling,
-//       Schedule for later
+//   ┌────────────────────────────────────────────────────────┐
+//   │  Breadcrumb:  All Leads / [Trade] / [Bucket?]          │
+//   │  Trade strip: [All Trades] [Roofing] [HVAC] [...]      │
+//   ├────────────────────────────────────────────────────────┤
+//   │  OVERVIEW       (no bucket selected)                    │
+//   │  • headline counters                                    │
+//   │  • bucket grid                                          │
+//   │  • trade-level CTAs                                     │
+//   │                                                         │
+//   │  DRILL-DOWN     (bucket selected)                       │
+//   │  • back-to-overview affordance                          │
+//   │  • filtered lead list with selection + bulk actions     │
+//   │  • per-lead SchedulingMenu                              │
+//   └────────────────────────────────────────────────────────┘
 //
-//  2. DRILL-DOWN (after clicking a bucket card):
-//     • back arrow to overview
-//     • filtered lead list for that service
-//     • per-lead checkbox + "Send selected to Today" bulk action
-//     • per-lead trigger that delegates to the existing onSelectLead
+// All Trades mode aggregates buckets across every trade — sums the
+// counts per serviceId, exposes top trade by count for "strongest
+// trade overlap," merges leadsByService into one filtered list.
 //
-// All data comes from `serviceBucketsByTrade[trade]` which is already
-// in the snapshot — this component is wiring, not generation. The
-// bulk-send-to-today action calls /api/scheduling/override per lead;
-// keep selections small (the UI shows a count and warns above 25).
+// Browser back behavior: when the user drills into a bucket we push a
+// no-op history entry (URL unchanged). The popstate listener pops the
+// drill state instead of ejecting from /operator. Trade switches do
+// not push history — the trade strip provides instant lateral movement
+// and does not need an "undo" stack.
+//
+// The component is the single source of truth for in-All-Leads
+// navigation. Trade selection still propagates back to OperatorConsole
+// via onTradeChange so other surfaces (Today queue filters, header
+// stats) stay synchronized.
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import SchedulingMenu from "./SchedulingMenu";
 
@@ -57,6 +68,12 @@ interface ServiceBucketCard {
   topLeadName: string | null;
   topReason: string | null;
   leadKeys: string[];
+  /** Populated only in All Trades aggregated mode — count per real
+   *  trade id so the card can show "47 in Roofing · 33 in HVAC". */
+  tradeBreakdown?: Record<string, number>;
+  /** Populated only in All Trades mode — the single trade id with
+   *  the most leads in this bucket. */
+  topTradeId?: string;
 }
 
 interface TradeBundle {
@@ -64,15 +81,34 @@ interface TradeBundle {
   leadsByService: Record<string, FilteredLeadEntry[]>;
 }
 
+interface TradeOption {
+  id: string;
+  label: string;
+}
+
 interface Props {
   workspaceSlug: string;
+  /** Currently selected trade id from OperatorConsole. May be the
+   *  sentinel "__all__" — represented internally via viewMode rather
+   *  than as a bundle key. */
   trade: string;
-  tradeLabel: string;
-  bundle: TradeBundle;
+  /** Full trade-bundle map. Used both for the active-trade view and
+   *  for All Trades aggregation. */
+  serviceBucketsByTrade: Record<string, TradeBundle>;
+  /** Trades that should appear in the persistent trade strip.
+   *  OperatorConsole derives this from its existing module list. */
+  availableTrades: TradeOption[];
+  /** Called when the user picks a real trade from the strip — keeps
+   *  OperatorConsole's selectedTradeId in sync. NOT called when the
+   *  user picks "All Trades" (we leave selectedTradeId alone so the
+   *  Today queue's last-picked trade survives the side trip). */
+  onTradeChange?: (tradeId: string) => void;
   onSelectLead?: (leadKey: string) => void;
   onViewAllInTrade?: () => void;
   onStartPrioritizedCalling?: () => void;
 }
+
+const ALL_TRADES_ID = "__all__";
 
 const palette = {
   bg: "#FAFBFC",
@@ -100,27 +136,161 @@ const TIER_STYLE: Record<ServiceBucketCard["tier"], { color: string; bg: string;
   advanced: { color: palette.advancedTier, bg: palette.advancedTierBg, label: "Advanced" },
 };
 
+// ─── All Trades aggregation ──────────────────────────────────────────
+// Sums per-service bucket counts across every real trade and merges
+// the per-service filtered-lead lists. Sorts cards by total count
+// descending so the strongest cross-trade campaign opportunities
+// surface first. Tracks per-trade contribution so the card can render
+// the strongest-trade-overlap subtitle requested for the All Trades
+// surface.
+function aggregateAcrossTrades(
+  map: Record<string, TradeBundle>,
+  tradeLabels: Record<string, string>,
+): TradeBundle {
+  const byService = new Map<string, ServiceBucketCard>();
+  const leadsByService: Record<string, FilteredLeadEntry[]> = {};
+  for (const [tradeId, bundle] of Object.entries(map)) {
+    if (!bundle || !Array.isArray(bundle.cards)) continue;
+    for (const card of bundle.cards) {
+      const existing = byService.get(card.serviceId);
+      if (existing) {
+        existing.count += card.count;
+        existing.leadKeys = [...existing.leadKeys, ...card.leadKeys];
+        existing.tradeBreakdown = { ...(existing.tradeBreakdown ?? {}), [tradeId]: card.count };
+        if (card.count > 0 && !existing.topReason && card.topReason) {
+          existing.topReason = card.topReason;
+        }
+        // Top lead = whichever real trade contributed the most for this service.
+        const currentTopCount = existing.topTradeId ? (existing.tradeBreakdown?.[existing.topTradeId] ?? 0) : 0;
+        if (card.count > currentTopCount && card.topLeadName) {
+          existing.topLeadName = card.topLeadName;
+          existing.topTradeId = tradeId;
+        }
+      } else {
+        byService.set(card.serviceId, {
+          ...card,
+          leadKeys: [...card.leadKeys],
+          tradeBreakdown: { [tradeId]: card.count },
+          topTradeId: card.count > 0 ? tradeId : undefined,
+        });
+      }
+    }
+    if (bundle.leadsByService) {
+      for (const [sid, leads] of Object.entries(bundle.leadsByService)) {
+        if (!leadsByService[sid]) leadsByService[sid] = [];
+        // Tag each lead with its source trade so the drill-down list
+        // can show which vertical the lead belongs to. Mutates a
+        // shallow copy — original stays untouched.
+        for (const l of leads) {
+          leadsByService[sid].push({
+            ...l,
+            // The trade label is shown alongside the company name in
+            // All Trades mode. Reusing serviceTags would conflict
+            // with the existing service-tag chips, so we add a
+            // separate label that the renderer reads opportunistically.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ["__sourceTradeLabel" as any]: tradeLabels[tradeId] ?? tradeId,
+          });
+        }
+      }
+    }
+  }
+  return {
+    cards: [...byService.values()].sort((a, b) => b.count - a.count),
+    leadsByService,
+  };
+}
+
 export default function AllLeadsBucketOverview({
   workspaceSlug,
   trade,
-  tradeLabel,
-  bundle,
+  serviceBucketsByTrade,
+  availableTrades,
+  onTradeChange,
   onSelectLead,
   onViewAllInTrade,
   onStartPrioritizedCalling,
 }: Props) {
   const router = useRouter();
+  const [viewMode, setViewMode] = useState<"trade" | "all">("trade");
   const [drillIntoServiceId, setDrillIntoServiceId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkPending, setBulkPending] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
 
+  // Trade-label lookup keyed by id — used by the All Trades aggregator
+  // and the breadcrumb to resolve display strings without an extra
+  // Map iteration on every render.
+  const tradeLabels = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const t of availableTrades) out[t.id] = t.label;
+    return out;
+  }, [availableTrades]);
+
+  // Aggregated bundle is computed lazily. Cards are sorted desc by
+  // count so the strongest cross-trade opportunities lead.
+  const aggregatedBundle = useMemo(
+    () => aggregateAcrossTrades(serviceBucketsByTrade, tradeLabels),
+    [serviceBucketsByTrade, tradeLabels],
+  );
+
+  // Resolve which bundle the body should render against.
+  const activeBundle = viewMode === "all"
+    ? aggregatedBundle
+    : (serviceBucketsByTrade[trade] ?? null);
+
+  const activeTradeLabel = viewMode === "all"
+    ? "All Trades"
+    : (tradeLabels[trade] ?? trade);
+
+  // ─── Browser-back interception ───────────────────────────────────
+  // When the operator drills into a bucket we push a sentinel history
+  // entry (URL unchanged). The popstate listener catches the back
+  // press and pops the drill state instead of letting the browser
+  // eject /operator. We unregister on unmount and on every drill
+  // transition so the listener never goes stale.
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    if (!drillIntoServiceId) return undefined;
+    // Push a sentinel state on the first drill-in. Calling pushState
+    // with the existing URL preserves the address bar exactly.
+    window.history.pushState({ meridianDrill: drillIntoServiceId }, "");
+    function onPop() {
+      setDrillIntoServiceId(null);
+      setSelected(new Set());
+      setBulkError(null);
+    }
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [drillIntoServiceId]);
+
+  // Cross-trade bucket preservation. When the active trade changes,
+  // keep the drill if the new trade has the same service bucket; else
+  // drop back to the bucket grid so the operator never sees an empty
+  // list because the bucket doesn't exist in the new vertical.
+  useEffect(() => {
+    if (!drillIntoServiceId) return;
+    if (!activeBundle) return;
+    const exists = activeBundle.cards.some((c) => c.serviceId === drillIntoServiceId);
+    if (!exists) {
+      setDrillIntoServiceId(null);
+      setSelected(new Set());
+    }
+  // We deliberately depend on `trade` and `viewMode` so the check
+  // fires only on a true context switch, not on every prop reference.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trade, viewMode]);
+
+  // ─── Counters ────────────────────────────────────────────────────
   const totals = useMemo(() => {
+    if (!activeBundle) {
+      return { total: 0, ready: 0, inProgress: 0, followUp: 0, bucketCount: 0 };
+    }
     const allLeads = new Set<string>();
     let ready = 0;
     let inProgress = 0;
     let followUp = 0;
-    for (const list of Object.values(bundle.leadsByService)) {
+    for (const list of Object.values(activeBundle.leadsByService)) {
       for (const lead of list) {
         if (allLeads.has(lead.leadKey)) continue;
         allLeads.add(lead.leadKey);
@@ -135,16 +305,40 @@ export default function AllLeadsBucketOverview({
       ready,
       inProgress,
       followUp,
-      bucketCount: bundle.cards.filter((c) => c.count > 0).length,
+      bucketCount: activeBundle.cards.filter((c) => c.count > 0).length,
     };
-  }, [bundle]);
+  }, [activeBundle]);
 
-  const drillCard = drillIntoServiceId
-    ? bundle.cards.find((c) => c.serviceId === drillIntoServiceId) ?? null
-    : null;
-  const drillLeads = drillIntoServiceId
-    ? (bundle.leadsByService[drillIntoServiceId] ?? [])
-    : [];
+  // ─── Trade-strip handlers ────────────────────────────────────────
+  function handleSelectTrade(tradeId: string) {
+    if (tradeId === ALL_TRADES_ID) {
+      setViewMode("all");
+      // Keep OperatorConsole's selectedTradeId untouched so other
+      // surfaces (Today queue) keep their last-picked trade context.
+      return;
+    }
+    setViewMode("trade");
+    if (tradeId !== trade) onTradeChange?.(tradeId);
+  }
+
+  // ─── Drill controls ──────────────────────────────────────────────
+  function handleEnterDrill(serviceId: string) {
+    setDrillIntoServiceId(serviceId);
+    setSelected(new Set());
+    setBulkError(null);
+  }
+
+  function handleExitDrill() {
+    setDrillIntoServiceId(null);
+    setSelected(new Set());
+    setBulkError(null);
+    // If we entered drill via pushState, pop one history entry so the
+    // sentinel doesn't accumulate. The popstate handler will fire and
+    // try to clear drill state — that's fine, it's already null.
+    if (typeof window !== "undefined" && window.history.state?.meridianDrill) {
+      window.history.back();
+    }
+  }
 
   function toggleSelect(leadKey: string) {
     setSelected((prev) => {
@@ -183,227 +377,266 @@ export default function AllLeadsBucketOverview({
     router.refresh();
   }
 
-  // ─── Drill-down view ───────────────────────────────────────────────
-  if (drillCard) {
-    return (
-      <section
-        style={{
-          background: palette.surface,
-          border: `1px solid ${palette.border}`,
-          borderRadius: "12px",
-          padding: "20px 22px",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            marginBottom: "14px",
-            gap: "12px",
-          }}
-        >
-          <div>
-            <button
-              type="button"
-              onClick={() => {
-                setDrillIntoServiceId(null);
-                setSelected(new Set());
-                setBulkError(null);
-              }}
-              style={{
-                background: "transparent",
-                border: "none",
-                fontSize: "12px",
-                color: palette.textMuted,
-                cursor: "pointer",
-                padding: 0,
-                marginBottom: "6px",
-              }}
-            >
-              ‹ Back to {tradeLabel} buckets
-            </button>
-            <div style={{ fontSize: "18px", fontWeight: 700, color: palette.text }}>
-              {drillCard.label}
-            </div>
-            <div style={{ fontSize: "12px", color: palette.textMuted, marginTop: "2px" }}>
-              {drillCard.count} {drillCard.count === 1 ? "lead" : "leads"} •{" "}
-              <TierBadge tier={drillCard.tier} />
-              {drillCard.topReason ? <> • {drillCard.topReason}</> : null}
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <SelectionPill count={selected.size} />
-            <button
-              type="button"
-              onClick={sendSelectedToToday}
-              disabled={selected.size === 0 || bulkPending}
-              style={{
-                padding: "7px 14px",
-                fontSize: "12px",
-                fontWeight: 600,
-                background: selected.size > 0 ? palette.accent : palette.borderLight,
-                color: selected.size > 0 ? "#FFFFFF" : palette.textTertiary,
-                border: "none",
-                borderRadius: "7px",
-                cursor: selected.size === 0 || bulkPending ? "not-allowed" : "pointer",
-              }}
-            >
-              {bulkPending ? "Moving…" : "Send selected to Today"}
-            </button>
-          </div>
-        </div>
-        {selected.size >= 25 ? (
-          <div
-            style={{
-              padding: "8px 10px",
-              marginBottom: "12px",
-              background: "#FEF3C7",
-              border: "1px solid #FCD34D",
-              borderRadius: "7px",
-              fontSize: "11px",
-              color: "#92400E",
-            }}
-          >
-            Selecting {selected.size} leads. The daily call cap is 20 — moving more than that will overflow.
-          </div>
-        ) : null}
-        {bulkError ? (
-          <div
-            role="alert"
-            style={{
-              padding: "8px 10px",
-              marginBottom: "12px",
-              background: "#FEF2F2",
-              border: "1px solid #FCA5A5",
-              borderRadius: "7px",
-              fontSize: "11px",
-              color: palette.destructive,
-            }}
-          >
-            {bulkError}
-          </div>
-        ) : null}
+  // ─── Drill-down view ─────────────────────────────────────────────
+  const drillCard = drillIntoServiceId && activeBundle
+    ? activeBundle.cards.find((c) => c.serviceId === drillIntoServiceId) ?? null
+    : null;
+  const drillLeads = drillIntoServiceId && activeBundle
+    ? (activeBundle.leadsByService[drillIntoServiceId] ?? [])
+    : [];
 
-        {drillLeads.length === 0 ? (
-          <EmptyHint label={`No leads currently match ${drillCard.label}.`} />
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {drillLeads.map((lead) => {
-              const isSelected = selected.has(lead.leadKey);
-              return (
-                <div
-                  key={lead.leadKey}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    padding: "12px 14px",
-                    background: isSelected ? palette.accentMuted : palette.surface,
-                    border: `1px solid ${isSelected ? palette.accentBorder : palette.borderLight}`,
-                    borderRadius: "8px",
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => toggleSelect(lead.leadKey)}
-                    aria-label={`Select ${lead.companyName}`}
-                    style={{ cursor: "pointer", width: "14px", height: "14px" }}
-                  />
-                  <div
-                    style={{ flex: 1, minWidth: 0, cursor: onSelectLead ? "pointer" : "default" }}
-                    onClick={() => onSelectLead?.(lead.leadKey)}
-                  >
-                    <div style={{ fontSize: "13px", fontWeight: 600, color: palette.text }}>
-                      {lead.companyName}
-                      {lead.closeLabel ? (
-                        <span
-                          style={{
-                            marginLeft: "8px",
-                            padding: "2px 6px",
-                            fontSize: "10px",
-                            fontWeight: 500,
-                            background: palette.accentMuted,
-                            color: palette.accent,
-                            borderRadius: "4px",
-                          }}
-                        >
-                          {lead.closeLabel}
-                        </span>
-                      ) : null}
-                    </div>
-                    {lead.primaryAngleLabel ? (
-                      <div
-                        style={{
-                          fontSize: "11px",
-                          color: palette.textMuted,
-                          marginTop: "3px",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {lead.primaryAngleLabel}
-                        {lead.location ? <> · {lead.location}</> : null}
-                      </div>
-                    ) : lead.location ? (
-                      <div style={{ fontSize: "11px", color: palette.textMuted, marginTop: "3px" }}>
-                        {lead.location}
-                      </div>
-                    ) : null}
-                  </div>
-                  {lead.serviceTags && lead.serviceTags.length > 0 ? (
-                    <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", justifyContent: "flex-end" }}>
-                      {lead.serviceTags.slice(0, 2).map((t) => (
-                        <span
-                          key={t.id}
-                          title={t.reason}
-                          style={{
-                            padding: "2px 6px",
-                            fontSize: "10px",
-                            background: palette.borderLight,
-                            color: palette.text,
-                            borderRadius: "4px",
-                          }}
-                        >
-                          {t.label}
-                        </span>
-                      ))}
-                      {lead.serviceTags.length > 2 ? (
-                        <span style={{ fontSize: "10px", color: palette.textTertiary }}>
-                          +{lead.serviceTags.length - 2}
-                        </span>
-                      ) : null}
-                    </div>
-                  ) : null}
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <SchedulingMenu
-                      leadId={lead.leadKey}
-                      workspaceSlug={workspaceSlug}
-                      leadName={lead.companyName}
-                      variant="icon"
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
-    );
-  }
-
-  // ─── Overview (default) ───────────────────────────────────────────
   return (
     <section
       style={{
         background: palette.surface,
         border: `1px solid ${palette.border}`,
         borderRadius: "12px",
-        padding: "20px 22px",
+        padding: "18px 22px 22px",
       }}
     >
+      {/* ─── Persistent navigation header ─────────────────────────── */}
+      <Breadcrumb
+        tradeLabel={activeTradeLabel}
+        bucketLabel={drillCard?.label ?? null}
+        onClickAllLeads={() => {
+          // Reset to overview without forcing a trade pick — keeps
+          // the user's last context. Used as a fast escape hatch.
+          handleExitDrill();
+        }}
+        onClickTrade={() => {
+          // Click trade segment — exit drill, stay in current trade.
+          handleExitDrill();
+        }}
+      />
+      <TradeStrip
+        availableTrades={availableTrades}
+        activeTradeId={viewMode === "all" ? ALL_TRADES_ID : trade}
+        onSelect={handleSelectTrade}
+      />
+
+      {drillCard ? (
+        // ─── DRILL-DOWN BODY ───────────────────────────────────────
+        <DrillDown
+          card={drillCard}
+          leads={drillLeads}
+          tradeLabel={activeTradeLabel}
+          workspaceSlug={workspaceSlug}
+          selected={selected}
+          bulkPending={bulkPending}
+          bulkError={bulkError}
+          onExit={handleExitDrill}
+          onToggleSelect={toggleSelect}
+          onSendSelected={sendSelectedToToday}
+          onSelectLead={onSelectLead}
+          isAllTradesMode={viewMode === "all"}
+        />
+      ) : (
+        // ─── OVERVIEW BODY ─────────────────────────────────────────
+        <Overview
+          tradeLabel={activeTradeLabel}
+          activeBundle={activeBundle}
+          totals={totals}
+          isAllTradesMode={viewMode === "all"}
+          onEnterDrill={handleEnterDrill}
+          onViewAllInTrade={onViewAllInTrade}
+          onStartPrioritizedCalling={onStartPrioritizedCalling}
+        />
+      )}
+    </section>
+  );
+}
+
+// ─── Breadcrumb ────────────────────────────────────────────────────
+// Three-segment breadcrumb. Static "All Leads" anchor, clickable
+// trade segment (drill out), clickable bucket segment when drilled.
+// All segments use the same hover/active treatment so the operator
+// can read hierarchy at a glance without parsing visual chrome.
+
+function Breadcrumb({
+  tradeLabel,
+  bucketLabel,
+  onClickAllLeads,
+  onClickTrade,
+}: {
+  tradeLabel: string;
+  bucketLabel: string | null;
+  onClickAllLeads: () => void;
+  onClickTrade: () => void;
+}) {
+  return (
+    <nav
+      aria-label="All Leads breadcrumb"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "6px",
+        fontSize: "11px",
+        fontWeight: 500,
+        color: palette.textMuted,
+        marginBottom: "10px",
+        userSelect: "none",
+      }}
+    >
+      <CrumbButton onClick={onClickAllLeads} muted>All Leads</CrumbButton>
+      <Sep />
+      {bucketLabel ? (
+        <CrumbButton onClick={onClickTrade} muted>{tradeLabel}</CrumbButton>
+      ) : (
+        <CrumbCurrent>{tradeLabel}</CrumbCurrent>
+      )}
+      {bucketLabel ? (
+        <>
+          <Sep />
+          <CrumbCurrent>{bucketLabel}</CrumbCurrent>
+        </>
+      ) : null}
+    </nav>
+  );
+}
+
+function CrumbButton({ children, onClick, muted }: { children: React.ReactNode; onClick: () => void; muted?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        background: "transparent",
+        border: "none",
+        padding: 0,
+        fontSize: "11px",
+        fontWeight: 500,
+        color: muted ? palette.textMuted : palette.text,
+        cursor: "pointer",
+        textDecoration: "underline",
+        textDecorationColor: "transparent",
+        transition: "text-decoration-color 120ms ease",
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.textDecorationColor = palette.accent; }}
+      onMouseLeave={(e) => { e.currentTarget.style.textDecorationColor = "transparent"; }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function CrumbCurrent({ children }: { children: React.ReactNode }) {
+  return (
+    <span style={{ fontSize: "11px", fontWeight: 600, color: palette.text }}>{children}</span>
+  );
+}
+
+function Sep() {
+  return <span style={{ color: palette.textTertiary }}>›</span>;
+}
+
+// ─── Trade strip ───────────────────────────────────────────────────
+// Persistent horizontal pill row. "All Trades" pill is always first;
+// real trades follow. Active pill renders with the accent border so
+// the operator knows where they are at every level of the hierarchy.
+
+function TradeStrip({
+  availableTrades,
+  activeTradeId,
+  onSelect,
+}: {
+  availableTrades: TradeOption[];
+  activeTradeId: string;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label="Trade selector"
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: "6px",
+        marginBottom: "16px",
+        padding: "6px",
+        background: palette.bg,
+        border: `1px solid ${palette.borderLight}`,
+        borderRadius: "8px",
+      }}
+    >
+      <TradePill
+        id={ALL_TRADES_ID}
+        label="All Trades"
+        active={activeTradeId === ALL_TRADES_ID}
+        onClick={() => onSelect(ALL_TRADES_ID)}
+        emphasized
+      />
+      <span style={{ width: "1px", background: palette.borderLight, alignSelf: "stretch", margin: "0 2px" }} aria-hidden="true" />
+      {availableTrades.map((t) => (
+        <TradePill
+          key={t.id}
+          id={t.id}
+          label={t.label}
+          active={activeTradeId === t.id}
+          onClick={() => onSelect(t.id)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function TradePill({
+  label,
+  active,
+  onClick,
+  emphasized,
+}: {
+  id: string;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  emphasized?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      style={{
+        padding: "6px 12px",
+        fontSize: "12px",
+        fontWeight: active ? 700 : 500,
+        background: active ? palette.surface : "transparent",
+        color: active ? palette.accent : palette.text,
+        border: `1px solid ${active ? palette.accentBorder : "transparent"}`,
+        borderRadius: "6px",
+        cursor: "pointer",
+        boxShadow: active ? "0 1px 2px rgba(15,23,42,0.04)" : "none",
+        letterSpacing: emphasized ? "0.02em" : "normal",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+// ─── Overview body ─────────────────────────────────────────────────
+
+function Overview({
+  tradeLabel,
+  activeBundle,
+  totals,
+  isAllTradesMode,
+  onEnterDrill,
+  onViewAllInTrade,
+  onStartPrioritizedCalling,
+}: {
+  tradeLabel: string;
+  activeBundle: TradeBundle | null;
+  totals: { total: number; ready: number; inProgress: number; followUp: number; bucketCount: number };
+  isAllTradesMode: boolean;
+  onEnterDrill: (serviceId: string) => void;
+  onViewAllInTrade?: () => void;
+  onStartPrioritizedCalling?: () => void;
+}) {
+  const populatedCards = activeBundle?.cards.filter((c) => c.count > 0) ?? [];
+  return (
+    <>
       <div
         style={{
           display: "flex",
@@ -418,10 +651,12 @@ export default function AllLeadsBucketOverview({
             ALL LEADS · {tradeLabel.toUpperCase()}
           </div>
           <div style={{ fontSize: "18px", fontWeight: 700, color: palette.text, marginTop: "2px" }}>
-            Service-bucket overview
+            {isAllTradesMode ? "Cross-trade campaign overview" : "Service-bucket overview"}
           </div>
           <div style={{ fontSize: "12px", color: palette.textMuted, marginTop: "4px" }}>
-            Pick the sales motion. Drill into any bucket to see the companies that need it.
+            {isAllTradesMode
+              ? "Aggregated across every trade. Pick the strongest service motion to run a cross-vertical campaign."
+              : "Pick the sales motion. Drill into any bucket to see the companies that need it."}
           </div>
         </div>
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" }}>
@@ -443,7 +678,7 @@ export default function AllLeadsBucketOverview({
               Start prioritized calling
             </button>
           ) : null}
-          {onViewAllInTrade ? (
+          {onViewAllInTrade && !isAllTradesMode ? (
             <button
               type="button"
               onClick={onViewAllInTrade}
@@ -481,8 +716,14 @@ export default function AllLeadsBucketOverview({
       </div>
 
       {/* Bucket grid */}
-      {bundle.cards.filter((c) => c.count > 0).length === 0 ? (
-        <EmptyHint label={`No service buckets yet for ${tradeLabel}. Run the slow-path refresh to regenerate.`} />
+      {populatedCards.length === 0 ? (
+        <EmptyHint
+          label={
+            isAllTradesMode
+              ? "No service buckets are populated across any trade yet. Refresh intelligence or check ingestion supply."
+              : `No service buckets yet for ${tradeLabel}. Refresh intelligence to regenerate.`
+          }
+        />
       ) : (
         <div
           style={{
@@ -491,18 +732,17 @@ export default function AllLeadsBucketOverview({
             gap: "12px",
           }}
         >
-          {bundle.cards
-            .filter((c) => c.count > 0)
-            .map((card) => (
-              <BucketCard
-                key={card.serviceId}
-                card={card}
-                onClick={() => setDrillIntoServiceId(card.serviceId)}
-              />
-            ))}
+          {populatedCards.map((card) => (
+            <BucketCard
+              key={card.serviceId}
+              card={card}
+              isAllTradesMode={isAllTradesMode}
+              onClick={() => onEnterDrill(card.serviceId)}
+            />
+          ))}
         </div>
       )}
-    </section>
+    </>
   );
 }
 
@@ -534,8 +774,22 @@ function Counter({ label, value, accent }: { label: string; value: number; accen
   );
 }
 
-function BucketCard({ card, onClick }: { card: ServiceBucketCard; onClick: () => void }) {
+function BucketCard({
+  card,
+  isAllTradesMode,
+  onClick,
+}: {
+  card: ServiceBucketCard;
+  isAllTradesMode: boolean;
+  onClick: () => void;
+}) {
   const tier = TIER_STYLE[card.tier];
+  // Build the "strongest trade overlap" subtitle for All Trades mode
+  // — top 2 contributing trades plus a remainder count so the card
+  // never gets visually busy.
+  const breakdownLine = isAllTradesMode && card.tradeBreakdown
+    ? buildBreakdownLine(card.tradeBreakdown)
+    : null;
   return (
     <button
       type="button"
@@ -584,7 +838,11 @@ function BucketCard({ card, onClick }: { card: ServiceBucketCard; onClick: () =>
           {card.count === 1 ? "lead" : "leads"}
         </div>
       </div>
-      {card.topLeadName ? (
+      {breakdownLine ? (
+        <div style={{ fontSize: "10px", color: palette.textMuted, lineHeight: 1.4 }}>
+          {breakdownLine}
+        </div>
+      ) : card.topLeadName ? (
         <div style={{ fontSize: "11px", color: palette.textMuted, lineHeight: 1.4 }}>
           <span style={{ fontWeight: 500, color: palette.text }}>{card.topLeadName}</span>
           {card.topReason ? <span> — {card.topReason}</span> : null}
@@ -601,6 +859,271 @@ function BucketCard({ card, onClick }: { card: ServiceBucketCard; onClick: () =>
         View leads ›
       </div>
     </button>
+  );
+}
+
+function buildBreakdownLine(breakdown: Record<string, number>): string {
+  const entries = Object.entries(breakdown)
+    .filter(([, c]) => c > 0)
+    .sort((a, b) => b[1] - a[1]);
+  if (entries.length === 0) return "";
+  const top = entries.slice(0, 2);
+  const remainder = entries.slice(2);
+  const remainderTotal = remainder.reduce((acc, [, c]) => acc + c, 0);
+  const parts = top.map(([id, count]) => `${count} ${id}`);
+  if (remainderTotal > 0) {
+    parts.push(`+${remainderTotal} other`);
+  }
+  return parts.join(" · ");
+}
+
+// ─── Drill-down body ───────────────────────────────────────────────
+
+function DrillDown({
+  card,
+  leads,
+  tradeLabel,
+  workspaceSlug,
+  selected,
+  bulkPending,
+  bulkError,
+  onExit,
+  onToggleSelect,
+  onSendSelected,
+  onSelectLead,
+  isAllTradesMode,
+}: {
+  card: ServiceBucketCard;
+  leads: FilteredLeadEntry[];
+  tradeLabel: string;
+  workspaceSlug: string;
+  selected: Set<string>;
+  bulkPending: boolean;
+  bulkError: string | null;
+  onExit: () => void;
+  onToggleSelect: (leadKey: string) => void;
+  onSendSelected: () => void;
+  onSelectLead?: (leadKey: string) => void;
+  isAllTradesMode: boolean;
+}) {
+  return (
+    <>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          marginBottom: "14px",
+          gap: "12px",
+        }}
+      >
+        <div>
+          <button
+            type="button"
+            onClick={onExit}
+            style={{
+              background: "transparent",
+              border: "none",
+              fontSize: "12px",
+              color: palette.textMuted,
+              cursor: "pointer",
+              padding: 0,
+              marginBottom: "6px",
+            }}
+          >
+            ‹ Back to {tradeLabel} buckets
+          </button>
+          <div style={{ fontSize: "18px", fontWeight: 700, color: palette.text }}>
+            {card.label}
+          </div>
+          <div style={{ fontSize: "12px", color: palette.textMuted, marginTop: "2px" }}>
+            {card.count} {card.count === 1 ? "lead" : "leads"} •{" "}
+            <TierBadge tier={card.tier} />
+            {card.topReason ? <> • {card.topReason}</> : null}
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <SelectionPill count={selected.size} />
+          <button
+            type="button"
+            onClick={onSendSelected}
+            disabled={selected.size === 0 || bulkPending}
+            style={{
+              padding: "7px 14px",
+              fontSize: "12px",
+              fontWeight: 600,
+              background: selected.size > 0 ? palette.accent : palette.borderLight,
+              color: selected.size > 0 ? "#FFFFFF" : palette.textTertiary,
+              border: "none",
+              borderRadius: "7px",
+              cursor: selected.size === 0 || bulkPending ? "not-allowed" : "pointer",
+            }}
+          >
+            {bulkPending ? "Moving…" : "Send selected to Today"}
+          </button>
+        </div>
+      </div>
+      {selected.size >= 25 ? (
+        <div
+          style={{
+            padding: "8px 10px",
+            marginBottom: "12px",
+            background: "#FEF3C7",
+            border: "1px solid #FCD34D",
+            borderRadius: "7px",
+            fontSize: "11px",
+            color: "#92400E",
+          }}
+        >
+          Selecting {selected.size} leads. The daily call cap is 20 — moving more than that will overflow.
+        </div>
+      ) : null}
+      {bulkError ? (
+        <div
+          role="alert"
+          style={{
+            padding: "8px 10px",
+            marginBottom: "12px",
+            background: "#FEF2F2",
+            border: "1px solid #FCA5A5",
+            borderRadius: "7px",
+            fontSize: "11px",
+            color: palette.destructive,
+          }}
+        >
+          {bulkError}
+        </div>
+      ) : null}
+
+      {leads.length === 0 ? (
+        <EmptyHint label={`No leads currently match ${card.label}.`} />
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          {leads.map((lead) => {
+            const isSelected = selected.has(lead.leadKey);
+            // Source-trade label only present in All Trades aggregated
+            // mode — read it dynamically so the type stays clean.
+            const sourceTrade =
+              isAllTradesMode
+                ? ((lead as unknown) as Record<string, string>)["__sourceTradeLabel"] ?? null
+                : null;
+            return (
+              <div
+                key={lead.leadKey}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  padding: "12px 14px",
+                  background: isSelected ? palette.accentMuted : palette.surface,
+                  border: `1px solid ${isSelected ? palette.accentBorder : palette.borderLight}`,
+                  borderRadius: "8px",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => onToggleSelect(lead.leadKey)}
+                  aria-label={`Select ${lead.companyName}`}
+                  style={{ cursor: "pointer", width: "14px", height: "14px" }}
+                />
+                <div
+                  style={{ flex: 1, minWidth: 0, cursor: onSelectLead ? "pointer" : "default" }}
+                  onClick={() => onSelectLead?.(lead.leadKey)}
+                >
+                  <div style={{ fontSize: "13px", fontWeight: 600, color: palette.text }}>
+                    {lead.companyName}
+                    {sourceTrade ? (
+                      <span
+                        style={{
+                          marginLeft: "8px",
+                          padding: "2px 6px",
+                          fontSize: "10px",
+                          fontWeight: 600,
+                          background: palette.bg,
+                          color: palette.textMuted,
+                          border: `1px solid ${palette.borderLight}`,
+                          borderRadius: "4px",
+                          textTransform: "capitalize",
+                        }}
+                      >
+                        {sourceTrade}
+                      </span>
+                    ) : null}
+                    {lead.closeLabel ? (
+                      <span
+                        style={{
+                          marginLeft: "8px",
+                          padding: "2px 6px",
+                          fontSize: "10px",
+                          fontWeight: 500,
+                          background: palette.accentMuted,
+                          color: palette.accent,
+                          borderRadius: "4px",
+                        }}
+                      >
+                        {lead.closeLabel}
+                      </span>
+                    ) : null}
+                  </div>
+                  {lead.primaryAngleLabel ? (
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        color: palette.textMuted,
+                        marginTop: "3px",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {lead.primaryAngleLabel}
+                      {lead.location ? <> · {lead.location}</> : null}
+                    </div>
+                  ) : lead.location ? (
+                    <div style={{ fontSize: "11px", color: palette.textMuted, marginTop: "3px" }}>
+                      {lead.location}
+                    </div>
+                  ) : null}
+                </div>
+                {lead.serviceTags && lead.serviceTags.length > 0 ? (
+                  <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                    {lead.serviceTags.slice(0, 2).map((t) => (
+                      <span
+                        key={t.id}
+                        title={t.reason}
+                        style={{
+                          padding: "2px 6px",
+                          fontSize: "10px",
+                          background: palette.borderLight,
+                          color: palette.text,
+                          borderRadius: "4px",
+                        }}
+                      >
+                        {t.label}
+                      </span>
+                    ))}
+                    {lead.serviceTags.length > 2 ? (
+                      <span style={{ fontSize: "10px", color: palette.textTertiary }}>
+                        +{lead.serviceTags.length - 2}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
+                <div onClick={(e) => e.stopPropagation()}>
+                  <SchedulingMenu
+                    leadId={lead.leadKey}
+                    workspaceSlug={workspaceSlug}
+                    leadName={lead.companyName}
+                    variant="icon"
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </>
   );
 }
 
