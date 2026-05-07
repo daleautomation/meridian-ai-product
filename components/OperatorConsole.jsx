@@ -10011,12 +10011,27 @@ export default function OperatorConsole({
                 label: TRADE_MODULES[id]?.label ?? id,
               }));
               if (availableTrades.length === 0) return null;
+              // Operator pool — prefer the workspace's existing
+              // teamWorkload.perRep when populated, fall back to a
+              // small LaborTech-specific roster so John+Sam can
+              // assign leads on day one without a config change.
+              const teamReps = Array.isArray(teamWorkload?.perRep) ? teamWorkload.perRep : [];
+              const reps = teamReps.length > 0
+                ? teamReps.map((r) => ({ id: r.id, name: r.name }))
+                : [
+                    { id: "john", name: "John" },
+                    { id: "sam", name: "Sam" },
+                    { id: "rep-1", name: "Rep 1" },
+                    { id: "rep-2", name: "Rep 2" },
+                    { id: "unassigned", name: "Unassigned" },
+                  ];
               return (
                 <AllLeadsBucketOverview
                   workspaceSlug={workspace?.slug ?? ""}
                   trade={selectedTradeId}
                   serviceBucketsByTrade={serviceBucketsByTrade}
                   availableTrades={availableTrades}
+                  reps={reps}
                   onTradeChange={(newTradeId) => {
                     // Only fires for real trade picks — the "All Trades"
                     // virtual selection is internal to the component

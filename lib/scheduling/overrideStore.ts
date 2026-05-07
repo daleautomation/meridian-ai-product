@@ -22,6 +22,7 @@ export type ScheduleOverrideAction =
   | "move_today"
   | "move_tomorrow"
   | "move_next_week"
+  | "move_to_date"
   | "follow_up"
   | "skip"
   | "assign_rep"
@@ -144,5 +145,36 @@ export function nextMondayIso(now: Date = new Date()): string {
   const dow = t.getDay(); // 0 Sun .. 6 Sat
   const daysUntilMonday = dow === 0 ? 1 : 8 - dow;
   t.setDate(t.getDate() + daysUntilMonday);
+  return todayIso(t);
+}
+
+/** Validate a YYYY-MM-DD date string. Returns the trimmed value if
+ *  it's a real date and falls on a weekday (Mon–Fri); else null.
+ *  Past dates are rejected because operators should not be able to
+ *  schedule leads into a slot that's already gone — confusing for
+ *  the team operating-board. */
+export function validateWeekdayIso(value: unknown, now: Date = new Date()): string | null {
+  if (typeof value !== "string") return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const parsed = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  const dow = parsed.getDay();
+  if (dow === 0 || dow === 6) return null; // weekend
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  if (parsed.getTime() < today.getTime()) return null; // past
+  return value;
+}
+
+/** Compute the next occurrence of a given weekday (1 Mon … 5 Fri).
+ *  Used by the SchedulingMenu's weekday quick picks. If today is
+ *  the requested weekday, returns next week's same weekday — moving
+ *  to "today" should use action=move_today, not this helper. */
+export function nextWeekdayIso(targetDow: number, now: Date = new Date()): string {
+  const t = new Date(now);
+  const currentDow = t.getDay();
+  let delta = targetDow - currentDow;
+  if (delta <= 0) delta += 7;
+  t.setDate(t.getDate() + delta);
   return todayIso(t);
 }

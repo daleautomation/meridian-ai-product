@@ -24,6 +24,7 @@ type Action =
   | "move_today"
   | "move_tomorrow"
   | "move_next_week"
+  | "move_to_date"
   | "follow_up"
   | "skip"
   | "assign_rep"
@@ -62,7 +63,7 @@ const palette = {
 
 const PRIMARY_ITEMS: Array<{ action: Action; label: string; hint: string }> = [
   { action: "move_today", label: "Move to Today", hint: "Top of today's queue" },
-  { action: "move_tomorrow", label: "Move to Tomorrow", hint: "Working day, weekend-skipped" },
+  { action: "move_tomorrow", label: "Move to Tomorrow", hint: "Next working day" },
   { action: "move_next_week", label: "Move to Next Week", hint: "Next Monday" },
 ];
 
@@ -70,6 +71,45 @@ const SECONDARY_ITEMS: Array<{ action: Action; label: string; hint: string }> = 
   { action: "follow_up", label: "Mark Follow-Up", hint: "Out of main queue, retains context" },
   { action: "skip", label: "Skip / Revisit Later", hint: "Drops to bottom of pipeline" },
 ];
+
+// Weekday quick picks. Numbers map to JS getDay(): 1=Mon … 5=Fri.
+// Today's weekday is hidden — operators use "Move to Today" instead.
+const WEEKDAYS: Array<{ id: number; label: string; short: string }> = [
+  { id: 1, label: "Monday", short: "Mon" },
+  { id: 2, label: "Tuesday", short: "Tue" },
+  { id: 3, label: "Wednesday", short: "Wed" },
+  { id: 4, label: "Thursday", short: "Thu" },
+  { id: 5, label: "Friday", short: "Fri" },
+];
+
+function nextWeekdayIso(targetDow: number, now: Date = new Date()): string {
+  const t = new Date(now);
+  let delta = targetDow - t.getDay();
+  if (delta <= 0) delta += 7;
+  t.setDate(t.getDate() + delta);
+  const y = t.getFullYear();
+  const m = String(t.getMonth() + 1).padStart(2, "0");
+  const d = String(t.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function todayIsoLocal(now: Date = new Date()): string {
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function isWeekdayInFuture(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return false;
+  const dow = parsed.getDay();
+  if (dow === 0 || dow === 6) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return parsed.getTime() >= today.getTime();
+}
 
 export default function SchedulingMenu({
   leadId,
@@ -83,6 +123,8 @@ export default function SchedulingMenu({
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState<Action | null>(null);
   const [showReps, setShowReps] = useState(false);
+  const [showDateInput, setShowDateInput] = useState(false);
+  const [dateInputValue, setDateInputValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -110,21 +152,19 @@ export default function SchedulingMenu({
     };
   }, [open]);
 
-  async function send(action: Action, repId?: string) {
+  async function send(action: Action, opts?: { repId?: string; scheduledFor?: string }) {
     if (pending) return;
     setPending(action);
     setError(null);
     try {
+      const payload: Record<string, unknown> = { leadId, workspaceSlug, action };
+      if (action === "assign_rep" && opts?.repId) payload.repId = opts.repId;
+      if (action === "move_to_date" && opts?.scheduledFor) payload.scheduledFor = opts.scheduledFor;
       const res = await fetch("/api/scheduling/override", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({
-          leadId,
-          workspaceSlug,
-          action,
-          repId: action === "assign_rep" ? repId : undefined,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
@@ -135,6 +175,8 @@ export default function SchedulingMenu({
         setPending(null);
         setOpen(false);
         setShowReps(false);
+        setShowDateInput(false);
+        setDateInputValue("");
       }, 350);
     } catch (e) {
       setError(e instanceof Error ? e.message : "request failed");
@@ -205,16 +247,68 @@ export default function SchedulingMenu({
         >
           {showReps && reps && reps.length > 0 ? (
             <>
-              <MenuHeader label="Assign rep" onBack={() => setShowReps(false)} />
+              <MenuHeader label="Assign operator" onBack={() => setShowReps(false)} />
               {reps.map((r) => (
                 <MenuItem
                   key={r.id}
                   label={r.name}
                   hint={`Assign ${r.name}`}
                   pending={pending === "assign_rep"}
-                  onClick={() => send("assign_rep", r.id)}
+                  onClick={() => send("assign_rep", { repId: r.id })}
                 />
               ))}
+            </>
+          ) : showDateInput ? (
+            <>
+              <MenuHeader
+                label="Schedule for date"
+                onBack={() => {
+                  setShowDateInput(false);
+                  setDateInputValue("");
+                }}
+              />
+              <div style={{ padding: "6px 10px 4px" }}>
+                <input
+                  type="date"
+                  value={dateInputValue}
+                  min={todayIsoLocal()}
+                  onChange={(e) => setDateInputValue(e.target.value)}
+                  aria-label="Pick a weekday date"
+                  style={{
+                    width: "100%",
+                    padding: "6px 8px",
+                    fontSize: "12px",
+                    color: palette.text,
+                    border: `1px solid ${palette.border}`,
+                    borderRadius: "6px",
+                    fontFamily: "inherit",
+                  }}
+                />
+                {dateInputValue && !isWeekdayInFuture(dateInputValue) ? (
+                  <div style={{ marginTop: "6px", fontSize: "10px", color: palette.destructive }}>
+                    Pick a weekday today or later. Weekends aren&rsquo;t valid call days.
+                  </div>
+                ) : null}
+                <button
+                  type="button"
+                  disabled={!isWeekdayInFuture(dateInputValue) || pending === "move_to_date"}
+                  onClick={() => send("move_to_date", { scheduledFor: dateInputValue })}
+                  style={{
+                    marginTop: "8px",
+                    width: "100%",
+                    padding: "7px 10px",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    background: isWeekdayInFuture(dateInputValue) ? palette.accent : palette.divider,
+                    color: isWeekdayInFuture(dateInputValue) ? "#FFFFFF" : palette.textMuted,
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: isWeekdayInFuture(dateInputValue) ? "pointer" : "not-allowed",
+                  }}
+                >
+                  {pending === "move_to_date" ? "Scheduling…" : "Schedule for this date"}
+                </button>
+              </div>
             </>
           ) : (
             <>
@@ -228,6 +322,49 @@ export default function SchedulingMenu({
                   onClick={() => send(it.action)}
                 />
               ))}
+              <SectionLabel>This week</SectionLabel>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "4px",
+                  padding: "4px 6px 6px",
+                  flexWrap: "wrap",
+                }}
+              >
+                {WEEKDAYS.map((d) => {
+                  const iso = nextWeekdayIso(d.id);
+                  const isPending = pending === "move_to_date";
+                  return (
+                    <button
+                      key={d.id}
+                      type="button"
+                      onClick={() => send("move_to_date", { scheduledFor: iso })}
+                      disabled={isPending}
+                      title={`Move to ${d.label} (${iso})`}
+                      style={{
+                        flex: 1,
+                        minWidth: "40px",
+                        padding: "5px 8px",
+                        fontSize: "11px",
+                        fontWeight: 500,
+                        background: palette.surfaceHover,
+                        color: palette.text,
+                        border: `1px solid ${palette.border}`,
+                        borderRadius: "5px",
+                        cursor: isPending ? "wait" : "pointer",
+                      }}
+                    >
+                      {d.short}
+                    </button>
+                  );
+                })}
+              </div>
+              <MenuItem
+                label="Pick a specific date…"
+                hint="Schedule for any future weekday"
+                onClick={() => setShowDateInput(true)}
+                chevron
+              />
               <Divider />
               <SectionLabel>State</SectionLabel>
               {SECONDARY_ITEMS.map((it) => (
@@ -244,8 +381,8 @@ export default function SchedulingMenu({
                   <Divider />
                   <SectionLabel>Assignment</SectionLabel>
                   <MenuItem
-                    label="Assign Rep…"
-                    hint={`${reps.length} rep${reps.length === 1 ? "" : "s"} available`}
+                    label="Assign operator…"
+                    hint={`${reps.length} operator${reps.length === 1 ? "" : "s"} available`}
                     onClick={() => setShowReps(true)}
                     chevron
                   />

@@ -21,6 +21,7 @@ import {
   todayIso,
   tomorrowIso,
   nextMondayIso,
+  validateWeekdayIso,
   type ScheduleOverride,
   type ScheduleOverrideAction,
 } from "@/lib/scheduling/overrideStore";
@@ -30,6 +31,7 @@ const VALID_ACTIONS: ScheduleOverrideAction[] = [
   "move_today",
   "move_tomorrow",
   "move_next_week",
+  "move_to_date",
   "follow_up",
   "skip",
   "assign_rep",
@@ -41,6 +43,9 @@ interface OverrideRequest {
   workspaceSlug?: unknown;
   action?: unknown;
   repId?: unknown;
+  /** Required when action === "move_to_date" — must be a YYYY-MM-DD
+   *  weekday in the future or today. */
+  scheduledFor?: unknown;
 }
 
 function bad(status: number, error: string) {
@@ -78,6 +83,13 @@ export async function POST(req: Request) {
   if (action === "move_today") scheduledFor = todayIso(now);
   if (action === "move_tomorrow") scheduledFor = tomorrowIso(now);
   if (action === "move_next_week") scheduledFor = nextMondayIso(now);
+  if (action === "move_to_date") {
+    const validated = validateWeekdayIso(body.scheduledFor, now);
+    if (!validated) {
+      return bad(400, "move_to_date requires a YYYY-MM-DD weekday in the future");
+    }
+    scheduledFor = validated;
+  }
 
   const override: ScheduleOverride = {
     leadId,

@@ -86,6 +86,11 @@ interface TradeOption {
   label: string;
 }
 
+interface RepOption {
+  id: string;
+  name: string;
+}
+
 interface Props {
   workspaceSlug: string;
   /** Currently selected trade id from OperatorConsole. May be the
@@ -98,6 +103,11 @@ interface Props {
   /** Trades that should appear in the persistent trade strip.
    *  OperatorConsole derives this from its existing module list. */
   availableTrades: TradeOption[];
+  /** Operator/rep pool for the assignment submenu. Comes from the
+   *  workspace's teamWorkload.perRep when available, with a small
+   *  fallback the operator console resolves. Empty list disables the
+   *  assignment submenu cleanly. */
+  reps?: RepOption[];
   /** Called when the user picks a real trade from the strip — keeps
    *  OperatorConsole's selectedTradeId in sync. NOT called when the
    *  user picks "All Trades" (we leave selectedTradeId alone so the
@@ -136,6 +146,43 @@ const TIER_STYLE: Record<ServiceBucketCard["tier"], { color: string; bg: string;
   advanced: { color: palette.advancedTier, bg: palette.advancedTierBg, label: "Advanced" },
 };
 
+// ─── Priority label derivation ─────────────────────────────────────
+// Maps existing scoring fields (urgency / closeProbability / closeLabel
+// / needScore) to a single high-signal label. No invented scores —
+// the inputs are all server-computed values already on each lead row.
+//
+// Order of precedence:
+//   call_now urgency  ─► "Call First"
+//   close prob ≥ 0.7  ─► "High Priority"
+//   close prob ≥ 0.5  ─► "Strong Fit"
+//   need score ≥ 7    ─► "Strong Fit"
+//   build_next + ≥ 5  ─► "Medium Fit"
+//   build_next        ─► "Nurture"
+//   else              ─► "Low Priority"
+
+type PriorityLabel = "Call First" | "High Priority" | "Strong Fit" | "Medium Fit" | "Nurture" | "Low Priority";
+
+function derivePriorityLabel(lead: FilteredLeadEntry): PriorityLabel {
+  const urgency = lead.urgency;
+  const close = typeof lead.closeProbability === "number" ? lead.closeProbability : null;
+  const need = typeof lead.needScore === "number" ? lead.needScore : 0;
+  if (urgency === "call_now") return "Call First";
+  if (close !== null && close >= 0.7) return "High Priority";
+  if ((close !== null && close >= 0.5) || need >= 7) return "Strong Fit";
+  if (urgency === "build_next" && need >= 5) return "Medium Fit";
+  if (urgency === "build_next") return "Nurture";
+  return "Low Priority";
+}
+
+const PRIORITY_STYLE: Record<PriorityLabel, { color: string; bg: string }> = {
+  "Call First": { color: "#9F1239", bg: "#FFE4E6" },          // rose
+  "High Priority": { color: "#9A3412", bg: "#FFEDD5" },       // amber
+  "Strong Fit": { color: "#0F766E", bg: "#ECFDF5" },          // teal
+  "Medium Fit": { color: "#1D4ED8", bg: "#EFF6FF" },          // blue
+  "Nurture": { color: "#475569", bg: "#F1F5F9" },             // slate
+  "Low Priority": { color: "#94A3B8", bg: "#F8FAFC" },        // muted slate
+};
+
 // ─── All Trades aggregation ──────────────────────────────────────────
 // Sums per-service bucket counts across every real trade and merges
 // the per-service filtered-lead lists. Sorts cards by total count
@@ -144,44 +191,59 @@ const TIER_STYLE: Record<ServiceBucketCard["tier"], { color: string; bg: string;
 // the strongest-trade-overlap subtitle requested for the All Trades
 // surface.
 function aggregateAcrossTrades(
-  map: Record<string, TradeBundle>,
+  map: Record<string, TradeBundle> | null | undefined,
   tradeLabels: Record<string, string>,
 ): TradeBundle {
   const byService = new Map<string, ServiceBucketCard>();
   const leadsByService: Record<string, FilteredLeadEntry[]> = {};
+  if (!map || typeof map !== "object") {
+    return { cards: [], leadsByService };
+  }
   for (const [tradeId, bundle] of Object.entries(map)) {
-    if (!bundle || !Array.isArray(bundle.cards)) continue;
-    for (const card of bundle.cards) {
+    if (!bundle || typeof bundle !== "object") continue;
+    const cards = Array.isArray(bundle.cards) ? bundle.cards : [];
+    for (const card of cards) {
+      if (!card || typeof card.serviceId !== "string") continue;
+      // Defensive count coercion — if a snapshot ever ships with a
+      // null/undefined count, treat it as 0 rather than NaN-ing the
+      // aggregate.
+      const cardCount = typeof card.count === "number" && !Number.isNaN(card.count) ? card.count : 0;
+      const cardLeadKeys = Array.isArray(card.leadKeys) ? card.leadKeys : [];
       const existing = byService.get(card.serviceId);
       if (existing) {
-        existing.count += card.count;
-        existing.leadKeys = [...existing.leadKeys, ...card.leadKeys];
-        existing.tradeBreakdown = { ...(existing.tradeBreakdown ?? {}), [tradeId]: card.count };
-        if (card.count > 0 && !existing.topReason && card.topReason) {
+        existing.count = (existing.count ?? 0) + cardCount;
+        existing.leadKeys = [...(existing.leadKeys ?? []), ...cardLeadKeys];
+        existing.tradeBreakdown = { ...(existing.tradeBreakdown ?? {}), [tradeId]: cardCount };
+        if (cardCount > 0 && !existing.topReason && card.topReason) {
           existing.topReason = card.topReason;
         }
-        // Top lead = whichever real trade contributed the most for this service.
+        // Promote the strongest-contributing trade's top lead so the
+        // aggregated card surfaces the most representative example.
         const currentTopCount = existing.topTradeId ? (existing.tradeBreakdown?.[existing.topTradeId] ?? 0) : 0;
-        if (card.count > currentTopCount && card.topLeadName) {
+        if (cardCount > currentTopCount && card.topLeadName) {
           existing.topLeadName = card.topLeadName;
           existing.topTradeId = tradeId;
         }
       } else {
         byService.set(card.serviceId, {
           ...card,
-          leadKeys: [...card.leadKeys],
-          tradeBreakdown: { [tradeId]: card.count },
-          topTradeId: card.count > 0 ? tradeId : undefined,
+          count: cardCount,
+          leadKeys: [...cardLeadKeys],
+          tradeBreakdown: { [tradeId]: cardCount },
+          topTradeId: cardCount > 0 ? tradeId : undefined,
         });
       }
     }
-    if (bundle.leadsByService) {
-      for (const [sid, leads] of Object.entries(bundle.leadsByService)) {
+    const lbs = bundle.leadsByService;
+    if (lbs && typeof lbs === "object") {
+      for (const [sid, leads] of Object.entries(lbs)) {
+        if (!Array.isArray(leads)) continue;
         if (!leadsByService[sid]) leadsByService[sid] = [];
         // Tag each lead with its source trade so the drill-down list
         // can show which vertical the lead belongs to. Mutates a
         // shallow copy — original stays untouched.
         for (const l of leads) {
+          if (!l || typeof l !== "object") continue;
           leadsByService[sid].push({
             ...l,
             // The trade label is shown alongside the company name in
@@ -196,7 +258,7 @@ function aggregateAcrossTrades(
     }
   }
   return {
-    cards: [...byService.values()].sort((a, b) => b.count - a.count),
+    cards: [...byService.values()].sort((a, b) => (b.count ?? 0) - (a.count ?? 0)),
     leadsByService,
   };
 }
@@ -206,6 +268,7 @@ export default function AllLeadsBucketOverview({
   trade,
   serviceBucketsByTrade,
   availableTrades,
+  reps,
   onTradeChange,
   onSelectLead,
   onViewAllInTrade,
@@ -290,22 +353,34 @@ export default function AllLeadsBucketOverview({
     let ready = 0;
     let inProgress = 0;
     let followUp = 0;
-    for (const list of Object.values(activeBundle.leadsByService)) {
+    const lbs = activeBundle.leadsByService ?? {};
+    for (const list of Object.values(lbs)) {
+      if (!Array.isArray(list)) continue;
       for (const lead of list) {
-        if (allLeads.has(lead.leadKey)) continue;
-        allLeads.add(lead.leadKey);
+        // Defensive identity resolution — older snapshots may have
+        // shipped without an explicit leadKey field. Fall back to id
+        // so the counter never silently zeroes out.
+        const key =
+          (lead && typeof lead.leadKey === "string" && lead.leadKey)
+          || (lead && typeof (lead as unknown as { id?: string }).id === "string"
+                ? (lead as unknown as { id: string }).id
+                : null);
+        if (!key) continue;
+        if (allLeads.has(key)) continue;
+        allLeads.add(key);
         const state = lead.leadState ?? "ready_to_call";
         if (state === "ready_to_call") ready++;
         else if (state === "in_progress") inProgress++;
         else if (state === "follow_up") followUp++;
       }
     }
+    const cards = Array.isArray(activeBundle.cards) ? activeBundle.cards : [];
     return {
       total: allLeads.size,
       ready,
       inProgress,
       followUp,
-      bucketCount: activeBundle.cards.filter((c) => c.count > 0).length,
+      bucketCount: cards.filter((c) => (c?.count ?? 0) > 0).length,
     };
   }, [activeBundle]);
 
@@ -421,6 +496,7 @@ export default function AllLeadsBucketOverview({
           leads={drillLeads}
           tradeLabel={activeTradeLabel}
           workspaceSlug={workspaceSlug}
+          reps={reps}
           selected={selected}
           bulkPending={bulkPending}
           bulkError={bulkError}
@@ -884,6 +960,7 @@ function DrillDown({
   leads,
   tradeLabel,
   workspaceSlug,
+  reps,
   selected,
   bulkPending,
   bulkError,
@@ -897,6 +974,7 @@ function DrillDown({
   leads: FilteredLeadEntry[];
   tradeLabel: string;
   workspaceSlug: string;
+  reps?: RepOption[];
   selected: Set<string>;
   bulkPending: boolean;
   bulkError: string | null;
@@ -906,6 +984,11 @@ function DrillDown({
   onSelectLead?: (leadKey: string) => void;
   isAllTradesMode: boolean;
 }) {
+  // Build a quick lookup so the assigned-rep pill on each row can
+  // resolve a repId to a display name. Stable for the lifetime of
+  // this drill-down render.
+  const repLookup: Record<string, string> = {};
+  if (reps) for (const r of reps) repLookup[r.id] = r.name;
   return (
     <>
       <div
@@ -1007,6 +1090,17 @@ function DrillDown({
               isAllTradesMode
                 ? ((lead as unknown) as Record<string, string>)["__sourceTradeLabel"] ?? null
                 : null;
+            // Priority label is derived from existing scoring fields
+            // — never invented. Surfaces who matters first without
+            // forcing the operator to open every Deep Report.
+            const priority = derivePriorityLabel(lead);
+            const priorityStyle = PRIORITY_STYLE[priority];
+            // Assigned operator (set via override). Pulled off the
+            // tagged lead — applyScheduleOverrides stamps assignedRepId
+            // on every override-affected lead.
+            const assignedRepId =
+              ((lead as unknown) as { assignedRepId?: string }).assignedRepId ?? null;
+            const assignedRepName = assignedRepId ? (repLookup[assignedRepId] ?? assignedRepId) : null;
             return (
               <div
                 key={lead.leadKey}
@@ -1027,6 +1121,22 @@ function DrillDown({
                   aria-label={`Select ${lead.companyName}`}
                   style={{ cursor: "pointer", width: "14px", height: "14px" }}
                 />
+                <span
+                  title={`${priority} — derived from urgency + close probability`}
+                  style={{
+                    padding: "3px 8px",
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    background: priorityStyle.bg,
+                    color: priorityStyle.color,
+                    borderRadius: "4px",
+                    flexShrink: 0,
+                    letterSpacing: "0.02em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {priority}
+                </span>
                 <div
                   style={{ flex: 1, minWidth: 0, cursor: onSelectLead ? "pointer" : "default" }}
                   onClick={() => onSelectLead?.(lead.leadKey)}
@@ -1063,6 +1173,23 @@ function DrillDown({
                         }}
                       >
                         {lead.closeLabel}
+                      </span>
+                    ) : null}
+                    {assignedRepName ? (
+                      <span
+                        title={`Assigned to ${assignedRepName}`}
+                        style={{
+                          marginLeft: "8px",
+                          padding: "2px 6px",
+                          fontSize: "10px",
+                          fontWeight: 600,
+                          background: "#FFF7ED",
+                          color: "#9A3412",
+                          border: "1px solid #FED7AA",
+                          borderRadius: "4px",
+                        }}
+                      >
+                        ◇ {assignedRepName}
                       </span>
                     ) : null}
                   </div>
@@ -1115,6 +1242,10 @@ function DrillDown({
                     leadId={lead.leadKey}
                     workspaceSlug={workspaceSlug}
                     leadName={lead.companyName}
+                    reps={reps}
+                    hasOverride={
+                      ((lead as unknown) as { scheduleOverride?: unknown }).scheduleOverride != null
+                    }
                     variant="icon"
                   />
                 </div>

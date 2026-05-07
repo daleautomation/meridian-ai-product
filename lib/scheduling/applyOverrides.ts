@@ -97,6 +97,7 @@ export function applyScheduleOverrides<P extends OperatorBucketProps>(
         continue;
       case "move_tomorrow":
       case "move_next_week":
+      case "move_to_date":
         out.todayList.push(tagged);
         continue;
       case "follow_up":
