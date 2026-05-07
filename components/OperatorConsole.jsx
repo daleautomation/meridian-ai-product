@@ -69,6 +69,19 @@ import {
   DEAL_STAGE_LABELS,
   sortDealsForStage,
 } from "../lib/leads/deals";
+import { trackEvent } from "../lib/tracking/clientTracker";
+
+// Debug-log gate. Per-render logs flood the main thread on the live
+// demo; enable via NEXT_PUBLIC_DEBUG_MERIDIAN=1 only when needed.
+const DEBUG_UI =
+  typeof process !== "undefined"
+  && typeof process.env !== "undefined"
+  && process.env.NEXT_PUBLIC_DEBUG_MERIDIAN === "1";
+
+// No-op logger used in heavy memo paths. Errors + warnings still go
+// through the real console; only verbose dev info is silenced.
+const dlog = DEBUG_UI ? console.log.bind(console) : () => {};
+const ddebug = DEBUG_UI ? (console.debug ? console.debug.bind(console) : console.log.bind(console)) : () => {};
 
 // Internal-only diagnostics flag. Off in production by default; never
 // renders UI. When on, the dev console log gains classification
@@ -8584,7 +8597,12 @@ export default function OperatorConsole({
   }, [selectedTradeId]);
   const handleSelectServiceAngle = useCallback((bucketId) => {
     setSelectedServiceAngleId((prev) => (prev === bucketId ? null : bucketId));
-  }, []);
+    trackEvent({
+      eventType: "service_bucket_select",
+      serviceBucketId: bucketId ?? null,
+      tradeId: selectedTradeId ?? null,
+    });
+  }, [selectedTradeId]);
   const handleClearServiceAngle = useCallback(() => {
     setSelectedServiceAngleId(null);
   }, []);
@@ -9009,13 +9027,13 @@ export default function OperatorConsole({
         const t = (l && (l.trade || l.tradeId || l.category || l.moduleId)) ?? "unknown";
         tradesPresent.add(String(t).toLowerCase());
       }
-      console.log(
+      dlog(
         `[all-trades-debug] rawLeads=${(angleScopedLeads ?? []).length} ` +
         `trades=${Array.from(tradesPresent).join(",") || "none"}`,
       );
     }
     // eslint-disable-next-line no-console
-    console.log(
+    dlog(
       `[debug-tasks] OperatorConsole selectedTrade="${selectedTradeId}" ` +
       `combinedLeadPool=${combinedLeadPool.length} ` +
       `tradeScopedLeads=${tradeScopedLeads.length} ` +
@@ -9053,7 +9071,7 @@ export default function OperatorConsole({
           byDay.set(k, (byDay.get(k) ?? 0) + 1);
         }
         // eslint-disable-next-line no-console
-        console.log(
+        dlog(
           `[stage2-buildTasksFromLeads] masterPool=${masterPool.length} ` +
           `baseTasks=${baseTasks.length} callTasks=${callTasks.length} ` +
           `byDay=${JSON.stringify(Object.fromEntries(Array.from(byDay.entries()).sort()))}`,
@@ -9061,7 +9079,7 @@ export default function OperatorConsole({
       } catch { /* ignore */ }
     }
     // eslint-disable-next-line no-console
-    console.log(
+    dlog(
       `[debug-tasks] OperatorConsole baseTasks=${baseTasks.length} ` +
       `selectedTrade="${selectedTradeId}"`,
     );
@@ -9121,7 +9139,7 @@ export default function OperatorConsole({
           Math.abs(patternAdjustments[a].probabilityDelta),
         )
         .slice(0, 5);
-      console.debug("[CalendarCommandCenter]", {
+      ddebug("[CalendarCommandCenter]", {
         leads: tradeScopedLeads.length,
         tasksGenerated: tasks.length,
         duplicateIds: dupes,
@@ -9193,7 +9211,7 @@ export default function OperatorConsole({
           totalLeads: s.totalLeads,
           buckets: s.buckets.map((b) => ({ id: b.bucketId, count: b.count })),
         }));
-        console.debug("[TradeModule]", {
+        ddebug("[TradeModule]", {
           selectedTradeId,
           tradeLabel,
           totalTasksWithBucket,
@@ -9226,7 +9244,7 @@ export default function OperatorConsole({
             topTask = t.id;
           }
         }
-        console.debug("[CanonicalScoring]", {
+        ddebug("[CanonicalScoring]", {
           topExecuteTaskId: topExecute,
           topAllocationTaskId: topAlloc,
           topTaskScoreTaskId: topTask,
@@ -9242,7 +9260,7 @@ export default function OperatorConsole({
           feedbackEvents,
           tasks: priorOptimizedTasksRef.current,
         });
-        console.debug("[GlobalIntelligence]", {
+        ddebug("[GlobalIntelligence]", {
           globalMarketsAnalyzed: globalDiscovery.diagnostics.marketsAnalyzed,
           universalPatternKeys: globalDiscovery.universalPatternKeys,
           marketSpecificPatternKeys: globalDiscovery.marketSpecificPatternKeys,
@@ -9312,7 +9330,7 @@ export default function OperatorConsole({
           byDay.set(k, (byDay.get(k) ?? 0) + 1);
         }
         // eslint-disable-next-line no-console
-        console.log(
+        dlog(
           `[stage3-rawCalendarTasks] total=${pool.length} callTasks=${callTasks.length} ` +
           `selectedTradeId=${selectedTradeId} ` +
           `selectedRepId=${selectedRepId ?? "—"} ` +
@@ -9346,7 +9364,7 @@ export default function OperatorConsole({
         return typeof k === "string" && allowed.has(k);
       });
       if (typeof console !== "undefined") {
-        console.log(
+        dlog(
           `[calendar-service-filter] trade=${selectedTradeId} ` +
           `service=${selectedLaborTechServiceId} scheduledVisible=${pool.length}`,
         );
@@ -9396,7 +9414,7 @@ export default function OperatorConsole({
         next.serviceShortLabel.startsWith("trade:")
       ) {
         // eslint-disable-next-line no-console
-        console.log(
+        dlog(
           `[label-audit-warning] lead="${next?.linkedCompany ?? next?.id ?? "?"}" ` +
           `issue="service overwritten by trade label"`,
         );
@@ -9407,7 +9425,7 @@ export default function OperatorConsole({
         !next.serviceShortLabel
       ) {
         // eslint-disable-next-line no-console
-        console.log(
+        dlog(
           `[label-audit-warning] lead="${next?.linkedCompany ?? next?.id ?? "?"}" ` +
           `issue="missing service bucket in all trades"`,
         );
@@ -9420,16 +9438,16 @@ export default function OperatorConsole({
         const tid = t?.tradeId || "unknown";
         tradeCounts[tid] = (tradeCounts[tid] ?? 0) + 1;
       }
-      console.log(
+      dlog(
         `[all-trades-debug] selectedTrade=all visible=${pool.length} ` +
         `trades=${Object.keys(tradeCounts).length}`,
       );
-      console.log(
+      dlog(
         `[calendar-trade-view] mode=all visible=${pool.length} ` +
         `trades=${Object.keys(tradeCounts).length}`,
       );
       Object.entries(tradeCounts).forEach(([tid, count]) => {
-        console.log(`[calendar-trade-color] trade=${tid} count=${count}`);
+        dlog(`[calendar-trade-color] trade=${tid} count=${count}`);
       });
     }
     const finalPool = filterCalendarTasks(pool, calendarVisibility);
@@ -9451,7 +9469,7 @@ export default function OperatorConsole({
         const expected = ["2026-05-07","2026-05-08","2026-05-11","2026-05-12","2026-05-13","2026-05-14"];
         const expectedVsActual = expected.map((d) => `${d}:exp20/act${byDay.get(d) ?? 0}`).join(" ");
         // eslint-disable-next-line no-console
-        console.log(
+        dlog(
           `[stage4-calendarTasks] total=${finalPool.length} callTasks=${callTasks.length} ` +
           `byDay=${JSON.stringify(Object.fromEntries(Array.from(byDay.entries()).sort()))} ` +
           `field-test=${expectedVsActual}`,
@@ -9517,7 +9535,7 @@ export default function OperatorConsole({
     }
     const list = Array.from(seen.values());
     if (typeof console !== "undefined" && list.length > 0) {
-      console.log(
+      dlog(
         `[calendar-service-colors] services=${list.map((s) => s.id).join(",")} count=${list.length}`,
       );
     }
@@ -9929,7 +9947,10 @@ export default function OperatorConsole({
               tradeSlot={(
                 <TradeModuleSelector
                   selectedTradeId={selectedTradeId}
-                  onSelect={setSelectedTradeId}
+                  onSelect={(tid) => {
+                    setSelectedTradeId(tid);
+                    trackEvent({ eventType: "trade_tab_select", tradeId: tid ?? null });
+                  }}
                 />
               )}
             />
@@ -10000,7 +10021,7 @@ export default function OperatorConsole({
                     setSelectedLaborTechServiceId(sid);
                     if (typeof console !== "undefined") {
                       const visible = (tradeBundle.leadsByService?.[sid] ?? []).length;
-                      console.log(`[service-filter] trade=${selectedTradeId} service=${sid} visible=${visible}`);
+                      dlog(`[service-filter] trade=${selectedTradeId} service=${sid} visible=${visible}`);
                     }
                   }}
                   onClearService={() => setSelectedLaborTechServiceId(null)}
@@ -10026,16 +10047,18 @@ export default function OperatorConsole({
               selectedLeadKey={selectedKey}
               onSelectLead={(leadKey) => {
                 setSelectedKey(leadKey);
-                // Cross-tab bridge: same click → Operator + Intelligence
-                // Panel parity as Today's calendar card click. We route
-                // through handleEnterAssistMode so the assistIntentRef
-                // is armed BEFORE selectedTaskId flips — otherwise the
-                // parent's reset effect would close Assist Mode in the
-                // same commit.
                 if (typeof leadKey === "string" && leadKey.length > 0) {
                   const taskId = `lead-${leadKey}-call`;
                   const list = Array.isArray(rawCalendarTasks) ? rawCalendarTasks : [];
                   const direct = list.find((t) => t?.linkedLeadId === leadKey);
+                  trackEvent({
+                    eventType: "all_leads_row_select",
+                    taskId,
+                    leadId: leadKey,
+                    companyName: direct?.linkedCompany ?? null,
+                    tradeId: direct?.tradeId ?? selectedTradeId ?? null,
+                    serviceBucketId: direct?.laborTechScan?.primaryService ?? null,
+                  });
                   handleEnterAssistMode(direct ?? { id: taskId });
                 }
               }}

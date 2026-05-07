@@ -25,11 +25,16 @@ export type PublicUser = {
   workspaces: string[];
 };
 
+// ── Field-test demo credentials ─────────────────────────────────────
+// Single source of truth. Update here to rotate any account; the
+// login route, session, and workspace routing all read from this map.
+// Passwords are plaintext for the field-test demo only — replace
+// with hashed credentials before any non-demo deployment.
 export const TENANTS: Record<string, Tenant> = {
   dylan: {
     id: "dylan",
     name: "Dylan",
-    password: "dylan",
+    password: "meridian",
     modules: ["roofing"],
     geo: [],
     workspaces: ["labortech"],
@@ -37,7 +42,7 @@ export const TENANTS: Record<string, Tenant> = {
   john: {
     id: "john",
     name: "John",
-    password: "john",
+    password: "labortech",
     modules: ["roofing"],
     geo: [],
     workspaces: ["labortech"],

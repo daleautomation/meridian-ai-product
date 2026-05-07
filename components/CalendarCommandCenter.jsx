@@ -31,6 +31,7 @@ import {
   saveExecutionOutcome,
   updateExecutionOutcome,
 } from "../lib/execution/executionOutcome";
+import { trackEvent } from "../lib/tracking/clientTracker";
 import { explainTaskAction, explainTaskPriority } from "../lib/calendar/taskExplain";
 import LeadContextStrip from "./LeadContextStrip";
 import LeadEmailAction from "./LeadEmailAction";
@@ -44,6 +45,14 @@ import {
   panelBlueGlow,
 } from "./workflowLayout";
 import LeadWorkflowDrawer from "./LeadWorkflowDrawer";
+
+// Debug-log gate. Per-render console.log calls flood the main thread
+// when the calendar renders ~200 cards × N re-renders. Enable via
+// NEXT_PUBLIC_DEBUG_MERIDIAN=1 during local debugging only.
+const DEBUG_UI =
+  typeof process !== "undefined"
+  && typeof process.env !== "undefined"
+  && process.env.NEXT_PUBLIC_DEBUG_MERIDIAN === "1";
 
 const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const DAY_FULL  = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -733,7 +742,7 @@ function TaskCard({ task, compact = false, now, isExecuteNow = false, onTaskFeed
             )
           : null;
 
-        if (typeof console !== "undefined") {
+        if (DEBUG_UI && typeof console !== "undefined") {
           // eslint-disable-next-line no-console
           console.log(
             `[label-audit] lead="${task?.linkedCompany ?? task?.id ?? "?"}" ` +
@@ -1073,7 +1082,7 @@ function FeedbackControls({ task, onTaskFeedback }) {
     : phoneDigits.length === 11 && phoneDigits.startsWith("1")
       ? `tel:+${phoneDigits}`
       : phoneDigits ? `tel:${phoneDigits}` : null;
-  if (typeof console !== "undefined" && task?.linkedCompany) {
+  if (DEBUG_UI && typeof console !== "undefined" && task?.linkedCompany) {
     // eslint-disable-next-line no-console
     console.log(
       `[card-actions] lead="${task.linkedCompany}" actions=` +
@@ -2832,6 +2841,17 @@ function ExecutionOutcomePanel({ taskId }) {
     const next = updateExecutionOutcome(outcome, patch);
     setOutcome(next);
     saveExecutionOutcome(taskId, next);
+    trackEvent({
+      eventType: "outcome_save",
+      taskId: taskId,
+      metadata: {
+        status: next.status,
+        hasNotes: (next.notes ?? "").length > 0,
+        estimatedValue: next.estimatedValue ?? null,
+        nextFollowupDate: next.nextFollowupDate ?? null,
+        patchKeys: Object.keys(patch ?? {}),
+      },
+    });
   };
 
   const QUICK_BUTTONS = [
@@ -3052,14 +3072,12 @@ export function SelectedLeadPanel({
   // and from Today's Command Queue (Open Assist Mode button). The
   // Operator panel no longer surfaces a manual trigger.
   useEffect(() => {
+    if (!DEBUG_UI) return;
     if (!task?.id) return;
     // eslint-disable-next-line no-console
     console.log(
       `[deep-report-button] company="${company}" hasScan=${scanQualified ? "true" : "false"}`,
     );
-    // Lead-context audit. Confirms the calendar card, the operator
-    // panel, and the Deep Report agree on this lead's service. The
-    // panel's serviceLabel resolution mirrors TaskCard's source order.
     const calendarService = task?.serviceShortLabel ?? task?.serviceBucketLabel ?? task?.laborTechScan?.primaryService ?? null;
     const panelService = task?.laborTechScan?.primaryService ?? task?.primaryServiceLabel ?? task?.serviceShortLabel ?? task?.serviceBucketLabel ?? null;
     const reportService = task?.laborTechScan?.primaryService ?? null;
@@ -3529,14 +3547,20 @@ export function SelectedLeadPanel({
             }
             if (typeof onMutate === "function") onMutate(task.id, { status: "in_progress" });
             if (typeof onOpen === "function") onOpen(task);
-            // Stamp the persisted Execution Outcome so the queue chip
-            // reflects the call without needing a second click.
             if (task?.id) {
               try {
                 const next = updateExecutionOutcome(loadExecutionOutcome(task.id), { status: "Called" });
                 saveExecutionOutcome(task.id, next);
               } catch { /* fail silent */ }
             }
+            trackEvent({
+              eventType: "call_now_clicked",
+              taskId: task?.id ?? null,
+              leadId: task?.linkedLeadId ?? null,
+              companyName: company,
+              tradeId: task?.tradeId ?? null,
+              serviceBucketId: task?.laborTechScan?.primaryService ?? null,
+            });
           }}
           aria-label={telHref ? `Call ${company} now` : "Call unavailable"}
           aria-disabled={!telHref}
@@ -4644,16 +4668,16 @@ export default function CalendarCommandCenter({
 
   const handleSelectTask = (task) => {
     if (!task) return;
-    // Context lock — once a call is active the operator can't switch
-    // leads by clicking another card. Outcome capture is the only
-    // way to advance.
     if (callMode === "active") return;
-    // A direct calendar card click is now an EXECUTION INTENT — same
-    // path as Today's Command Queue. Both surfaces flip selectedTask
-    // AND deepReportOpen in one commit, so the operator lands on
-    // [Operator + Intelligence Panel] without a second click. The
-    // legacy "Open Assist Mode →" button has been removed from the
-    // Operator panel because this is now the only path users need.
+    trackEvent({
+      eventType: "calendar_card_select",
+      taskId: task.id ?? null,
+      leadId: task.linkedLeadId ?? null,
+      companyName: task.linkedCompany ?? null,
+      tradeId: task.tradeId ?? null,
+      serviceBucketId: task?.laborTechScan?.primaryService ?? null,
+      metadata: { source: "calendar" },
+    });
     handleOpenAssist(task);
   };
   const handleClearSelectedTask = () => {
@@ -4679,13 +4703,17 @@ export default function CalendarCommandCenter({
   const handleOpenAssist = (task) => {
     if (!task) return;
     if (callMode === "active") return;
+    trackEvent({
+      eventType: "deep_report_open",
+      taskId: task.id ?? null,
+      leadId: task.linkedLeadId ?? null,
+      companyName: task.linkedCompany ?? null,
+      tradeId: task.tradeId ?? null,
+      serviceBucketId: task?.laborTechScan?.primaryService ?? null,
+    });
     if (typeof externalOnEnterAssistMode === "function") {
-      // Controlled path. Parent owns selectedTaskId AND deepReportOpen
-      // AND the intent ref — the only place that can flip both states
-      // without our parent's reset effect overwriting the open.
       externalOnEnterAssistMode(task);
     } else {
-      // Standalone fallback (no parent wiring).
       assistIntentRef.current = task.id;
       if (selectedTaskId === task.id) {
         setDeepReportOpen(true);
@@ -4870,8 +4898,9 @@ export default function CalendarCommandCenter({
     for (const k of Object.keys(map)) {
       map[k] = rankTasks(map[k], now);
     }
-    // ── Stage 5 diagnostic: tasksByDay grouping ─────────────────
-    if (typeof console !== "undefined") {
+    // ── Stage 5 diagnostic — gated by DEBUG_UI to keep the live demo
+    // free of console-flood UI freezes.
+    if (DEBUG_UI && typeof console !== "undefined") {
       try {
         const callOnly = {};
         for (const [k, list] of Object.entries(map)) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function LoginForm() {
@@ -10,6 +10,17 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Demo button gating — show only after mount AND only on dev /
+  // ngrok hosts. SSR returns null so production hydration never
+  // sees the button.
+  const [showDemoLogin, setShowDemoLogin] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const host = window.location.hostname.toLowerCase();
+    const isDev = host === "localhost" || host === "127.0.0.1";
+    const isNgrok = host.includes("ngrok");
+    setShowDemoLogin(isDev || isNgrok);
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -63,6 +74,14 @@ function LoginForm() {
         <button type="submit" disabled={loading} style={styles.btn}>
           {loading ? "Signing in..." : "Sign In"}
         </button>
+        {showDemoLogin ? (
+          <a
+            href="/api/auth/demo-login?user=john&workspace=labortech"
+            style={styles.demoBtn}
+          >
+            Demo Login as John
+          </a>
+        ) : null}
       </form>
     </div>
   );
@@ -138,6 +157,21 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     cursor: "pointer",
     minHeight: "44px",
+  },
+  demoBtn: {
+    marginTop: "12px",
+    padding: "12px",
+    borderRadius: "8px",
+    background: "transparent",
+    color: "#2563EB",
+    border: "1px solid #BFDBFE",
+    fontSize: "13px",
+    fontWeight: 600,
+    cursor: "pointer",
+    minHeight: "40px",
+    textAlign: "center",
+    textDecoration: "none",
+    display: "block",
   },
 };
 

@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { palette } from "../lib/theme";
 import { getLaborTechServiceFit } from "../lib/scan/serviceFit";
 import { loadAllExecutionOutcomes } from "../lib/execution/executionOutcome";
+import { trackEvent } from "../lib/tracking/clientTracker";
 
 // Today is the PRIORITY layer — rank, confidence, urgency only.
 // Pain framing lives in the Operator. Tactical "how" lives in the
@@ -72,15 +73,21 @@ export default function TodayExecutionPlan({
   const handlePrimary = (task) => {
     if (!task) return;
     setRoutingTaskId(task.id);
-    // Auto-expand when the user routes into a lead that may sit
-    // beyond the focused window, so they always have the rest of
-    // the day visible after the first click.
     if (!expanded && hasOverflow) setExpanded(true);
     if (typeof window !== "undefined") {
       window.setTimeout(() => {
         setRoutingTaskId((current) => (current === task.id ? null : current));
       }, 900);
     }
+    trackEvent({
+      eventType: "today_open_assist_mode",
+      taskId: task.id ?? null,
+      leadId: task.linkedLeadId ?? null,
+      companyName: task.linkedCompany ?? null,
+      tradeId: task.tradeId ?? null,
+      serviceBucketId: task?.laborTechScan?.primaryService ?? null,
+      metadata: { source: "today_queue" },
+    });
     if (typeof onOpenAssist === "function") {
       onOpenAssist(task);
       return;
@@ -363,6 +370,16 @@ export default function TodayExecutionPlan({
                   <a
                     href={tel}
                     title={`Call ${phone}`}
+                    onClick={() => {
+                      trackEvent({
+                        eventType: "today_call_direct",
+                        taskId: task.id ?? null,
+                        leadId: task.linkedLeadId ?? null,
+                        companyName: task.linkedCompany ?? null,
+                        tradeId: task.tradeId ?? null,
+                        metadata: { phone: phone ? "present" : "missing" },
+                      });
+                    }}
                     style={{
                       fontSize: "11px", fontWeight: 700,
                       color: palette.blue,
