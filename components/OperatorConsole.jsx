@@ -4,6 +4,9 @@ import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { palette } from "../lib/theme";
 import SourceReadiness from "./SourceReadiness";
 import LaborTechServicesPanel from "./LaborTechServicesPanel";
+import SnapshotFreshnessPill from "./SnapshotFreshnessPill";
+import SchedulingMenu from "./SchedulingMenu";
+import AllLeadsBucketOverview from "./AllLeadsBucketOverview";
 import {
   filterCalendarTasks,
   summarizeVisibility,
@@ -8360,6 +8363,10 @@ export default function OperatorConsole({
   callTheseFirst = [], todayList = [], remaining = [], rest = [],
   totalPipeline = 0, pipelineMap = {}, roi, lastPipelineJob = null,
   pendingReviews, calendarEvents, recentActivities,
+  // Snapshot freshness — passed by the operator page so the pill in
+  // the header can render a relative time and offer a manual refresh.
+  snapshotGeneratedAt = null,
+  snapshotIsFresh = false,
 }) {
   // Rep filter for the calendar (All / Rep 1 / Rep 2). Display-only —
   // does not change scheduling.
@@ -9702,6 +9709,12 @@ export default function OperatorConsole({
               <span className="meridian-stats-optional" style={S.stat}>{roi?.closedWon ?? 0} closed</span>
             </>
           )}
+          {workspace?.slug ? (
+            <SnapshotFreshnessPill
+              workspaceSlug={workspace.slug}
+              generatedAt={snapshotGeneratedAt ?? null}
+            />
+          ) : null}
           <span style={S.userName}>{user.name}</span>
         </div>
       </header>
@@ -9988,6 +10001,37 @@ export default function OperatorConsole({
               flexDirection: "column",
               gap: "16px",
             }}>
+            {(() => {
+              const tradeBundle = serviceBucketsByTrade?.[selectedTradeId];
+              if (!tradeBundle || !Array.isArray(tradeBundle.cards) || tradeBundle.cards.length === 0) {
+                return null;
+              }
+              const tradeLabel = TRADE_MODULES[selectedTradeId]?.label ?? selectedTradeId;
+              return (
+                <AllLeadsBucketOverview
+                  workspaceSlug={workspace?.slug ?? ""}
+                  trade={selectedTradeId}
+                  tradeLabel={tradeLabel}
+                  bundle={tradeBundle}
+                  onSelectLead={(leadKey) => {
+                    setSelectedKey(leadKey);
+                    if (typeof leadKey === "string" && leadKey.length > 0) {
+                      const taskId = `lead-${leadKey}-call`;
+                      const list = Array.isArray(rawCalendarTasks) ? rawCalendarTasks : [];
+                      const direct = list.find((t) => t?.linkedLeadId === leadKey);
+                      handleEnterAssistMode(direct ?? { id: taskId });
+                    }
+                  }}
+                  onViewAllInTrade={() => setSelectedLaborTechServiceId(null)}
+                  onStartPrioritizedCalling={() => {
+                    // Route to Today's queue — the deterministic
+                    // ranked schedule already produced the priority
+                    // order. Operator clicks the first card from there.
+                    setActiveTab("calendar");
+                  }}
+                />
+              );
+            })()}
             {(() => {
               const tradeBundle = serviceBucketsByTrade?.[selectedTradeId];
               if (!tradeBundle || !Array.isArray(tradeBundle.cards) || tradeBundle.cards.length === 0) {

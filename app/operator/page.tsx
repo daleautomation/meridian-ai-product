@@ -37,6 +37,8 @@ import {
 import { getSourceReadiness } from "../../lib/sources/readiness";
 import { ALL_TRADE_ENV_VARS } from "../../lib/modules/tradeSources";
 import { readOperatorSnapshot, writeOperatorSnapshot } from "../../lib/operatorPayload/snapshot";
+import { listOverrides } from "../../lib/scheduling/overrideStore";
+import { applyScheduleOverrides } from "../../lib/scheduling/applyOverrides";
 
 export const dynamic = "force-dynamic";
 
@@ -144,6 +146,16 @@ async function renderOperatorPage({
       // was generated under a different user). Workspace identity is
       // preserved from the snapshot — it must match the requested slug.
       const snapProps = snap.props as Record<string, unknown>;
+      const tOv = Date.now();
+      const overrides = await listOverrides(workspace.slug);
+      const merged = applyScheduleOverrides(
+        snapProps as unknown as Parameters<typeof applyScheduleOverrides>[0],
+        overrides,
+      );
+      // eslint-disable-next-line no-console
+      console.log(
+        `[operator-timing] overrides_applied ms=${Date.now() - tOv} count=${overrides.length}`,
+      );
       // eslint-disable-next-line no-console
       console.log(
         `[operator-timing] FAST_PATH total_ms=${Date.now() - t0} ` +
@@ -153,12 +165,14 @@ async function renderOperatorPage({
       // unknown is necessary because TypeScript can't statically know
       // the JSON file matches OperatorConsoleProps — that contract is
       // enforced by the snapshot generator.
-      const typedProps = snapProps as unknown as Parameters<typeof OperatorConsole>[0];
+      const typedProps = merged as unknown as Parameters<typeof OperatorConsole>[0];
       return (
         <OperatorConsole
           {...typedProps}
           user={{ name: user.name ?? user.id, id: user.id }}
           workspace={workspace}
+          snapshotGeneratedAt={snap.generatedAt}
+          snapshotIsFresh={true}
         />
       );
     }
@@ -791,6 +805,7 @@ async function renderOperatorPage({
       : null,
   };
 
+  const slowGeneratedAt = new Date().toISOString();
   // eslint-disable-next-line no-console
   console.log(`[operator-timing] SLOW_PATH total_ms=${Date.now() - t0} workspace=${workspace.slug}`);
 
@@ -804,11 +819,17 @@ async function renderOperatorPage({
     });
   }
 
+  // Apply persisted overrides on top of the freshly computed lists.
+  const overridesSlow = await listOverrides(workspace.slug);
+  const mergedSlow = applyScheduleOverrides(operatorProps, overridesSlow);
+
   return (
     <OperatorConsole
       user={{ name: user.name ?? user.id, id: user.id }}
       workspace={workspace}
-      {...operatorProps}
+      {...mergedSlow}
+      snapshotGeneratedAt={slowGeneratedAt}
+      snapshotIsFresh={true}
     />
   );
 }

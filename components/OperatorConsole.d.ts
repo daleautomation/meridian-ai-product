@@ -79,6 +79,11 @@ interface OperatorConsoleProps {
   calendarEvents?: unknown[];
   recentActivities?: unknown[];
   lastPipelineJob?: { completedAt: string; errors: number; enriched: number } | null;
+  /** ISO timestamp the operator payload snapshot was generated at.
+   *  Powers the freshness pill in the header. Null means slow-path. */
+  snapshotGeneratedAt?: string | null;
+  /** True when the SSR pulled the cached snapshot. False on slow path. */
+  snapshotIsFresh?: boolean;
 }
 
 declare function OperatorConsole(props: OperatorConsoleProps): React.JSX.Element;
