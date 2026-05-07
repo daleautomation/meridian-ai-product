@@ -52,3 +52,15 @@ export function isWeekend(date: Date): boolean {
   const d = date.getDay();
   return d === 0 || d === 6;
 }
+
+/** Advance to the next Mon–Fri. If the input is already a weekday,
+ *  returns a copy of that date unchanged. Used by the global scheduler
+ *  + manual override surfaces to guarantee no auto-generated date
+ *  ever lands on Sat/Sun. Pure — never mutates input. */
+export function nextBusinessDay(date: Date): Date {
+  const out = new Date(date);
+  while (isWeekend(out)) {
+    out.setDate(out.getDate() + 1);
+  }
+  return out;
+}

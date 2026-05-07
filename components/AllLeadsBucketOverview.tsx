@@ -34,9 +34,26 @@
 // via onTradeChange so other surfaces (Today queue filters, header
 // stats) stay synchronized.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import SchedulingMenu from "./SchedulingMenu";
+
+// ─── All Trades id normalization ───────────────────────────────────
+// External callers (OperatorConsole's selectedTradeId, breadcrumb
+// links, future deep-link URLs) historically used several sentinels
+// to mean "aggregate every trade" — "all", "all-trades", "__all__",
+// or just nothing. Treating any of those as a real trade id sends
+// the bundle lookup off a cliff (returns undefined, totals show 0).
+//
+// One helper, one source of truth. Use it everywhere the component
+// asks "is this an aggregate selection?". Do not abstract further —
+// this is the only normalization the surface needs.
+const ALL_TRADES_SENTINELS = new Set(["all", "all-trades", "__all__"]);
+function isAllTradesId(value: unknown): boolean {
+  if (value == null) return true;
+  if (typeof value !== "string") return false;
+  return ALL_TRADES_SENTINELS.has(value);
+}
 
 interface ServiceTag { id: string; label: string; reason?: string }
 interface FilteredLeadEntry {
@@ -275,11 +292,30 @@ export default function AllLeadsBucketOverview({
   onStartPrioritizedCalling,
 }: Props) {
   const router = useRouter();
-  const [viewMode, setViewMode] = useState<"trade" | "all">("trade");
+  // Initial view mode follows the incoming trade prop. If the parent
+  // hands us "all" / "all-trades" / "__all__" / null, render the
+  // aggregated cross-trade view immediately — no extra click required.
+  const [viewMode, setViewMode] = useState<"trade" | "all">(() =>
+    isAllTradesId(trade) ? "all" : "trade",
+  );
   const [drillIntoServiceId, setDrillIntoServiceId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkPending, setBulkPending] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
+
+  // Sync viewMode when the external trade prop changes. Two rules:
+  //   • External flip to an aggregate sentinel  → force viewMode "all"
+  //   • External flip to a real trade           → force viewMode "trade"
+  //
+  // The internal "All Trades" pill click does NOT change the trade
+  // prop (see handleSelectTrade), so this effect never fights with
+  // user-local state — it only reacts to genuine parent updates.
+  const prevTradeRef = useRef(trade);
+  useEffect(() => {
+    if (prevTradeRef.current === trade) return;
+    prevTradeRef.current = trade;
+    setViewMode(isAllTradesId(trade) ? "all" : "trade");
+  }, [trade]);
 
   // Trade-label lookup keyed by id — used by the All Trades aggregator
   // and the breadcrumb to resolve display strings without an extra
@@ -297,12 +333,19 @@ export default function AllLeadsBucketOverview({
     [serviceBucketsByTrade, tradeLabels],
   );
 
+  // Aggregate mode is reached either by viewMode flip (user clicked
+  // the All Trades pill) OR by an aggregate-sentinel trade prop
+  // (OperatorConsole says selectedTradeId === "all"). Either path
+  // renders the same cross-trade view — no silent empty state from
+  // looking up serviceBucketsByTrade["all"].
+  const isAggregateMode = viewMode === "all" || isAllTradesId(trade);
+
   // Resolve which bundle the body should render against.
-  const activeBundle = viewMode === "all"
+  const activeBundle = isAggregateMode
     ? aggregatedBundle
     : (serviceBucketsByTrade[trade] ?? null);
 
-  const activeTradeLabel = viewMode === "all"
+  const activeTradeLabel = isAggregateMode
     ? "All Trades"
     : (tradeLabels[trade] ?? trade);
 
@@ -386,7 +429,7 @@ export default function AllLeadsBucketOverview({
 
   // ─── Trade-strip handlers ────────────────────────────────────────
   function handleSelectTrade(tradeId: string) {
-    if (tradeId === ALL_TRADES_ID) {
+    if (tradeId === ALL_TRADES_ID || isAllTradesId(tradeId)) {
       setViewMode("all");
       // Keep OperatorConsole's selectedTradeId untouched so other
       // surfaces (Today queue) keep their last-picked trade context.
@@ -485,7 +528,7 @@ export default function AllLeadsBucketOverview({
       />
       <TradeStrip
         availableTrades={availableTrades}
-        activeTradeId={viewMode === "all" ? ALL_TRADES_ID : trade}
+        activeTradeId={isAggregateMode ? ALL_TRADES_ID : trade}
         onSelect={handleSelectTrade}
       />
 
@@ -504,7 +547,7 @@ export default function AllLeadsBucketOverview({
           onToggleSelect={toggleSelect}
           onSendSelected={sendSelectedToToday}
           onSelectLead={onSelectLead}
-          isAllTradesMode={viewMode === "all"}
+          isAllTradesMode={isAggregateMode}
         />
       ) : (
         // ─── OVERVIEW BODY ─────────────────────────────────────────
@@ -512,7 +555,7 @@ export default function AllLeadsBucketOverview({
           tradeLabel={activeTradeLabel}
           activeBundle={activeBundle}
           totals={totals}
-          isAllTradesMode={viewMode === "all"}
+          isAllTradesMode={isAggregateMode}
           onEnterDrill={handleEnterDrill}
           onViewAllInTrade={onViewAllInTrade}
           onStartPrioritizedCalling={onStartPrioritizedCalling}

@@ -168,13 +168,19 @@ export function buildLeadSchedule(
 
   const startSeed = new Date(options.weekStartDate);
   const seed = Number.isFinite(startSeed.getTime()) ? startSeed : new Date();
-  const { weekdays, weekends } = buildDayPlan(seed);
+  const { weekdays } = buildDayPlan(seed);
   const dayPool: Date[] = [...weekdays];
-  const overflowDays: Date[] = [...weekends];
+  // HARD weekend exclusion. Auto-scheduling never emits Sat/Sun
+  // dates. Leads that exceed weekday capacity drop into the overflow
+  // queue and pull forward when a slot opens, rather than spilling
+  // onto a non-working day. Manual weekend placement is a separate
+  // explicit feature — see app/api/scheduling/override (validateWeekdayIso
+  // currently rejects weekends; only relax that under an explicit flag).
+  const overflowDays: Date[] = [];
 
-  // Per-day counters.
+  // Per-day counters — weekday-only by construction.
   const perDay: Record<string, { calls: number; callNow: number; callWeek: number }> = {};
-  for (const d of [...dayPool, ...overflowDays]) {
+  for (const d of dayPool) {
     perDay[isoDateKey(d)] = { calls: 0, callNow: 0, callWeek: 0 };
   }
 
@@ -229,31 +235,12 @@ export function buildLeadSchedule(
         idx = (idx + probe + 1) % days.length; // advance so next lead favors the next day
       }
       if (!placed) {
-        // Try weekend overflow.
-        let weekendPlaced = false;
-        for (const day of overflowDays) {
-          const k = isoDateKey(day);
-          const counts = perDay[k];
-          if (counts[counterField] >= perDayCap) continue;
-          if (counts.calls >= maxTotal) continue;
-          const entry: ScheduleEntry = {
-            leadKey: leadKey(lead),
-            date: middayIso(day),
-            tag,
-            title: leadTitle(lead),
-            status: "priority",
-          };
-          entries.push(entry);
-          byKey.set(entry.leadKey, entry);
-          counts[counterField]++;
-          counts.calls++;
-          weekendPlaced = true;
-          break;
-        }
-        if (!weekendPlaced) {
-          overflow++;
-          overflowLeadsRaw.push(lead);
-        }
+        // Weekday capacity exhausted. Drop to the overflow queue
+        // instead of spilling onto Sat/Sun. The pull-forward
+        // mechanic (next render after a call is marked done) frees
+        // the slot and admits the next overflow lead automatically.
+        overflow++;
+        overflowLeadsRaw.push(lead);
       }
     }
   }
