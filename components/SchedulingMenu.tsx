@@ -196,7 +196,11 @@ export default function SchedulingMenu({
             borderRadius: "10px",
             boxShadow: "0 10px 30px rgba(15,23,42,0.10), 0 4px 8px rgba(15,23,42,0.06)",
             padding: "6px",
-            zIndex: 50,
+            // Operator-side modals and drawers sit at z=1000+; the
+            // dropdown sits just below those so a stacked modal can
+            // still take precedence, but it never gets clipped by
+            // calendar cards or rail panels (typical z<=20).
+            zIndex: 200,
           }}
         >
           {showReps && reps && reps.length > 0 ? (

@@ -10032,46 +10032,10 @@ export default function OperatorConsole({
                 />
               );
             })()}
-            {(() => {
-              const tradeBundle = serviceBucketsByTrade?.[selectedTradeId];
-              if (!tradeBundle || !Array.isArray(tradeBundle.cards) || tradeBundle.cards.length === 0) {
-                return null;
-              }
-              const tradeLabel = TRADE_MODULES[selectedTradeId]?.label ?? selectedTradeId;
-              const filteredLeads = selectedLaborTechServiceId
-                ? (tradeBundle.leadsByService?.[selectedLaborTechServiceId] ?? [])
-                : [];
-              return (
-                <LaborTechServicesPanel
-                  tradeLabel={tradeLabel}
-                  tradeId={selectedTradeId}
-                  buckets={tradeBundle.cards}
-                  filteredLeads={filteredLeads}
-                  selectedServiceId={selectedLaborTechServiceId}
-                  selectedLeadKey={selectedKey}
-                  onSelectLead={(leadKey) => {
-                setSelectedKey(leadKey);
-                // Cross-tab bridge — route through handleEnterAssistMode
-                // so the bucket-card click opens Operator + Intelligence
-                // Panel together (parity with Today's card click).
-                if (typeof leadKey === "string" && leadKey.length > 0) {
-                  const taskId = `lead-${leadKey}-call`;
-                  const list = Array.isArray(rawCalendarTasks) ? rawCalendarTasks : [];
-                  const direct = list.find((t) => t?.linkedLeadId === leadKey);
-                  handleEnterAssistMode(direct ?? { id: taskId });
-                }
-              }}
-                  onSelectService={(sid) => {
-                    setSelectedLaborTechServiceId(sid);
-                    if (typeof console !== "undefined") {
-                      const visible = (tradeBundle.leadsByService?.[sid] ?? []).length;
-                      dlog(`[service-filter] trade=${selectedTradeId} service=${sid} visible=${visible}`);
-                    }
-                  }}
-                  onClearService={() => setSelectedLaborTechServiceId(null)}
-                />
-              );
-            })()}
+            {/* Removed duplicate LaborTechServicesPanel render. Bucket
+                overview + drill-down now lives entirely in
+                AllLeadsBucketOverview above. The TradeLeadsPortfolio
+                below provides the deep raw-list view. */}
             {selectedLaborTechServiceId ? null : (
             <TradeLeadsPortfolio
               user={user}

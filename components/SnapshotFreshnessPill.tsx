@@ -72,11 +72,20 @@ export default function SnapshotFreshnessPill({ workspaceSlug, generatedAt }: Pr
         const body = await res.json().catch(() => null);
         throw new Error(body?.error ?? `HTTP ${res.status}`);
       }
-      // Soft refresh — the next page render will run the slow path
-      // and produce a new snapshot.
+      // The endpoint reports `invalidated: false` on Vercel because
+      // the deploy filesystem is read-only at runtime. In that case
+      // we still soft-refresh so the relative-time label re-computes,
+      // but the underlying snapshot stays unchanged. On dev the write
+      // succeeds and the next render genuinely re-runs the slow path.
+      const body = await res.json().catch(() => null);
+      const trulyInvalidated = body?.invalidated === true;
       router.refresh();
-      // Hold the spinner briefly so the user sees the action took.
-      setTimeout(() => setRefreshing(false), 1200);
+      if (!trulyInvalidated) {
+        // Tell the operator honestly that nothing actually changed —
+        // a redeploy is required to refresh data on production.
+        setError("snapshot stays cached on production — redeploy to refresh");
+      }
+      setTimeout(() => setRefreshing(false), 800);
     } catch (e) {
       setError(e instanceof Error ? e.message : "refresh failed");
       setRefreshing(false);
