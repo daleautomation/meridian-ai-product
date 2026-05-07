@@ -36,6 +36,7 @@ import {
 } from "../../config/workspaces";
 import { getSourceReadiness } from "../../lib/sources/readiness";
 import { ALL_TRADE_ENV_VARS } from "../../lib/modules/tradeSources";
+import { readOperatorSnapshot, writeOperatorSnapshot } from "../../lib/operatorPayload/snapshot";
 
 export const dynamic = "force-dynamic";
 
@@ -91,8 +92,11 @@ async function renderOperatorPage({
 }: {
   searchParams?: Promise<SearchParams>;
 }) {
+  const t0 = Date.now();
   const user = await getSession();
   if (!user) redirect("/login");
+  // eslint-disable-next-line no-console
+  console.log(`[operator-timing] session_resolved ms=${Date.now() - t0}`);
 
   const params = (await searchParams) ?? {};
   const requestedSlug = Array.isArray(params.workspace) ? params.workspace[0] : params.workspace;
@@ -118,6 +122,48 @@ async function renderOperatorPage({
     return <WorkspacePicker workspaces={userWorkspaces} userName={user.name ?? user.id} />;
   }
 
+  // ── Snapshot fast-path ──────────────────────────────────────────────
+  // Pre-baked operator payload at data/snapshots/<slug>-operator.json.
+  // When present and unexpired we skip every heavy compute step
+  // (Google Places ingestion, diagnostics, sales-strategy generation,
+  // service-bucket aggregation, scheduling) and hand OperatorConsole
+  // exactly the props the slow-path would have produced. Snapshot is
+  // refreshed by the slow-path after each successful render so warm
+  // containers stay current. Disable with MERIDIAN_DISABLE_SNAPSHOT=1.
+  const snapshotEnabled = process.env.MERIDIAN_DISABLE_SNAPSHOT !== "1";
+  if (snapshotEnabled) {
+    const tSnap = Date.now();
+    const snap = await readOperatorSnapshot(workspace.slug);
+    // eslint-disable-next-line no-console
+    console.log(
+      `[operator-timing] snapshot_lookup ms=${Date.now() - tSnap} ` +
+      `hit=${snap ? "true" : "false"} workspace=${workspace.slug}`,
+    );
+    if (snap) {
+      // Override the user prop with the *current* session (the snapshot
+      // was generated under a different user). Workspace identity is
+      // preserved from the snapshot — it must match the requested slug.
+      const snapProps = snap.props as Record<string, unknown>;
+      // eslint-disable-next-line no-console
+      console.log(
+        `[operator-timing] FAST_PATH total_ms=${Date.now() - t0} ` +
+        `snapshot_generated_at=${snap.generatedAt}`,
+      );
+      // Snapshot props are validated at write time. The cast through
+      // unknown is necessary because TypeScript can't statically know
+      // the JSON file matches OperatorConsoleProps — that contract is
+      // enforced by the snapshot generator.
+      const typedProps = snapProps as unknown as Parameters<typeof OperatorConsole>[0];
+      return (
+        <OperatorConsole
+          {...typedProps}
+          user={{ name: user.name ?? user.id, id: user.id }}
+          workspace={workspace}
+        />
+      );
+    }
+  }
+
   // ── Workspace lead load (single bridge into ingestion) ──────────────
   // Load every module that has a wired source (its own seed file). The
   // OperatorConsole's trade selector filters by lead.trade so trades
@@ -139,6 +185,7 @@ async function renderOperatorPage({
   // refresh; failed refresh returns stale-if-available. See
   // lib/ingestion/cache/ for the storage strategy + production
   // durability notes.
+  const tIngest = Date.now();
   const decidedByModule = await Promise.all(
     moduleLoadList.map(async (mid) => {
       const result = await cachedLoadWorkspaceLeads({
@@ -149,6 +196,8 @@ async function renderOperatorPage({
       return { mid, leads: result.leads, cacheStatus: result.status, storeId: result.diagnostics.storeId };
     }),
   );
+  // eslint-disable-next-line no-console
+  console.log(`[operator-timing] ingestion ms=${Date.now() - tIngest} modules=${moduleLoadList.length}`);
   const decided = (decidedByModule ?? []).flatMap((g) => g?.leads ?? []);
   // eslint-disable-next-line no-console
   console.log(
@@ -217,6 +266,7 @@ async function renderOperatorPage({
     totals: { callNow: 0, callThisWeek: 0, watch: 0, scheduled: 0, overflow: 0 },
   };
   let globalSchedule: ReturnType<typeof buildGlobalLeadSchedule>;
+  const tSched = Date.now();
   try {
     globalSchedule = buildGlobalLeadSchedule(decided, {
       weekStartDate,
@@ -232,6 +282,8 @@ async function renderOperatorPage({
     console.error("[GLOBAL SCHEDULE CRASH]", err);
     globalSchedule = EMPTY_GLOBAL_SCHEDULE;
   }
+  // eslint-disable-next-line no-console
+  console.log(`[operator-timing] global_schedule ms=${Date.now() - tSched}`);
 
   // Overflow queue diagnostic. `pulled` stays 0 until pull-forward
   // persistence ships — see the TODO in components/OperatorConsole.jsx
@@ -256,6 +308,7 @@ async function renderOperatorPage({
     weekendSkips: 0,
   };
   let teamSchedule: ReturnType<typeof buildRollingTeamSchedule>;
+  const tTeamSched = Date.now();
   try {
     teamSchedule = buildRollingTeamSchedule(decided, {
       startDate: weekStartDate,
@@ -270,6 +323,8 @@ async function renderOperatorPage({
     console.error("[TEAM SCHEDULE CRASH]", err);
     teamSchedule = EMPTY_TEAM_SCHEDULE;
   }
+  // eslint-disable-next-line no-console
+  console.log(`[operator-timing] team_schedule ms=${Date.now() - tTeamSched}`);
   const teamScheduleByKey = teamSchedule.byKey;
   const scheduleByKey = new Map<string, string>();
   for (const e of globalSchedule.entries) scheduleByKey.set(e.leadKey, e.date);
@@ -551,6 +606,7 @@ async function renderOperatorPage({
     leadsByService: Record<string, FilteredLeadEntry[]>;
   };
   const serviceBucketsByTrade: Record<string, ServiceBucketsForTrade> = {};
+  const tStrategy = Date.now();
   for (const group of decidedByModule) {
     const tradeCfg = getTradeServices(group.mid);
     if (!tradeCfg) {
@@ -691,6 +747,8 @@ async function renderOperatorPage({
 
     serviceBucketsByTrade[group.mid] = { cards, leadsByService };
   }
+  // eslint-disable-next-line no-console
+  console.log(`[operator-timing] strategy_and_buckets ms=${Date.now() - tStrategy} leads=${decided.length}`);
 
   const sourceReadiness = getSourceReadiness();
 
@@ -710,27 +768,47 @@ async function renderOperatorPage({
     typeof process.env.HUNTER_API_KEY === "string"
     && process.env.HUNTER_API_KEY.trim().length > 0;
 
+  // Build the prop bag once so we can both render and persist it.
+  const operatorProps = {
+    sourceReadiness,
+    connectedEnvVars,
+    hunterAvailable,
+    overflowQueueCount: teamSchedule.overflowEntries.length,
+    serviceBucketsByTrade,
+    teamWorkload,
+    callTheseFirst,
+    todayList,
+    remaining,
+    rest,
+    pendingReviews,
+    totalPipeline: uiLeads.length,
+    pipelineMap,
+    roi,
+    calendarEvents,
+    recentActivities: recentActivities.slice(0, 30),
+    lastPipelineJob: lastJob
+      ? { completedAt: lastJob.completedAt, errors: lastJob.errors.length, enriched: lastJob.steps.enrich?.succeeded ?? 0 }
+      : null,
+  };
+
+  // eslint-disable-next-line no-console
+  console.log(`[operator-timing] SLOW_PATH total_ms=${Date.now() - t0} workspace=${workspace.slug}`);
+
+  // Best-effort snapshot write so the next render on this container
+  // hits the fast path. Vercel /tmp is ephemeral; the in-bundle
+  // snapshot is the durable artifact and must be regenerated locally.
+  if (snapshotEnabled) {
+    void writeOperatorSnapshot(workspace.slug, operatorProps).then((ok) => {
+      // eslint-disable-next-line no-console
+      console.log(`[operator-timing] snapshot_write ok=${ok} workspace=${workspace.slug}`);
+    });
+  }
+
   return (
     <OperatorConsole
       user={{ name: user.name ?? user.id, id: user.id }}
       workspace={workspace}
-      sourceReadiness={sourceReadiness}
-      connectedEnvVars={connectedEnvVars}
-      hunterAvailable={hunterAvailable}
-      overflowQueueCount={teamSchedule.overflowEntries.length}
-      serviceBucketsByTrade={serviceBucketsByTrade}
-      teamWorkload={teamWorkload}
-      callTheseFirst={callTheseFirst}
-      todayList={todayList}
-      remaining={remaining}
-      rest={rest}
-      pendingReviews={pendingReviews}
-      totalPipeline={uiLeads.length}
-      pipelineMap={pipelineMap}
-      roi={roi}
-      calendarEvents={calendarEvents}
-      recentActivities={recentActivities.slice(0, 30)}
-      lastPipelineJob={lastJob ? { completedAt: lastJob.completedAt, errors: lastJob.errors.length, enriched: lastJob.steps.enrich?.succeeded ?? 0 } : null}
+      {...operatorProps}
     />
   );
 }
