@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getTenantById } from "@/config/tenants";
 import { createSessionToken, SESSION_COOKIE } from "@/lib/session";
 import { makeEvent, writeEvent } from "@/lib/tracking/eventLog";
+import { isDemoAllowedHost, describeDemoAllowlist } from "@/lib/demo/access";
 
 // Meridian — Demo / dev-only one-click login.
 //
@@ -9,24 +10,28 @@ import { makeEvent, writeEvent } from "@/lib/tracking/eventLog";
 // by environmental issues (cookie storage on shared public-suffix
 // domains, SameSite tab transitions, browser cookie settings).
 //
-// HARD-GATED: returns 403 outside dev / non-production / ngrok host.
-// Never logs the password (this route doesn't take one).
-
-function isAllowedHost(hostHeader: string | null): boolean {
-  if (process.env.NODE_ENV !== "production") return true;
-  if (!hostHeader) return false;
-  const host = hostHeader.toLowerCase();
-  return host.includes("ngrok") || host.includes("localhost") || host.includes("127.0.0.1");
-}
+// HARD-GATED: returns 403 outside dev / non-production / approved
+// hosts. Allowlist is shared with /demo/john via lib/demo/access.ts
+// so a single env var (MERIDIAN_DEMO_ALLOWED_HOSTS) controls both.
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const user = url.searchParams.get("user")?.toLowerCase().trim() ?? "";
   const workspace = url.searchParams.get("workspace")?.toLowerCase().trim() ?? "";
 
-  if (!isAllowedHost(req.headers.get("host"))) {
+  // Prefer the forwarded host (Vercel sets x-forwarded-host to the
+  // public domain). Raw host on Vercel is the function's internal
+  // hostname which never matches the allowlist.
+  const requestHost =
+    req.headers.get("x-forwarded-host")
+    ?? req.headers.get("host")
+    ?? "";
+  if (!isDemoAllowedHost(requestHost)) {
     // eslint-disable-next-line no-console
-    console.log(`[demo-login] forbidden env=${process.env.NODE_ENV} host="${req.headers.get("host") ?? ""}"`);
+    console.log(
+      `[demo-login] forbidden env=${process.env.NODE_ENV} host="${requestHost}" ` +
+      `allowlist="${describeDemoAllowlist()}"`,
+    );
     return NextResponse.json({ error: "Demo login disabled in this environment" }, { status: 403 });
   }
 

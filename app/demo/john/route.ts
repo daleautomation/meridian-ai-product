@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getTenantById } from "@/config/tenants";
 import { createSessionToken, SESSION_COOKIE } from "@/lib/session";
 import { makeEvent, writeEvent } from "@/lib/tracking/eventLog";
+import { isDemoAllowedHost, describeDemoAllowlist } from "@/lib/demo/access";
 
 // Meridian — Friendlier demo entry point at /demo/john.
 //
@@ -17,16 +18,23 @@ import { makeEvent, writeEvent } from "@/lib/tracking/eventLog";
 const TARGET_USER = "john";
 const TARGET_WORKSPACE = "labortech";
 
-function isAllowedHost(hostHeader: string | null): boolean {
-  if (process.env.NODE_ENV !== "production") return true;
-  if (!hostHeader) return false;
-  const host = hostHeader.toLowerCase();
-  return host.includes("ngrok") || host.includes("localhost") || host.includes("127.0.0.1");
-}
-
 export async function GET(req: Request) {
-  if (!isAllowedHost(req.headers.get("host"))) {
-    return NextResponse.json({ error: "Demo entry disabled in this environment" }, { status: 403 });
+  // Prefer the forwarded host (Vercel sets x-forwarded-host to the
+  // public domain; the raw host header is the function's internal
+  // hostname). Falling back to host avoids dev-only regressions.
+  const requestHost =
+    req.headers.get("x-forwarded-host")
+    ?? req.headers.get("host")
+    ?? "";
+  if (!isDemoAllowedHost(requestHost)) {
+    // eslint-disable-next-line no-console
+    console.log(
+      `[demo/john] forbidden host="${requestHost}" allowlist="${describeDemoAllowlist()}"`,
+    );
+    return NextResponse.json(
+      { error: "Demo entry disabled in this environment" },
+      { status: 403 },
+    );
   }
 
   const tenant = getTenantById(TARGET_USER);
