@@ -23,6 +23,12 @@ import {
   rankCapitalAllocation,
 } from "../lib/calendar/executeNow";
 import { compareLeadTasks } from "../lib/calendar/leadScore";
+import {
+  LAUNCH_DAY_ISO,
+  isLaunchDayOrBefore,
+  getWeekStartIso,
+  formatWeekStartLabel,
+} from "../lib/dates/businessDate";
 import { getLaborTechServiceFit, buildServiceFitBreakdown } from "../lib/scan/serviceFit";
 import {
   EXECUTION_OUTCOME_STATUSES,
@@ -411,16 +417,15 @@ function laborTechDemoAnchorDate() {
     out.setHours(0, 0, 0, 0);
     return out;
   }
-  // Dynamic path — Day 1 = the next upcoming Thursday from today.
-  // If today IS Thursday, use today. Keeps the header copy
-  // ("Day 1 starts Thursday <date>") accurate every time the page
-  // loads, no manual sync required before a demo.
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const dow = now.getDay(); // 0 Sun … 4 Thu … 6 Sat
-  const daysUntilThu = (4 - dow + 7) % 7; // 0 if today is Thu
-  const out = new Date(now);
-  out.setDate(now.getDate() + daysUntilThu);
+  // Pinned to the immutable historical launch day (LAUNCH_DAY_ISO).
+  // Previously this rolled forward to "next Thursday from today,"
+  // which after launch-day caused the calendar header to advertise
+  // "Day 1 starts Thursday <future date>" forever. Now the anchor is
+  // the actual launch Friday (May 8 2026); the header copy is gated
+  // separately on isLaunchDayOrBefore() so post-launch the calendar
+  // shows "This week's call plan · Week of {date}" instead.
+  const [y, m, d] = LAUNCH_DAY_ISO.split("-").map((s) => Number(s));
+  const out = new Date(y, (m || 1) - 1, d || 1);
   out.setHours(0, 0, 0, 0);
   return out;
 }
@@ -5456,9 +5461,9 @@ export default function CalendarCommandCenter({
               ? "Priority view · top 5 actions to work now"
               : calendarView === "day" ? "Today's call plan"
               : calendarView === "month" ? "This month at a glance"
-              : LABORTECH_DEMO_ANCHOR_ENABLED
+              : LABORTECH_DEMO_ANCHOR_ENABLED && isLaunchDayOrBefore()
                 ? `LaborTech launch call plan · Day 1 starts ${laborTechDemoAnchorLabel()}`
-                : "This week's call plan · team execution"}
+                : `This week's call plan · Week of ${formatWeekStartLabel(getWeekStartIso())}`}
           </div>
 
           {!hasTradeLeads ? (

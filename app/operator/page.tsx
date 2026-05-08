@@ -39,6 +39,11 @@ import { ALL_TRADE_ENV_VARS } from "../../lib/modules/tradeSources";
 import { readOperatorSnapshot, writeOperatorSnapshot } from "../../lib/operatorPayload/snapshot";
 import { listOverrides } from "../../lib/scheduling/overrideStore";
 import { applyScheduleOverrides } from "../../lib/scheduling/applyOverrides";
+import {
+  getBusinessTodayIso,
+  getWeekStartIso,
+  LAUNCH_DAY_ISO,
+} from "../../lib/dates/businessDate";
 
 export const dynamic = "force-dynamic";
 
@@ -241,25 +246,37 @@ async function renderOperatorPage({
   const tradePriority: Record<string, number> = {};
   SOURCE_BACKED_MODULES.forEach((m, i) => { tradePriority[m] = i; });
 
-  // ── LaborTech launch start ───────────────────────────────────────────
-  // Pin scheduling to Monday May 4 of the current calendar year (or
-  // the next May 4 if today is already past). Single config constant
-  // — change here when the launch slips.
-  const LABORTECH_LAUNCH_MONTH = 5;   // May
-  const LABORTECH_LAUNCH_DAY = 4;
+  // ── Schedule anchor ───────────────────────────────────────────────
+  // Anchor scheduling to the Monday of the current business week. This
+  // tracks "today" — the prior fixed-May-4 anchor would jump a year
+  // forward once May 4 passed, mismatching the operator's reality.
+  // The downstream calendar filters columns < today via dayKey(now)
+  // so past weekdays in the current week disappear cleanly; future
+  // weekdays render normally. Resolved via getBusinessTodayIso so
+  // the server's locale doesn't drift the anchor by a day at midnight.
   const launchStart = (() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const candidate = new Date(today.getFullYear(), LABORTECH_LAUNCH_MONTH - 1, LABORTECH_LAUNCH_DAY);
-    candidate.setHours(0, 0, 0, 0);
-    if (candidate.getTime() < today.getTime()) {
-      // Past this year — push to next year so the live week still
-      // anchors on Monday May 4.
-      candidate.setFullYear(candidate.getFullYear() + 1);
-    }
-    return candidate;
+    const todayIso = getBusinessTodayIso();
+    const [yy, mm, dd] = todayIso.split("-").map(Number);
+    const dt = new Date(yy, mm - 1, dd);
+    dt.setHours(0, 0, 0, 0);
+    const dow = dt.getDay(); // 0 Sun .. 6 Sat
+    const offsetToMonday = dow === 0 ? -6 : 1 - dow;
+    dt.setDate(dt.getDate() + offsetToMonday);
+    return dt;
   })();
   const weekStartDate = launchStart.toISOString();
+  // Single canonical log line for date-axis diagnostics. Every field
+  // here is the SAME value the rest of the system computes against —
+  // grep `[business-today]` in production logs to verify the operator
+  // console agrees with the database / scheduler / calendar.
+  // eslint-disable-next-line no-console
+  console.log(
+    `[business-today] launchDayIso=${LAUNCH_DAY_ISO} ` +
+    `businessTodayIso=${getBusinessTodayIso()} ` +
+    `weekStartIso=${getWeekStartIso()} ` +
+    `weekStartDate=${weekStartDate.slice(0, 10)} ` +
+    `serverNow=${new Date().toISOString()}`,
+  );
   // eslint-disable-next-line no-console
   console.log(
     `[schedule-launch] start=${weekStartDate.slice(0, 10)} target=20/day weekdaysOnly=true`,
@@ -475,22 +492,19 @@ async function renderOperatorPage({
   });
 
   // Per-rep + per-week + today/this-week workload summary.
-  const todayKey = (() => {
-    const d = new Date();
-    const m = d.getMonth() + 1;
-    const day = d.getDate();
-    return `${d.getFullYear()}-${m < 10 ? "0" + m : m}-${day < 10 ? "0" + day : day}`;
-  })();
+  // todayKey resolves in the business timezone so a Vercel function
+  // running in UTC still groups assignments by the operator's local
+  // working day.
+  const todayKey = getBusinessTodayIso();
   const thisWeekStartKey = (() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
+    const [yy, mm, dd] = todayKey.split("-").map(Number);
+    const d = new Date(yy, mm - 1, dd);
     const dow = d.getDay();
     const offset = dow === 0 ? -6 : 1 - dow;
-    const m2 = new Date(d);
-    m2.setDate(m2.getDate() + offset);
-    const mm = m2.getMonth() + 1;
-    const dd = m2.getDate();
-    return `${m2.getFullYear()}-${mm < 10 ? "0" + mm : mm}-${dd < 10 ? "0" + dd : dd}`;
+    d.setDate(d.getDate() + offset);
+    const m2 = String(d.getMonth() + 1).padStart(2, "0");
+    const d2 = String(d.getDate()).padStart(2, "0");
+    return `${d.getFullYear()}-${m2}-${d2}`;
   })();
   const todayAssignments = teamSchedule.assignments.filter((a) => a.date === todayKey);
   const todayPerRep: Record<string, number> = {};
@@ -551,6 +565,25 @@ async function renderOperatorPage({
     if (s === "CLOSED_WON") roi.closedWon++;
     if (s === "CLOSED_LOST") roi.closedLost++;
   }
+
+  // Today Queue + calendar both source from `callTheseFirst` →
+  // `buildTasksFromLeads` → `applyLaborTechDemoSchedule`. If the
+  // rendered queue ever disagrees with this log, the divergence is
+  // downstream (CRM filter applied at task-build time, snapshot
+  // drift, or override merge). The excluded-terminal count is the
+  // number of leads stripped by tasks.ts before scheduling — they
+  // never reach Today Queue or any calendar column.
+  const excludedTerminalCRM = uiLeads.filter((l) => {
+    const s = (pipelineMap[l.id]?.status ?? "").toUpperCase();
+    return s === "CLOSED_WON" || s === "CLOSED_LOST" || s === "DISQUALIFIED";
+  }).length;
+  // eslint-disable-next-line no-console
+  console.log(
+    `[today-queue-source] callTheseFirst=${callTheseFirst.length} ` +
+    `todayList=${todayList.length} remaining=${remaining.length} rest=${rest.length} ` +
+    `totalLeads=${uiLeads.length} excludedTerminalCRM=${excludedTerminalCRM} ` +
+    `roi.contacted=${roi.contacted} roi.closedWon=${roi.closedWon}`,
+  );
 
   const today = new Date();
   const calStart = new Date(today); calStart.setDate(calStart.getDate() - 7);

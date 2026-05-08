@@ -432,23 +432,42 @@ function deriveRevenueImpact(l: LeadLike): number | undefined {
   return legacy;
 }
 
+// Push a Date forward to the next Mon–Fri. No-op on weekdays. Used
+// by every function in this file that emits a calendar dueDate so a
+// naive day offset (or a stale weekend value persisted from before
+// the weekend-skip rule shipped) never lands on Sat/Sun. Mirrors the
+// rule enforced by lib/scheduling/leadSchedule.ts and the override
+// API's validateWeekdayIso — single source of weekend semantics
+// across the whole platform.
+function coerceWeekday(d: Date): Date {
+  const out = new Date(d);
+  while (true) {
+    const dow = out.getDay();
+    if (dow !== 0 && dow !== 6) break;
+    out.setDate(out.getDate() + 1);
+  }
+  return out;
+}
+
 function isoOffsetDays(now: Date, days: number, hour = 17, minute = 0): string {
   const d = new Date(now);
   d.setDate(d.getDate() + days);
   d.setHours(hour, minute, 0, 0);
-  return d.toISOString();
+  return coerceWeekday(d).toISOString();
 }
 
 function callDueIso(l: LeadLike, now: Date): string {
   // Respect a server-attached schedule (lib/scheduling/leadSchedule.ts).
   // Falls back to the legacy "EOD today / tomorrow" rule when absent.
+  // In both paths the result passes through coerceWeekday so a stale
+  // weekend `scheduledFor` from an older snapshot is corrected on the fly.
   const explicit = (l as { scheduledFor?: string }).scheduledFor;
   if (typeof explicit === "string" && explicit.length > 0) {
     const ms = new Date(explicit).getTime();
     if (Number.isFinite(ms)) {
       const d = new Date(ms);
       d.setHours(17, 0, 0, 0);
-      return d.toISOString();
+      return coerceWeekday(d).toISOString();
     }
   }
   // CALL NOW or forceAction → end of today. Otherwise tomorrow EOD.
@@ -463,7 +482,7 @@ function followupDueIso(
   const explicit = pipe?.nextActionDate;
   if (explicit) {
     const ms = new Date(explicit).getTime();
-    if (Number.isFinite(ms)) return new Date(ms).toISOString();
+    if (Number.isFinite(ms)) return coerceWeekday(new Date(ms)).toISOString();
   }
   if (l.forceAction) return isoOffsetDays(now, 0, 17);
   if (isCallNow(l) || (l.score ?? 0) >= 75) return isoOffsetDays(now, 1, 17);
@@ -1083,7 +1102,7 @@ export function getMockTasks(): TaskItem[] {
     const d = new Date();
     d.setDate(d.getDate() + offset);
     d.setHours(h, m, 0, 0);
-    return d.toISOString();
+    return coerceWeekday(d).toISOString();
   };
 
   return [

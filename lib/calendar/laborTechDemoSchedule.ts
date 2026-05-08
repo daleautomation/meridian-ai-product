@@ -20,6 +20,7 @@
 
 import type { TaskItem, TaskPriority } from "./tasks";
 import { serviceFitConfidenceScore } from "../scan/serviceFit";
+import { getBusinessTodayWeekdayIso } from "../dates/businessDate";
 // Recurring-ingestion architecture: the demo schedule is now also
 // expressible as an IngestionBatch. Existing scheduler logic is
 // untouched; the import is exported below so a future cron-driven
@@ -30,8 +31,22 @@ export { LABORTECH_DEMO_BATCH, buildBatchSlotIso, projectIngestionWindow, buildN
 
 export const LABORTECH_DEMO_ROLLOUT_ENABLED = true;
 
-// Thursday, May 7, 2026 — Day 1 of the demo rollout.
-export const LABORTECH_DEMO_DAY_ONE = { year: 2026, month: 5, day: 7 } as const;
+// Day 1 anchor — the operator's business today (rolled forward to
+// Monday if today is Sat/Sun). Resolved fresh on every call so a
+// long-running server / a Vercel container that warmed up yesterday
+// never anchors the calendar to a stale day.
+//
+// Use `getLaborTechDemoDayOne()` from internal code. The
+// `LABORTECH_DEMO_DAY_ONE` export remains for backward compatibility
+// — its value is captured at module-init time and may be stale on
+// long-lived processes; treat it as a launch-day reference, not a
+// runtime "today."
+export function getLaborTechDemoDayOne(): { year: number; month: number; day: number } {
+  const iso = getBusinessTodayWeekdayIso();
+  const [y, m, d] = iso.split("-").map(Number);
+  return { year: y, month: m, day: d };
+}
+export const LABORTECH_DEMO_DAY_ONE = getLaborTechDemoDayOne();
 
 // Slots per day. The master daily execution plan caps at 20 calls
 // per business day — 10 in the morning (15-min cadence 9:00 → 11:15)
@@ -163,11 +178,13 @@ function compareCallTasks(a: TaskItem, b: TaskItem): number {
 function buildDemoSlotIso(slotIndex: number): string {
   // Walk forward from Day-1, skipping Saturday (6) and Sunday (0),
   // returning a local-time ISO timestamp at the corresponding slot.
+  // Day 1 resolved fresh per call — never anchored to module init.
+  const dayOne = getLaborTechDemoDayOne();
   const dayOfWeek = (i: number) => {
     const d = new Date(
-      LABORTECH_DEMO_DAY_ONE.year,
-      LABORTECH_DEMO_DAY_ONE.month - 1,
-      LABORTECH_DEMO_DAY_ONE.day,
+      dayOne.year,
+      dayOne.month - 1,
+      dayOne.day,
     );
     let added = 0;
     let dayOffset = 0;
@@ -354,15 +371,13 @@ export function applyLaborTechDemoSchedule(tasks: TaskItem[]): TaskItem[] {
     } catch { /* logging failure is non-fatal */ }
   }
 
-  // Day-1 floor (Thursday May 7 @ 09:00 local) — applied to non-call
-  // tasks whose dueDate would otherwise land before the rollout start.
-  // Keeps the calendar honest: nothing visible pre-launch.
+  // Day-1 floor — applied to non-call tasks whose dueDate would
+  // otherwise land before the rollout start. Keeps the calendar
+  // honest: nothing visible from before today's anchor day. Day 1
+  // resolved fresh so the floor tracks "today" each render.
   const dayOneFloor = (() => {
-    const d = new Date(
-      LABORTECH_DEMO_DAY_ONE.year,
-      LABORTECH_DEMO_DAY_ONE.month - 1,
-      LABORTECH_DEMO_DAY_ONE.day,
-    );
+    const dayOne = getLaborTechDemoDayOne();
+    const d = new Date(dayOne.year, dayOne.month - 1, dayOne.day);
     d.setHours(9, 0, 0, 0);
     return d;
   })();
