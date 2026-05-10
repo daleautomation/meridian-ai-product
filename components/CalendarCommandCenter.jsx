@@ -9,6 +9,7 @@
 // Calendar / Gmail / Airtable / CRM without touching the UI.
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { palette } from "../lib/theme";
 import {
   TASK_CATEGORIES,
@@ -2827,28 +2828,120 @@ function FieldTestDiagnosticsPanel({ tasksByDay, dataTotal }) {
 // a CRM — six controls, one localStorage map. Captures what happened
 // after the lead was worked so the field-test data + commission
 // attribution conversation have real evidence.
-function ExecutionOutcomePanel({ taskId }) {
+// Outbound-call outcome statuses that trigger the overflow pull-forward.
+// notes/estimatedValue/nextFollowupDate edits leave `status` unchanged,
+// so they are filtered out by the status-equality guard inside apply()
+// without needing to inspect the patch shape.
+const PULL_FORWARD_TRIGGER_STATUSES = new Set([
+  "Called",
+  "Interested",
+  "Follow Up",
+  "Proposal Sent",
+  "Closed Won",
+  "Closed Lost",
+]);
+
+function ExecutionOutcomePanel({
+  taskId,
+  // Layer A — canonical lead identity. The parent SelectedLeadPanel has
+  // these on `task`; passing them down so trackEvent's `leadId` field is
+  // populated (was previously logged as "-") and so the pull-forward
+  // POST below has the workspace + lead context it needs.
+  linkedLeadId = null,
+  linkedCompany = null,
+  // Layer B2 — overflow queue source-of-truth (capped, ordered by team
+  // scheduler priority) + workspace slug for the override POST.
+  overflowEntries = [],
+  workspaceSlug = "",
+}) {
+  const router = useRouter();
   const [outcome, setOutcome] = useState(() => getDefaultExecutionOutcome());
+  // Track which overflow leadKeys have already been pulled forward by
+  // THIS panel instance. Survives re-renders, cleared on unmount. The
+  // server-side override store is the durable source of truth across
+  // sessions; this Set protects against rapid double-clicks before the
+  // next render's overflowEntries reflects the new placement.
+  const pulledRef = useRef(new Set());
+  // Track the previous status so an outcome that doesn't change status
+  // (e.g. notes/estimatedValue blur) doesn't re-fire the pull-forward.
+  const prevStatusRef = useRef(outcome.status);
 
   // Load on mount + whenever the operator switches leads.
   useEffect(() => {
     if (!taskId) {
       setOutcome(getDefaultExecutionOutcome());
+      prevStatusRef.current = getDefaultExecutionOutcome().status;
       return;
     }
     const loaded = loadExecutionOutcome(taskId);
-    setOutcome(loaded ?? getDefaultExecutionOutcome());
+    const next = loaded ?? getDefaultExecutionOutcome();
+    setOutcome(next);
+    prevStatusRef.current = next.status;
   }, [taskId]);
 
   if (!taskId) return null;
 
+  // Best-effort pull-forward POST. Fires only when (1) the new status
+  // is in the trigger set AND (2) the status actually changed AND (3)
+  // there is an overflow lead we haven't pulled yet AND (4) we have
+  // a workspaceSlug to authorize against. Failures are logged but
+  // never surfaced — the outcome save itself is independent.
+  const firePullForward = (newStatus) => {
+    if (!PULL_FORWARD_TRIGGER_STATUSES.has(newStatus)) return;
+    if (!workspaceSlug) return;
+    const candidate = (overflowEntries ?? []).find(
+      (e) => e && typeof e.leadKey === "string" && !pulledRef.current.has(e.leadKey),
+    );
+    if (!candidate) return;
+    pulledRef.current.add(candidate.leadKey);
+    const todayIso = (() => {
+      const d = new Date();
+      const fmt = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/Chicago",
+        year: "numeric", month: "2-digit", day: "2-digit",
+      });
+      return fmt.format(d);
+    })();
+    fetch("/api/scheduling/override", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        leadId: candidate.leadKey,
+        workspaceSlug,
+        action: "move_to_date",
+        scheduledFor: todayIso,
+        updatedBy: "system:pull_forward",
+      }),
+    })
+      .then((res) => {
+        if (!res.ok) {
+          // Roll back the dedup entry so a follow-up outcome can retry.
+          pulledRef.current.delete(candidate.leadKey);
+          return;
+        }
+        // Soft refresh — re-fetches the RSC payload so the calendar
+        // and Today Queue immediately reflect the pulled lead in
+        // today's column. No full page reload, no client state loss.
+        router.refresh();
+      })
+      .catch(() => {
+        pulledRef.current.delete(candidate.leadKey);
+      });
+  };
+
   const apply = (patch) => {
+    const prevStatus = prevStatusRef.current;
     const next = updateExecutionOutcome(outcome, patch);
     setOutcome(next);
     saveExecutionOutcome(taskId, next);
     trackEvent({
       eventType: "outcome_save",
       taskId: taskId,
+      // Layer A — canonical lead identity now travels with the event
+      // so server logs read leadId=<key> instead of leadId=-.
+      leadId: linkedLeadId ?? null,
+      companyName: linkedCompany ?? null,
       metadata: {
         status: next.status,
         hasNotes: (next.notes ?? "").length > 0,
@@ -2857,6 +2950,12 @@ function ExecutionOutcomePanel({ taskId }) {
         patchKeys: Object.keys(patch ?? {}),
       },
     });
+    // Layer B2 — overflow pull-forward. Gated on status change so
+    // notes/value/date blurs (which keep status unchanged) never fire.
+    if (next.status !== prevStatus) {
+      firePullForward(next.status);
+    }
+    prevStatusRef.current = next.status;
   };
 
   const QUICK_BUTTONS = [
@@ -3062,6 +3161,13 @@ export function SelectedLeadPanel({
   // Deep Report trigger — required. The drawer owns the layered Deep
   // Report panel; this prop must always be supplied by the parent.
   onOpenDeepReport,
+  // Overflow queue + workspace slug — fed into ExecutionOutcomePanel
+  // so an outbound call outcome (Called / Interested / Follow Up /
+  // Proposal Sent / Closed Won / Closed Lost) can pull the next
+  // eligible overflow lead forward into today via the existing
+  // override layer.
+  overflowEntries = [],
+  workspaceSlug = "",
 }) {
   // Popover state removed — Call Now now fires tel: directly. No
   // intermediate confirmation step on a desktop operator workflow.
@@ -3766,7 +3872,13 @@ export function SelectedLeadPanel({
 
       <Divider />
 
-      <ExecutionOutcomePanel taskId={task.id} />
+      <ExecutionOutcomePanel
+        taskId={task.id}
+        linkedLeadId={task?.linkedLeadId ?? null}
+        linkedCompany={task?.linkedCompany ?? null}
+        overflowEntries={overflowEntries}
+        workspaceSlug={workspaceSlug}
+      />
 
     </aside>
     </>
@@ -4421,6 +4533,12 @@ function DayColumn({ date, tasks, isToday, now, onTaskFeedback, selectedTaskId, 
 export default function CalendarCommandCenter({
   tasks,
   insights,
+  // Capped overflow queue + workspace slug — fed directly into the
+  // SelectedLeadPanel/ExecutionOutcomePanel chain so an outbound
+  // outcome can pull-forward the next eligible overflow lead via the
+  // existing /api/scheduling/override layer.
+  overflowEntries = [],
+  workspaceSlug = "",
   onTaskFeedback,
   tradeSlot,
   tradeId,
@@ -5641,6 +5759,8 @@ export default function CalendarCommandCenter({
               onLeadUpdate={onLeadUpdate}
               hunterAvailable={hunterAvailable}
               onOpenDeepReport={() => setDeepReportOpen(true)}
+              overflowEntries={overflowEntries}
+              workspaceSlug={workspaceSlug}
             />
           )}
         />
