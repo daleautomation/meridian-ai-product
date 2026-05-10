@@ -393,6 +393,15 @@ function dayKey(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function dateFromIsoKey(iso) {
+  if (typeof iso !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+  const [y, m, d] = iso.split("-").map((s) => Number(s));
+  if (!y || !m || !d) return null;
+  const out = new Date(y, m - 1, d);
+  out.setHours(0, 0, 0, 0);
+  return out;
+}
+
 // ── DEMO ANCHOR ──────────────────────────────────────────────────────
 // Presentational-only anchor for the LaborTech demo. Pins the calendar's
 // initial visible week to the week containing this date, and forces the
@@ -409,6 +418,10 @@ const LABORTECH_DEMO_ANCHOR_ENABLED = true;
 // to the next Thursday — keeps the demo copy honest no matter when
 // the system is opened. Format: "YYYY-MM-DD".
 const LABORTECH_DEMO_ANCHOR_OVERRIDE = null;
+
+function laborTechDemoAnchorActive() {
+  return LABORTECH_DEMO_ANCHOR_ENABLED && isLaunchDayOrBefore();
+}
 
 function laborTechDemoAnchorDate() {
   // Explicit override path — production-style config wins.
@@ -457,7 +470,7 @@ function laborTechDemoAnchorLabel() {
 // week containing the demo anchor. Returns 0 when the anchor is already
 // in the visible week or when the anchor is disabled.
 function laborTechDemoWeekOffset(baseStart) {
-  if (!LABORTECH_DEMO_ANCHOR_ENABLED) return 0;
+  if (!laborTechDemoAnchorActive()) return 0;
   try {
     const anchor = laborTechDemoAnchorDate();
     const anchorWeekStart = startOfWeek(anchor);
@@ -505,6 +518,15 @@ function formatCloseability(taskOrScan) {
       ? "Incomplete"
       : quality.value >= 80 ? "High" : quality.value >= 50 ? "Medium" : "Lower",
   };
+}
+
+function closeabilitySourceLabel(source) {
+  if (source === "laborTechScan.closeability.score") return "LaborTech scan closeability";
+  if (source === "closeProbability100") return "sales strategy close probability";
+  if (source === "salesStrategy.closeProbability") return "sales strategy close probability";
+  if (source === "closeProbability") return "task probability fallback";
+  if (source === "laborTechScan.incomplete") return "incomplete LaborTech scan";
+  return "unknown source";
 }
 
 // Closeability chip tone — single blue accent across every surface
@@ -822,7 +844,9 @@ function TaskCard({ task, compact = false, now, isExecuteNow = false, onTaskFeed
               ) : null}
               {closeFit ? (
                 <span
-                  title={typeof closeFit.pct === "number" ? `Closeability: ${closeFit.pct}%` : "Closeability incomplete"}
+                  title={typeof closeFit.pct === "number"
+                    ? `Closeability: ${closeFit.pct}% · Source: ${closeabilitySourceLabel(closeFit.source)}`
+                    : `Closeability incomplete · Source: ${closeabilitySourceLabel(closeFit.source)}`}
                   style={CLOSEABILITY_CHIP_STYLE}
                 >
                   {closeFit.label}
@@ -4857,7 +4881,7 @@ export default function CalendarCommandCenter({
     }
   };
 
-  const baseStart = useMemo(() => startOfWeek(now), [now]);
+  const baseStart = useMemo(() => dateFromIsoKey(getWeekStartIso()) ?? startOfWeek(now), [now]);
   const weekStart = useMemo(() => {
     const d = new Date(baseStart);
     d.setDate(d.getDate() + weekOffset * 7);
@@ -4918,12 +4942,13 @@ export default function CalendarCommandCenter({
   // logic is touched.
   //
   // Order of preference:
-  //   1. The LaborTech demo anchor (May 7) when present in the visible
+  //   1. The LaborTech demo anchor when launch-day emphasis is still active
+  //      and the anchor is present in the visible
   //      week — even if that column has zero tasks today, we still want
   //      it visually flagged as Day 1 of the rollout.
   //   2. Otherwise the earliest day with tasks that isn't before today.
   const firstActiveDayKey = useMemo(() => {
-    if (LABORTECH_DEMO_ANCHOR_ENABLED) {
+    if (laborTechDemoAnchorActive()) {
       const anchorKey = laborTechDemoAnchorKey();
       for (const d of days) {
         if (dayKey(d) === anchorKey) return anchorKey;
@@ -4955,6 +4980,10 @@ export default function CalendarCommandCenter({
     calendarView === "day" ? dayLabel
       : calendarView === "month" ? monthLabel
       : weekLabel;
+  const openTaskCount = useMemo(
+    () => (data ?? []).filter((t) => t && t.status !== "done").length,
+    [data],
+  );
   const todayLabel =
     calendarView === "day" ? "Today"
       : calendarView === "month" ? "This Month"
@@ -5104,7 +5133,7 @@ export default function CalendarCommandCenter({
               Operator
             </div>
             <div style={{ fontSize: "12px", color: palette.textSecondary, marginTop: "1px" }}>
-              {headerRangeLabel} · {data.length} in queue
+              {headerRangeLabel} · {openTaskCount} open task{openTaskCount === 1 ? "" : "s"}
             </div>
           </div>
           {tradeSlot ? (
@@ -5328,7 +5357,7 @@ export default function CalendarCommandCenter({
           {layoutMode !== "operator" && calendarView === "week" && hasTradeLeads ? (() => {
             const executionPlan = (() => {
               if (!Array.isArray(data) || data.length === 0) return [];
-              const dayOneKey = LABORTECH_DEMO_ANCHOR_ENABLED ? laborTechDemoAnchorKey() : null;
+              const dayOneKey = laborTechDemoAnchorActive() ? laborTechDemoAnchorKey() : null;
               const pool = data.filter((t) => {
                 if (!t || t.status === "done") return false;
                 const id = t.id ?? "";
@@ -5443,9 +5472,9 @@ export default function CalendarCommandCenter({
               ? "Priority view · top 5 actions to work now"
               : calendarView === "day" ? "Today's call plan"
               : calendarView === "month" ? "This month at a glance"
-              : LABORTECH_DEMO_ANCHOR_ENABLED && isLaunchDayOrBefore()
+              : laborTechDemoAnchorActive()
                 ? `LaborTech launch call plan · Day 1 starts ${laborTechDemoAnchorLabel()}`
-                : `This week's call plan · Week of ${formatWeekStartLabel(getWeekStartIso())}`}
+                : `This week's call plan · Week of ${formatWeekStartLabel(dayKey(weekStart))}`}
           </div>
 
           {!hasTradeLeads ? (
@@ -5504,9 +5533,9 @@ export default function CalendarCommandCenter({
               const k = dayKey(day);
               const items = tasksByDay[k] ?? [];
               const isTodayCol = k === dayKey(now);
-              const isDayOneCol = LABORTECH_DEMO_ANCHOR_ENABLED && k === laborTechDemoAnchorKey();
+              const isDayOneCol = laborTechDemoAnchorActive() && k === laborTechDemoAnchorKey();
               const isPreLaunchCol =
-                LABORTECH_DEMO_ANCHOR_ENABLED
+                laborTechDemoAnchorActive()
                 && k < laborTechDemoAnchorKey()
                 && !isDayOneCol;
               return (
@@ -5562,7 +5591,7 @@ export default function CalendarCommandCenter({
                 // column still renders normally if the user navigates
                 // to it; we just fade it.
                 const isPreLaunch =
-                  LABORTECH_DEMO_ANCHOR_ENABLED
+                  laborTechDemoAnchorActive()
                   && k < laborTechDemoAnchorKey()
                   && !isFirstActive;
                 return (

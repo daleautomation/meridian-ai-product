@@ -27,6 +27,7 @@ import {
   aggregateServiceBuckets,
 } from "../../lib/services/serviceNeedClassifier";
 import { getTradeServices } from "../../lib/services/tradeServiceConfig";
+import { getService as getServiceCatalogEntry } from "../../lib/services/serviceCatalog";
 import { generateSalesStrategy } from "../../lib/sales/salesStrategy";
 import {
   getWorkspaceBySlug,
@@ -496,16 +497,7 @@ async function renderOperatorPage({
   // running in UTC still groups assignments by the operator's local
   // working day.
   const todayKey = getBusinessTodayIso();
-  const thisWeekStartKey = (() => {
-    const [yy, mm, dd] = todayKey.split("-").map(Number);
-    const d = new Date(yy, mm - 1, dd);
-    const dow = d.getDay();
-    const offset = dow === 0 ? -6 : 1 - dow;
-    d.setDate(d.getDate() + offset);
-    const m2 = String(d.getMonth() + 1).padStart(2, "0");
-    const d2 = String(d.getDate()).padStart(2, "0");
-    return `${d.getFullYear()}-${m2}-${d2}`;
-  })();
+  const thisWeekStartKey = getWeekStartIso();
   const todayAssignments = teamSchedule.assignments.filter((a) => a.date === todayKey);
   const todayPerRep: Record<string, number> = {};
   for (const r of DEFAULT_TEAM_MEMBERS) todayPerRep[r.id] = 0;
@@ -773,9 +765,10 @@ async function renderOperatorPage({
       const agg = buckets.get(sid);
       const list = leadsByService[sid] ?? [];
       const top = list[0];
+      const catalogLabel = getServiceCatalogEntry(sid)?.label;
       const card: ServiceBucketCard = {
         serviceId: sid,
-        label: top?.serviceLabel ?? sid,
+        label: top?.serviceLabel ?? catalogLabel ?? sid,
         tier: tierMap[sid] ?? "secondary",
         count: agg?.count ?? 0,
         topLeadName: top?.companyName ?? null,
