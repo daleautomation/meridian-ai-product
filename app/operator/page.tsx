@@ -828,6 +828,17 @@ async function renderOperatorPage({
     connectedEnvVars,
     hunterAvailable,
     overflowQueueCount: teamSchedule.overflowEntries.length,
+    // Capped overflow queue exposed to the client so the
+    // ExecutionOutcomePanel can pull-forward the next eligible lead
+    // when an outbound call outcome is recorded. Cap of 50 keeps the
+    // SSR payload small; the daily call cap is 20 so 50 is plenty of
+    // runway. Each entry carries the leadKey + companyName for the
+    // POST. Order is the team scheduler's priority — first entry is
+    // always the strongest available pull.
+    overflowEntries: (teamSchedule.overflowEntries ?? []).slice(0, 50).map((e) => ({
+      leadKey: e.leadKey,
+      companyName: (e as unknown as { companyName?: string }).companyName ?? null,
+    })),
     serviceBucketsByTrade,
     teamWorkload,
     callTheseFirst,

@@ -8374,6 +8374,7 @@ function AngleAttackLanesGrid({ angles, leadsByAngle, selectedServiceAngleId, on
 export default function OperatorConsole({
   user, workspace, sourceReadiness = [], connectedEnvVars = [], hunterAvailable = false,
   overflowQueueCount = 0,
+  overflowEntries = [],
   teamWorkload = null,
   serviceBucketsByTrade = {},
   callTheseFirst = [], todayList = [], remaining = [], rest = [],
@@ -9954,6 +9955,8 @@ export default function OperatorConsole({
             <CalendarCommandCenter
               tasks={calendarTasks}
               insights={operatorInsights}
+              overflowEntries={overflowEntries}
+              workspaceSlug={workspace?.slug ?? ""}
               onTaskFeedback={handleTaskFeedback}
               tradeId={selectedTradeId}
               tradeLabel={TRADE_MODULES[selectedTradeId]?.label ?? "Roofing"}

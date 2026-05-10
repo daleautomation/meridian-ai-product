@@ -46,6 +46,11 @@ interface OverrideRequest {
   /** Required when action === "move_to_date" — must be a YYYY-MM-DD
    *  weekday in the future or today. */
   scheduledFor?: unknown;
+  /** Optional system-source attribution. Must start with "system:".
+   *  Used by automated flows (e.g. overflow pull-forward) so review
+   *  logs can distinguish operator-initiated overrides from system
+   *  ones. Any other value is ignored and the session id wins. */
+  updatedBy?: unknown;
 }
 
 function bad(status: number, error: string) {
@@ -91,17 +96,38 @@ export async function POST(req: Request) {
     scheduledFor = validated;
   }
 
+  // Honor a system-source attribution when the request is already
+  // authenticated AND the value declares itself with the "system:"
+  // prefix. Any other value is ignored — the session id always wins
+  // for operator-initiated actions. This preserves the audit trail
+  // (who actually authorized the request) while letting automated
+  // flows tag themselves so post-session review can filter them out.
+  const trustedSystemSource =
+    typeof body.updatedBy === "string" && body.updatedBy.startsWith("system:")
+      ? body.updatedBy
+      : null;
+
   const override: ScheduleOverride = {
     leadId,
     workspaceSlug,
     action,
     scheduledFor,
     repId: action === "assign_rep" ? repId : null,
-    updatedBy: session.id,
+    updatedBy: trustedSystemSource ?? session.id,
     updatedAt: now.toISOString(),
   };
 
   const persisted = await setOverride(override);
+  if (trustedSystemSource === "system:pull_forward") {
+    // Dedicated log line so the overflow-pull-forward path is
+    // observable in production without scanning every override.
+    // eslint-disable-next-line no-console
+    console.log(
+      `[overflow-pull-forward] action=${action} lead=${leadId} ` +
+      `workspace=${workspaceSlug} scheduledFor=${scheduledFor ?? "—"} ` +
+      `authorizedBy=${session.id} persisted=${persisted}`,
+    );
+  }
 
   // Fire-and-forget tracking event so the post-session review
   // captures every scheduling decision the operator makes.
