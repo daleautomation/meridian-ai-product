@@ -13,11 +13,14 @@ import { palette } from "../lib/theme";
 import { getLaborTechServiceFit } from "../lib/scan/serviceFit";
 import { loadAllExecutionOutcomes } from "../lib/execution/executionOutcome";
 import { trackEvent } from "../lib/tracking/clientTracker";
+import { resolveLeadQualityDisplay } from "../lib/display/leadQuality";
 
 // Today is the PRIORITY layer — rank, confidence, urgency only.
 // Pain framing lives in the Operator. Tactical "how" lives in the
 // Intelligence Panel. We do not repeat either here.
-function priorityBadge(score) {
+function priorityBadge(quality) {
+  const score = quality?.value;
+  if (quality?.isUnknown) return { label: "INCOMPLETE", icon: "·",  fg: "#475569", bg: "#F1F5F9", border: "#E2E8F0" };
   if (typeof score !== "number") return { label: "QUEUED",    icon: "·",  fg: "#475569", bg: "#F1F5F9", border: "#E2E8F0" };
   if (score >= 80)               return { label: "CALL FIRST", icon: "🔥", fg: "#1D4ED8", bg: "#EEF4FF", border: "rgba(37,99,235,0.45)" };
   if (score >= 60)               return { label: "STRONG",    icon: "▲",  fg: "#15803D", bg: "#F0FDF4", border: "#BBF7D0" };
@@ -193,9 +196,9 @@ export default function TodayExecutionPlan({
           const lead = (linkedKey && leadByKey && leadByKey.get) ? leadByKey.get(linkedKey) : null;
           const phone = task.phone ?? lead?.phone ?? lead?.contacts?.primaryPhone ?? null;
           const tel = telHrefOf(phone);
-          const score = task.laborTechScan?.closeability?.score;
-          const badge = priorityBadge(typeof score === "number" ? score : null);
-          const confidencePct = typeof score === "number" ? `${Math.round(score)}%` : null;
+          const quality = resolveLeadQualityDisplay(task);
+          const badge = priorityBadge(quality);
+          const confidencePct = typeof quality.value === "number" && !quality.isUnknown ? `${Math.round(quality.value)}%` : null;
           const urgency = task.laborTechScan?.urgency?.label ?? null;
           const isHotUrgency = urgency === "Critical" || urgency === "High";
           const company = task.linkedCompany ?? "Unknown lead";
