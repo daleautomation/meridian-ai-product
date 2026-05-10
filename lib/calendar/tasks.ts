@@ -882,6 +882,16 @@ export function buildTasksFromLeads(
       ...(patternLearningReason ? { patternLearningReason } : {}),
       ...bucketFields,
     };
+    // Display-only intelligence payload. Keep it on non-call tasks too
+    // so the UI does not fall back to ambiguous probability labels or
+    // hide Assist Mode just because the selected task is contact/revenue.
+    const displayInsightFields = {
+      ...(l.laborTechScan ? { laborTechScan: l.laborTechScan } : {}),
+      ...(l.salesStrategy ? { salesStrategy: l.salesStrategy } : {}),
+      ...(typeof l.salesStrategy?.closeProbability === "number"
+        ? { closeProbability100: l.salesStrategy.closeProbability }
+        : {}),
+    };
 
     const isContacted = FOLLOWUP_STATUSES.has(status);
 
@@ -1010,6 +1020,7 @@ export function buildTasksFromLeads(
         ...baseLink,
         notes: `Estimated value: ~$${Math.round(rev).toLocaleString()}.`,
         nextAction: "Move this lead toward proposal, paid setup, or booked call.",
+        ...displayInsightFields,
         ...probFields,
       });
     }
@@ -1052,6 +1063,7 @@ export function buildTasksFromLeads(
           ...baseLink,
           notes: notesParts.length > 0 ? notesParts.join(" ") : `Scan status: ${scan.status}.`,
           nextAction: scan.nextAction,
+          ...displayInsightFields,
           closeProbability,
           dealConfidence,
           ...bucketFields,
@@ -1073,6 +1085,7 @@ export function buildTasksFromLeads(
         ...baseLink,
         notes: "Lead has no primary phone or email on file.",
         nextAction: "Find verified phone, email, owner, and website before outreach.",
+        ...displayInsightFields,
         closeProbability,
         dealConfidence,
         ...bucketFields,
