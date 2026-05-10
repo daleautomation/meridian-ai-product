@@ -13,6 +13,7 @@
 
 import { useMemo } from "react";
 import { palette } from "../lib/theme";
+import { resolveLeadQualityDisplay } from "../lib/display/leadQuality";
 
 const TIER_LABEL = { primary: "Primary", secondary: "Secondary", advanced: "Advanced" };
 const TIER_COLOR = {
@@ -170,17 +171,15 @@ function FilteredLeadCard({ entry, isSelected = false, onClick, currentBucketId,
             {stateTone.label}
           </span>
           {typeof entry.closeProbability === "number" ? (() => {
-            const raw = entry.closeProbability;
-            // Floor at 15 / ceiling at 95 — mirrors the v2 scorer so
-            // older snapshots also display in-range, never raw 0/100.
-            const pct = Math.max(15, Math.min(95, Math.round(raw <= 1 ? raw * 100 : raw)));
-            const tier = pct >= 80 ? "High" : pct >= 50 ? "Medium" : "Lower";
+            const quality = resolveLeadQualityDisplay({ salesStrategy: { closeProbability: entry.closeProbability } });
+            const pct = quality.value;
+            const tier = quality.isUnknown ? "Incomplete" : quality.value >= 80 ? "High" : quality.value >= 50 ? "Medium" : "Lower";
             const reason = typeof entry.closeReason === "string" && entry.closeReason.length > 0
               ? entry.closeReason
               : (entry.closeLabel ?? "—");
             return (
               <span
-                title={`${tier} probability · ${pct}% — ${reason}`}
+                title={typeof pct === "number" ? `${tier} probability · ${pct}% — ${reason}` : `${tier} probability — ${reason}`}
                 style={{
                   fontSize: "10px", fontWeight: 800, letterSpacing: "0.06em",
                   textTransform: "uppercase",
@@ -192,7 +191,7 @@ function FilteredLeadCard({ entry, isSelected = false, onClick, currentBucketId,
                   whiteSpace: "nowrap",
                 }}
               >
-                {tier.toUpperCase()} · {pct}%
+                {typeof pct === "number" ? `${tier.toUpperCase()} · ${pct}%` : quality.label}
               </span>
             );
           })() : null}

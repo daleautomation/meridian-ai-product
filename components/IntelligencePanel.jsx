@@ -17,6 +17,7 @@ import {
   buildServiceFitBreakdown,
 } from "../lib/scan/serviceFit";
 import { getLeadIntelligence } from "../lib/intelligence/leadIntelligence";
+import { resolveLeadQualityDisplay } from "../lib/display/leadQuality";
 
 const PALETTE = {
   pageBg:        "#F8FAFC",
@@ -53,7 +54,8 @@ function buildLeadContext({ task, tradeLabel }) {
   const service = scan?.primaryService ?? task?.serviceShortLabel ?? task?.serviceBucketLabel ?? null;
   const phoneStatus = task?.phone ? "verified" : "missing";
   const emailStatus = task?.emailStatus ?? (task?.email ? "verified" : "not_searched");
-  const closeScore = scan?.closeability?.score ?? task?.closeProbability100 ?? null;
+  const quality = resolveLeadQualityDisplay(task);
+  const closeScore = quality.isUnknown ? null : quality.value;
   return {
     companyName: company,
     moduleId: task?.tradeId ?? "roofing",
@@ -72,7 +74,7 @@ function buildLeadContext({ task, tradeLabel }) {
     evidence: Array.isArray(scan?.evidence) ? scan.evidence.slice(0, 5) : [],
     businessImpact: Array.isArray(scan?.businessImpact) ? scan.businessImpact.slice(0, 3) : [],
     salesAngle: scan?.salesAngle ?? null,
-    closeabilityLabel: scan?.closeability?.label ?? null,
+    closeabilityLabel: quality.isUnknown ? "Incomplete" : (scan?.closeability?.label ?? null),
     closeabilityScore: closeScore,
     urgency: scan?.urgency?.label ?? null,
     recommendedAction: scan?.recommendedAction ?? null,

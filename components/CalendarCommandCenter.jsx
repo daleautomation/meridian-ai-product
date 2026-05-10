@@ -38,6 +38,7 @@ import {
   updateExecutionOutcome,
 } from "../lib/execution/executionOutcome";
 import { trackEvent } from "../lib/tracking/clientTracker";
+import { resolveLeadQualityDisplay } from "../lib/display/leadQuality";
 import { explainTaskAction, explainTaskPriority } from "../lib/calendar/taskExplain";
 import LeadContextStrip from "./LeadContextStrip";
 import LeadEmailAction from "./LeadEmailAction";
@@ -491,39 +492,19 @@ function priorityTone(p) {
   return { color: "#475569", bg: "#F8FAFC", border: "#E2E8F0" };
 }
 
-// Single source of truth for closeability presentation. Reads from
-//   1. task.laborTechScan.closeability.score (0..100)
-//   2. task.closeProbability100 (0..100)
-//   3. task.salesStrategy.closeProbability (0..1 OR 0..100)
-//   4. task.closeProbability (0..1)
-// Values <= 1 are treated as fractions; > 1 are treated as percentages.
-// Returns { pct, label } where label is "CLOSEABILITY <pct>%" — null
-// when no closeability signal is on the task.
+// Single source of truth for closeability presentation. Valid scan-backed
+// scores keep the scan range; incomplete scans render as incomplete instead
+// of turning fallback floors into precise percentages.
 function formatCloseability(taskOrScan) {
-  if (!taskOrScan) return null;
-  const direct = taskOrScan?.laborTechScan?.closeability?.score;
-  const t100 = taskOrScan?.closeProbability100;
-  const stratCp = taskOrScan?.salesStrategy?.closeProbability;
-  const tCp = taskOrScan?.closeProbability;
-  const scanCp = taskOrScan?.closeability?.score; // when called with a raw scan
-  const candidate =
-    typeof direct === "number" ? direct
-    : typeof t100 === "number" ? t100
-    : typeof scanCp === "number" ? scanCp
-    : typeof stratCp === "number" ? stratCp
-    : typeof tCp === "number" ? tCp
-    : null;
-  if (candidate === null) return null;
-  const pctRaw = candidate <= 1 ? candidate * 100 : candidate;
-  // Floor at 15, ceiling at 95 — mirrors the v2 closeability scorer
-  // so legacy values from older snapshots also display in-range and
-  // never as raw 0% or 100%.
-  const pct = Math.max(15, Math.min(95, Math.round(pctRaw)));
-  // Display tier — High probability / Medium / Lower priority. Tier
-  // breakpoints match the v2 spread curve (lib/scan/laborTechScan.ts):
-  //   ≥ 80 → High, ≥ 50 → Medium, < 50 → Lower.
-  const tier = pct >= 80 ? "High" : pct >= 50 ? "Medium" : "Lower";
-  return { pct, tier, label: `${tier.toUpperCase()} · ${pct}%` };
+  const quality = resolveLeadQualityDisplay(taskOrScan);
+  if (quality.source === "none") return null;
+  return {
+    ...quality,
+    pct: quality.value,
+    tier: quality.isUnknown
+      ? "Incomplete"
+      : quality.value >= 80 ? "High" : quality.value >= 50 ? "Medium" : "Lower",
+  };
 }
 
 // Closeability chip tone — single blue accent across every surface
@@ -841,7 +822,7 @@ function TaskCard({ task, compact = false, now, isExecuteNow = false, onTaskFeed
               ) : null}
               {closeFit ? (
                 <span
-                  title={`Closeability: ${closeFit.pct}%`}
+                  title={typeof closeFit.pct === "number" ? `Closeability: ${closeFit.pct}%` : "Closeability incomplete"}
                   style={CLOSEABILITY_CHIP_STYLE}
                 >
                   {closeFit.label}
@@ -956,7 +937,8 @@ function TaskCard({ task, compact = false, now, isExecuteNow = false, onTaskFeed
         // 1–2 metrics: closeability + (urgency or money).
         const metrics = [];
         const close = formatCloseability(task);
-        if (close) metrics.push(`Close ${close.pct}%`);
+        if (close?.isUnknown) metrics.push("Close incomplete");
+        else if (typeof close?.pct === "number") metrics.push(`Close ${close.pct}%`);
         if (scan?.urgency?.label) {
           metrics.push(scan.urgency.label);
         } else if (money) {

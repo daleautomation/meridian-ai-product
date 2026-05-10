@@ -9,6 +9,7 @@
 // with filler copy.
 
 import { useEffect } from "react";
+import { resolveLeadQualityDisplay } from "../lib/display/leadQuality";
 
 const PALETTE = {
   pageBg:        "#F8FAFC",
@@ -124,7 +125,10 @@ export default function LaborTechScanReport({ open, onClose, onBack, scan, compa
 
   const safe = scan ?? null;
   const painTone = PAIN_TONE[safe?.painLevel ?? "low"] ?? PAIN_TONE.low;
-  const closeTone = CLOSE_TONE[safe?.closeability?.label ?? "Moderate"] ?? CLOSE_TONE.Moderate;
+  const quality = resolveLeadQualityDisplay(safe);
+  const closeTone = quality.isUnknown
+    ? CLOSE_TONE.Weak
+    : CLOSE_TONE[safe?.closeability?.label ?? "Moderate"] ?? CLOSE_TONE.Moderate;
   const urgencyTone = URGENCY_TONE[safe?.urgency?.label ?? "Medium"] ?? URGENCY_TONE.Medium;
 
   const evidence = Array.isArray(safe?.evidence) ? safe.evidence : [];
@@ -242,11 +246,11 @@ export default function LaborTechScanReport({ open, onClose, onBack, scan, compa
               <Pill tone={painTone}>Pain · {painTone.label}</Pill>
               <Pill tone={urgencyTone}>Urgency · {(safe?.urgency?.label ?? "Medium").toUpperCase()}</Pill>
               <Pill tone={closeTone}>
-                {(safe?.closeability?.label ?? "Moderate").toUpperCase()}
+                {quality.isUnknown ? quality.label : (safe?.closeability?.label ?? "Moderate").toUpperCase()}
               </Pill>
-              {typeof safe?.closeability?.score === "number" ? (
+              {typeof quality.value === "number" && !quality.isUnknown ? (
                 <Pill tone={{ fg: "#2563EB", bg: "rgba(59,130,246,0.10)" }}>
-                  Closeability {Math.max(0, Math.min(100, Math.round(safe.closeability.score <= 1 ? safe.closeability.score * 100 : safe.closeability.score)))}%
+                  Closeability {quality.value}%
                 </Pill>
               ) : null}
             </div>
@@ -395,10 +399,9 @@ export default function LaborTechScanReport({ open, onClose, onBack, scan, compa
               <SectionCard>
                 <SectionLabel>Closeability</SectionLabel>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                  <Pill tone={closeTone}>{safe.closeability?.label ?? "Moderate"}</Pill>
-                  {typeof safe.closeability?.score === "number" ? (() => {
-                    const raw = safe.closeability.score;
-                    const pct = Math.max(0, Math.min(100, Math.round(raw <= 1 ? raw * 100 : raw)));
+                  <Pill tone={closeTone}>{quality.isUnknown ? "Incomplete" : (safe.closeability?.label ?? "Moderate")}</Pill>
+                  {typeof quality.value === "number" && !quality.isUnknown ? (() => {
+                    const pct = quality.value;
                     return (
                       <span style={{
                         fontSize: "11px", fontWeight: 800, letterSpacing: "0.06em",
