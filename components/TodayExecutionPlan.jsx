@@ -14,6 +14,7 @@ import { getLaborTechServiceFit } from "../lib/scan/serviceFit";
 import { loadAllExecutionOutcomes } from "../lib/execution/executionOutcome";
 import { trackEvent } from "../lib/tracking/clientTracker";
 import { resolveLeadQualityDisplay } from "../lib/display/leadQuality";
+import { getCanonicalPhone } from "../lib/leads/phone";
 
 // Today is the PRIORITY layer — rank, confidence, urgency only.
 // Pain framing lives in the Operator. Tactical "how" lives in the
@@ -204,7 +205,7 @@ export default function TodayExecutionPlan({
         {visibleTasks.map((task, i) => {
           const linkedKey = task.linkedLeadId;
           const lead = (linkedKey && leadByKey && leadByKey.get) ? leadByKey.get(linkedKey) : null;
-          const phone = task.phone ?? lead?.phone ?? lead?.contacts?.primaryPhone ?? null;
+          const phone = getCanonicalPhone(lead) ?? task.phone ?? null;
           const tel = telHrefOf(phone);
           const quality = resolveLeadQualityDisplay(task);
           const badge = priorityBadge(quality);

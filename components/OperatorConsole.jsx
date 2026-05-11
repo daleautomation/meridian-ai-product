@@ -64,6 +64,7 @@ import {
   formatMoney,
   leadOpportunityValue,
 } from "../lib/leads/leadActions";
+import { getCanonicalPhone, withCanonicalPhoneContact } from "../lib/leads/phone";
 import { useOutcomes, useDecisionFlow, leadKeyOf } from "../lib/leads/outcomes";
 import { generateCallScript } from "../lib/leads/scriptEngine";
 import { bucketPerformanceMap } from "../lib/leads/decisionEngine";
@@ -127,7 +128,7 @@ function scoreLabelColor(score) {
 function marketFitQuality(lead) {
   return resolveLeadQualityDisplay({
     ...lead,
-    phone: lead?.phone ?? lead?.contacts?.primaryPhone ?? null,
+    phone: getCanonicalPhone(lead),
   });
 }
 
@@ -1261,7 +1262,7 @@ function LeadRow({ lead, index, isSelected, onSelect, sectionBucket }) {
   const baseBg = index % 2 === 1 ? t.stripeBg : t.baseBg;
   const opp = opportunityMeta(tier);
   const decision = lead.decision || null;
-  const phone = lead.contacts?.primaryPhone || null;
+  const phone = getCanonicalPhone(lead);
   const fitScore = marketFitScore(lead);
   const fitLabel = fitScore === null ? null : `Fit ${fitScore}%`;
 
@@ -2138,13 +2139,13 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
         return (
           <NextActionBlock
             nextAction={lead.nextAction}
-            canCall={!!lead.contacts?.primaryPhone}
+            canCall={!!getCanonicalPhone(lead)}
             onEnterCallMode={() => setShowCallMode(true)}
             onCall={() => {
-              copyText(lead.contacts?.primaryPhone || "").catch(() => {});
+              copyText(getCanonicalPhone(lead) || "").catch(() => {});
               logOutreach("call_started", "next_action");
             }}
-            phoneHref={lead.contacts?.primaryPhone ? telHref(lead.contacts.primaryPhone) : null}
+            phoneHref={getCanonicalPhone(lead) ? telHref(getCanonicalPhone(lead)) : null}
             mailtoHref={bestEmail ? buildQuickMailto(bestEmail) : null}
             mailtoTooltip={emailIsHunter ? "Verified email (Hunter)" : (bestEmail ? `Email ${bestEmail}` : undefined)}
             onOpenScan={() => { setShowScanModal(true); logOutreach("scan_viewed", "next_action"); }}
@@ -2159,7 +2160,8 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
         const tradeKey = lead.trade || TRADE_DEFAULT;
         const trade = getTradeModule(tradeKey);
         const bucket = getServiceBucket(tradeKey, lead.serviceBucket);
-        const hasPhoneAtHeader = !!lead.contacts?.primaryPhone;
+        const headerPhone = getCanonicalPhone(lead);
+        const hasPhoneAtHeader = !!headerPhone;
         return (
           <div style={S.companyHeaderCard}>
             <div style={S.companyHeaderTop}>
@@ -2193,15 +2195,15 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
                 {hasPhoneAtHeader ? (
                   <>
                     <div style={S.companyHeaderPhoneLabel} title="Verified phone">Primary Phone</div>
-                    <div style={S.companyHeaderPhone}>{lead.contacts.primaryPhone}</div>
+                    <div style={S.companyHeaderPhone}>{headerPhone}</div>
                     {/* Paired CTA group — primary Call Now + secondary Call
                         Script, aligned horizontally at the same height so
                         the rep reads them as one action cluster. */}
                     <div style={S.companyHeaderCtaRow}>
                       <a
-                        href={telHref(lead.contacts.primaryPhone)}
+                        href={telHref(headerPhone)}
                         onClick={() => {
-                          copyText(lead.contacts.primaryPhone || "").catch(() => {});
+                          copyText(headerPhone || "").catch(() => {});
                           logOutreach("call_started", "header");
                         }}
                         style={S.companyHeaderCallBtn}
@@ -2284,7 +2286,7 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
         onCopyPhone={async () => {
           // One-click Copy: prefer the phone; fall back to email when no
           // phone is on file. Status line reflects what was copied.
-          const phone = lead.contacts?.primaryPhone;
+          const phone = getCanonicalPhone(lead);
           const email = lead.contacts?.primaryEmail;
           const target = phone || email;
           if (!target) return;
@@ -3013,7 +3015,7 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
           onSaveNote={handleAddNote}
           onStatusChange={handleStatusChange}
           onCall={() => {
-            copyText(lead.contacts?.primaryPhone || "").catch(() => {});
+            copyText(getCanonicalPhone(lead) || "").catch(() => {});
             logOutreach("call_started", "call_mode");
             // The tel: link on the Call button handles navigation natively.
           }}
@@ -4958,7 +4960,7 @@ function AssistantChat({ lead, workspace }) {
       .map((i) => (typeof i === "string" ? i : (i.headline || i.label || i.description || i.reason || "")))
       .filter(Boolean);
     const weakSignals = [];
-    if (!lead.contacts?.primaryPhone) weakSignals.push("No verified phone");
+    if (!getCanonicalPhone(lead)) weakSignals.push("No verified phone");
     if (!lead.contacts?.primaryEmail) weakSignals.push("No verified email");
     if (!(lead.resolvedBusinessUrl || lead.domain)) weakSignals.push("No website on file");
     if (!lead.lastChecked && !lead.websiteProof?.last_checked) weakSignals.push("Never scanned");
@@ -4971,7 +4973,7 @@ function AssistantChat({ lead, workspace }) {
       reason: decision?.reason || "",
       suggestedOpening: decision?.suggestedOpening || "",
       website: lead.resolvedBusinessUrl || lead.domain || lead.websiteProof?.homepage_url || undefined,
-      phone: lead.contacts?.primaryPhone || undefined,
+      phone: getCanonicalPhone(lead) || undefined,
       email: lead.contacts?.primaryEmail || undefined,
       status: lead.accountSnapshot?.status || undefined,
       lastChecked: lead.lastChecked || lead.websiteProof?.last_checked || undefined,
@@ -7499,7 +7501,7 @@ function FeaturedAngleWorkspace({ angle, isActive, leads, onSelect, onOpenOperat
         if (!haystack.includes(q)) return false;
       }
       const hasWebsite = !!(lead.website || lead.websiteUrl || lead.domain);
-      const hasPhone = !!(lead.phone || lead.contacts?.primaryPhone);
+      const hasPhone = !!getCanonicalPhone(lead);
       if (filter === "website") return hasWebsite;
       if (filter === "phone") return hasPhone;
       if (filter === "needs_contact") return !hasWebsite && !hasPhone;
@@ -7822,7 +7824,7 @@ function FeaturedAngleWorkspace({ angle, isActive, leads, onSelect, onOpenOperat
                 const reviews = typeof lead.reviewCount === "number" ? lead.reviewCount : (typeof lead.reviews === "number" ? lead.reviews : null);
                 if (typeof reviews === "number" && reviews >= 0) meta.push(`${reviews} review${reviews === 1 ? "" : "s"}`);
                 if (lead.website || lead.websiteUrl || lead.domain) meta.push("website");
-                if (lead.phone || lead.contacts?.primaryPhone) meta.push("phone");
+                if (getCanonicalPhone(lead)) meta.push("phone");
                 if (lead.source === "google_places") meta.push("Google Places");
                 const rowKey = lead.key ?? lead.id ?? lead.name ?? i;
                 const isSelected = selectedLeadKey != null && lead.key === selectedLeadKey;
@@ -8443,11 +8445,12 @@ export default function OperatorConsole({
     const [city, state] = splitLocation(lead.location);
     (async () => {
       try {
+        const tradeCategory = lead.trade || lead.tradeId || lead.moduleId || lead.category || "roofing";
         const res = await callMcp("find_best_contact", {
           company: { name: lead.name, domain: lead.domain, location: lead.location },
           city,
           state,
-          category: "roofing",
+          category: tradeCategory,
           // Forward site-extracted signals (if any) so the resolver
           // waterfall can fold them into its ranked contact paths.
           websitePhone: lead.websiteProof?.phone_from_site ?? undefined,
@@ -8459,6 +8462,7 @@ export default function OperatorConsole({
         setContactOverlay((prev) => ({
           ...prev,
           [lead.key]: {
+            phone: data.phone ?? undefined,
             contacts: {
               primaryPhone: data.phone ?? undefined,
               primaryEmail: data.email ?? undefined,
@@ -8512,13 +8516,14 @@ export default function OperatorConsole({
   const applyOverlay = (lead) => {
     const o = contactOverlay[lead.key];
     if (!o) return lead;
-    return {
+    return withCanonicalPhoneContact({
       ...lead,
+      phone: o.phone ?? lead.phone,
       contacts: { ...(lead.contacts ?? {}), ...o.contacts },
       resolvedListingUrl: o.resolvedListingUrl ?? lead.resolvedListingUrl,
       fallbackRoute: o.fallbackRoute ?? lead.fallbackRoute,
       contactPaths: o.contactPaths ?? lead.contactPaths,
-    };
+    });
   };
   const withOverlays = (leads) => leads.map(applyOverlay);
 
@@ -8784,8 +8789,8 @@ export default function OperatorConsole({
   // ingestion. filterLeadsForTrade gates by tradeId so HVAC pulls
   // never bleed into Roofing and vice-versa.
   const combinedLeadPool = useMemo(() => {
-    const imported = Object.values(importedLeadsByTrade ?? {}).flat();
-    return [...overlaidAllLeads, ...imported];
+    const imported = Object.values(importedLeadsByTrade ?? {}).flat().map(withCanonicalPhoneContact);
+    return [...overlaidAllLeads.map(withCanonicalPhoneContact), ...imported];
   }, [overlaidAllLeads, importedLeadsByTrade]);
 
   // Single source of truth for whichever trade is selected. Used by
@@ -9526,7 +9531,7 @@ export default function OperatorConsole({
       linkedLeadId: selectedKey,
       linkedCompany: lead.name ?? null,
       linkedLocation: lead.location ?? null,
-      phone: lead.contacts?.primaryPhone ?? null,
+      phone: getCanonicalPhone(lead),
       email: lead.contacts?.primaryEmail ?? null,
       verifiedEmail: lead.verifiedEmail ?? null,
       emailSource: lead.emailSource ?? null,

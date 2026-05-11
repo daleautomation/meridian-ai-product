@@ -38,6 +38,10 @@ import {
 import { getSourceReadiness } from "../../lib/sources/readiness";
 import { ALL_TRADE_ENV_VARS } from "../../lib/modules/tradeSources";
 import { readOperatorSnapshot, writeOperatorSnapshot } from "../../lib/operatorPayload/snapshot";
+import {
+  withCanonicalPhoneContact,
+  type CanonicalPhoneLeadLike,
+} from "../../lib/leads/phone";
 import { listOverrides } from "../../lib/scheduling/overrideStore";
 import { applyScheduleOverrides } from "../../lib/scheduling/applyOverrides";
 import {
@@ -151,7 +155,7 @@ async function renderOperatorPage({
       // Override the user prop with the *current* session (the snapshot
       // was generated under a different user). Workspace identity is
       // preserved from the snapshot — it must match the requested slug.
-      const snapProps = snap.props as Record<string, unknown>;
+      const snapProps = normalizeOperatorPhoneProps(snap.props as Record<string, unknown>);
       const tOv = Date.now();
       const overrides = await listOverrides(workspace.slug);
       const merged = applyScheduleOverrides(
@@ -823,7 +827,7 @@ async function renderOperatorPage({
     && process.env.HUNTER_API_KEY.trim().length > 0;
 
   // Build the prop bag once so we can both render and persist it.
-  const operatorProps = {
+  const operatorProps = normalizeOperatorPhoneProps({
     sourceReadiness,
     connectedEnvVars,
     hunterAvailable,
@@ -854,7 +858,7 @@ async function renderOperatorPage({
     lastPipelineJob: lastJob
       ? { completedAt: lastJob.completedAt, errors: lastJob.errors.length, enriched: lastJob.steps.enrich?.succeeded ?? 0 }
       : null,
-  };
+  });
 
   const slowGeneratedAt = new Date().toISOString();
   // eslint-disable-next-line no-console
@@ -918,7 +922,7 @@ type UiLead = NormalizedLead & {
 };
 
 function toUiLead(lead: NormalizedLead & { decision: LeadDecision }, idx: number): UiLead {
-  return {
+  const uiLead: UiLead = {
     ...lead,
     key: lead.id,
     name: lead.companyName,
@@ -936,6 +940,25 @@ function toUiLead(lead: NormalizedLead & { decision: LeadDecision }, idx: number
     trade: lead.moduleId,
     accountSnapshot: { status: lead.crm.status ?? "NEW" },
   };
+  return withCanonicalPhoneContact(uiLead);
+}
+
+function normalizeOperatorPhoneProps<T extends Record<string, unknown>>(props: T): T {
+  const normalizeList = (value: unknown): unknown => {
+    if (!Array.isArray(value)) return value;
+    return value.map((item) => {
+      if (!item || typeof item !== "object") return item;
+      return withCanonicalPhoneContact(item as CanonicalPhoneLeadLike);
+    });
+  };
+
+  return {
+    ...props,
+    callTheseFirst: normalizeList(props.callTheseFirst),
+    todayList: normalizeList(props.todayList),
+    remaining: normalizeList(props.remaining),
+    rest: normalizeList(props.rest),
+  } as T;
 }
 
 // ── Inline workspace picker ───────────────────────────────────────────

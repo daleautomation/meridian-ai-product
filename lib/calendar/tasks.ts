@@ -17,6 +17,7 @@ import {
 import { getTradeModule } from "../modules/tradeConfigs";
 import { primaryBucketForLead } from "../modules/bucketClassifier";
 import { computeScanStatus, diagnosticTaskTitle } from "../diagnostics/scanStatus";
+import { getCanonicalPhone } from "../leads/phone";
 // LABORTECH DEMO ROLLOUT — see lib/calendar/laborTechDemoSchedule.ts.
 // Reversible via the flag inside that file; remove this import (and the
 // call site at the end of buildTasksFromLeads) to drop the demo entirely.
@@ -802,7 +803,7 @@ export function buildTasksFromLeads(
     const patternLearningReason = patternLearningApplied ? patternResult!.reason : undefined;
 
     const expectedValue = deriveExpectedValue(rev, closeProbability);
-    const phone = l.contacts?.primaryPhone || null;
+    const phone = getCanonicalPhone(l);
     // Plain email — falls back to the top-level `lead.email` so leads
     // imported without a contacts overlay still surface their email
     // on every task. Verified-email enrichment fields are spread in

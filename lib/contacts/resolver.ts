@@ -984,17 +984,26 @@ export async function resolveContact(input: BusinessInput): Promise<ContactResol
     ?? null;
   const hunterPersonName = emailCandidate?.contactName ?? undefined;
 
-  // Phone preference: first top-scored candidate with a phone.
-  const withPhone = scored.find((c) => !!c.phone);
+  // Phone preference follows the ranked contact-path waterfall. This keeps
+  // Google Business Profile above lower-ranked providers when both matched.
+  const primaryPhonePath = paths.find((p) => p.method === "phone");
+  const withPhone = primaryPhonePath
+    ? scored.find((c) => c.source === primaryPhonePath.source && c.phone === primaryPhonePath.value)
+      ?? scored.find((c) => c.phone === primaryPhonePath.value)
+    : scored.find((c) => !!c.phone);
 
   if (withPhone) {
-    const confidence = sourceConfidence(withPhone.source);
+    const confidence = primaryPhonePath?.confidence ?? sourceConfidence(withPhone.source);
+    const primaryPhoneSource =
+      primaryPhonePath?.source && primaryPhonePath.source !== "website" && primaryPhonePath.source !== "inferred"
+        ? primaryPhonePath.source
+        : withPhone.source;
     return enrich({
-      phone: withPhone.phone ?? null,
+      phone: primaryPhonePath?.value ?? withPhone.phone ?? null,
       email: bestEmail,
       fallbackRoute: null,
       fallbackUrl: withPhone.website ?? null,
-      source: withPhone.source,
+      source: primaryPhoneSource,
       confidence,
       checkedSources,
       matchedName: withPhone.name,
@@ -1005,8 +1014,8 @@ export async function resolveContact(input: BusinessInput): Promise<ContactResol
       summary: "found",
       paths,
       detail: bestEmail
-        ? `verified_phone_found_${withPhone.source}_with_email`
-        : `verified_phone_found_${withPhone.source}`,
+        ? `verified_phone_found_${primaryPhoneSource}_with_email`
+        : `verified_phone_found_${primaryPhoneSource}`,
       skippedSources,
     }, scored);
   }
