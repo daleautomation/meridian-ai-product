@@ -8,7 +8,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSession } from "../../lib/auth";
-import { listSnapshots } from "../../lib/state/companySnapshotStore";
+import { listSnapshots, type CompanySnapshot } from "../../lib/state/companySnapshotStore";
 import { getAllActivities, getCalendarEvents } from "../../lib/state/crmStore";
 import { getJobHistory } from "../../lib/pipeline/dailyJob";
 import OperatorConsole from "../../components/OperatorConsole";
@@ -42,6 +42,7 @@ import {
   withCanonicalPhoneContact,
   type CanonicalPhoneLeadLike,
 } from "../../lib/leads/phone";
+import { resolveByLeadIdentity } from "../../lib/leads/identity";
 import { listOverrides } from "../../lib/scheduling/overrideStore";
 import { applyScheduleOverrides } from "../../lib/scheduling/applyOverrides";
 import { companyKey } from "../../lib/mcp/types";
@@ -156,7 +157,11 @@ async function renderOperatorPage({
       // Override the user prop with the *current* session (the snapshot
       // was generated under a different user). Workspace identity is
       // preserved from the snapshot — it must match the requested slug.
-      const snapProps = normalizeOperatorPhoneProps(snap.props as Record<string, unknown>);
+      const currentSnapshots = await listSnapshots();
+      const snapProps = mergeCurrentCrmIntoOperatorProps(
+        normalizeOperatorPhoneProps(snap.props as Record<string, unknown>),
+        currentSnapshots,
+      );
       const tOv = Date.now();
       const overrides = await listOverrides(workspace.slug);
       const merged = applyScheduleOverrides(
@@ -538,21 +543,7 @@ async function renderOperatorPage({
   // Pipeline + CRM still come from existing stores (empty when nothing
   // has been logged yet — honest empty).
   const snapshots = await listSnapshots();
-  const pipelineMap: Record<string, PipelineData> = {};
-  for (const snap of snapshots) {
-    pipelineMap[snap.key] = {
-      status: snap.status ?? "NEW",
-      lastAction: snap.lastAction ?? null,
-      nextAction: snap.nextAction ?? null,
-      nextActionDate: snap.nextActionDate ?? null,
-      contactName: snap.contactName ?? null,
-      contactPhone: snap.contactPhone ?? null,
-      dealActionCount: snap.dealActions?.length ?? 0,
-      callAttempts: snap.callAttempts ?? 0,
-      consecutiveNoAnswers: snap.consecutiveNoAnswers ?? 0,
-      escalationStage: snap.escalationStage ?? 0,
-    };
-  }
+  const pipelineMap = buildPipelineMapFromSnapshots(snapshots);
 
   const roi = { totalLeads: uiLeads.length, contacted: 0, interested: 0, closedWon: 0, closedLost: 0 };
   for (const snap of snapshots) {
@@ -828,7 +819,7 @@ async function renderOperatorPage({
     && process.env.HUNTER_API_KEY.trim().length > 0;
 
   // Build the prop bag once so we can both render and persist it.
-  const operatorProps = normalizeOperatorPhoneProps({
+  const operatorProps = mergeCurrentCrmIntoOperatorProps(normalizeOperatorPhoneProps({
     sourceReadiness,
     connectedEnvVars,
     hunterAvailable,
@@ -859,7 +850,7 @@ async function renderOperatorPage({
     lastPipelineJob: lastJob
       ? { completedAt: lastJob.completedAt, errors: lastJob.errors.length, enriched: lastJob.steps.enrich?.succeeded ?? 0 }
       : null,
-  });
+  }), snapshots);
 
   const slowGeneratedAt = new Date().toISOString();
   // eslint-disable-next-line no-console
@@ -902,6 +893,73 @@ type PipelineData = {
   consecutiveNoAnswers: number;
   escalationStage: number;
 };
+
+function pipelineEntryFromSnapshot(snap: CompanySnapshot): PipelineData {
+  return {
+    status: snap.status ?? "NEW",
+    lastAction: snap.lastAction ?? null,
+    nextAction: snap.nextAction ?? null,
+    nextActionDate: snap.nextActionDate ?? null,
+    contactName: snap.contactName ?? null,
+    contactPhone: snap.contactPhone ?? null,
+    dealActionCount: snap.dealActions?.length ?? 0,
+    callAttempts: snap.callAttempts ?? 0,
+    consecutiveNoAnswers: snap.consecutiveNoAnswers ?? 0,
+    escalationStage: snap.escalationStage ?? 0,
+  };
+}
+
+function buildPipelineMapFromSnapshots(snapshots: CompanySnapshot[]): Record<string, PipelineData> {
+  const pipelineMap: Record<string, PipelineData> = {};
+  for (const snap of snapshots) {
+    pipelineMap[snap.key] = pipelineEntryFromSnapshot(snap);
+  }
+  return pipelineMap;
+}
+
+function mergeCurrentCrmIntoOperatorProps<T extends Record<string, unknown>>(
+  props: T,
+  snapshots: CompanySnapshot[],
+): T {
+  const pipelineMap = buildPipelineMapFromSnapshots(snapshots);
+  const snapshotByKey: Record<string, CompanySnapshot> = {};
+  for (const snap of snapshots) snapshotByKey[snap.key] = snap;
+
+  const mergeLead = (item: unknown): unknown => {
+    if (!item || typeof item !== "object") return item;
+    const lead = item as Record<string, unknown>;
+    const resolved = resolveByLeadIdentity(lead, snapshotByKey);
+    if (!resolved.value) return lead;
+    const pipe = pipelineEntryFromSnapshot(resolved.value);
+    return {
+      ...lead,
+      companyKey: typeof lead.companyKey === "string" && lead.companyKey ? lead.companyKey : resolved.key,
+      crmKey: typeof lead.crmKey === "string" && lead.crmKey ? lead.crmKey : resolved.key,
+      accountSnapshot: {
+        ...((lead.accountSnapshot && typeof lead.accountSnapshot === "object") ? lead.accountSnapshot : {}),
+        status: pipe.status,
+      },
+      crm: {
+        ...((lead.crm && typeof lead.crm === "object") ? lead.crm : {}),
+        status: pipe.status,
+      },
+    };
+  };
+
+  const mergeList = (value: unknown): unknown => Array.isArray(value) ? value.map(mergeLead) : value;
+
+  return {
+    ...props,
+    pipelineMap: {
+      ...((props.pipelineMap && typeof props.pipelineMap === "object") ? props.pipelineMap : {}),
+      ...pipelineMap,
+    },
+    callTheseFirst: mergeList(props.callTheseFirst),
+    todayList: mergeList(props.todayList),
+    remaining: mergeList(props.remaining),
+    rest: mergeList(props.rest),
+  } as T;
+}
 
 // ── NormalizedLead → operator-console UI shape ─────────────────────────
 // OperatorConsole was originally fed CompanyDecision-shaped objects.

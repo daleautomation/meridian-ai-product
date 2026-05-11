@@ -11,10 +11,17 @@
 import { useEffect, useState } from "react";
 import { palette } from "../lib/theme";
 import { getLaborTechServiceFit } from "../lib/scan/serviceFit";
-import { loadAllExecutionOutcomes, resolveExecutionOutcome } from "../lib/execution/executionOutcome";
+import {
+  EXECUTION_OUTCOME_CHANGED_EVENT,
+  loadAllExecutionOutcomes,
+  resolveExecutionOutcome,
+} from "../lib/execution/executionOutcome";
 import { trackEvent } from "../lib/tracking/clientTracker";
 import { resolveLeadQualityDisplay } from "../lib/display/leadQuality";
 import { getCanonicalPhone } from "../lib/leads/phone";
+import { formatTelHref } from "../lib/leads/leadActions";
+import { taskAnchorIso } from "../lib/calendar/tasks";
+import { getBusinessTodayIso, toBusinessDateIso } from "../lib/dates/businessDate";
 
 // Today is the PRIORITY layer — rank, confidence, urgency only.
 // Pain framing lives in the Operator. Tactical "how" lives in the
@@ -36,14 +43,6 @@ function qualitySourceLabel(source) {
   if (source === "closeProbability") return "task probability fallback";
   if (source === "laborTechScan.incomplete") return "incomplete LaborTech scan";
   return "unknown source";
-}
-
-function telHrefOf(phone) {
-  if (!phone) return null;
-  const digits = String(phone).replace(/\D/g, "");
-  if (digits.length === 10) return `tel:+1${digits}`;
-  if (digits.length === 11 && digits.startsWith("1")) return `tel:+${digits}`;
-  return digits ? `tel:${digits}` : null;
 }
 
 export default function TodayExecutionPlan({
@@ -71,7 +70,12 @@ export default function TodayExecutionPlan({
       setOutcomeMap(loadAllExecutionOutcomes());
     };
     window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    const onOutcomeChanged = () => setOutcomeMap(loadAllExecutionOutcomes());
+    window.addEventListener(EXECUTION_OUTCOME_CHANGED_EVENT, onOutcomeChanged);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener(EXECUTION_OUTCOME_CHANGED_EVENT, onOutcomeChanged);
+    };
   }, []);
   // Focused vs full view. Default is the top 6 ranked leads; the
   // user expands to see the rest of the day.
@@ -80,8 +84,15 @@ export default function TodayExecutionPlan({
 
   if (!Array.isArray(tasks) || tasks.length === 0) return null;
 
-  const totalCount = tasks.length;
-  const visibleTasks = expanded ? tasks : tasks.slice(0, TOP_LIMIT);
+  const businessTodayKey = getBusinessTodayIso();
+  const todayTasks = tasks.filter((task) => {
+    const anchor = taskAnchorIso(task);
+    return anchor ? toBusinessDateIso(anchor) === businessTodayKey : false;
+  });
+  if (todayTasks.length === 0) return null;
+
+  const totalCount = todayTasks.length;
+  const visibleTasks = expanded ? todayTasks : todayTasks.slice(0, TOP_LIMIT);
   const hasOverflow = totalCount > TOP_LIMIT;
 
   const handlePrimary = (task) => {
@@ -136,7 +147,7 @@ export default function TodayExecutionPlan({
             fontSize: "15px", fontWeight: 700, color: palette.textPrimary,
             marginTop: "3px", lineHeight: 1.25,
           }}>
-            {tasks.length} {tasks.length === 1 ? "lead" : "leads"} scheduled for today
+            {totalCount} {totalCount === 1 ? "lead" : "leads"} scheduled for today
           </div>
           <div style={{
             fontSize: "11.5px",
@@ -206,7 +217,7 @@ export default function TodayExecutionPlan({
           const linkedKey = task.linkedLeadId;
           const lead = (linkedKey && leadByKey && leadByKey.get) ? leadByKey.get(linkedKey) : null;
           const phone = getCanonicalPhone(lead) ?? task.phone ?? null;
-          const tel = telHrefOf(phone);
+          const tel = formatTelHref(phone);
           const quality = resolveLeadQualityDisplay(task);
           const badge = priorityBadge(quality);
           const confidencePct = typeof quality.value === "number" && !quality.isUnknown ? `${Math.round(quality.value)}%` : null;

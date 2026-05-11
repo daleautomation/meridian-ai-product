@@ -82,6 +82,10 @@ export function isLeadStatus(s: unknown): s is LeadStatus {
 const LEGACY_MAP: Record<string, LeadStatus> = {
   CALLED: LEAD_STATUS.CONTACTED,
   PITCHED: LEAD_STATUS.INTERESTED,
+  DISQUALIFIED: LEAD_STATUS.NOT_QUALIFIED,
+  SKIPPED: LEAD_STATUS.NOT_QUALIFIED,
+  WON: LEAD_STATUS.CLOSED_WON,
+  LOST: LEAD_STATUS.CLOSED_LOST,
 };
 
 export function normalizeStatus(s: string | null | undefined): LeadStatus {
@@ -102,4 +106,21 @@ export const TERMINAL_STATUSES: LeadStatus[] = [
 
 export function isTerminalStatus(s: LeadStatus): boolean {
   return TERMINAL_STATUSES.includes(s);
+}
+
+export const CONTACTED_STYLE_STATUSES: LeadStatus[] = [
+  LEAD_STATUS.CONTACTED,
+  LEAD_STATUS.VOICEMAIL,
+  LEAD_STATUS.EMAILED,
+  LEAD_STATUS.INTERESTED,
+  LEAD_STATUS.FOLLOW_UP,
+  LEAD_STATUS.QUALIFIED,
+];
+
+export function isTerminalStatusValue(s: string | null | undefined): boolean {
+  return isTerminalStatus(normalizeStatus(s));
+}
+
+export function isContactedStyleStatusValue(s: string | null | undefined): boolean {
+  return CONTACTED_STYLE_STATUSES.includes(normalizeStatus(s));
 }

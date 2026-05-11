@@ -27,8 +27,10 @@ import { compareLeadTasks } from "../lib/calendar/leadScore";
 import {
   LAUNCH_DAY_ISO,
   isLaunchDayOrBefore,
+  getBusinessTodayIso,
   getWeekStartIso,
   formatWeekStartLabel,
+  toBusinessDateIso,
 } from "../lib/dates/businessDate";
 import { getLaborTechServiceFit, buildServiceFitBreakdown } from "../lib/scan/serviceFit";
 import {
@@ -38,6 +40,8 @@ import {
   saveExecutionOutcome,
   updateExecutionOutcome,
 } from "../lib/execution/executionOutcome";
+import { triggerPullForward } from "../lib/execution/pullForward";
+import { formatTelHref, formatSmsHref } from "../lib/leads/leadActions";
 import { trackEvent } from "../lib/tracking/clientTracker";
 import { resolveLeadQualityDisplay } from "../lib/display/leadQuality";
 import { explainTaskAction, explainTaskPriority } from "../lib/calendar/taskExplain";
@@ -1090,11 +1094,7 @@ function FeedbackControls({ task, onTaskFeedback }) {
   const taskEmail = task?.email || null;
   const taskVerifiedEmail = task?.verifiedEmail || null;
   const phoneDigits = phone ? String(phone).replace(/\D/g, "") : "";
-  const telHref = phoneDigits.length === 10
-    ? `tel:+1${phoneDigits}`
-    : phoneDigits.length === 11 && phoneDigits.startsWith("1")
-      ? `tel:+${phoneDigits}`
-      : phoneDigits ? `tel:${phoneDigits}` : null;
+  const telHref = formatTelHref(phone);
   if (DEBUG_UI && typeof console !== "undefined" && task?.linkedCompany) {
     // eslint-disable-next-line no-console
     console.log(
@@ -1459,18 +1459,10 @@ function metaLineFor(task) {
 }
 
 function telHrefFor(task) {
-  const phone = task?.phone || null;
-  const digits = phone ? String(phone).replace(/\D/g, "") : "";
-  if (digits.length === 10) return `tel:+1${digits}`;
-  if (digits.length === 11 && digits.startsWith("1")) return `tel:+${digits}`;
-  return digits ? `tel:${digits}` : null;
+  return formatTelHref(task?.phone || null);
 }
 function smsHrefFor(task) {
-  const phone = task?.phone || null;
-  const digits = phone ? String(phone).replace(/\D/g, "") : "";
-  if (digits.length === 10) return `sms:+1${digits}`;
-  if (digits.length === 11 && digits.startsWith("1")) return `sms:+${digits}`;
-  return digits ? `sms:${digits}` : null;
+  return formatSmsHref(task?.phone || null);
 }
 function formatPhoneDisplay(task) {
   const phone = task?.phone || null;
@@ -2835,19 +2827,6 @@ function FieldTestDiagnosticsPanel({ tasksByDay, dataTotal }) {
 // a CRM — six controls, one localStorage map. Captures what happened
 // after the lead was worked so the field-test data + commission
 // attribution conversation have real evidence.
-// Outbound-call outcome statuses that trigger the overflow pull-forward.
-// notes/estimatedValue/nextFollowupDate edits leave `status` unchanged,
-// so they are filtered out by the status-equality guard inside apply()
-// without needing to inspect the patch shape.
-const PULL_FORWARD_TRIGGER_STATUSES = new Set([
-  "Called",
-  "Interested",
-  "Follow Up",
-  "Proposal Sent",
-  "Closed Won",
-  "Closed Lost",
-]);
-
 function ExecutionOutcomePanel({
   taskId,
   // Layer A — canonical lead identity. The parent SelectedLeadPanel has
@@ -2900,47 +2879,13 @@ function ExecutionOutcomePanel({
   // a workspaceSlug to authorize against. Failures are logged but
   // never surfaced — the outcome save itself is independent.
   const firePullForward = (newStatus) => {
-    if (!PULL_FORWARD_TRIGGER_STATUSES.has(newStatus)) return;
-    if (!workspaceSlug) return;
-    const candidate = (overflowEntries ?? []).find(
-      (e) => e && typeof e.leadKey === "string" && !pulledRef.current.has(e.leadKey),
-    );
-    if (!candidate) return;
-    pulledRef.current.add(candidate.leadKey);
-    const todayIso = (() => {
-      const d = new Date();
-      const fmt = new Intl.DateTimeFormat("en-CA", {
-        timeZone: "America/Chicago",
-        year: "numeric", month: "2-digit", day: "2-digit",
-      });
-      return fmt.format(d);
-    })();
-    fetch("/api/scheduling/override", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "same-origin",
-      body: JSON.stringify({
-        leadId: candidate.leadKey,
-        workspaceSlug,
-        action: "move_to_date",
-        scheduledFor: todayIso,
-        updatedBy: "system:pull_forward",
-      }),
-    })
-      .then((res) => {
-        if (!res.ok) {
-          // Roll back the dedup entry so a follow-up outcome can retry.
-          pulledRef.current.delete(candidate.leadKey);
-          return;
-        }
-        // Soft refresh — re-fetches the RSC payload so the calendar
-        // and Today Queue immediately reflect the pulled lead in
-        // today's column. No full page reload, no client state loss.
-        router.refresh();
-      })
-      .catch(() => {
-        pulledRef.current.delete(candidate.leadKey);
-      });
+    triggerPullForward({
+      status: newStatus,
+      overflowEntries,
+      workspaceSlug,
+      pulledKeys: pulledRef.current,
+      onPulled: () => router.refresh(),
+    });
   };
 
   const apply = (patch) => {
@@ -3248,16 +3193,8 @@ export function SelectedLeadPanel({
   // operator panel dial through identical normalization.
   const phone = task?.phone || null;
   const phoneDigits = phone ? String(phone).replace(/\D/g, "") : "";
-  const telHref = phoneDigits.length === 10
-    ? `tel:+1${phoneDigits}`
-    : phoneDigits.length === 11 && phoneDigits.startsWith("1")
-      ? `tel:+${phoneDigits}`
-      : phoneDigits ? `tel:${phoneDigits}` : null;
-  const smsHref = phoneDigits.length === 10
-    ? `sms:+1${phoneDigits}`
-    : phoneDigits.length === 11 && phoneDigits.startsWith("1")
-      ? `sms:+${phoneDigits}`
-      : phoneDigits ? `sms:${phoneDigits}` : null;
+  const telHref = formatTelHref(phone);
+  const smsHref = formatSmsHref(phone);
   const phoneDisplay = phoneDigits.length === 10
     ? `(${phoneDigits.slice(0,3)}) ${phoneDigits.slice(3,6)}-${phoneDigits.slice(6)}`
     : phoneDigits.length === 11 && phoneDigits.startsWith("1")
@@ -4219,17 +4156,26 @@ function DayColumn({ date, tasks, isToday, now, onTaskFeedback, selectedTaskId, 
     return new Set(tasks.slice(0, 3).map((t) => t.id));
   }, [tasks, isFirstActive]);
 
+  const callTasks = useMemo(
+    () => tasks.filter((t) => {
+      const id = t?.id ?? "";
+      const title = t?.title ?? "";
+      return id.endsWith("-call") || title.startsWith("Call ");
+    }),
+    [tasks],
+  );
+
   // Tier breakdown for the day-summary line.
   const tierCounts = useMemo(() => {
     const out = { CLOSE_NOW: 0, STRONG: 0, TEST: 0 };
-    for (const t of tasks) {
+    for (const t of callTasks) {
       const tier = t?.leadTier;
       if (tier === "CLOSE_NOW" || tier === "STRONG" || tier === "TEST") {
         out[tier]++;
       }
     }
     return out;
-  }, [tasks]);
+  }, [callTasks]);
   const hasTierData =
     tierCounts.CLOSE_NOW + tierCounts.STRONG + tierCounts.TEST > 0;
 
@@ -4363,7 +4309,7 @@ function DayColumn({ date, tasks, isToday, now, onTaskFeedback, selectedTaskId, 
           alignItems: "center",
         }}>
           <span style={{ color: palette.textPrimary, fontWeight: 700 }}>
-            {tasks.length} {tasks.length === 1 ? "lead" : "leads"}
+            {callTasks.length} {callTasks.length === 1 ? "lead" : "leads"}
           </span>
           <span style={{ color: palette.textTertiary }}>·</span>
           <span style={{ color: tierTone("CLOSE_NOW").bg, fontWeight: 700 }}>
@@ -4768,6 +4714,7 @@ export default function CalendarCommandCenter({
   // so the main task list isn't mutated; if the parent provides a real
   // mutation handler later it can subsume this.
   const [taskOverrides, setTaskOverrides] = useState({});
+  const pulledForwardRef = useRef(new Set());
 
   // Operator guidance — small overlay launched from the header. The
   // dismissed state is stored in localStorage so first-time users see a
@@ -4989,6 +4936,13 @@ export default function CalendarCommandCenter({
         notes: outcomeNotes || undefined,
       });
       saveExecutionOutcome(current.id, merged, identityKeys);
+      triggerPullForward({
+        status: targetStatus,
+        overflowEntries,
+        workspaceSlug,
+        pulledKeys: pulledForwardRef.current,
+        onPulled: () => router.refresh(),
+      });
     } catch { /* fail silent */ }
 
     // Pick next — first item in callQueue that isn't the one we just
@@ -5486,19 +5440,16 @@ export default function CalendarCommandCenter({
           {layoutMode !== "operator" && calendarView === "week" && hasTradeLeads ? (() => {
             const executionPlan = (() => {
               if (!Array.isArray(data) || data.length === 0) return [];
-              const dayOneKey = laborTechDemoAnchorActive() ? laborTechDemoAnchorKey() : null;
+              const businessTodayKey = getBusinessTodayIso();
               const pool = data.filter((t) => {
                 if (!t || t.status === "done") return false;
                 const id = t.id ?? "";
                 const title = t.title ?? "";
                 const isCall = id.endsWith("-call") || title.startsWith("Call ");
                 if (!isCall) return false;
-                if (dayOneKey) {
-                  const a = taskAnchorIso(t);
-                  if (!a) return false;
-                  return dayKey(new Date(a)) === dayOneKey;
-                }
-                return true;
+                const a = taskAnchorIso(t);
+                if (!a) return false;
+                return toBusinessDateIso(a) === businessTodayKey;
               });
               pool.sort((a, b) => {
                 const qa = resolveLeadQualityDisplay(a);
@@ -5537,7 +5488,7 @@ export default function CalendarCommandCenter({
                   }}
                 >
                   <span style={{ color: palette.textPrimary, fontWeight: 600 }}>
-                    This plan is based on urgency and closeability — not just raw data.
+                    This plan is based on urgency and market fit — not just raw data.
                   </span>
                   <span style={{ color: palette.textTertiary, fontStyle: "italic" }}>
                     Email is available for a subset of leads — phone remains the primary channel.

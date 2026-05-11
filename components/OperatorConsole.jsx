@@ -24,7 +24,7 @@ import LeadEmailAction from "./LeadEmailAction";
 import ContactStrategyPanel from "./ContactStrategyPanel";
 import { WORKFLOW, SHELL_GRID } from "./workflowLayout";
 import LeadWorkflowDrawer from "./LeadWorkflowDrawer";
-import { buildTasksFromLeads } from "../lib/calendar/tasks";
+import { buildTasksFromLeads, taskAnchorIso } from "../lib/calendar/tasks";
 import {
   deriveOutcomeEventsFromPipelineMap,
   combineLearningAdjustments,
@@ -65,10 +65,17 @@ import {
   leadOpportunityValue,
 } from "../lib/leads/leadActions";
 import { getCanonicalPhone, withCanonicalPhoneContact } from "../lib/leads/phone";
+import {
+  deriveLeadCompanyKey as deriveSharedLeadCompanyKey,
+  leadIdentityCandidates as sharedLeadIdentityCandidates,
+} from "../lib/leads/identity";
 import { useOutcomes, useDecisionFlow, leadKeyOf } from "../lib/leads/outcomes";
 import { generateCallScript } from "../lib/leads/scriptEngine";
 import { bucketPerformanceMap } from "../lib/leads/decisionEngine";
-import { companyKey as deriveCompanyKey } from "../lib/mcp/types";
+import {
+  EXECUTION_OUTCOME_CHANGED_EVENT,
+  loadAllExecutionOutcomes,
+} from "../lib/execution/executionOutcome";
 import {
   useDeals,
   buildLeadIndex,
@@ -76,6 +83,12 @@ import {
   sortDealsForStage,
 } from "../lib/leads/deals";
 import { trackEvent } from "../lib/tracking/clientTracker";
+import {
+  isContactedStyleStatusValue,
+  isTerminalStatusValue,
+  normalizeStatus,
+} from "../lib/crm/statusTaxonomy";
+import { getBusinessTodayIso, toBusinessDateIso } from "../lib/dates/businessDate";
 
 // Debug-log gate. Per-render logs flood the main thread on the live
 // demo; enable via NEXT_PUBLIC_DEBUG_MERIDIAN=1 only when needed.
@@ -3051,7 +3064,7 @@ function CallMode({
   }, [onClose]);
 
   const c = lead.contacts || {};
-  const phone = c.primaryPhone;
+  const phone = getCanonicalPhone(lead);
   // Prefer the Hunter-verified email when present; emailSource drives
   // the tooltip on the email button below.
   const email = lead.verifiedEmail || c.primaryEmail;
@@ -5352,47 +5365,19 @@ function angleCopy(a) {
 //   in_progress   — already contacted (CALLED / VOICEMAIL / EMAILED / etc.)
 //   follow_up     — has a scheduled follow-up date or FOLLOW_UP status
 //   closed        — terminal state (won / lost / disqualified / not_qualified)
-function cleanIdentityValue(value) {
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
-}
-
 function deriveLeadCompanyKey(lead) {
-  if (!lead) return null;
-  const name = cleanIdentityValue(lead.name) ?? cleanIdentityValue(lead.companyName);
-  if (!name) return null;
-  const domain =
-    cleanIdentityValue(lead.domain)
-    ?? cleanIdentityValue(lead.website)
-    ?? cleanIdentityValue(lead.resolvedBusinessUrl);
-  try {
-    return deriveCompanyKey({
-      name,
-      ...(domain ? { domain, url: domain } : {}),
-      ...(cleanIdentityValue(lead.location) ? { location: cleanIdentityValue(lead.location) } : {}),
-    });
-  } catch {
-    return null;
-  }
+  return deriveSharedLeadCompanyKey(lead);
 }
 
 function leadIdentityCandidates(lead) {
-  if (!lead) return [];
-  return [
-    cleanIdentityValue(lead.companyKey),
-    cleanIdentityValue(lead.crmKey),
-    deriveLeadCompanyKey(lead),
-    lead.id == null ? null : String(lead.id),
-    lead.key == null ? null : String(lead.key),
-  ].filter(Boolean).filter((key, index, arr) => arr.indexOf(key) === index);
+  return sharedLeadIdentityCandidates(lead);
 }
 
 function normalizeCrmStatus(raw) {
   const upper = (raw ?? "").toString().trim().toUpperCase();
   if (!upper) return "";
-  if (upper === "DISQUALIFIED") return "NOT_QUALIFIED";
-  if (upper === "CALLED") return "CONTACTED";
-  if (upper === "PITCHED") return "INTERESTED";
-  return upper;
+  const normalized = normalizeStatus(upper);
+  return normalized === "NEW" && upper !== "NEW" ? upper : normalized;
 }
 
 function classifyLeadState(lead, pipelineMap) {
@@ -5404,12 +5389,7 @@ function classifyLeadState(lead, pipelineMap) {
   const rawStatus = normalizeCrmStatus(pipe?.status ?? lead?.accountSnapshot?.status ?? lead?.crm?.status ?? lead?.status ?? "");
 
   // Terminal — closed.
-  if (
-    rawStatus === "CLOSED_WON" || rawStatus === "WON" ||
-    rawStatus === "CLOSED_LOST" || rawStatus === "LOST" ||
-    rawStatus === "DISQUALIFIED" || rawStatus === "NOT_QUALIFIED" ||
-    rawStatus === "ARCHIVED" || rawStatus === "SKIPPED"
-  ) {
+  if (isTerminalStatusValue(rawStatus)) {
     return "closed";
   }
 
@@ -5426,9 +5406,7 @@ function classifyLeadState(lead, pipelineMap) {
 
   // In progress — already contacted in some form.
   if (
-    rawStatus === "CONTACTED" || rawStatus === "CALLED" ||
-    rawStatus === "VOICEMAIL" || rawStatus === "EMAILED" ||
-    rawStatus === "PITCHED"
+    isContactedStyleStatusValue(rawStatus)
   ) {
     return "in_progress";
   }
@@ -8458,6 +8436,7 @@ export default function OperatorConsole({
   const [userClosedAssistant, setUserClosedAssistant] = useState(false);
   const [deepReportOpen, setDeepReportOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [executionOutcomeVersion, setExecutionOutcomeVersion] = useState(0);
   const [seeding, setSeeding] = useState(false);
   // Primary view tab: existing card list ("cards") or weekly Calendar
   // Command Center ("calendar"). Defaults to cards so the existing surface
@@ -8474,6 +8453,21 @@ export default function OperatorConsole({
 
   const handleSelect = (lead) => setSelectedKey(selectedKey === lead.key ? null : lead.key);
   const handleUpdate = () => setRefreshKey((k) => k + 1);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const bump = () => setExecutionOutcomeVersion((v) => v + 1);
+    const onStorage = (e) => {
+      if (e.key && e.key !== "meridian.executionOutcomes.v1") return;
+      bump();
+    };
+    window.addEventListener(EXECUTION_OUTCOME_CHANGED_EVENT, bump);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener(EXECUTION_OUTCOME_CHANGED_EVENT, bump);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
 
   const startFindContact = useCallback((lead) => {
     if (!lead) return;
@@ -8555,18 +8549,34 @@ export default function OperatorConsole({
     return () => clearTimeout(t);
   }, [findTask]);
 
+  const mergeContactPaths = (basePaths, overlayPaths) => {
+    const combined = [
+      ...(Array.isArray(basePaths) ? basePaths : []),
+      ...(Array.isArray(overlayPaths) ? overlayPaths : []),
+    ];
+    const seen = new Set();
+    return combined.filter((path) => {
+      if (!path || typeof path !== "object") return false;
+      const key = `${path.method ?? ""}:${path.source ?? ""}:${path.value ?? ""}`.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+
   // Merge overlay (fresh contact resolver output) into each lead so the UI
   // reflects live resolution without waiting for server-prop refresh.
   const applyOverlay = (lead) => {
     const o = contactOverlay[lead.key];
     if (!o) return lead;
+    const contactPaths = mergeContactPaths(lead.contactPaths, o.contactPaths);
     return withCanonicalPhoneContact({
       ...lead,
       phone: o.phone ?? lead.phone,
       contacts: { ...(lead.contacts ?? {}), ...o.contacts },
       resolvedListingUrl: o.resolvedListingUrl ?? lead.resolvedListingUrl,
       fallbackRoute: o.fallbackRoute ?? lead.fallbackRoute,
-      contactPaths: o.contactPaths ?? lead.contactPaths,
+      contactPaths: contactPaths.length > 0 ? contactPaths : undefined,
     });
   };
   const withOverlays = (leads) => leads.map(applyOverlay);
@@ -9114,10 +9124,12 @@ export default function OperatorConsole({
       `selectedServiceAngleId="${selectedServiceAngleId ?? ""}" ` +
       `tradeIdForTasks="${tradeIdForTasks ?? ""}"`,
     );
+    const executionOutcomeMap = typeof window !== "undefined" ? loadAllExecutionOutcomes() : {};
     const baseTasks = buildTasksFromLeads(masterPool, {
       pipelineMap,
       learningAdjustments,
       patternAdjustments,
+      executionOutcomeMap,
       tradeId: tradeIdForTasks,
       // Field-test pipeline: master plan needs at least 120 callable
       // tasks (20/day × 6 days) plus overflow into subsequent weeks
@@ -9354,7 +9366,7 @@ export default function OperatorConsole({
     // and angle filters are applied downstream (calendarTasks memo)
     // so changing a tab doesn't rebuild the schedule.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [combinedLeadPool, pipelineMap, intelligenceScope, feedbackEvents]);
+  }, [combinedLeadPool, pipelineMap, intelligenceScope, feedbackEvents, executionOutcomeVersion]);
   const rawCalendarTasks = calendarBundle.tasks;
   const operatorInsights = calendarBundle.insights;
 
@@ -9552,6 +9564,18 @@ export default function OperatorConsole({
     return finalPool;
   }, [rawCalendarTasks, calendarVisibility, selectedLaborTechServiceId, selectedTradeId, serviceBucketsByTrade, primaryServiceByLeadKey, selectedRepId]);
 
+  const businessTodayTaskCount = useMemo(() => {
+    const todayKey = getBusinessTodayIso();
+    return (calendarTasks ?? []).filter((task) => {
+      if (!task || task.status === "done") return false;
+      const id = task.id ?? "";
+      const title = task.title ?? "";
+      if (!id.endsWith("-call") && !title.startsWith("Call ")) return false;
+      const anchor = taskAnchorIso(task);
+      return anchor ? toBusinessDateIso(anchor) === todayKey : false;
+    }).length;
+  }, [calendarTasks]);
+
   // Workflow-task lookup for the All Leads inline panels — finds the
   // matching call task in calendarTasks by linkedLeadId so the same
   // SelectedLeadPanel + Assistant + Deep Report mount with real task
@@ -9566,10 +9590,18 @@ export default function OperatorConsole({
     // when the calendar didn't produce one.
     const lead = selectedLead;
     if (!lead) return null;
+    const outcomeMap = typeof window !== "undefined" ? loadAllExecutionOutcomes() : {};
+    const outcome = leadIdentityCandidates(lead)
+      .map((key) => outcomeMap[key])
+      .find(Boolean) ?? null;
+    if (outcome?.status === "Closed Won" || outcome?.status === "Closed Lost" || outcome?.status === "Not Qualified") {
+      return null;
+    }
+    const isFollowupOutcome = outcome?.status && outcome.status !== "Not Contacted";
     return {
-      id: `lead-${selectedKey}-call`,
-      title: `Call ${lead.name ?? "lead"}`,
-      category: "priority",
+      id: `lead-${selectedKey}-${isFollowupOutcome ? "followup" : "call"}`,
+      title: `${isFollowupOutcome ? "Follow up with" : "Call"} ${lead.name ?? "lead"}`,
+      category: isFollowupOutcome ? "followup" : "priority",
       priority: "medium",
       status: "todo",
       linkedLeadId: selectedKey,
@@ -9596,7 +9628,7 @@ export default function OperatorConsole({
         ? lead.salesStrategy.closeProbability
         : null,
     };
-  }, [selectedKey, rawCalendarTasks, selectedLead]);
+  }, [selectedKey, rawCalendarTasks, selectedLead, executionOutcomeVersion]);
 
   // Legend entries — only services that appear in the visible tasks.
   const calendarServiceLegend = useMemo(() => {
@@ -9695,11 +9727,9 @@ export default function OperatorConsole({
                     This week: <strong style={{ color: palette.textPrimary }}>{teamWorkload.thisWeek}</strong>
                   </span>
                 ) : null}
-                {typeof teamWorkload.today === "number" ? (
-                  <span>
-                    Today: <strong style={{ color: palette.textPrimary }}>{teamWorkload.today}</strong>
-                  </span>
-                ) : null}
+                <span>
+                  Today: <strong style={{ color: palette.textPrimary }}>{businessTodayTaskCount}</strong>
+                </span>
                 {teamWorkload.perRep.map((r) => (
                   <span key={r.id}>
                     {r.name} today: <strong style={{ color: palette.textPrimary }}>{r.today ?? 0}</strong>

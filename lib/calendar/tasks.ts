@@ -18,8 +18,11 @@ import { getTradeModule } from "../modules/tradeConfigs";
 import { primaryBucketForLead } from "../modules/bucketClassifier";
 import { computeScanStatus, diagnosticTaskTitle } from "../diagnostics/scanStatus";
 import { getCanonicalPhone } from "../leads/phone";
-import { normalizeStatus } from "../crm/statusTaxonomy";
-import { companyKey } from "../mcp/types";
+import { isTerminalStatusValue, normalizeStatus } from "../crm/statusTaxonomy";
+import {
+  cleanIdentityValue as cleanKey,
+  leadIdentityCandidates,
+} from "../leads/identity";
 // LABORTECH DEMO ROLLOUT — see lib/calendar/laborTechDemoSchedule.ts.
 // Reversible via the flag inside that file; remove this import (and the
 // call site at the end of buildTasksFromLeads) to drop the demo entirely.
@@ -348,6 +351,11 @@ export interface BuildTasksOptions {
    */
   patternAdjustments?: Record<string, PatternAdjustmentLike> | null;
   /**
+   * Current client-side execution outcomes. Keys may be task ids or
+   * company identity keys; task generation resolves both for back-compat.
+   */
+  executionOutcomeMap?: Record<string, ExecutionOutcomeLike> | null;
+  /**
    * Trade module to apply when classifying leads into service buckets.
    * Falls back to lead.tradeId / lead.trade / lead.category, then to
    * "roofing" so existing single-trade callers are unaffected.
@@ -376,6 +384,10 @@ export interface LearningAdjustmentLike {
   lastOutcomeAt?: string;
 }
 
+export interface ExecutionOutcomeLike {
+  status?: string | null;
+}
+
 const FOLLOWUP_STATUSES = new Set([
   "CONTACTED", "CALLED", "VOICEMAIL", "EMAILED",
   "FOLLOW_UP", "INTERESTED", "QUALIFIED", "PITCHED",
@@ -389,9 +401,17 @@ const TERMINAL_STATUSES = new Set([
   "ARCHIVED",
 ]);
 
-function cleanKey(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
-}
+const OUTCOME_TO_PIPELINE_STATUS: Record<string, string> = {
+  "Not Contacted": "",
+  Called: "CONTACTED",
+  Interested: "FOLLOW_UP",
+  "Follow Up": "FOLLOW_UP",
+  Qualified: "FOLLOW_UP",
+  "Proposal Sent": "FOLLOW_UP",
+  "Closed Won": "CLOSED_WON",
+  "Closed Lost": "CLOSED_LOST",
+  "Not Qualified": "NOT_QUALIFIED",
+};
 
 function normalizePipelineStatus(raw: string | null | undefined): string {
   const upper = (raw ?? "").toString().trim().toUpperCase();
@@ -415,26 +435,8 @@ function leadCompanyDomain(l: LeadLike): string | null {
   return cleanKey(l.domain) ?? cleanKey(l.website) ?? cleanKey(l.resolvedBusinessUrl);
 }
 
-function derivedCompanyKey(l: LeadLike): string | null {
-  const name = leadCompanyName(l);
-  if (!name) return null;
-  const domain = leadCompanyDomain(l);
-  return companyKey({
-    name,
-    ...(domain ? { domain, url: domain } : {}),
-    ...(cleanKey(l.location) ? { location: cleanKey(l.location)! } : {}),
-  });
-}
-
 function identityCandidates(l: LeadLike): string[] {
-  const candidates = [
-    cleanKey(l.companyKey),
-    cleanKey(l.crmKey),
-    derivedCompanyKey(l),
-    l.id == null ? null : String(l.id),
-    l.key == null ? null : String(l.key),
-  ];
-  return Array.from(new Set(candidates.filter((k): k is string => !!k)));
+  return leadIdentityCandidates(l);
 }
 
 function resolvePipelineEntry(
@@ -446,6 +448,26 @@ function resolvePipelineEntry(
     if (pipelineMap[key]) return { key, pipe: pipelineMap[key] };
   }
   return { key: candidates[0] ?? null, pipe: null };
+}
+
+function resolveExecutionOutcomeStatus(
+  l: LeadLike,
+  outcomeMap: Record<string, ExecutionOutcomeLike> | null | undefined,
+): string | null {
+  if (!outcomeMap) return null;
+  const id = leadId(l);
+  const keys = [
+    id ? `lead-${id}-call` : null,
+    id ? `lead-${id}-followup` : null,
+    ...identityCandidates(l),
+  ].filter((key): key is string => !!key);
+  for (const key of Array.from(new Set(keys))) {
+    const status = outcomeMap[key]?.status;
+    if (typeof status === "string" && status !== "Not Contacted") {
+      return OUTCOME_TO_PIPELINE_STATUS[status] ?? normalizePipelineStatus(status);
+    }
+  }
+  return null;
 }
 
 function isCallNow(l: LeadLike): boolean {
@@ -467,7 +489,7 @@ function isToday(l: LeadLike): boolean {
 
 function hasContact(l: LeadLike): boolean {
   const c = l.contacts ?? {};
-  return !!(c.primaryPhone || c.primaryEmail);
+  return !!(getCanonicalPhone(l) || c.primaryEmail);
 }
 
 function hasWebsiteScan(l: LeadLike): boolean {
@@ -842,10 +864,12 @@ export function buildTasksFromLeads(
     if (!id) continue;
 
     const { key: operationalCompanyKey, pipe } = resolvePipelineEntry(l, pipelineMap);
-    const status = normalizePipelineStatus(
+    const crmStatus = normalizePipelineStatus(
       pipe?.status ?? l.accountSnapshot?.status ?? l.crm?.status,
     );
-    if (TERMINAL_STATUSES.has(status)) continue;
+    const outcomeStatus = resolveExecutionOutcomeStatus(l, options.executionOutcomeMap);
+    const status = outcomeStatus ?? crmStatus;
+    if (TERMINAL_STATUSES.has(status) || isTerminalStatusValue(status)) continue;
     if (operationalCompanyKey && seenCompanyKeys.has(operationalCompanyKey)) continue;
     if (operationalCompanyKey) seenCompanyKeys.add(operationalCompanyKey);
 
