@@ -34,7 +34,7 @@ import { getLaborTechServiceFit, buildServiceFitBreakdown } from "../lib/scan/se
 import {
   EXECUTION_OUTCOME_STATUSES,
   getDefaultExecutionOutcome,
-  loadExecutionOutcome,
+  loadExecutionOutcomeByIdentity,
   saveExecutionOutcome,
   updateExecutionOutcome,
 } from "../lib/execution/executionOutcome";
@@ -2856,6 +2856,8 @@ function ExecutionOutcomePanel({
   // POST below has the workspace + lead context it needs.
   linkedLeadId = null,
   linkedCompany = null,
+  companyKey = null,
+  crmKey = null,
   // Layer B2 — overflow queue source-of-truth (capped, ordered by team
   // scheduler priority) + workspace slug for the override POST.
   overflowEntries = [],
@@ -2863,6 +2865,10 @@ function ExecutionOutcomePanel({
 }) {
   const router = useRouter();
   const [outcome, setOutcome] = useState(() => getDefaultExecutionOutcome());
+  const identityKeys = useMemo(
+    () => [companyKey, crmKey, linkedLeadId],
+    [companyKey, crmKey, linkedLeadId],
+  );
   // Track which overflow leadKeys have already been pulled forward by
   // THIS panel instance. Survives re-renders, cleared on unmount. The
   // server-side override store is the durable source of truth across
@@ -2880,11 +2886,11 @@ function ExecutionOutcomePanel({
       prevStatusRef.current = getDefaultExecutionOutcome().status;
       return;
     }
-    const loaded = loadExecutionOutcome(taskId);
+    const loaded = loadExecutionOutcomeByIdentity(taskId, identityKeys);
     const next = loaded ?? getDefaultExecutionOutcome();
     setOutcome(next);
     prevStatusRef.current = next.status;
-  }, [taskId]);
+  }, [taskId, identityKeys]);
 
   if (!taskId) return null;
 
@@ -2941,7 +2947,7 @@ function ExecutionOutcomePanel({
     const prevStatus = prevStatusRef.current;
     const next = updateExecutionOutcome(outcome, patch);
     setOutcome(next);
-    saveExecutionOutcome(taskId, next);
+    saveExecutionOutcome(taskId, next, identityKeys);
     trackEvent({
       eventType: "outcome_save",
       taskId: taskId,
@@ -3667,8 +3673,9 @@ export function SelectedLeadPanel({
             if (typeof onOpen === "function") onOpen(task);
             if (task?.id) {
               try {
-                const next = updateExecutionOutcome(loadExecutionOutcome(task.id), { status: "Called" });
-                saveExecutionOutcome(task.id, next);
+                const identityKeys = [task.companyKey, task.crmKey, task.linkedLeadId];
+                const next = updateExecutionOutcome(loadExecutionOutcomeByIdentity(task.id, identityKeys), { status: "Called" });
+                saveExecutionOutcome(task.id, next, identityKeys);
               } catch { /* fail silent */ }
             }
             trackEvent({
@@ -3883,6 +3890,8 @@ export function SelectedLeadPanel({
         taskId={task.id}
         linkedLeadId={task?.linkedLeadId ?? null}
         linkedCompany={task?.linkedCompany ?? null}
+        companyKey={task?.companyKey ?? null}
+        crmKey={task?.crmKey ?? null}
         overflowEntries={overflowEntries}
         workspaceSlug={workspaceSlug}
       />
@@ -4974,11 +4983,12 @@ export default function CalendarCommandCenter({
       };
       const targetStatus = statusMap[outcomeId] ?? "Called";
       const outcomeNotes = note;
-      const merged = updateExecutionOutcome(loadExecutionOutcome(current.id), {
+      const identityKeys = [current.companyKey, current.crmKey, current.linkedLeadId];
+      const merged = updateExecutionOutcome(loadExecutionOutcomeByIdentity(current.id, identityKeys), {
         status: targetStatus,
         notes: outcomeNotes || undefined,
       });
-      saveExecutionOutcome(current.id, merged);
+      saveExecutionOutcome(current.id, merged, identityKeys);
     } catch { /* fail silent */ }
 
     // Pick next — first item in callQueue that isn't the one we just

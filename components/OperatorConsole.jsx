@@ -68,6 +68,7 @@ import { getCanonicalPhone, withCanonicalPhoneContact } from "../lib/leads/phone
 import { useOutcomes, useDecisionFlow, leadKeyOf } from "../lib/leads/outcomes";
 import { generateCallScript } from "../lib/leads/scriptEngine";
 import { bucketPerformanceMap } from "../lib/leads/decisionEngine";
+import { companyKey as deriveCompanyKey } from "../lib/mcp/types";
 import {
   useDeals,
   buildLeadIndex,
@@ -5351,20 +5352,63 @@ function angleCopy(a) {
 //   in_progress   — already contacted (CALLED / VOICEMAIL / EMAILED / etc.)
 //   follow_up     — has a scheduled follow-up date or FOLLOW_UP status
 //   closed        — terminal state (won / lost / disqualified / not_qualified)
+function cleanIdentityValue(value) {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function deriveLeadCompanyKey(lead) {
+  if (!lead) return null;
+  const name = cleanIdentityValue(lead.name) ?? cleanIdentityValue(lead.companyName);
+  if (!name) return null;
+  const domain =
+    cleanIdentityValue(lead.domain)
+    ?? cleanIdentityValue(lead.website)
+    ?? cleanIdentityValue(lead.resolvedBusinessUrl);
+  try {
+    return deriveCompanyKey({
+      name,
+      ...(domain ? { domain, url: domain } : {}),
+      ...(cleanIdentityValue(lead.location) ? { location: cleanIdentityValue(lead.location) } : {}),
+    });
+  } catch {
+    return null;
+  }
+}
+
+function leadIdentityCandidates(lead) {
+  if (!lead) return [];
+  return [
+    cleanIdentityValue(lead.companyKey),
+    cleanIdentityValue(lead.crmKey),
+    deriveLeadCompanyKey(lead),
+    lead.id == null ? null : String(lead.id),
+    lead.key == null ? null : String(lead.key),
+  ].filter(Boolean).filter((key, index, arr) => arr.indexOf(key) === index);
+}
+
+function normalizeCrmStatus(raw) {
+  const upper = (raw ?? "").toString().trim().toUpperCase();
+  if (!upper) return "";
+  if (upper === "DISQUALIFIED") return "NOT_QUALIFIED";
+  if (upper === "CALLED") return "CONTACTED";
+  if (upper === "PITCHED") return "INTERESTED";
+  return upper;
+}
+
 function classifyLeadState(lead, pipelineMap) {
   if (!lead) return "ready_to_call";
-  const id = lead.key ?? lead.id ?? null;
-  const pipe = (id && pipelineMap) ? pipelineMap[id] : null;
-  const rawStatus = (pipe?.status ?? lead?.crm?.status ?? lead?.status ?? "")
-    .toString()
-    .toUpperCase();
+  const candidates = leadIdentityCandidates(lead);
+  const pipe = candidates
+    .map((key) => pipelineMap?.[key])
+    .find(Boolean) ?? null;
+  const rawStatus = normalizeCrmStatus(pipe?.status ?? lead?.accountSnapshot?.status ?? lead?.crm?.status ?? lead?.status ?? "");
 
   // Terminal — closed.
   if (
     rawStatus === "CLOSED_WON" || rawStatus === "WON" ||
     rawStatus === "CLOSED_LOST" || rawStatus === "LOST" ||
     rawStatus === "DISQUALIFIED" || rawStatus === "NOT_QUALIFIED" ||
-    rawStatus === "SKIPPED"
+    rawStatus === "ARCHIVED" || rawStatus === "SKIPPED"
   ) {
     return "closed";
   }
@@ -9530,6 +9574,8 @@ export default function OperatorConsole({
       status: "todo",
       linkedLeadId: selectedKey,
       linkedCompany: lead.name ?? null,
+      companyKey: lead.companyKey ?? lead.crmKey ?? deriveLeadCompanyKey(lead) ?? null,
+      crmKey: lead.crmKey ?? lead.companyKey ?? deriveLeadCompanyKey(lead) ?? null,
       linkedLocation: lead.location ?? null,
       phone: getCanonicalPhone(lead),
       email: lead.contacts?.primaryEmail ?? null,
