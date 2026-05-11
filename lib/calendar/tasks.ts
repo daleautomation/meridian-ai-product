@@ -18,6 +18,8 @@ import { getTradeModule } from "../modules/tradeConfigs";
 import { primaryBucketForLead } from "../modules/bucketClassifier";
 import { computeScanStatus, diagnosticTaskTitle } from "../diagnostics/scanStatus";
 import { getCanonicalPhone } from "../leads/phone";
+import { normalizeStatus } from "../crm/statusTaxonomy";
+import { companyKey } from "../mcp/types";
 // LABORTECH DEMO ROLLOUT — see lib/calendar/laborTechDemoSchedule.ts.
 // Reversible via the flag inside that file; remove this import (and the
 // call site at the end of buildTasksFromLeads) to drop the demo entirely.
@@ -53,6 +55,8 @@ export interface TaskItem {
   linkedPerson?: string;
   linkedCompany?: string;
   linkedLeadId?: string;
+  companyKey?: string;
+  crmKey?: string;
   notes?: string;
   nextAction?: string;
   /** 0..1, clamped to [0.05, 0.90]. Optional. */
@@ -192,8 +196,12 @@ export function taskAnchorIso(t: TaskItem): string | null {
 export interface LeadLike {
   key?: string | number | null;
   id?: string | number | null;
+  companyKey?: string | null;
+  crmKey?: string | null;
   name?: string | null;
+  companyName?: string | null;
   domain?: string | null;
+  website?: string | null;
   resolvedBusinessUrl?: string | null;
   location?: string | null;
   score?: number | null;
@@ -260,6 +268,12 @@ export interface LeadLike {
   emailSource?: string | null;
   emailVerifiedAt?: string | null;
   emailConfidence?: string | null;
+  crm?: {
+    status?: string | null;
+  } | null;
+  accountSnapshot?: {
+    status?: string | null;
+  } | null;
   // LaborTech premium scan (lib/scan/laborTechScan.ts). Stamped onto
   // the lead during ingestion. Loose shape so this file does not need
   // an upward import on the scan module.
@@ -367,12 +381,71 @@ const FOLLOWUP_STATUSES = new Set([
   "FOLLOW_UP", "INTERESTED", "QUALIFIED", "PITCHED",
 ]);
 
-const TERMINAL_STATUSES = new Set(["CLOSED_WON", "CLOSED_LOST", "DISQUALIFIED"]);
+const TERMINAL_STATUSES = new Set([
+  "CLOSED_WON",
+  "CLOSED_LOST",
+  "NOT_QUALIFIED",
+  "DISQUALIFIED",
+  "ARCHIVED",
+]);
+
+function cleanKey(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function normalizePipelineStatus(raw: string | null | undefined): string {
+  const upper = (raw ?? "").toString().trim().toUpperCase();
+  if (!upper) return "";
+  if (upper === "DISQUALIFIED") return "NOT_QUALIFIED";
+  const normalized = normalizeStatus(upper);
+  return normalized === "NEW" && upper !== "NEW" ? upper : normalized;
+}
 
 function leadId(l: LeadLike): string | null {
   const raw = l.key ?? l.id ?? null;
   if (raw == null) return null;
   return String(raw);
+}
+
+function leadCompanyName(l: LeadLike): string | null {
+  return cleanKey(l.name) ?? cleanKey(l.companyName);
+}
+
+function leadCompanyDomain(l: LeadLike): string | null {
+  return cleanKey(l.domain) ?? cleanKey(l.website) ?? cleanKey(l.resolvedBusinessUrl);
+}
+
+function derivedCompanyKey(l: LeadLike): string | null {
+  const name = leadCompanyName(l);
+  if (!name) return null;
+  const domain = leadCompanyDomain(l);
+  return companyKey({
+    name,
+    ...(domain ? { domain, url: domain } : {}),
+    ...(cleanKey(l.location) ? { location: cleanKey(l.location)! } : {}),
+  });
+}
+
+function identityCandidates(l: LeadLike): string[] {
+  const candidates = [
+    cleanKey(l.companyKey),
+    cleanKey(l.crmKey),
+    derivedCompanyKey(l),
+    l.id == null ? null : String(l.id),
+    l.key == null ? null : String(l.key),
+  ];
+  return Array.from(new Set(candidates.filter((k): k is string => !!k)));
+}
+
+function resolvePipelineEntry(
+  l: LeadLike,
+  pipelineMap: Record<string, PipelineEntryLike>,
+): { key: string | null; pipe: PipelineEntryLike | null } {
+  const candidates = identityCandidates(l);
+  for (const key of candidates) {
+    if (pipelineMap[key]) return { key, pipe: pipelineMap[key] };
+  }
+  return { key: candidates[0] ?? null, pipe: null };
 }
 
 function isCallNow(l: LeadLike): boolean {
@@ -551,7 +624,7 @@ function safeStr(v: unknown): string | undefined {
 }
 
 function leadDisplayName(l: LeadLike): string {
-  return (l.name && l.name.trim()) || l.domain || "Unnamed lead";
+  return (l.name && l.name.trim()) || (l.companyName && l.companyName.trim()) || l.domain || "Unnamed lead";
 }
 
 // ── Close probability + deal confidence ────────────────────────────────
@@ -757,6 +830,7 @@ export function buildTasksFromLeads(
 
   const out: TaskItem[] = [];
   const seen = new Set<string>();
+  const seenCompanyKeys = new Set<string>();
   const push = (t: TaskItem) => {
     if (seen.has(t.id)) return;
     seen.add(t.id);
@@ -767,22 +841,29 @@ export function buildTasksFromLeads(
     const id = leadId(l);
     if (!id) continue;
 
-    const pipe = pipelineMap[id];
-    const status = (pipe?.status ?? "").toUpperCase();
+    const { key: operationalCompanyKey, pipe } = resolvePipelineEntry(l, pipelineMap);
+    const status = normalizePipelineStatus(
+      pipe?.status ?? l.accountSnapshot?.status ?? l.crm?.status,
+    );
     if (TERMINAL_STATUSES.has(status)) continue;
+    if (operationalCompanyKey && seenCompanyKeys.has(operationalCompanyKey)) continue;
+    if (operationalCompanyKey) seenCompanyKeys.add(operationalCompanyKey);
 
     const company = leadDisplayName(l);
     const person = l.contacts?.contactName ?? pipe?.contactName ?? undefined;
+    const pipeEntry = pipe ?? undefined;
     const rev = deriveRevenueImpact(l);
     const issue = topIssue(l);
     const strategic = strategicFromScore(l.score);
     const risk = riskFromLead(l);
-    const baseProb = deriveCloseProbability(l, pipe);
+    const baseProb = deriveCloseProbability(l, pipeEntry);
     const baseConf = deriveDealConfidence(l);
 
     // Outcome-learning adjustment, if any, is applied as a clamped nudge
     // on top of the heuristic baseline. Heuristic remains source of truth.
-    const adj = options.learningAdjustments?.[id];
+    const adj =
+      options.learningAdjustments?.[id]
+      ?? (operationalCompanyKey ? options.learningAdjustments?.[operationalCompanyKey] : undefined);
     const directProb = applyProbAdjustment(baseProb, adj);
     const directConf = applyConfAdjustment(baseConf, adj);
     const learningApplied =
@@ -791,7 +872,7 @@ export function buildTasksFromLeads(
 
     // Pattern-learning nudge — capped at ±0.10. Always applied after
     // direct learning so per-lead outcomes dominate pattern inference.
-    const patternResult = applyPatternAdjustment(l, options.patternAdjustments, pipe);
+    const patternResult = applyPatternAdjustment(l, options.patternAdjustments, pipeEntry);
     const closeProbability = patternResult
       ? Math.max(CLOSE_PROB_MIN, Math.min(CLOSE_PROB_MAX, directProb + patternResult.probabilityDelta))
       : directProb;
@@ -813,6 +894,7 @@ export function buildTasksFromLeads(
     const baseLink = {
       linkedLeadId: id,
       linkedCompany: company,
+      ...(operationalCompanyKey ? { companyKey: operationalCompanyKey, crmKey: operationalCompanyKey } : {}),
       ...(person ? { linkedPerson: person } : {}),
       ...(typeof l.location === "string" && l.location ? { linkedLocation: l.location } : {}),
       ...(phone ? { phone } : {}),
@@ -994,7 +1076,7 @@ export function buildTasksFromLeads(
         category: "followup",
         priority: followPriority,
         status: "todo",
-        dueDate: followupDueIso(l, pipe, now),
+        dueDate: followupDueIso(l, pipeEntry, now),
         ...(rev ? { revenueImpact: rev } : {}),
         riskIfMissed: risk,
         strategicImportance: strategic,

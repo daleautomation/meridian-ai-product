@@ -11,7 +11,7 @@
 import { useEffect, useState } from "react";
 import { palette } from "../lib/theme";
 import { getLaborTechServiceFit } from "../lib/scan/serviceFit";
-import { loadAllExecutionOutcomes } from "../lib/execution/executionOutcome";
+import { loadAllExecutionOutcomes, resolveExecutionOutcome } from "../lib/execution/executionOutcome";
 import { trackEvent } from "../lib/tracking/clientTracker";
 import { resolveLeadQualityDisplay } from "../lib/display/leadQuality";
 import { getCanonicalPhone } from "../lib/leads/phone";
@@ -215,7 +215,11 @@ export default function TodayExecutionPlan({
           const company = task.linkedCompany ?? "Unknown lead";
           const fit = getLaborTechServiceFit(task);
           const fitLabel = fit?.primaryServiceLabel ?? null;
-          const outcome = task.id ? outcomeMap[task.id] : null;
+          const outcome = resolveExecutionOutcome(
+            outcomeMap,
+            task.id,
+            [task.companyKey, task.crmKey, task.linkedLeadId],
+          );
           const outcomeStatus = outcome && outcome.status !== "Not Contacted" ? outcome.status : null;
           const outcomeTone = (() => {
             if (!outcomeStatus) return null;

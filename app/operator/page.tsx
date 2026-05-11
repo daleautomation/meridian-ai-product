@@ -44,6 +44,7 @@ import {
 } from "../../lib/leads/phone";
 import { listOverrides } from "../../lib/scheduling/overrideStore";
 import { applyScheduleOverrides } from "../../lib/scheduling/applyOverrides";
+import { companyKey } from "../../lib/mcp/types";
 import {
   getBusinessTodayIso,
   getWeekStartIso,
@@ -918,10 +919,18 @@ type UiLead = NormalizedLead & {
   contacts: { primaryPhone?: string; primaryEmail?: string; source?: string };
   domain?: string;
   resolvedBusinessUrl?: string;
+  companyKey: string;
+  crmKey: string;
   accountSnapshot?: { status: string };
 };
 
 function toUiLead(lead: NormalizedLead & { decision: LeadDecision }, idx: number): UiLead {
+  const stableCompanyKey = companyKey({
+    name: lead.companyName,
+    domain: lead.website,
+    url: lead.website,
+    location: lead.location,
+  });
   const uiLead: UiLead = {
     ...lead,
     key: lead.id,
@@ -935,6 +944,8 @@ function toUiLead(lead: NormalizedLead & { decision: LeadDecision }, idx: number
     },
     domain: lead.website,
     resolvedBusinessUrl: lead.website,
+    companyKey: stableCompanyKey,
+    crmKey: stableCompanyKey,
     // Tag the lead with its trade so OperatorConsole's filter
     // (filterLeadsForTrade) routes it to the correct module.
     trade: lead.moduleId,
@@ -944,11 +955,41 @@ function toUiLead(lead: NormalizedLead & { decision: LeadDecision }, idx: number
 }
 
 function normalizeOperatorPhoneProps<T extends Record<string, unknown>>(props: T): T {
+  const withStableCompanyKey = (item: Record<string, unknown>): Record<string, unknown> => {
+    const name =
+      typeof item.name === "string" && item.name.trim()
+        ? item.name
+        : typeof item.companyName === "string" && item.companyName.trim()
+          ? item.companyName
+          : null;
+    const domain =
+      typeof item.domain === "string" && item.domain.trim()
+        ? item.domain
+        : typeof item.website === "string" && item.website.trim()
+          ? item.website
+          : typeof item.resolvedBusinessUrl === "string" && item.resolvedBusinessUrl.trim()
+            ? item.resolvedBusinessUrl
+            : null;
+    if (!name) return item;
+    const stableCompanyKey = companyKey({
+      name,
+      ...(domain ? { domain, url: domain } : {}),
+      ...(typeof item.location === "string" ? { location: item.location } : {}),
+    });
+    return {
+      ...item,
+      companyKey: typeof item.companyKey === "string" && item.companyKey ? item.companyKey : stableCompanyKey,
+      crmKey: typeof item.crmKey === "string" && item.crmKey ? item.crmKey : stableCompanyKey,
+    };
+  };
+
   const normalizeList = (value: unknown): unknown => {
     if (!Array.isArray(value)) return value;
     return value.map((item) => {
       if (!item || typeof item !== "object") return item;
-      return withCanonicalPhoneContact(item as CanonicalPhoneLeadLike);
+      return withCanonicalPhoneContact(
+        withStableCompanyKey(item as Record<string, unknown>) as CanonicalPhoneLeadLike,
+      );
     });
   };
 

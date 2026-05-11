@@ -145,14 +145,44 @@ export function loadExecutionOutcome(taskId: string | null | undefined): Executi
   return map[taskId] ?? null;
 }
 
+function compactKeys(keys: Array<string | null | undefined>): string[] {
+  return Array.from(new Set(keys.filter((key): key is string => typeof key === "string" && key.trim().length > 0)));
+}
+
+export function resolveExecutionOutcome(
+  map: Record<string, ExecutionOutcome>,
+  taskId: string | null | undefined,
+  identityKeys: Array<string | null | undefined> = [],
+): ExecutionOutcome | null {
+  for (const key of compactKeys([taskId, ...identityKeys])) {
+    if (map[key]) return map[key];
+  }
+  return null;
+}
+
+export function loadExecutionOutcomeByIdentity(
+  taskId: string | null | undefined,
+  identityKeys: Array<string | null | undefined> = [],
+): ExecutionOutcome | null {
+  const map = readMap();
+  return resolveExecutionOutcome(map, taskId, identityKeys);
+}
+
 export function loadAllExecutionOutcomes(): Record<string, ExecutionOutcome> {
   return readMap();
 }
 
-export function saveExecutionOutcome(taskId: string, outcome: ExecutionOutcome): void {
+export function saveExecutionOutcome(
+  taskId: string,
+  outcome: ExecutionOutcome,
+  identityKeys: Array<string | null | undefined> = [],
+): void {
   if (!taskId) return;
   const map = readMap();
-  map[taskId] = normalizeExecutionOutcome(outcome);
+  const normalized = normalizeExecutionOutcome(outcome);
+  for (const key of compactKeys([taskId, ...identityKeys])) {
+    map[key] = normalized;
+  }
   writeMap(map);
 }
 
