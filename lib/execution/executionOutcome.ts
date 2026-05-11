@@ -20,7 +20,8 @@ export type ExecutionOutcomeStatus =
   | "Qualified"
   | "Proposal Sent"
   | "Closed Won"
-  | "Closed Lost";
+  | "Closed Lost"
+  | "Not Qualified";
 
 export interface ExecutionOutcome {
   status: ExecutionOutcomeStatus;
@@ -35,6 +36,7 @@ export interface ExecutionOutcome {
 }
 
 export const EXECUTION_OUTCOME_STORAGE_KEY = "meridian.executionOutcomes.v1";
+export const EXECUTION_OUTCOME_CHANGED_EVENT = "meridian:executionOutcomesChanged";
 
 export const EXECUTION_OUTCOME_STATUSES: ExecutionOutcomeStatus[] = [
   "Not Contacted",
@@ -45,6 +47,7 @@ export const EXECUTION_OUTCOME_STATUSES: ExecutionOutcomeStatus[] = [
   "Proposal Sent",
   "Closed Won",
   "Closed Lost",
+  "Not Qualified",
 ];
 
 export function getDefaultExecutionOutcome(): ExecutionOutcome {
@@ -134,6 +137,7 @@ function writeMap(map: Record<string, ExecutionOutcome>): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(EXECUTION_OUTCOME_STORAGE_KEY, JSON.stringify(map));
+    window.dispatchEvent(new CustomEvent(EXECUTION_OUTCOME_CHANGED_EVENT));
   } catch {
     /* quota exceeded / private mode — fail silently */
   }
