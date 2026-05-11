@@ -2010,8 +2010,9 @@ function RightNowCard({ decision, onTaskFeedback, tradeLabel, hasTradeLeads = tr
 
   const ev = t.expectedValue;
   const upside = decision.expectedUpside ?? t.revenueImpact;
-  const probPct = typeof t.closeProbability === "number"
-    ? Math.round(t.closeProbability * 100)
+  const rightNowQuality = resolveLeadQualityDisplay(t);
+  const probPct = !rightNowQuality.isUnknown && typeof rightNowQuality.value === "number"
+    ? Math.round(rightNowQuality.value)
     : null;
 
   // Pre-format display strings outside JSX so server + client render

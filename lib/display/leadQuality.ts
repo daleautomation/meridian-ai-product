@@ -26,7 +26,7 @@ type QualityInput = {
   closeProbability100?: number | null;
   salesStrategy?: { closeProbability?: number | null } | null;
   closeProbability?: number | null;
-  closeability?: { score?: number | null } | null;
+  closeability?: { score?: number | string | null } | null;
   qualified?: boolean | null;
   qualificationReason?: string | null;
   primaryPain?: string | null;
@@ -38,7 +38,7 @@ type ScanLike = {
   qualificationReason?: string | null;
   primaryPain?: string | null;
   primaryService?: string | null;
-  closeability?: { score?: number | null } | null;
+  closeability?: { score?: number | string | null } | null;
 } | null | undefined;
 
 const UNKNOWN: LeadQualityDisplay = {
@@ -56,6 +56,15 @@ function clampPercent(n: number, min: number, max: number): number {
 
 function asPercent(n: number): number {
   return n <= 1 ? n * 100 : n;
+}
+
+function finiteNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim().length > 0) {
+    const n = Number(value);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
 }
 
 function tierLabel(value: number): string {
@@ -80,7 +89,7 @@ function isIncompleteScan(scan: ScanLike): boolean {
   if (scan.qualified === false) return true;
   if (reason.includes("temp bypass")) return true;
   if (
-    scan.closeability?.score === 15 &&
+    finiteNumber(scan.closeability?.score) === 15 &&
     scan.primaryService === "Diagnostics" &&
     typeof scan.primaryPain === "string" &&
     scan.primaryPain.toLowerCase().includes("secondary opportunity")
@@ -100,8 +109,8 @@ export function resolveLeadQualityDisplay(input: QualityInput): LeadQualityDispl
     return resolvedUnknown("laborTechScan.incomplete");
   }
 
-  const scanScore = scan?.closeability?.score ?? input?.closeability?.score;
-  if (typeof scanScore === "number" && Number.isFinite(scanScore)) {
+  const scanScore = finiteNumber(scan?.closeability?.score ?? input?.closeability?.score);
+  if (scanScore !== null) {
     const value = clampPercent(asPercent(scanScore), 15, 95);
     return {
       kind: "scan_closeability",
