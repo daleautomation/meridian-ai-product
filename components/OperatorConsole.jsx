@@ -24,7 +24,7 @@ import LeadEmailAction from "./LeadEmailAction";
 import ContactStrategyPanel from "./ContactStrategyPanel";
 import { WORKFLOW, SHELL_GRID } from "./workflowLayout";
 import LeadWorkflowDrawer from "./LeadWorkflowDrawer";
-import { buildTasksFromLeads } from "../lib/calendar/tasks";
+import { buildTasksFromLeads, taskAnchorIso } from "../lib/calendar/tasks";
 import {
   deriveOutcomeEventsFromPipelineMap,
   combineLearningAdjustments,
@@ -88,6 +88,7 @@ import {
   isTerminalStatusValue,
   normalizeStatus,
 } from "../lib/crm/statusTaxonomy";
+import { getBusinessTodayIso, toBusinessDateIso } from "../lib/dates/businessDate";
 
 // Debug-log gate. Per-render logs flood the main thread on the live
 // demo; enable via NEXT_PUBLIC_DEBUG_MERIDIAN=1 only when needed.
@@ -9563,6 +9564,18 @@ export default function OperatorConsole({
     return finalPool;
   }, [rawCalendarTasks, calendarVisibility, selectedLaborTechServiceId, selectedTradeId, serviceBucketsByTrade, primaryServiceByLeadKey, selectedRepId]);
 
+  const businessTodayTaskCount = useMemo(() => {
+    const todayKey = getBusinessTodayIso();
+    return (calendarTasks ?? []).filter((task) => {
+      if (!task || task.status === "done") return false;
+      const id = task.id ?? "";
+      const title = task.title ?? "";
+      if (!id.endsWith("-call") && !title.startsWith("Call ")) return false;
+      const anchor = taskAnchorIso(task);
+      return anchor ? toBusinessDateIso(anchor) === todayKey : false;
+    }).length;
+  }, [calendarTasks]);
+
   // Workflow-task lookup for the All Leads inline panels — finds the
   // matching call task in calendarTasks by linkedLeadId so the same
   // SelectedLeadPanel + Assistant + Deep Report mount with real task
@@ -9714,11 +9727,9 @@ export default function OperatorConsole({
                     This week: <strong style={{ color: palette.textPrimary }}>{teamWorkload.thisWeek}</strong>
                   </span>
                 ) : null}
-                {typeof teamWorkload.today === "number" ? (
-                  <span>
-                    Today: <strong style={{ color: palette.textPrimary }}>{teamWorkload.today}</strong>
-                  </span>
-                ) : null}
+                <span>
+                  Today: <strong style={{ color: palette.textPrimary }}>{businessTodayTaskCount}</strong>
+                </span>
                 {teamWorkload.perRep.map((r) => (
                   <span key={r.id}>
                     {r.name} today: <strong style={{ color: palette.textPrimary }}>{r.today ?? 0}</strong>
