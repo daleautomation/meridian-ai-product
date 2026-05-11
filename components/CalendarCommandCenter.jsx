@@ -2888,6 +2888,43 @@ function ExecutionOutcomePanel({
     });
   };
 
+  const postDurableOutcome = (next, patch) => {
+    if (!workspaceSlug || !taskId || !next?.status || next.status === "Not Contacted") return;
+    const patchKeys = Object.keys(patch ?? {});
+    fetch("/api/execution/outcomes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        workspace: workspaceSlug,
+        taskId,
+        leadId: linkedLeadId ?? null,
+        companyKey: companyKey ?? crmKey ?? linkedLeadId ?? null,
+        crmKey: crmKey ?? companyKey ?? linkedLeadId ?? null,
+        companyName: linkedCompany ?? null,
+        sourceSurface: "calendar",
+        outcomeStatus: next.status,
+        occurredAt: next.lastActionAt ?? new Date().toISOString(),
+        nextAction: next.status === "Follow Up" ? "follow_up_call" : null,
+        nextActionDate: next.nextFollowupDate ?? null,
+        estimatedValue: next.estimatedValue ?? null,
+        meridianInfluenced: true,
+        influenceReason: "Operator recorded outcome from Meridian Calendar execution panel",
+        idempotencyKey: `${workspaceSlug}:${taskId}:${next.status}:${next.lastActionAt ?? ""}:${patchKeys.join(",")}`,
+        metadata: {
+          notes: next.notes ?? "",
+          hasNotes: (next.notes ?? "").length > 0,
+          patchKeys,
+          identityKeys,
+        },
+      }),
+    })
+      .then((res) => {
+        if (res.ok) router.refresh();
+      })
+      .catch(() => { /* local optimistic outcome remains available */ });
+  };
+
   const apply = (patch) => {
     const prevStatus = prevStatusRef.current;
     const next = updateExecutionOutcome(outcome, patch);
@@ -2899,15 +2936,19 @@ function ExecutionOutcomePanel({
       // Layer A — canonical lead identity now travels with the event
       // so server logs read leadId=<key> instead of leadId=-.
       leadId: linkedLeadId ?? null,
+      companyKey: companyKey ?? crmKey ?? linkedLeadId ?? null,
+      crmKey: crmKey ?? companyKey ?? linkedLeadId ?? null,
       companyName: linkedCompany ?? null,
       metadata: {
         status: next.status,
+        previousStatus: prevStatus,
         hasNotes: (next.notes ?? "").length > 0,
         estimatedValue: next.estimatedValue ?? null,
         nextFollowupDate: next.nextFollowupDate ?? null,
         patchKeys: Object.keys(patch ?? {}),
       },
     });
+    postDurableOutcome(next, patch);
     // Layer B2 — overflow pull-forward. Gated on status change so
     // notes/value/date blurs (which keep status unchanged) never fire.
     if (next.status !== prevStatus) {
@@ -3127,6 +3168,7 @@ export function SelectedLeadPanel({
   overflowEntries = [],
   workspaceSlug = "",
 }) {
+  const router = useRouter();
   // Popover state removed — Call Now now fires tel: directly. No
   // intermediate confirmation step on a desktop operator workflow.
   const status = executionStatusFor(task);
@@ -3613,12 +3655,38 @@ export function SelectedLeadPanel({
                 const identityKeys = [task.companyKey, task.crmKey, task.linkedLeadId];
                 const next = updateExecutionOutcome(loadExecutionOutcomeByIdentity(task.id, identityKeys), { status: "Called" });
                 saveExecutionOutcome(task.id, next, identityKeys);
+                if (workspaceSlug) {
+                  fetch("/api/execution/outcomes", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "same-origin",
+                    body: JSON.stringify({
+                      workspace: workspaceSlug,
+                      taskId: task.id,
+                      leadId: task.linkedLeadId ?? null,
+                      companyKey: task.companyKey ?? task.crmKey ?? task.linkedLeadId ?? null,
+                      crmKey: task.crmKey ?? task.companyKey ?? task.linkedLeadId ?? null,
+                      companyName: company,
+                      sourceSurface: "calendar_call_now",
+                      outcomeStatus: "Called",
+                      occurredAt: next.lastActionAt ?? new Date().toISOString(),
+                      meridianInfluenced: true,
+                      influenceReason: "Operator clicked Call Now from Meridian Calendar",
+                      idempotencyKey: `${workspaceSlug}:${task.id}:Called:${next.lastActionAt ?? ""}:call_now`,
+                      metadata: { identityKeys, phone: telHref ? "present" : "missing" },
+                    }),
+                  })
+                    .then((res) => { if (res.ok) router.refresh(); })
+                    .catch(() => { /* local optimistic outcome remains available */ });
+                }
               } catch { /* fail silent */ }
             }
             trackEvent({
               eventType: "call_now_clicked",
               taskId: task?.id ?? null,
               leadId: task?.linkedLeadId ?? null,
+              companyKey: task?.companyKey ?? task?.crmKey ?? task?.linkedLeadId ?? null,
+              crmKey: task?.crmKey ?? task?.companyKey ?? task?.linkedLeadId ?? null,
               companyName: company,
               tradeId: task?.tradeId ?? null,
               serviceBucketId: task?.laborTechScan?.primaryService ?? null,
@@ -4936,6 +5004,33 @@ export default function CalendarCommandCenter({
         notes: outcomeNotes || undefined,
       });
       saveExecutionOutcome(current.id, merged, identityKeys);
+      if (workspaceSlug) {
+        fetch("/api/execution/outcomes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            workspace: workspaceSlug,
+            taskId: current.id,
+            leadId: current.linkedLeadId ?? null,
+            companyKey: current.companyKey ?? current.crmKey ?? current.linkedLeadId ?? null,
+            crmKey: current.crmKey ?? current.companyKey ?? current.linkedLeadId ?? null,
+            companyName: current.linkedCompany ?? null,
+            sourceSurface: "calendar_call_mode",
+            outcomeStatus: targetStatus,
+            occurredAt: merged.lastActionAt ?? new Date().toISOString(),
+            nextAction: targetStatus === "Follow Up" ? "follow_up_call" : null,
+            nextActionDate: merged.nextFollowupDate ?? null,
+            estimatedValue: merged.estimatedValue ?? null,
+            meridianInfluenced: true,
+            influenceReason: "Operator recorded Call Mode outcome from Meridian Calendar",
+            idempotencyKey: `${workspaceSlug}:${current.id}:${targetStatus}:${merged.lastActionAt ?? ""}:call_mode`,
+            metadata: { notes: outcomeNotes || "", outcomeId, identityKeys },
+          }),
+        })
+          .then((res) => { if (res.ok) router.refresh(); })
+          .catch(() => { /* local optimistic outcome remains available */ });
+      }
       triggerPullForward({
         status: targetStatus,
         overflowEntries,

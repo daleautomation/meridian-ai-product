@@ -38,6 +38,8 @@ export async function POST(req: Request) {
     workspace,
     leadId: typeof body.leadId === "string" ? body.leadId : null,
     taskId: typeof body.taskId === "string" ? body.taskId : null,
+    companyKey: typeof body.companyKey === "string" ? body.companyKey : null,
+    crmKey: typeof body.crmKey === "string" ? body.crmKey : null,
     companyName: typeof body.companyName === "string" ? body.companyName : null,
     tradeId: typeof body.tradeId === "string" ? body.tradeId : null,
     serviceBucketId: typeof body.serviceBucketId === "string" ? body.serviceBucketId : null,

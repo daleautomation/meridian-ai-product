@@ -135,9 +135,20 @@ export async function POST(req: Request) {
     await writeEvent(makeEvent({
       eventType: "schedule_override",
       userId: session.id,
+      operatorId: session.id,
       workspace: workspaceSlug,
       leadId,
-      metadata: { action, repId, scheduledFor, persisted },
+      companyKey: leadId,
+      crmKey: leadId,
+      sourceSurface: trustedSystemSource === "system:pull_forward" ? "system_pull_forward" : "scheduling_override",
+      metadata: {
+        action,
+        repId,
+        scheduledFor,
+        persisted,
+        authorizedBy: session.id,
+        updatedBy: override.updatedBy,
+      },
     }));
   } catch { /* fail silent */ }
 

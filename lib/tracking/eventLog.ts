@@ -18,28 +18,60 @@ export const EVENT_LOG_PATH =
   ?? path.resolve(process.cwd(), "data", "usage-events.jsonl");
 
 export interface UsageEvent {
+  eventId?: string;
   eventType: string;
   userId: string | null;
+  operatorId?: string | null;
   workspace: string | null;
   leadId: string | null;
   taskId: string | null;
+  companyKey?: string | null;
+  crmKey?: string | null;
   companyName: string | null;
   tradeId: string | null;
   serviceBucketId: string | null;
+  sourceSurface?: string | null;
+  previousStatus?: string | null;
+  nextStatus?: string | null;
+  outcomeStatus?: string | null;
+  nextAction?: string | null;
+  nextActionDate?: string | null;
+  estimatedValue?: number | null;
+  meridianInfluenced?: boolean;
+  influenceReason?: string | null;
+  occurredAt?: string | null;
+  recordedAt?: string | null;
+  idempotencyKey?: string | null;
   timestamp: string;          // ISO
   metadata: Record<string, unknown>;
 }
 
 export function makeEvent(input: Partial<UsageEvent> & { eventType: string }): UsageEvent {
   return {
+    ...(input.eventId ? { eventId: input.eventId } : {}),
     eventType: input.eventType,
     userId: input.userId ?? null,
+    operatorId: input.operatorId ?? input.userId ?? null,
     workspace: input.workspace ?? null,
     leadId: input.leadId ?? null,
     taskId: input.taskId ?? null,
+    companyKey: input.companyKey ?? null,
+    crmKey: input.crmKey ?? null,
     companyName: input.companyName ?? null,
     tradeId: input.tradeId ?? null,
     serviceBucketId: input.serviceBucketId ?? null,
+    sourceSurface: input.sourceSurface ?? null,
+    previousStatus: input.previousStatus ?? null,
+    nextStatus: input.nextStatus ?? null,
+    outcomeStatus: input.outcomeStatus ?? null,
+    nextAction: input.nextAction ?? null,
+    nextActionDate: input.nextActionDate ?? null,
+    estimatedValue: input.estimatedValue ?? null,
+    meridianInfluenced: input.meridianInfluenced ?? false,
+    influenceReason: input.influenceReason ?? null,
+    occurredAt: input.occurredAt ?? null,
+    recordedAt: input.recordedAt ?? null,
+    idempotencyKey: input.idempotencyKey ?? null,
     timestamp: input.timestamp ?? new Date().toISOString(),
     metadata: input.metadata ?? {},
   };

@@ -43,6 +43,7 @@ import {
   type CanonicalPhoneLeadLike,
 } from "../../lib/leads/phone";
 import { resolveByLeadIdentity } from "../../lib/leads/identity";
+import { loadDurableOutcomeMap } from "../../lib/execution/serverOutcomeStore";
 import { listOverrides } from "../../lib/scheduling/overrideStore";
 import { applyScheduleOverrides } from "../../lib/scheduling/applyOverrides";
 import { companyKey } from "../../lib/mcp/types";
@@ -158,8 +159,12 @@ async function renderOperatorPage({
       // was generated under a different user). Workspace identity is
       // preserved from the snapshot — it must match the requested slug.
       const currentSnapshots = await listSnapshots();
+      const durableOutcomeMap = await loadDurableOutcomeMap(workspace.slug);
       const snapProps = mergeCurrentCrmIntoOperatorProps(
-        normalizeOperatorPhoneProps(snap.props as Record<string, unknown>),
+        {
+          ...normalizeOperatorPhoneProps(snap.props as Record<string, unknown>),
+          serverExecutionOutcomeMap: durableOutcomeMap,
+        },
         currentSnapshots,
       );
       const tOv = Date.now();
@@ -544,6 +549,7 @@ async function renderOperatorPage({
   // has been logged yet — honest empty).
   const snapshots = await listSnapshots();
   const pipelineMap = buildPipelineMapFromSnapshots(snapshots);
+  const durableOutcomeMap = await loadDurableOutcomeMap(workspace.slug);
 
   const roi = { totalLeads: uiLeads.length, contacted: 0, interested: 0, closedWon: 0, closedLost: 0 };
   for (const snap of snapshots) {
@@ -844,6 +850,7 @@ async function renderOperatorPage({
     pendingReviews,
     totalPipeline: uiLeads.length,
     pipelineMap,
+    serverExecutionOutcomeMap: durableOutcomeMap,
     roi,
     calendarEvents,
     recentActivities: recentActivities.slice(0, 30),
