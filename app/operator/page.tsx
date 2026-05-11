@@ -734,6 +734,12 @@ async function renderOperatorPage({
       );
       const strategy = lead.salesStrategy;
       const dialablePhone = getDialablePhone(lead);
+      const stableServiceCompanyKey = companyKey({
+        name: lead.companyName,
+        domain: lead.website,
+        url: lead.website,
+        location: lead.location,
+      });
       const primary = strategy?.primaryAngle;
       const topObj = strategy?.objections?.[0];
       // Multi-bucket membership — every service this company needs.
@@ -749,8 +755,8 @@ async function renderOperatorPage({
         const list = leadsByService[need.serviceId] ?? (leadsByService[need.serviceId] = []);
         list.push({
           leadKey: lead.id,
-          companyKey: lead.companyKey,
-          crmKey: lead.crmKey,
+          companyKey: stableServiceCompanyKey,
+          crmKey: stableServiceCompanyKey,
           companyName: lead.companyName,
           location: lead.location,
           phone: dialablePhone ?? undefined,
