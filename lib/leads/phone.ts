@@ -9,15 +9,25 @@ type PhonePathLike = {
   value?: string | null;
   source?: string | null;
   rank?: number | null;
+  confidence?: string | null;
+  verified?: boolean | null;
 };
 
 export type CanonicalPhoneLeadLike = {
   phone?: string | null;
+  phoneAuthority?: string | null;
   contacts?: {
     primaryPhone?: string | null;
     [key: string]: unknown;
   } | null;
   contactPaths?: PhonePathLike[] | null;
+};
+
+export type DialablePhoneDetails = {
+  phone: string;
+  source: string | null;
+  confidence: string | null;
+  verified: boolean;
 };
 
 const SOURCE_RANK: Record<string, number> = {
@@ -65,6 +75,65 @@ export function getCanonicalPhone(
   if (pathPhone) return pathPhone;
 
   return phoneValue(lead?.contacts?.primaryPhone) ?? phoneValue(lead?.phone);
+}
+
+function isDialableShape(value: string | null | undefined): boolean {
+  const raw = phoneValue(value);
+  if (!raw) return false;
+  const digits = raw.replace(/\D/g, "");
+  return digits.length >= 10 && digits.length <= 15;
+}
+
+function isTrustedDialablePath(path: PhonePathLike): boolean {
+  const phone = phoneValue(path.value);
+  if (!isDialableShape(phone)) return false;
+  if (path.verified === false) return false;
+  const confidence = String(path.confidence ?? "").toLowerCase();
+  if (confidence === "low" || confidence === "none") return false;
+  if (path.verified === true || confidence === "high" || confidence === "medium") return true;
+  const source = String(path.source ?? "").toLowerCase();
+  return source === "google_places" || source === "gbp";
+}
+
+/**
+ * Operational dial authority. Unlike getCanonicalPhone(), this never falls
+ * back to raw lead.phone unless an upstream server task explicitly stamped
+ * that value as dialable.
+ */
+export function getDialablePhoneDetails(
+  lead: CanonicalPhoneLeadLike | null | undefined,
+): DialablePhoneDetails | null {
+  const paths = phonePaths(lead).filter(isTrustedDialablePath);
+  const gbpPath = paths.find((path) => {
+    const source = String(path.source ?? "").toLowerCase();
+    return source === "google_places" || source === "gbp";
+  });
+  const bestPath = gbpPath ?? paths.slice().sort((a, b) => pathRank(a) - pathRank(b))[0];
+  const pathPhone = phoneValue(bestPath?.value);
+  if (pathPhone) {
+    return {
+      phone: pathPhone,
+      source: phoneValue(bestPath?.source),
+      confidence: phoneValue(bestPath?.confidence),
+      verified: bestPath?.verified === true,
+    };
+  }
+
+  if (lead?.phoneAuthority === "dialable" && isDialableShape(lead.phone)) {
+    return {
+      phone: phoneValue(lead.phone)!,
+      source: "server",
+      confidence: "high",
+      verified: true,
+    };
+  }
+  return null;
+}
+
+export function getDialablePhone(
+  lead: CanonicalPhoneLeadLike | null | undefined,
+): string | null {
+  return getDialablePhoneDetails(lead)?.phone ?? null;
 }
 
 export function withCanonicalPhoneContact<T extends CanonicalPhoneLeadLike>(lead: T): T {

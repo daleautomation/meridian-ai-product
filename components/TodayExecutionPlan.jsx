@@ -18,7 +18,7 @@ import {
 } from "../lib/execution/executionOutcome";
 import { trackEvent } from "../lib/tracking/clientTracker";
 import { resolveLeadQualityDisplay } from "../lib/display/leadQuality";
-import { getCanonicalPhone } from "../lib/leads/phone";
+import { getDialablePhone } from "../lib/leads/phone";
 import { formatTelHref } from "../lib/leads/leadActions";
 import { taskAnchorIso } from "../lib/calendar/tasks";
 import { getBusinessTodayIso, toBusinessDateIso } from "../lib/dates/businessDate";
@@ -55,6 +55,7 @@ export default function TodayExecutionPlan({
   // Optional skip handler — advances to the next lead in the queue.
   onSkipTask,
   leadByKey,
+  serverExecutionOutcomeMap = {},
 }) {
   // Brief "just routed" state on the queue row itself — mirrors the
   // calendar card's pulse so the eye reads the launch as one motion.
@@ -63,20 +64,20 @@ export default function TodayExecutionPlan({
   // so cross-tab edits surface in the queue. Keyed by task.id.
   const [outcomeMap, setOutcomeMap] = useState({});
   useEffect(() => {
-    setOutcomeMap(loadAllExecutionOutcomes());
+    setOutcomeMap({ ...loadAllExecutionOutcomes(), ...(serverExecutionOutcomeMap ?? {}) });
     if (typeof window === "undefined") return undefined;
     const onStorage = (e) => {
       if (e.key && e.key !== "meridian.executionOutcomes.v1") return;
-      setOutcomeMap(loadAllExecutionOutcomes());
+      setOutcomeMap({ ...loadAllExecutionOutcomes(), ...(serverExecutionOutcomeMap ?? {}) });
     };
     window.addEventListener("storage", onStorage);
-    const onOutcomeChanged = () => setOutcomeMap(loadAllExecutionOutcomes());
+    const onOutcomeChanged = () => setOutcomeMap({ ...loadAllExecutionOutcomes(), ...(serverExecutionOutcomeMap ?? {}) });
     window.addEventListener(EXECUTION_OUTCOME_CHANGED_EVENT, onOutcomeChanged);
     return () => {
       window.removeEventListener("storage", onStorage);
       window.removeEventListener(EXECUTION_OUTCOME_CHANGED_EVENT, onOutcomeChanged);
     };
-  }, []);
+  }, [serverExecutionOutcomeMap]);
   // Focused vs full view. Default is the top 6 ranked leads; the
   // user expands to see the rest of the day.
   const [expanded, setExpanded] = useState(false);
@@ -216,7 +217,7 @@ export default function TodayExecutionPlan({
         {visibleTasks.map((task, i) => {
           const linkedKey = task.linkedLeadId;
           const lead = (linkedKey && leadByKey && leadByKey.get) ? leadByKey.get(linkedKey) : null;
-          const phone = getCanonicalPhone(lead) ?? task.phone ?? null;
+          const phone = getDialablePhone(lead) ?? (task.phoneAuthority === "dialable" ? task.phone : null);
           const tel = formatTelHref(phone);
           const quality = resolveLeadQualityDisplay(task);
           const badge = priorityBadge(quality);

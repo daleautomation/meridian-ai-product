@@ -38,6 +38,8 @@ interface Rep {
 interface Props {
   leadId: string;
   workspaceSlug: string;
+  companyKey?: string | null;
+  crmKey?: string | null;
   leadName?: string;
   reps?: Rep[];
   /** Visible on lead rows that already have an override applied so
@@ -114,6 +116,8 @@ function isWeekdayInFuture(value: string): boolean {
 export default function SchedulingMenu({
   leadId,
   workspaceSlug,
+  companyKey = null,
+  crmKey = null,
   leadName,
   reps,
   hasOverride,
@@ -157,7 +161,7 @@ export default function SchedulingMenu({
     setPending(action);
     setError(null);
     try {
-      const payload: Record<string, unknown> = { leadId, workspaceSlug, action };
+      const payload: Record<string, unknown> = { leadId, workspaceSlug, action, companyKey, crmKey };
       if (action === "assign_rep" && opts?.repId) payload.repId = opts.repId;
       if (action === "move_to_date" && opts?.scheduledFor) payload.scheduledFor = opts.scheduledFor;
       const res = await fetch("/api/scheduling/override", {

@@ -17,7 +17,7 @@ import {
 import { getTradeModule } from "../modules/tradeConfigs";
 import { primaryBucketForLead } from "../modules/bucketClassifier";
 import { computeScanStatus, diagnosticTaskTitle } from "../diagnostics/scanStatus";
-import { getCanonicalPhone } from "../leads/phone";
+import { getCanonicalPhone, getDialablePhoneDetails } from "../leads/phone";
 import { isTerminalStatusValue, normalizeStatus } from "../crm/statusTaxonomy";
 import {
   cleanIdentityValue as cleanKey,
@@ -125,8 +125,9 @@ export interface TaskItem {
   assignedRepId?: string;
   /** True when the slot was placed manually and must not be auto-moved. */
   slotLocked?: boolean;
-  /** Direct contact data lifted from the lead — drives Call Now / Email buttons. */
+  /** Stamped only when shared dial authority allows operational dialing. */
   phone?: string;
+  phoneAuthority?: "dialable";
   email?: string;
   /** Verified-email enrichment metadata (mirrors NormalizedLead). */
   emailStatus?: string;
@@ -221,6 +222,14 @@ export interface LeadLike {
     primaryEmail?: string | null;
     contactName?: string | null;
   } | null;
+  contactPaths?: Array<{
+    method?: string | null;
+    value?: string | null;
+    source?: string | null;
+    rank?: number | null;
+    confidence?: string | null;
+    verified?: boolean | null;
+  }> | null;
   websiteProof?: {
     homepage_fetch_ok?: boolean | null;
     issues?: string[] | null;
@@ -908,7 +917,7 @@ export function buildTasksFromLeads(
     const patternLearningReason = patternLearningApplied ? patternResult!.reason : undefined;
 
     const expectedValue = deriveExpectedValue(rev, closeProbability);
-    const phone = getCanonicalPhone(l);
+    const dialablePhone = getDialablePhoneDetails(l);
     // Plain email — falls back to the top-level `lead.email` so leads
     // imported without a contacts overlay still surface their email
     // on every task. Verified-email enrichment fields are spread in
@@ -921,7 +930,7 @@ export function buildTasksFromLeads(
       ...(operationalCompanyKey ? { companyKey: operationalCompanyKey, crmKey: operationalCompanyKey } : {}),
       ...(person ? { linkedPerson: person } : {}),
       ...(typeof l.location === "string" && l.location ? { linkedLocation: l.location } : {}),
-      ...(phone ? { phone } : {}),
+      ...(dialablePhone ? { phone: dialablePhone.phone, phoneAuthority: "dialable" as const } : {}),
       ...(email ? { email } : {}),
       // Verified-email enrichment metadata — propagated to EVERY task
       // via baseLink so LeadEmailAction renders consistently across

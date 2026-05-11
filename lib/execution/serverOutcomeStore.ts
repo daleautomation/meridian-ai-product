@@ -10,6 +10,7 @@ import crypto from "node:crypto";
 import { safeWriteJson } from "@/lib/utils/fsSafeWrite";
 import type { CompanyRef } from "@/lib/mcp/types";
 import { setNextAction, setStatus } from "@/lib/state/companySnapshotStore";
+import { isTerminalStatusValue } from "@/lib/crm/statusTaxonomy";
 import type { ExecutionOutcomeStatus } from "./executionOutcome";
 
 export type DurableOutcomeStatus = ExecutionOutcomeStatus;
@@ -182,8 +183,9 @@ export function crmStatusForOutcome(status: DurableOutcomeStatus): string | null
   }
 }
 
-async function syncCrmState(record: DurableExecutionOutcome, company: CompanyRef | null): Promise<void> {
-  if (!company) return;
+async function syncCrmState(record: DurableExecutionOutcome, company: CompanyRef | null): Promise<boolean> {
+  if (!company) return false;
+  let updated = false;
   const status = crmStatusForOutcome(record.outcomeStatus);
   if (status) {
     await setStatus(company, {
@@ -191,13 +193,16 @@ async function syncCrmState(record: DurableExecutionOutcome, company: CompanyRef
       changedBy: record.operatorId,
       note: `Execution outcome: ${record.outcomeStatus}`,
     });
+    updated = true;
   }
   if (record.outcomeStatus === "Follow Up" && record.nextActionDate) {
     await setNextAction(company, {
       nextAction: record.nextAction ?? "follow_up_call",
       nextActionDate: record.nextActionDate,
     });
+    updated = true;
   }
+  return updated;
 }
 
 export async function recordDurableOutcome(
@@ -247,11 +252,32 @@ export async function recordDurableOutcome(
 
     let crmUpdated = false;
     if (persisted) {
-      await syncCrmState(outcome, companyRefFrom(input));
-      crmUpdated = true;
+      crmUpdated = await syncCrmState(outcome, companyRefFrom(input));
     }
     return { outcome, persisted, crmUpdated, duplicate: false };
   });
+}
+
+export function isTerminalDurableOutcomeStatus(status: string | null | undefined): boolean {
+  return status === "Closed Won" || status === "Closed Lost" || status === "Not Qualified";
+}
+
+export async function findTerminalDurableOutcome(
+  workspace: string,
+  identityKeysInput: Array<string | null | undefined>,
+): Promise<DurableExecutionOutcome | null> {
+  const store = await readStore();
+  const ws = store.byWorkspace[workspace];
+  if (!ws) return null;
+  const keys = Array.from(new Set(identityKeysInput.filter((key): key is string => typeof key === "string" && key.trim().length > 0)));
+  for (const key of keys) {
+    const scoped = key.startsWith(`${workspace}:`) ? key : `${workspace}:${key}`;
+    const outcome = ws.latestByKey[scoped] ?? ws.latestByKey[key];
+    if (outcome && (isTerminalDurableOutcomeStatus(outcome.outcomeStatus) || isTerminalStatusValue(crmStatusForOutcome(outcome.outcomeStatus)))) {
+      return outcome;
+    }
+  }
+  return null;
 }
 
 export async function listDurableOutcomes(workspace: string): Promise<DurableExecutionOutcome[]> {

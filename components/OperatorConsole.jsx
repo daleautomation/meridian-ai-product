@@ -64,7 +64,7 @@ import {
   formatMoney,
   leadOpportunityValue,
 } from "../lib/leads/leadActions";
-import { getCanonicalPhone, withCanonicalPhoneContact } from "../lib/leads/phone";
+import { getCanonicalPhone, getDialablePhone, withCanonicalPhoneContact } from "../lib/leads/phone";
 import {
   deriveLeadCompanyKey as deriveSharedLeadCompanyKey,
   leadIdentityCandidates as sharedLeadIdentityCandidates,
@@ -201,6 +201,7 @@ function opportunityView(lead) {
       : confidence === "MEDIUM"
       ? "Revenue impact requires current lead volume"
       : "Estimate unavailable";
+    const dialablePhone = getDialablePhone(lead);
     return {
       level,
       confidence,
@@ -373,13 +374,9 @@ function formatEmailMethod(method) {
   }
 }
 
-// Normalize a phone to a dialable tel: URI. "(816) 555-0184" → "tel:+18165550184".
+// Operational call links must pass through shared dial authority first.
 function telHref(phone) {
-  if (!phone) return "#";
-  const digits = String(phone).replace(/\D/g, "");
-  if (digits.length === 11 && digits.startsWith("1")) return `tel:+${digits}`;
-  if (digits.length === 10) return `tel:+1${digits}`;
-  return `tel:${digits}`;
+  return formatTelHref(phone) || "#";
 }
 
 // One-click email template. Same copy for every lead — deterministic, safe
@@ -1276,7 +1273,7 @@ function LeadRow({ lead, index, isSelected, onSelect, sectionBucket }) {
   const baseBg = index % 2 === 1 ? t.stripeBg : t.baseBg;
   const opp = opportunityMeta(tier);
   const decision = lead.decision || null;
-  const phone = getCanonicalPhone(lead);
+  const phone = getDialablePhone(lead);
   const fitScore = marketFitScore(lead);
   const fitLabel = fitScore === null ? null : `Fit ${fitScore}%`;
 
@@ -2153,13 +2150,13 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
         return (
           <NextActionBlock
             nextAction={lead.nextAction}
-            canCall={!!getCanonicalPhone(lead)}
+            canCall={!!getDialablePhone(lead)}
             onEnterCallMode={() => setShowCallMode(true)}
             onCall={() => {
-              copyText(getCanonicalPhone(lead) || "").catch(() => {});
+              copyText(getDialablePhone(lead) || "").catch(() => {});
               logOutreach("call_started", "next_action");
             }}
-            phoneHref={getCanonicalPhone(lead) ? telHref(getCanonicalPhone(lead)) : null}
+            phoneHref={getDialablePhone(lead) ? telHref(getDialablePhone(lead)) : null}
             mailtoHref={bestEmail ? buildQuickMailto(bestEmail) : null}
             mailtoTooltip={emailIsHunter ? "Verified email (Hunter)" : (bestEmail ? `Email ${bestEmail}` : undefined)}
             onOpenScan={() => { setShowScanModal(true); logOutreach("scan_viewed", "next_action"); }}
@@ -2174,7 +2171,7 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
         const tradeKey = lead.trade || TRADE_DEFAULT;
         const trade = getTradeModule(tradeKey);
         const bucket = getServiceBucket(tradeKey, lead.serviceBucket);
-        const headerPhone = getCanonicalPhone(lead);
+        const headerPhone = getDialablePhone(lead);
         const hasPhoneAtHeader = !!headerPhone;
         return (
           <div style={S.companyHeaderCard}>
@@ -2300,7 +2297,7 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
         onCopyPhone={async () => {
           // One-click Copy: prefer the phone; fall back to email when no
           // phone is on file. Status line reflects what was copied.
-          const phone = getCanonicalPhone(lead);
+          const phone = getDialablePhone(lead);
           const email = lead.contacts?.primaryEmail;
           const target = phone || email;
           if (!target) return;
@@ -3029,7 +3026,7 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
           onSaveNote={handleAddNote}
           onStatusChange={handleStatusChange}
           onCall={() => {
-            copyText(getCanonicalPhone(lead) || "").catch(() => {});
+            copyText(getDialablePhone(lead) || "").catch(() => {});
             logOutreach("call_started", "call_mode");
             // The tel: link on the Call button handles navigation natively.
           }}
@@ -3064,7 +3061,7 @@ function CallMode({
   }, [onClose]);
 
   const c = lead.contacts || {};
-  const phone = getCanonicalPhone(lead);
+  const phone = getDialablePhone(lead);
   // Prefer the Hunter-verified email when present; emailSource drives
   // the tooltip on the email button below.
   const email = lead.verifiedEmail || c.primaryEmail;
@@ -4974,7 +4971,7 @@ function AssistantChat({ lead, workspace }) {
       .map((i) => (typeof i === "string" ? i : (i.headline || i.label || i.description || i.reason || "")))
       .filter(Boolean);
     const weakSignals = [];
-    if (!getCanonicalPhone(lead)) weakSignals.push("No verified phone");
+    if (!getDialablePhone(lead)) weakSignals.push("No verified phone");
     if (!lead.contacts?.primaryEmail) weakSignals.push("No verified email");
     if (!(lead.resolvedBusinessUrl || lead.domain)) weakSignals.push("No website on file");
     if (!lead.lastChecked && !lead.websiteProof?.last_checked) weakSignals.push("Never scanned");
@@ -4987,7 +4984,7 @@ function AssistantChat({ lead, workspace }) {
       reason: decision?.reason || "",
       suggestedOpening: decision?.suggestedOpening || "",
       website: lead.resolvedBusinessUrl || lead.domain || lead.websiteProof?.homepage_url || undefined,
-      phone: getCanonicalPhone(lead) || undefined,
+      phone: getDialablePhone(lead) || undefined,
       email: lead.contacts?.primaryEmail || undefined,
       status: lead.accountSnapshot?.status || undefined,
       lastChecked: lead.lastChecked || lead.websiteProof?.last_checked || undefined,
@@ -6332,7 +6329,7 @@ function DealCard({ deal, now, onOpen, muted = false }) {
 function DealDetailPanel({ deal, onClose, onCallDeal, onMoveStage, onAddNote, onMarkWon, onMarkLost, onSetNextAction, onSwitchTab }) {
   const [noteText, setNoteText] = useState("");
   const [nextActionDraft, setNextActionDraft] = useState(deal.nextAction);
-  const tel = deal.contact?.phone ? `tel:${deal.contact.phone.replace(/[^\d+]/g, "")}` : null;
+  const tel = formatTelHref(deal.contact?.phone ?? null);
   return (
     <div
       onClick={onClose}
@@ -7523,7 +7520,7 @@ function FeaturedAngleWorkspace({ angle, isActive, leads, onSelect, onOpenOperat
         if (!haystack.includes(q)) return false;
       }
       const hasWebsite = !!(lead.website || lead.websiteUrl || lead.domain);
-      const hasPhone = !!getCanonicalPhone(lead);
+      const hasPhone = !!getDialablePhone(lead);
       if (filter === "website") return hasWebsite;
       if (filter === "phone") return hasPhone;
       if (filter === "needs_contact") return !hasWebsite && !hasPhone;
@@ -7846,7 +7843,7 @@ function FeaturedAngleWorkspace({ angle, isActive, leads, onSelect, onOpenOperat
                 const reviews = typeof lead.reviewCount === "number" ? lead.reviewCount : (typeof lead.reviews === "number" ? lead.reviews : null);
                 if (typeof reviews === "number" && reviews >= 0) meta.push(`${reviews} review${reviews === 1 ? "" : "s"}`);
                 if (lead.website || lead.websiteUrl || lead.domain) meta.push("website");
-                if (getCanonicalPhone(lead)) meta.push("phone");
+                if (getDialablePhone(lead)) meta.push("phone");
                 if (lead.source === "google_places") meta.push("Google Places");
                 const rowKey = lead.key ?? lead.id ?? lead.name ?? i;
                 const isSelected = selectedLeadKey != null && lead.key === selectedLeadKey;
@@ -9618,7 +9615,7 @@ export default function OperatorConsole({
       companyKey: lead.companyKey ?? lead.crmKey ?? deriveLeadCompanyKey(lead) ?? null,
       crmKey: lead.crmKey ?? lead.companyKey ?? deriveLeadCompanyKey(lead) ?? null,
       linkedLocation: lead.location ?? null,
-      phone: getCanonicalPhone(lead),
+      ...(dialablePhone ? { phone: dialablePhone, phoneAuthority: "dialable" } : {}),
       email: lead.contacts?.primaryEmail ?? null,
       verifiedEmail: lead.verifiedEmail ?? null,
       emailSource: lead.emailSource ?? null,
@@ -10047,6 +10044,7 @@ export default function OperatorConsole({
               insights={operatorInsights}
               overflowEntries={overflowEntries}
               workspaceSlug={workspace?.slug ?? ""}
+              serverExecutionOutcomeMap={serverExecutionOutcomeMap ?? {}}
               onTaskFeedback={handleTaskFeedback}
               tradeId={selectedTradeId}
               tradeLabel={TRADE_MODULES[selectedTradeId]?.label ?? "Roofing"}

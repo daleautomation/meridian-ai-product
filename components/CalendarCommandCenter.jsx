@@ -37,6 +37,7 @@ import {
   EXECUTION_OUTCOME_STATUSES,
   getDefaultExecutionOutcome,
   loadExecutionOutcomeByIdentity,
+  resolveExecutionOutcome,
   saveExecutionOutcome,
   updateExecutionOutcome,
 } from "../lib/execution/executionOutcome";
@@ -1086,15 +1087,15 @@ function FeedbackControls({ task, onTaskFeedback }) {
     onTaskFeedback(task, type);
   };
   const stop = (e) => e.stopPropagation();
-  const phone = task?.phone || null;
+  const phone = dialableTaskPhone(task);
   // The shared LeadEmailAction renders Email / Email ✓ from these
   // fields. Find Email is suppressed on the small card row to keep
   // cards from growing taller — the SelectedLeadPanel surfaces it
   // when the user clicks in.
   const taskEmail = task?.email || null;
   const taskVerifiedEmail = task?.verifiedEmail || null;
-  const phoneDigits = phone ? String(phone).replace(/\D/g, "") : "";
   const telHref = formatTelHref(phone);
+  const smsHref = formatSmsHref(phone);
   if (DEBUG_UI && typeof console !== "undefined" && task?.linkedCompany) {
     // eslint-disable-next-line no-console
     console.log(
@@ -1134,9 +1135,9 @@ function FeedbackControls({ task, onTaskFeedback }) {
           Call Now
         </a>
       ) : null}
-      {telHref ? (
+      {smsHref ? (
         <a
-          href={`sms:${phoneDigits.length === 10 ? "+1" + phoneDigits : phoneDigits}`}
+          href={smsHref}
           onClick={stop}
           style={{
             fontSize: "10px",
@@ -1430,8 +1431,9 @@ function operatorInsightLine(task) {
     const sum = String(scan.reportSummary);
     return sum.length > 110 ? sum.slice(0, 108).trim() + "…" : sum;
   }
-  if (!task.phone && !task.email) return "Missing phone & email — enrich before outreach";
-  if (!task.phone) return "No phone on file — enrich before outreach";
+  const phone = dialableTaskPhone(task);
+  if (!phone && !task.email) return "Missing phone & email — enrich before outreach";
+  if (!phone) return "No dialable phone on file — enrich before outreach";
   if (task.riskIfMissed === "high") return "High risk if missed — don’t let this slip";
   if (task.category === "followup") return "Follow-up due — keep the call sequence moving";
   if (task.category === "scan") return "No verified website — call path is unclear";
@@ -1458,14 +1460,18 @@ function metaLineFor(task) {
   return parts.join(" · ");
 }
 
+function dialableTaskPhone(task) {
+  return task?.phoneAuthority === "dialable" ? task?.phone || null : null;
+}
+
 function telHrefFor(task) {
-  return formatTelHref(task?.phone || null);
+  return formatTelHref(dialableTaskPhone(task));
 }
 function smsHrefFor(task) {
-  return formatSmsHref(task?.phone || null);
+  return formatSmsHref(dialableTaskPhone(task));
 }
 function formatPhoneDisplay(task) {
-  const phone = task?.phone || null;
+  const phone = dialableTaskPhone(task);
   if (!phone) return null;
   const d = String(phone).replace(/\D/g, "");
   if (d.length === 10) return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
@@ -2841,9 +2847,11 @@ function ExecutionOutcomePanel({
   // scheduler priority) + workspace slug for the override POST.
   overflowEntries = [],
   workspaceSlug = "",
+  serverExecutionOutcomeMap = {},
 }) {
   const router = useRouter();
   const [outcome, setOutcome] = useState(() => getDefaultExecutionOutcome());
+  const [persistState, setPersistState] = useState("idle");
   const identityKeys = useMemo(
     () => [companyKey, crmKey, linkedLeadId],
     [companyKey, crmKey, linkedLeadId],
@@ -2865,11 +2873,13 @@ function ExecutionOutcomePanel({
       prevStatusRef.current = getDefaultExecutionOutcome().status;
       return;
     }
-    const loaded = loadExecutionOutcomeByIdentity(taskId, identityKeys);
-    const next = loaded ?? getDefaultExecutionOutcome();
+    const localLoaded = loadExecutionOutcomeByIdentity(taskId, identityKeys);
+    const serverLoaded = resolveExecutionOutcome(serverExecutionOutcomeMap ?? {}, taskId, identityKeys);
+    const next = serverLoaded ?? localLoaded ?? getDefaultExecutionOutcome();
     setOutcome(next);
+    setPersistState(serverLoaded ? "persisted" : "idle");
     prevStatusRef.current = next.status;
-  }, [taskId, identityKeys]);
+  }, [taskId, identityKeys, serverExecutionOutcomeMap]);
 
   if (!taskId) return null;
 
@@ -2891,6 +2901,7 @@ function ExecutionOutcomePanel({
   const postDurableOutcome = (next, patch) => {
     if (!workspaceSlug || !taskId || !next?.status || next.status === "Not Contacted") return;
     const patchKeys = Object.keys(patch ?? {});
+    setPersistState("saving");
     fetch("/api/execution/outcomes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -2919,10 +2930,16 @@ function ExecutionOutcomePanel({
         },
       }),
     })
-      .then((res) => {
-        if (res.ok) router.refresh();
+      .then(async (res) => {
+        const body = await res.json().catch(() => null);
+        if (res.ok && body?.persisted === true) {
+          setPersistState("persisted");
+          router.refresh();
+          return;
+        }
+        setPersistState("local_only");
       })
-      .catch(() => { /* local optimistic outcome remains available */ });
+      .catch(() => { setPersistState("local_only"); });
   };
 
   const apply = (patch) => {
@@ -2986,10 +3003,16 @@ function ExecutionOutcomePanel({
           fontSize: "10px",
           fontWeight: 700,
           letterSpacing: "0.06em",
-          color: palette.blue,
+          color: persistState === "local_only" ? palette.warning : palette.blue,
           textTransform: "uppercase",
         }}>
-          Tracked through Meridian
+          {persistState === "persisted"
+            ? "Saved to Meridian"
+            : persistState === "saving"
+              ? "Saving to Meridian"
+              : persistState === "local_only"
+                ? "Local only — server save failed"
+                : "Local until saved"}
         </div>
       </div>
 
@@ -3167,6 +3190,7 @@ export function SelectedLeadPanel({
   // override layer.
   overflowEntries = [],
   workspaceSlug = "",
+  serverExecutionOutcomeMap = {},
 }) {
   const router = useRouter();
   // Popover state removed — Call Now now fires tel: directly. No
@@ -3233,7 +3257,7 @@ export function SelectedLeadPanel({
 
   // Tel / SMS — same logic as FeedbackControls so the calendar and
   // operator panel dial through identical normalization.
-  const phone = task?.phone || null;
+  const phone = dialableTaskPhone(task);
   const phoneDigits = phone ? String(phone).replace(/\D/g, "") : "";
   const telHref = formatTelHref(phone);
   const smsHref = formatSmsHref(phone);
@@ -3676,7 +3700,10 @@ export function SelectedLeadPanel({
                       metadata: { identityKeys, phone: telHref ? "present" : "missing" },
                     }),
                   })
-                    .then((res) => { if (res.ok) router.refresh(); })
+                    .then(async (res) => {
+                      const body = await res.json().catch(() => null);
+                      if (res.ok && body?.persisted === true) router.refresh();
+                    })
                     .catch(() => { /* local optimistic outcome remains available */ });
                 }
               } catch { /* fail silent */ }
@@ -3899,6 +3926,7 @@ export function SelectedLeadPanel({
         crmKey={task?.crmKey ?? null}
         overflowEntries={overflowEntries}
         workspaceSlug={workspaceSlug}
+        serverExecutionOutcomeMap={serverExecutionOutcomeMap}
       />
 
     </aside>
@@ -4569,6 +4597,7 @@ export default function CalendarCommandCenter({
   // existing /api/scheduling/override layer.
   overflowEntries = [],
   workspaceSlug = "",
+  serverExecutionOutcomeMap = {},
   onTaskFeedback,
   tradeSlot,
   tradeId,
@@ -5028,7 +5057,10 @@ export default function CalendarCommandCenter({
             metadata: { notes: outcomeNotes || "", outcomeId, identityKeys },
           }),
         })
-          .then((res) => { if (res.ok) router.refresh(); })
+          .then(async (res) => {
+            const body = await res.json().catch(() => null);
+            if (res.ok && body?.persisted === true) router.refresh();
+          })
           .catch(() => { /* local optimistic outcome remains available */ });
       }
       triggerPullForward({
@@ -5594,6 +5626,7 @@ export default function CalendarCommandCenter({
                   onSelectTask={handleSelectTask}
                   onOpenAssist={handleOpenAssist}
                   leadByKey={null}
+                  serverExecutionOutcomeMap={serverExecutionOutcomeMap}
                 />
                 <FieldTestDiagnosticsPanel tasksByDay={tasksByDay} dataTotal={data.length} />
               </>
@@ -5831,6 +5864,7 @@ export default function CalendarCommandCenter({
               onOpenDeepReport={() => setDeepReportOpen(true)}
               overflowEntries={overflowEntries}
               workspaceSlug={workspaceSlug}
+              serverExecutionOutcomeMap={serverExecutionOutcomeMap}
             />
           )}
         />

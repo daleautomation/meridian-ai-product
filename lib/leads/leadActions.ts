@@ -5,7 +5,7 @@
 // number, never invent a domain. If the field is missing, callers
 // should render the FIND NUMBER unblock state instead of a CALL button.
 
-import { getCanonicalPhone } from "./phone";
+import { getDialablePhone } from "./phone";
 
 export interface ActionableLeadLike {
   phone?: string | null;
@@ -89,7 +89,7 @@ export function getActionableContact(lead: ActionableLeadLike | null | undefined
   if (!lead) {
     return { phone: null, phoneFormatted: null, email: null, hasPhone: false, hasEmail: false, callable: false, missing: ["phone", "email"] };
   }
-  const phoneRaw = getCanonicalPhone(lead);
+  const phoneRaw = getDialablePhone(lead);
   const emailRaw = (typeof lead.email === "string" && lead.email.includes("@"))
     ? lead.email.trim()
     : (typeof lead.contacts?.primaryEmail === "string" && lead.contacts.primaryEmail.includes("@"))

@@ -14,6 +14,7 @@
 import { useMemo } from "react";
 import { palette } from "../lib/theme";
 import { resolveLeadQualityDisplay } from "../lib/display/leadQuality";
+import { formatTelHref } from "../lib/leads/leadActions";
 
 const TIER_LABEL = { primary: "Primary", secondary: "Secondary", advanced: "Advanced" };
 const TIER_COLOR = {
@@ -104,7 +105,7 @@ const LEAD_STATE_TONE = {
 };
 
 function FilteredLeadCard({ entry, isSelected = false, onClick, currentBucketId, onSwitchBucket }) {
-  const phone = entry.phone;
+  const phone = entry.phoneAuthority === "dialable" ? entry.phone : null;
   const services = Array.isArray(entry.services) ? entry.services : [];
   // Multi-bucket membership tags. Surfaces every service this lead
   // needs so the user understands the company is classified across
@@ -312,13 +313,8 @@ function FilteredLeadCard({ entry, isSelected = false, onClick, currentBucketId,
         </div>
       ) : null}
       {phone ? (() => {
-        const phoneDigits = String(phone).replace(/\D/g, "");
-        const telHref =
-          phoneDigits.length === 10
-            ? `tel:+1${phoneDigits}`
-            : phoneDigits.length === 11 && phoneDigits.startsWith("1")
-              ? `tel:+${phoneDigits}`
-              : `tel:${phoneDigits}`;
+        const telHref = formatTelHref(phone);
+        if (!telHref) return null;
         return (
           <a
             href={telHref}
