@@ -43,6 +43,11 @@ import {
   type CanonicalPhoneLeadLike,
 } from "../../lib/leads/phone";
 import { resolveByLeadIdentity } from "../../lib/leads/identity";
+import {
+  loadDurableOutcomeMap,
+  type ExecutionOutcomeMapValue,
+} from "../../lib/execution/serverOutcomeStore";
+import { isTerminalStatusValue } from "../../lib/crm/statusTaxonomy";
 import { listOverrides } from "../../lib/scheduling/overrideStore";
 import { applyScheduleOverrides } from "../../lib/scheduling/applyOverrides";
 import { companyKey } from "../../lib/mcp/types";
@@ -158,10 +163,14 @@ async function renderOperatorPage({
       // was generated under a different user). Workspace identity is
       // preserved from the snapshot — it must match the requested slug.
       const currentSnapshots = await listSnapshots();
-      const snapProps = mergeCurrentCrmIntoOperatorProps(
-        normalizeOperatorPhoneProps(snap.props as Record<string, unknown>),
+      const durableOutcomeMap = await loadDurableOutcomeMap(workspace.slug);
+      const snapProps = mergeDurableOutcomesIntoOperatorProps(mergeCurrentCrmIntoOperatorProps(
+        {
+          ...normalizeOperatorPhoneProps(snap.props as Record<string, unknown>),
+          serverExecutionOutcomeMap: durableOutcomeMap,
+        },
         currentSnapshots,
-      );
+      ), durableOutcomeMap);
       const tOv = Date.now();
       const overrides = await listOverrides(workspace.slug);
       const merged = applyScheduleOverrides(
@@ -544,6 +553,7 @@ async function renderOperatorPage({
   // has been logged yet — honest empty).
   const snapshots = await listSnapshots();
   const pipelineMap = buildPipelineMapFromSnapshots(snapshots);
+  const durableOutcomeMap = await loadDurableOutcomeMap(workspace.slug);
 
   const roi = { totalLeads: uiLeads.length, contacted: 0, interested: 0, closedWon: 0, closedLost: 0 };
   for (const snap of snapshots) {
@@ -819,7 +829,7 @@ async function renderOperatorPage({
     && process.env.HUNTER_API_KEY.trim().length > 0;
 
   // Build the prop bag once so we can both render and persist it.
-  const operatorProps = mergeCurrentCrmIntoOperatorProps(normalizeOperatorPhoneProps({
+  const operatorProps = mergeDurableOutcomesIntoOperatorProps(mergeCurrentCrmIntoOperatorProps(normalizeOperatorPhoneProps({
     sourceReadiness,
     connectedEnvVars,
     hunterAvailable,
@@ -844,13 +854,14 @@ async function renderOperatorPage({
     pendingReviews,
     totalPipeline: uiLeads.length,
     pipelineMap,
+    serverExecutionOutcomeMap: durableOutcomeMap,
     roi,
     calendarEvents,
     recentActivities: recentActivities.slice(0, 30),
     lastPipelineJob: lastJob
       ? { completedAt: lastJob.completedAt, errors: lastJob.errors.length, enriched: lastJob.steps.enrich?.succeeded ?? 0 }
       : null,
-  }), snapshots);
+  }), snapshots), durableOutcomeMap);
 
   const slowGeneratedAt = new Date().toISOString();
   // eslint-disable-next-line no-console
@@ -958,6 +969,85 @@ function mergeCurrentCrmIntoOperatorProps<T extends Record<string, unknown>>(
     todayList: mergeList(props.todayList),
     remaining: mergeList(props.remaining),
     rest: mergeList(props.rest),
+  } as T;
+}
+
+function statusFromDurableOutcome(status: string | null | undefined): string | null {
+  switch (status) {
+    case "Called":
+      return "CONTACTED";
+    case "Interested":
+    case "Follow Up":
+      return "FOLLOW_UP";
+    case "Proposal Sent":
+    case "Qualified":
+      return "QUALIFIED";
+    case "Closed Won":
+      return "CLOSED_WON";
+    case "Closed Lost":
+      return "CLOSED_LOST";
+    case "Not Qualified":
+      return "NOT_QUALIFIED";
+    default:
+      return null;
+  }
+}
+
+function mergeDurableOutcomesIntoOperatorProps<T extends Record<string, unknown>>(
+  props: T,
+  durableOutcomeMap: Record<string, ExecutionOutcomeMapValue>,
+): T {
+  const resolveOutcome = (item: unknown): ExecutionOutcomeMapValue | null => {
+    if (!item || typeof item !== "object") return null;
+    const lead = item as Record<string, unknown>;
+    const directKeys = [
+      typeof lead.id === "string" ? `lead-${lead.id}-call` : null,
+      typeof lead.key === "string" ? `lead-${lead.key}-call` : null,
+    ].filter((key): key is string => !!key);
+    for (const key of directKeys) {
+      if (durableOutcomeMap[key]) return durableOutcomeMap[key];
+    }
+    return resolveByLeadIdentity(lead, durableOutcomeMap).value;
+  };
+
+  const mergeLead = (item: unknown): unknown => {
+    if (!item || typeof item !== "object") return item;
+    const lead = item as Record<string, unknown>;
+    const outcome = resolveOutcome(lead);
+    const status = statusFromDurableOutcome(outcome?.status);
+    if (!status) return lead;
+    return {
+      ...lead,
+      accountSnapshot: {
+        ...((lead.accountSnapshot && typeof lead.accountSnapshot === "object") ? lead.accountSnapshot : {}),
+        status,
+      },
+      crm: {
+        ...((lead.crm && typeof lead.crm === "object") ? lead.crm : {}),
+        status,
+      },
+    };
+  };
+
+  const mergeOpenList = (value: unknown): unknown => {
+    if (!Array.isArray(value)) return value;
+    return value
+      .map(mergeLead)
+      .filter((item) => {
+        if (!item || typeof item !== "object") return true;
+        const outcome = resolveOutcome(item);
+        const status = statusFromDurableOutcome(outcome?.status);
+        return !isTerminalStatusValue(status);
+      });
+  };
+
+  return {
+    ...props,
+    serverExecutionOutcomeMap: durableOutcomeMap,
+    callTheseFirst: mergeOpenList(props.callTheseFirst),
+    todayList: mergeOpenList(props.todayList),
+    remaining: mergeOpenList(props.remaining),
+    rest: mergeOpenList(props.rest),
   } as T;
 }
 

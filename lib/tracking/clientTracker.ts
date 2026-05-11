@@ -9,6 +9,8 @@ export interface TrackEventInput {
   workspace?: string | null;
   leadId?: string | null;
   taskId?: string | null;
+  companyKey?: string | null;
+  crmKey?: string | null;
   companyName?: string | null;
   tradeId?: string | null;
   serviceBucketId?: string | null;
@@ -23,6 +25,8 @@ export function trackEvent(input: TrackEventInput): void {
       workspace: input.workspace ?? null,
       leadId: input.leadId ?? null,
       taskId: input.taskId ?? null,
+      companyKey: input.companyKey ?? null,
+      crmKey: input.crmKey ?? null,
       companyName: input.companyName ?? null,
       tradeId: input.tradeId ?? null,
       serviceBucketId: input.serviceBucketId ?? null,

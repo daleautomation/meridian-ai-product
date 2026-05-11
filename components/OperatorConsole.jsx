@@ -8403,6 +8403,7 @@ export default function OperatorConsole({
   serviceBucketsByTrade = {},
   callTheseFirst = [], todayList = [], remaining = [], rest = [],
   totalPipeline = 0, pipelineMap = {}, roi, lastPipelineJob = null,
+  serverExecutionOutcomeMap = {},
   pendingReviews, calendarEvents, recentActivities,
   // Snapshot freshness — passed by the operator page so the pill in
   // the header can render a relative time and offer a manual refresh.
@@ -9124,7 +9125,11 @@ export default function OperatorConsole({
       `selectedServiceAngleId="${selectedServiceAngleId ?? ""}" ` +
       `tradeIdForTasks="${tradeIdForTasks ?? ""}"`,
     );
-    const executionOutcomeMap = typeof window !== "undefined" ? loadAllExecutionOutcomes() : {};
+    const localExecutionOutcomeMap = typeof window !== "undefined" ? loadAllExecutionOutcomes() : {};
+    const executionOutcomeMap = {
+      ...localExecutionOutcomeMap,
+      ...(serverExecutionOutcomeMap ?? {}),
+    };
     const baseTasks = buildTasksFromLeads(masterPool, {
       pipelineMap,
       learningAdjustments,
@@ -9366,7 +9371,7 @@ export default function OperatorConsole({
     // and angle filters are applied downstream (calendarTasks memo)
     // so changing a tab doesn't rebuild the schedule.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [combinedLeadPool, pipelineMap, intelligenceScope, feedbackEvents, executionOutcomeVersion]);
+  }, [combinedLeadPool, pipelineMap, intelligenceScope, feedbackEvents, executionOutcomeVersion, serverExecutionOutcomeMap]);
   const rawCalendarTasks = calendarBundle.tasks;
   const operatorInsights = calendarBundle.insights;
 
@@ -9590,7 +9595,11 @@ export default function OperatorConsole({
     // when the calendar didn't produce one.
     const lead = selectedLead;
     if (!lead) return null;
-    const outcomeMap = typeof window !== "undefined" ? loadAllExecutionOutcomes() : {};
+    const localOutcomeMap = typeof window !== "undefined" ? loadAllExecutionOutcomes() : {};
+    const outcomeMap = {
+      ...localOutcomeMap,
+      ...(serverExecutionOutcomeMap ?? {}),
+    };
     const outcome = leadIdentityCandidates(lead)
       .map((key) => outcomeMap[key])
       .find(Boolean) ?? null;
@@ -9628,7 +9637,7 @@ export default function OperatorConsole({
         ? lead.salesStrategy.closeProbability
         : null,
     };
-  }, [selectedKey, rawCalendarTasks, selectedLead, executionOutcomeVersion]);
+  }, [selectedKey, rawCalendarTasks, selectedLead, executionOutcomeVersion, serverExecutionOutcomeMap]);
 
   // Legend entries — only services that appear in the visible tasks.
   const calendarServiceLegend = useMemo(() => {
