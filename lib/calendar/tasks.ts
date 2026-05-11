@@ -851,11 +851,12 @@ export function buildTasksFromLeads(
 
     const company = leadDisplayName(l);
     const person = l.contacts?.contactName ?? pipe?.contactName ?? undefined;
+    const pipeEntry = pipe ?? undefined;
     const rev = deriveRevenueImpact(l);
     const issue = topIssue(l);
     const strategic = strategicFromScore(l.score);
     const risk = riskFromLead(l);
-    const baseProb = deriveCloseProbability(l, pipe);
+    const baseProb = deriveCloseProbability(l, pipeEntry);
     const baseConf = deriveDealConfidence(l);
 
     // Outcome-learning adjustment, if any, is applied as a clamped nudge
@@ -871,7 +872,7 @@ export function buildTasksFromLeads(
 
     // Pattern-learning nudge — capped at ±0.10. Always applied after
     // direct learning so per-lead outcomes dominate pattern inference.
-    const patternResult = applyPatternAdjustment(l, options.patternAdjustments, pipe);
+    const patternResult = applyPatternAdjustment(l, options.patternAdjustments, pipeEntry);
     const closeProbability = patternResult
       ? Math.max(CLOSE_PROB_MIN, Math.min(CLOSE_PROB_MAX, directProb + patternResult.probabilityDelta))
       : directProb;
@@ -1075,7 +1076,7 @@ export function buildTasksFromLeads(
         category: "followup",
         priority: followPriority,
         status: "todo",
-        dueDate: followupDueIso(l, pipe, now),
+        dueDate: followupDueIso(l, pipeEntry, now),
         ...(rev ? { revenueImpact: rev } : {}),
         riskIfMissed: risk,
         strategicImportance: strategic,
