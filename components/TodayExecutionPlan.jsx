@@ -27,6 +27,15 @@ function priorityBadge(quality) {
   return                                { label: "TEST",      icon: "·",  fg: "#475569", bg: "#F1F5F9", border: "#E2E8F0" };
 }
 
+function qualitySourceLabel(source) {
+  if (source === "laborTechScan.closeability.score") return "LaborTech scan closeability";
+  if (source === "closeProbability100") return "sales strategy close probability";
+  if (source === "salesStrategy.closeProbability") return "sales strategy close probability";
+  if (source === "closeProbability") return "task probability fallback";
+  if (source === "laborTechScan.incomplete") return "incomplete LaborTech scan";
+  return "unknown source";
+}
+
 function telHrefOf(phone) {
   if (!phone) return null;
   const digits = String(phone).replace(/\D/g, "");
@@ -279,14 +288,17 @@ export default function TodayExecutionPlan({
                     <span>{badge.label}</span>
                   </span>
                   {confidencePct ? (
-                    <span style={{
-                      fontSize: "10px",
-                      fontWeight: 700,
-                      letterSpacing: "0.04em",
-                      color: palette.textSecondary,
-                      whiteSpace: "nowrap",
-                      fontVariantNumeric: "tabular-nums",
-                    }}>
+                    <span
+                      title={`Fit source: ${qualitySourceLabel(quality.source)}`}
+                      style={{
+                        fontSize: "10px",
+                        fontWeight: 700,
+                        letterSpacing: "0.04em",
+                        color: palette.textSecondary,
+                        whiteSpace: "nowrap",
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
                       {confidencePct} fit
                     </span>
                   ) : null}
