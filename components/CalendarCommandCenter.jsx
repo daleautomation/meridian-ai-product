@@ -4156,17 +4156,26 @@ function DayColumn({ date, tasks, isToday, now, onTaskFeedback, selectedTaskId, 
     return new Set(tasks.slice(0, 3).map((t) => t.id));
   }, [tasks, isFirstActive]);
 
+  const callTasks = useMemo(
+    () => tasks.filter((t) => {
+      const id = t?.id ?? "";
+      const title = t?.title ?? "";
+      return id.endsWith("-call") || title.startsWith("Call ");
+    }),
+    [tasks],
+  );
+
   // Tier breakdown for the day-summary line.
   const tierCounts = useMemo(() => {
     const out = { CLOSE_NOW: 0, STRONG: 0, TEST: 0 };
-    for (const t of tasks) {
+    for (const t of callTasks) {
       const tier = t?.leadTier;
       if (tier === "CLOSE_NOW" || tier === "STRONG" || tier === "TEST") {
         out[tier]++;
       }
     }
     return out;
-  }, [tasks]);
+  }, [callTasks]);
   const hasTierData =
     tierCounts.CLOSE_NOW + tierCounts.STRONG + tierCounts.TEST > 0;
 
@@ -4300,7 +4309,7 @@ function DayColumn({ date, tasks, isToday, now, onTaskFeedback, selectedTaskId, 
           alignItems: "center",
         }}>
           <span style={{ color: palette.textPrimary, fontWeight: 700 }}>
-            {tasks.length} {tasks.length === 1 ? "lead" : "leads"}
+            {callTasks.length} {callTasks.length === 1 ? "lead" : "leads"}
           </span>
           <span style={{ color: palette.textTertiary }}>·</span>
           <span style={{ color: tierTone("CLOSE_NOW").bg, fontWeight: 700 }}>
