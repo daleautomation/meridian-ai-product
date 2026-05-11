@@ -999,7 +999,7 @@ export function buildTasksFromLeads(
             : issue
               ? `Reference ${issue} and confirm next step.`
               : "Confirm interest and lock the next concrete commitment."),
-        ...(l.laborTechScan ? { laborTechScan: l.laborTechScan } : {}),
+        ...displayInsightFields,
         ...(typeof l.leadTier === "string" ? { leadTier: l.leadTier } : {}),
         ...probFields,
       });
