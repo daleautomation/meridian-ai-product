@@ -61,7 +61,7 @@ function renderContext(ctx: LeadContext | null | undefined): string {
   push("Workspace", ctx.workspaceSlug);
   push("Module", ctx.moduleId);
   push("Bucket", ctx.bucket);
-  if (typeof ctx.score === "number") push("Ready to close", `${ctx.score}/100`);
+  if (typeof ctx.score === "number") push("Market fit", `${ctx.score}/100`);
   push("Why this lead", ctx.reason);
   push("Suggested opening", ctx.suggestedOpening);
   push("Website", ctx.website);

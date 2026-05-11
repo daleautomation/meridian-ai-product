@@ -20,7 +20,7 @@ import { resolveLeadQualityDisplay } from "../lib/display/leadQuality";
 // Intelligence Panel. We do not repeat either here.
 function priorityBadge(quality) {
   const score = quality?.value;
-  if (quality?.isUnknown) return { label: "INCOMPLETE", icon: "·",  fg: "#475569", bg: "#F1F5F9", border: "#E2E8F0" };
+  if (quality?.isUnknown) return { label: "SCAN LIMITED", icon: "·",  fg: "#475569", bg: "#F1F5F9", border: "#E2E8F0" };
   if (typeof score !== "number") return { label: "QUEUED",    icon: "·",  fg: "#475569", bg: "#F1F5F9", border: "#E2E8F0" };
   if (score >= 80)               return { label: "CALL FIRST", icon: "🔥", fg: "#1D4ED8", bg: "#EEF4FF", border: "rgba(37,99,235,0.45)" };
   if (score >= 60)               return { label: "STRONG",    icon: "▲",  fg: "#15803D", bg: "#F0FDF4", border: "#BBF7D0" };
@@ -28,6 +28,7 @@ function priorityBadge(quality) {
 }
 
 function qualitySourceLabel(source) {
+  if (source === "marketFit.calibrated") return "market-fit display score";
   if (source === "laborTechScan.closeability.score") return "LaborTech scan closeability";
   if (source === "closeProbability100") return "sales strategy close probability";
   if (source === "salesStrategy.closeProbability") return "sales strategy close probability";
