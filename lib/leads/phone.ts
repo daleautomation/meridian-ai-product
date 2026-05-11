@@ -15,9 +15,14 @@ type PhonePathLike = {
 
 export type CanonicalPhoneLeadLike = {
   phone?: string | null;
+  source?: string | null;
+  confidence?: string | null;
+  confidenceLabel?: string | null;
   phoneAuthority?: string | null;
   contacts?: {
     primaryPhone?: string | null;
+    source?: string | null;
+    confidence?: string | null;
     [key: string]: unknown;
   } | null;
   contactPaths?: PhonePathLike[] | null;
@@ -95,6 +100,16 @@ function isTrustedDialablePath(path: PhonePathLike): boolean {
   return source === "google_places" || source === "gbp";
 }
 
+function isTrustedSource(source: string | null | undefined): boolean {
+  const normalized = String(source ?? "").toLowerCase();
+  return normalized === "google_places" || normalized === "gbp";
+}
+
+function isLowConfidence(value: string | null | undefined): boolean {
+  const normalized = String(value ?? "").toLowerCase();
+  return normalized === "low" || normalized === "none";
+}
+
 /**
  * Operational dial authority. Unlike getCanonicalPhone(), this never falls
  * back to raw lead.phone unless an upstream server task explicitly stamped
@@ -124,6 +139,20 @@ export function getDialablePhoneDetails(
       phone: phoneValue(lead.phone)!,
       source: "server",
       confidence: "high",
+      verified: true,
+    };
+  }
+  const fallbackSource = phoneValue(lead?.contacts?.source) ?? phoneValue(lead?.source);
+  const fallbackConfidence =
+    phoneValue(lead?.contacts?.confidence)
+    ?? phoneValue(lead?.confidenceLabel)
+    ?? phoneValue(lead?.confidence);
+  const fallbackPhone = phoneValue(lead?.contacts?.primaryPhone) ?? phoneValue(lead?.phone);
+  if (isTrustedSource(fallbackSource) && !isLowConfidence(fallbackConfidence) && isDialableShape(fallbackPhone)) {
+    return {
+      phone: fallbackPhone!,
+      source: fallbackSource,
+      confidence: fallbackConfidence ?? "medium",
       verified: true,
     };
   }
