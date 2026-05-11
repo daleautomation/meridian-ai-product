@@ -120,7 +120,7 @@ export function categoryMatch(candidate: ContactCandidate, identity: Identity): 
     ? ["roof", "roofing", "shingle", "storm damage", "metal roof"]
     : [identity.category];
   const hit = primary.some((k) => fields.includes(k));
-  return hit ? 1 : 0.3;
+  return hit ? 1 : 0;
 }
 
 // Weighted composite: name 60%, location 30%, category 10%.

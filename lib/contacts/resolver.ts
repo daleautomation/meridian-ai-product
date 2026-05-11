@@ -241,17 +241,9 @@ function buildContactPaths(
 }
 
 // Below this score, we do not trust a candidate is the same business.
-// Name similarity + location + category weighted. Relaxed from 0.80 → 0.60
-// so partial name matches clear when location + category are strong — a
-// common case for "Smith Roofing" vs "Smith's Roofing LLC". Candidates that
-// still fall below this drop into the near-miss fallback path.
-const MATCH_THRESHOLD = 0.60;
-
-// Secondary acceptance: accept a candidate that falls under the composite
-// threshold IFF all three of these hold — ensures we don't accept unrelated
-// businesses just because they're in the same city.
-const MIN_NAME_SIM_FOR_BYPASS = 0.50;
-const MIN_LOCATION_FOR_BYPASS = 0.70;
+// Contact trust is dial-before-display now: weak phone-bearing matches stay
+// in near-miss/manual verification instead of becoming operational truth.
+const MATCH_THRESHOLD = 0.75;
 
 type Adapter = {
   key: ContactSource;
@@ -928,20 +920,10 @@ export async function resolveContact(input: BusinessInput): Promise<ContactResol
     .map((c) => ({ ...c, score: scoreCandidate(c, identity) }))
     .sort((a, b) => b.score.total - a.score.total);
 
-  // Primary filter: composite ≥ MATCH_THRESHOLD (0.60).
-  // Secondary acceptance: composite below threshold but name similarity and
-  // location are both strong AND the candidate has a phone — the "best
-  // valid match" rule. Keeps unrelated businesses out while rescuing
-  // close-but-imperfect name matches.
+  // Primary filter: composite ≥ MATCH_THRESHOLD. There is intentionally no
+  // phone-based bypass; a phone number must not rescue a weak identity match.
   const scored: MatchedCandidate[] = allScored.filter((c) => {
     if (c.score.total >= MATCH_THRESHOLD) return true;
-    if (
-      c.score.name >= MIN_NAME_SIM_FOR_BYPASS &&
-      c.score.location >= MIN_LOCATION_FOR_BYPASS &&
-      !!c.phone
-    ) {
-      return true;
-    }
     return false;
   });
 

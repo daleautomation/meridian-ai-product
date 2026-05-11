@@ -64,7 +64,12 @@ import {
   formatMoney,
   leadOpportunityValue,
 } from "../lib/leads/leadActions";
-import { getCanonicalPhone, withCanonicalPhoneContact } from "../lib/leads/phone";
+import {
+  getCanonicalPhone,
+  getDialablePhone,
+  getDialablePhoneDetails,
+  withCanonicalPhoneContact,
+} from "../lib/leads/phone";
 import { useOutcomes, useDecisionFlow, leadKeyOf } from "../lib/leads/outcomes";
 import { generateCallScript } from "../lib/leads/scriptEngine";
 import { bucketPerformanceMap } from "../lib/leads/decisionEngine";
@@ -232,7 +237,7 @@ function riskLevelColor(level) {
 function trustInfo(lead, siteStatus, nowLabel) {
   const c = lead.contacts || {};
   const proof = lead.websiteProof || null;
-  const hasPhone = !!c.primaryPhone;
+  const hasPhone = !!getDialablePhone(lead);
   const hasWebsite = !!(lead.resolvedBusinessUrl || lead.domain || proof?.homepage_fetch_ok);
   const scanOk = proof?.homepage_fetch_ok ?? (siteStatus === "verified_business_site");
 
@@ -527,7 +532,7 @@ function buildReasons(lead, siteStatus) {
 // ── Execution state (unified status, operator language) ───────────────
 
 function executionState(lead, siteStatus) {
-  const hasPhone = !!lead.contacts?.primaryPhone;
+  const hasPhone = !!getDialablePhone(lead);
   const hasEmail = !!lead.contacts?.primaryEmail;
   const weakSite = siteStatus && siteStatus !== "verified_business_site";
 
@@ -535,7 +540,9 @@ function executionState(lead, siteStatus) {
     return { text: "Overdue", color: palette.danger, bg: palette.dangerBg };
   }
   if (lead.closeReadiness === "READY TO CLOSE") {
-    return { text: "Call Now", color: palette.blue, bg: palette.bluePale };
+    return hasPhone
+      ? { text: "Call Now", color: palette.blue, bg: palette.bluePale }
+      : { text: "Verify Phone", color: palette.warning, bg: palette.warningBg };
   }
   if (lead.closeReadiness === "WAITING" || lead.closeReadiness === "AWAITING_REPLY") {
     return { text: "Waiting on Reply", color: palette.blue, bg: palette.bluePale };
@@ -545,7 +552,9 @@ function executionState(lead, siteStatus) {
     return { text: "No Contact Yet", color: palette.textSecondary, bg: palette.surfaceHover };
   }
   if (lead.recommendedAction === "CALL NOW") {
-    return { text: "Call Now", color: palette.blue, bg: palette.bluePale };
+    return hasPhone
+      ? { text: "Call Now", color: palette.blue, bg: palette.bluePale }
+      : { text: "Verify Phone", color: palette.warning, bg: palette.warningBg };
   }
   if (lead.recommendedAction === "TODAY") {
     return { text: "Call Today", color: palette.warning, bg: palette.warningBg };
@@ -1262,7 +1271,7 @@ function LeadRow({ lead, index, isSelected, onSelect, sectionBucket }) {
   const baseBg = index % 2 === 1 ? t.stripeBg : t.baseBg;
   const opp = opportunityMeta(tier);
   const decision = lead.decision || null;
-  const phone = getCanonicalPhone(lead);
+  const phone = getDialablePhone(lead);
   const fitScore = marketFitScore(lead);
   const fitLabel = fitScore === null ? null : `Fit ${fitScore}%`;
 
@@ -2136,16 +2145,17 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
         // tooltip surfaces "Verified email (Hunter)" when sourced.
         const bestEmail = lead.verifiedEmail || lead.contacts?.primaryEmail || null;
         const emailIsHunter = lead.emailSource === "hunter";
+        const dialablePhone = getDialablePhone(lead);
         return (
           <NextActionBlock
             nextAction={lead.nextAction}
-            canCall={!!getCanonicalPhone(lead)}
+            canCall={!!dialablePhone}
             onEnterCallMode={() => setShowCallMode(true)}
             onCall={() => {
-              copyText(getCanonicalPhone(lead) || "").catch(() => {});
+              copyText(dialablePhone || "").catch(() => {});
               logOutreach("call_started", "next_action");
             }}
-            phoneHref={getCanonicalPhone(lead) ? telHref(getCanonicalPhone(lead)) : null}
+            phoneHref={dialablePhone ? telHref(dialablePhone) : null}
             mailtoHref={bestEmail ? buildQuickMailto(bestEmail) : null}
             mailtoTooltip={emailIsHunter ? "Verified email (Hunter)" : (bestEmail ? `Email ${bestEmail}` : undefined)}
             onOpenScan={() => { setShowScanModal(true); logOutreach("scan_viewed", "next_action"); }}
@@ -2160,7 +2170,8 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
         const tradeKey = lead.trade || TRADE_DEFAULT;
         const trade = getTradeModule(tradeKey);
         const bucket = getServiceBucket(tradeKey, lead.serviceBucket);
-        const headerPhone = getCanonicalPhone(lead);
+        const canonicalPhone = getCanonicalPhone(lead);
+        const headerPhone = getDialablePhone(lead);
         const hasPhoneAtHeader = !!headerPhone;
         return (
           <div style={S.companyHeaderCard}>
@@ -2233,14 +2244,16 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
                 ) : (
                   <>
                     <div style={S.companyHeaderPhoneLabel}>Primary Phone</div>
-                    <div style={{ ...S.companyHeaderPhone, color: palette.textTertiary }}>Not on file</div>
+                    <div style={{ ...S.companyHeaderPhone, color: palette.textTertiary }}>
+                      {canonicalPhone ? "Verification required" : "Not on file"}
+                    </div>
                     <div style={S.companyHeaderCtaRow}>
                       <button
                         type="button"
                         onClick={() => onStartFindContact?.(lead)}
                         style={S.companyHeaderCallBtnMuted}
                       >
-                        Find Contact
+                        {canonicalPhone ? "Verify Phone" : "Find Contact"}
                       </button>
                       <button
                         type="button"
@@ -2286,7 +2299,7 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
         onCopyPhone={async () => {
           // One-click Copy: prefer the phone; fall back to email when no
           // phone is on file. Status line reflects what was copied.
-          const phone = getCanonicalPhone(lead);
+          const phone = getDialablePhone(lead);
           const email = lead.contacts?.primaryEmail;
           const target = phone || email;
           if (!target) return;
@@ -3015,7 +3028,7 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
           onSaveNote={handleAddNote}
           onStatusChange={handleStatusChange}
           onCall={() => {
-            copyText(getCanonicalPhone(lead) || "").catch(() => {});
+            copyText(getDialablePhone(lead) || "").catch(() => {});
             logOutreach("call_started", "call_mode");
             // The tel: link on the Call button handles navigation natively.
           }}
@@ -3050,7 +3063,7 @@ function CallMode({
   }, [onClose]);
 
   const c = lead.contacts || {};
-  const phone = c.primaryPhone;
+  const phone = getDialablePhone(lead);
   // Prefer the Hunter-verified email when present; emailSource drives
   // the tooltip on the email button below.
   const email = lead.verifiedEmail || c.primaryEmail;
@@ -4960,7 +4973,7 @@ function AssistantChat({ lead, workspace }) {
       .map((i) => (typeof i === "string" ? i : (i.headline || i.label || i.description || i.reason || "")))
       .filter(Boolean);
     const weakSignals = [];
-    if (!getCanonicalPhone(lead)) weakSignals.push("No verified phone");
+    if (!getDialablePhone(lead)) weakSignals.push("No verified phone");
     if (!lead.contacts?.primaryEmail) weakSignals.push("No verified email");
     if (!(lead.resolvedBusinessUrl || lead.domain)) weakSignals.push("No website on file");
     if (!lead.lastChecked && !lead.websiteProof?.last_checked) weakSignals.push("Never scanned");
@@ -4973,7 +4986,7 @@ function AssistantChat({ lead, workspace }) {
       reason: decision?.reason || "",
       suggestedOpening: decision?.suggestedOpening || "",
       website: lead.resolvedBusinessUrl || lead.domain || lead.websiteProof?.homepage_url || undefined,
-      phone: getCanonicalPhone(lead) || undefined,
+      phone: getDialablePhone(lead) || undefined,
       email: lead.contacts?.primaryEmail || undefined,
       status: lead.accountSnapshot?.status || undefined,
       lastChecked: lead.lastChecked || lead.websiteProof?.last_checked || undefined,
@@ -7501,7 +7514,7 @@ function FeaturedAngleWorkspace({ angle, isActive, leads, onSelect, onOpenOperat
         if (!haystack.includes(q)) return false;
       }
       const hasWebsite = !!(lead.website || lead.websiteUrl || lead.domain);
-      const hasPhone = !!getCanonicalPhone(lead);
+      const hasPhone = !!getDialablePhone(lead);
       if (filter === "website") return hasWebsite;
       if (filter === "phone") return hasPhone;
       if (filter === "needs_contact") return !hasWebsite && !hasPhone;
@@ -7824,7 +7837,7 @@ function FeaturedAngleWorkspace({ angle, isActive, leads, onSelect, onOpenOperat
                 const reviews = typeof lead.reviewCount === "number" ? lead.reviewCount : (typeof lead.reviews === "number" ? lead.reviews : null);
                 if (typeof reviews === "number" && reviews >= 0) meta.push(`${reviews} review${reviews === 1 ? "" : "s"}`);
                 if (lead.website || lead.websiteUrl || lead.domain) meta.push("website");
-                if (getCanonicalPhone(lead)) meta.push("phone");
+                if (getDialablePhone(lead)) meta.push("verified phone");
                 if (lead.source === "google_places") meta.push("Google Places");
                 const rowKey = lead.key ?? lead.id ?? lead.name ?? i;
                 const isSelected = selectedLeadKey != null && lead.key === selectedLeadKey;
@@ -8459,6 +8472,10 @@ export default function OperatorConsole({
         });
         const data = res?.data;
         if (!data) return;
+        const primaryPhonePath = Array.isArray(data.paths)
+          ? data.paths.find((p) => p?.method === "phone" && p?.value === data.phone)
+            ?? data.paths.find((p) => p?.method === "phone")
+          : null;
         setContactOverlay((prev) => ({
           ...prev,
           [lead.key]: {
@@ -8468,6 +8485,9 @@ export default function OperatorConsole({
               primaryEmail: data.email ?? undefined,
               source: data.source === "google_places" ? "gbp" : data.source,
               confidence: data.confidence === "none" ? "low" : data.confidence,
+              phoneConfidence: data.phoneConfidence ?? primaryPhonePath?.confidence,
+              verified: primaryPhonePath?.verified === true,
+              matchType: data.matchType,
               contactName: data.matchedName,
               lastVerifiedAt: data.lastCheckedAt,
               checkedSources: data.checkedSources,
@@ -8516,7 +8536,8 @@ export default function OperatorConsole({
   const applyOverlay = (lead) => {
     const o = contactOverlay[lead.key];
     if (!o) return lead;
-    return withCanonicalPhoneContact({
+    const currentDialable = getDialablePhone(lead);
+    const candidate = withCanonicalPhoneContact({
       ...lead,
       phone: o.phone ?? lead.phone,
       contacts: { ...(lead.contacts ?? {}), ...o.contacts },
@@ -8524,6 +8545,24 @@ export default function OperatorConsole({
       fallbackRoute: o.fallbackRoute ?? lead.fallbackRoute,
       contactPaths: o.contactPaths ?? lead.contactPaths,
     });
+    if (currentDialable && !getDialablePhone(candidate)) {
+      return {
+        ...candidate,
+        phone: lead.phone,
+        contacts: {
+          ...(candidate.contacts ?? {}),
+          primaryPhone: lead.contacts?.primaryPhone,
+          source: lead.contacts?.source ?? candidate.contacts?.source,
+          confidence: lead.contacts?.confidence ?? candidate.contacts?.confidence,
+          phoneConfidence: lead.contacts?.phoneConfidence ?? candidate.contacts?.phoneConfidence,
+          lastVerifiedAt: lead.contacts?.lastVerifiedAt ?? candidate.contacts?.lastVerifiedAt,
+          verified: lead.contacts?.verified ?? candidate.contacts?.verified,
+          matchType: lead.contacts?.matchType ?? candidate.contacts?.matchType,
+        },
+        contactPaths: lead.contactPaths,
+      };
+    }
+    return candidate;
   };
   const withOverlays = (leads) => leads.map(applyOverlay);
 
@@ -9522,6 +9561,7 @@ export default function OperatorConsole({
     // when the calendar didn't produce one.
     const lead = selectedLead;
     if (!lead) return null;
+    const dialablePhone = getDialablePhoneDetails(lead);
     return {
       id: `lead-${selectedKey}-call`,
       title: `Call ${lead.name ?? "lead"}`,
@@ -9531,7 +9571,11 @@ export default function OperatorConsole({
       linkedLeadId: selectedKey,
       linkedCompany: lead.name ?? null,
       linkedLocation: lead.location ?? null,
-      phone: getCanonicalPhone(lead),
+      phone: dialablePhone?.phone ?? null,
+      phoneSource: dialablePhone?.source ?? null,
+      phoneConfidence: dialablePhone?.confidence ?? null,
+      phoneVerified: dialablePhone?.verified ?? false,
+      phoneCheckedAt: dialablePhone?.checkedAt ?? null,
       email: lead.contacts?.primaryEmail ?? null,
       verifiedEmail: lead.verifiedEmail ?? null,
       emailSource: lead.emailSource ?? null,

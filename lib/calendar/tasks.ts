@@ -17,7 +17,7 @@ import {
 import { getTradeModule } from "../modules/tradeConfigs";
 import { primaryBucketForLead } from "../modules/bucketClassifier";
 import { computeScanStatus, diagnosticTaskTitle } from "../diagnostics/scanStatus";
-import { getCanonicalPhone } from "../leads/phone";
+import { getDialablePhoneDetails } from "../leads/phone";
 // LABORTECH DEMO ROLLOUT — see lib/calendar/laborTechDemoSchedule.ts.
 // Reversible via the flag inside that file; remove this import (and the
 // call site at the end of buildTasksFromLeads) to drop the demo entirely.
@@ -120,6 +120,10 @@ export interface TaskItem {
   slotLocked?: boolean;
   /** Direct contact data lifted from the lead — drives Call Now / Email buttons. */
   phone?: string;
+  phoneSource?: string;
+  phoneConfidence?: string;
+  phoneVerified?: boolean;
+  phoneCheckedAt?: string;
   email?: string;
   /** Verified-email enrichment metadata (mirrors NormalizedLead). */
   emailStatus?: string;
@@ -202,6 +206,20 @@ export interface LeadLike {
   forceAction?: boolean | null;
   recommendedAction?: string | null;
   nextAction?: string | null;
+  phone?: string | null;
+  phoneSource?: string | null;
+  phoneConfidence?: string | null;
+  phoneVerified?: boolean | null;
+  phoneCheckedAt?: string | null;
+  contactPaths?: Array<{
+    method?: string | null;
+    value?: string | null;
+    source?: string | null;
+    verified?: boolean | null;
+    confidence?: string | null;
+    rank?: number | null;
+    checkedAt?: string | null;
+  }> | null;
   /** Top-level email mirrored from NormalizedLead. May be set even
    *  when contacts.primaryEmail isn't (e.g. raw imports). */
   email?: string | null;
@@ -803,7 +821,8 @@ export function buildTasksFromLeads(
     const patternLearningReason = patternLearningApplied ? patternResult!.reason : undefined;
 
     const expectedValue = deriveExpectedValue(rev, closeProbability);
-    const phone = getCanonicalPhone(l);
+    const dialablePhone = getDialablePhoneDetails(l);
+    const phone = dialablePhone?.phone ?? null;
     // Plain email — falls back to the top-level `lead.email` so leads
     // imported without a contacts overlay still surface their email
     // on every task. Verified-email enrichment fields are spread in
@@ -816,6 +835,12 @@ export function buildTasksFromLeads(
       ...(person ? { linkedPerson: person } : {}),
       ...(typeof l.location === "string" && l.location ? { linkedLocation: l.location } : {}),
       ...(phone ? { phone } : {}),
+      ...(dialablePhone ? {
+        phoneSource: dialablePhone.source,
+        phoneConfidence: dialablePhone.confidence,
+        phoneVerified: dialablePhone.verified,
+        ...(dialablePhone.checkedAt ? { phoneCheckedAt: dialablePhone.checkedAt } : {}),
+      } : {}),
       ...(email ? { email } : {}),
       // Verified-email enrichment metadata — propagated to EVERY task
       // via baseLink so LeadEmailAction renders consistently across

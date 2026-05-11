@@ -14,6 +14,7 @@
 import { useMemo } from "react";
 import { palette } from "../lib/theme";
 import { resolveLeadQualityDisplay } from "../lib/display/leadQuality";
+import { getDialablePhone } from "../lib/leads/phone";
 
 const TIER_LABEL = { primary: "Primary", secondary: "Secondary", advanced: "Advanced" };
 const TIER_COLOR = {
@@ -104,7 +105,7 @@ const LEAD_STATE_TONE = {
 };
 
 function FilteredLeadCard({ entry, isSelected = false, onClick, currentBucketId, onSwitchBucket }) {
-  const phone = entry.phone;
+  const phone = getDialablePhone(entry);
   const services = Array.isArray(entry.services) ? entry.services : [];
   // Multi-bucket membership tags. Surfaces every service this lead
   // needs so the user understands the company is classified across

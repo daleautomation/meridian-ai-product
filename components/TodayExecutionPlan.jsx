@@ -14,7 +14,7 @@ import { getLaborTechServiceFit } from "../lib/scan/serviceFit";
 import { loadAllExecutionOutcomes } from "../lib/execution/executionOutcome";
 import { trackEvent } from "../lib/tracking/clientTracker";
 import { resolveLeadQualityDisplay } from "../lib/display/leadQuality";
-import { getCanonicalPhone } from "../lib/leads/phone";
+import { getDialablePhone } from "../lib/leads/phone";
 
 // Today is the PRIORITY layer — rank, confidence, urgency only.
 // Pain framing lives in the Operator. Tactical "how" lives in the
@@ -44,6 +44,13 @@ function telHrefOf(phone) {
   if (digits.length === 10) return `tel:+1${digits}`;
   if (digits.length === 11 && digits.startsWith("1")) return `tel:+${digits}`;
   return digits ? `tel:${digits}` : null;
+}
+
+function taskDialablePhone(task) {
+  if (!task?.phone) return null;
+  if (task.phoneVerified !== true) return null;
+  if (String(task.phoneConfidence || "").toLowerCase() !== "high") return null;
+  return task.phone;
 }
 
 export default function TodayExecutionPlan({
@@ -205,7 +212,7 @@ export default function TodayExecutionPlan({
         {visibleTasks.map((task, i) => {
           const linkedKey = task.linkedLeadId;
           const lead = (linkedKey && leadByKey && leadByKey.get) ? leadByKey.get(linkedKey) : null;
-          const phone = getCanonicalPhone(lead) ?? task.phone ?? null;
+          const phone = getDialablePhone(lead) ?? taskDialablePhone(task);
           const tel = telHrefOf(phone);
           const quality = resolveLeadQualityDisplay(task);
           const badge = priorityBadge(quality);

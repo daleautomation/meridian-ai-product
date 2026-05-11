@@ -580,6 +580,13 @@ function isTaskBlocked(task) {
   return false;
 }
 
+function taskDialablePhone(task) {
+  if (!task?.phone) return null;
+  if (task.phoneVerified !== true) return null;
+  if (String(task.phoneConfidence || "").toLowerCase() !== "high") return null;
+  return task.phone;
+}
+
 // CALL NOW reserved for the rail's executeNow target OR a critical-
 // priority call task. Used to paint the strongest visual treatment.
 function isCallNowTask(task) {
@@ -1082,7 +1089,7 @@ function FeedbackControls({ task, onTaskFeedback }) {
     onTaskFeedback(task, type);
   };
   const stop = (e) => e.stopPropagation();
-  const phone = task?.phone || null;
+  const phone = taskDialablePhone(task);
   // The shared LeadEmailAction renders Email / Email ✓ from these
   // fields. Find Email is suppressed on the small card row to keep
   // cards from growing taller — the SelectedLeadPanel surfaces it
@@ -1430,8 +1437,8 @@ function operatorInsightLine(task) {
     const sum = String(scan.reportSummary);
     return sum.length > 110 ? sum.slice(0, 108).trim() + "…" : sum;
   }
-  if (!task.phone && !task.email) return "Missing phone & email — enrich before outreach";
-  if (!task.phone) return "No phone on file — enrich before outreach";
+  if (!taskDialablePhone(task) && !task.email) return "Missing verified phone & email — enrich before outreach";
+  if (!taskDialablePhone(task)) return "No verified phone on file — enrich before outreach";
   if (task.riskIfMissed === "high") return "High risk if missed — don’t let this slip";
   if (task.category === "followup") return "Follow-up due — keep the call sequence moving";
   if (task.category === "scan") return "No verified website — call path is unclear";
@@ -1459,21 +1466,21 @@ function metaLineFor(task) {
 }
 
 function telHrefFor(task) {
-  const phone = task?.phone || null;
+  const phone = taskDialablePhone(task);
   const digits = phone ? String(phone).replace(/\D/g, "") : "";
   if (digits.length === 10) return `tel:+1${digits}`;
   if (digits.length === 11 && digits.startsWith("1")) return `tel:+${digits}`;
   return digits ? `tel:${digits}` : null;
 }
 function smsHrefFor(task) {
-  const phone = task?.phone || null;
+  const phone = taskDialablePhone(task);
   const digits = phone ? String(phone).replace(/\D/g, "") : "";
   if (digits.length === 10) return `sms:+1${digits}`;
   if (digits.length === 11 && digits.startsWith("1")) return `sms:+${digits}`;
   return digits ? `sms:${digits}` : null;
 }
 function formatPhoneDisplay(task) {
-  const phone = task?.phone || null;
+  const phone = taskDialablePhone(task);
   if (!phone) return null;
   const d = String(phone).replace(/\D/g, "");
   if (d.length === 10) return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
@@ -3240,7 +3247,7 @@ export function SelectedLeadPanel({
 
   // Tel / SMS — same logic as FeedbackControls so the calendar and
   // operator panel dial through identical normalization.
-  const phone = task?.phone || null;
+  const phone = taskDialablePhone(task);
   const phoneDigits = phone ? String(phone).replace(/\D/g, "") : "";
   const telHref = phoneDigits.length === 10
     ? `tel:+1${phoneDigits}`

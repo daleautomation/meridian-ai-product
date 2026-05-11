@@ -12,6 +12,8 @@
 // Plus a tiny session cache so the same lead/domain doesn't trigger
 // repeated wasted lookups inside one tab.
 
+import { getDialablePhone } from "../leads/phone";
+
 // ── Public types ─────────────────────────────────────────────────────
 
 export type HunterLookupStatus =
@@ -49,6 +51,15 @@ type LeadLike = {
   moduleId?: string | null;
   trade?: string | null;
   tradeId?: string | null;
+  contactPaths?: Array<{
+    method?: string | null;
+    value?: string | null;
+    source?: string | null;
+    verified?: boolean | null;
+    confidence?: string | null;
+    rank?: number | null;
+    checkedAt?: string | null;
+  }> | null;
   contacts?: { primaryPhone?: string | null; primaryEmail?: string | null; contactName?: string | null } | null;
   signals?: {
     reviewCount?: number | null;
@@ -242,7 +253,7 @@ export function getContactStrategy(lead: LeadLike | null | undefined): ContactSt
     };
   }
 
-  const phone = lead.phone || lead.contacts?.primaryPhone || null;
+  const phone = getDialablePhone(lead);
   const verifiedEmail = lead.verifiedEmail || null;
   const plainEmail = lead.email || lead.contacts?.primaryEmail || null;
 
