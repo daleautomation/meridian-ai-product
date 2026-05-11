@@ -17,6 +17,7 @@ import { getService as getServiceCatalogEntry } from "../lib/services/serviceCat
 import { getTradeColor, TRADE_COLOR_ORDER } from "../lib/modules/tradeColors";
 import { getTradeModule, getServiceBucket, TRADE_DEFAULT } from "../lib/modules/trades";
 import { buildCallQueue, summarizeQueue } from "../lib/scoring/callQueue";
+import { resolveLeadQualityDisplay } from "../lib/display/leadQuality";
 import CalendarCommandCenter, { SelectedLeadPanel } from "./CalendarCommandCenter";
 import LeadContextStrip from "./LeadContextStrip";
 import LeadEmailAction from "./LeadEmailAction";
@@ -121,6 +122,18 @@ function scoreLabelColor(score) {
   if (score >= 60) return palette.success;
   if (score >= 40) return palette.textSecondary;
   return palette.textTertiary;
+}
+
+function marketFitQuality(lead) {
+  return resolveLeadQualityDisplay({
+    ...lead,
+    phone: lead?.phone ?? lead?.contacts?.primaryPhone ?? null,
+  });
+}
+
+function marketFitScore(lead) {
+  const quality = marketFitQuality(lead);
+  return typeof quality.value === "number" && !quality.isUnknown ? quality.value : null;
 }
 
 // ── Opportunity classification (replaces numeric score) ───────────────
@@ -1249,6 +1262,8 @@ function LeadRow({ lead, index, isSelected, onSelect, sectionBucket }) {
   const opp = opportunityMeta(tier);
   const decision = lead.decision || null;
   const phone = lead.contacts?.primaryPhone || null;
+  const fitScore = marketFitScore(lead);
+  const fitLabel = fitScore === null ? null : `Fit ${fitScore}%`;
 
   // Click guard: prevent the row's onSelect when interacting with the
   // primary Call button.
@@ -1303,7 +1318,7 @@ function LeadRow({ lead, index, isSelected, onSelect, sectionBucket }) {
             background: opp.bg,
             border: `1px solid ${opp.border}`,
           }}>
-            {decision.bucket} · {decision.score}
+            {decision.bucket} · {fitLabel ?? decision.score}
           </span>
         ) : (
           <span style={{
@@ -1347,6 +1362,7 @@ function LeadRow({ lead, index, isSelected, onSelect, sectionBucket }) {
 function DecisionSummary({ lead }) {
   const dec = lead?.decision;
   if (!dec) return null;
+  const fitScore = marketFitScore(lead);
   const accent =
     dec.bucket === "Call now" ? "#B91C1C"
     : dec.bucket === "Call this week" ? "#B45309"
@@ -1374,7 +1390,7 @@ function DecisionSummary({ lead }) {
           fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em",
           textTransform: "uppercase", color: accent,
         }}>
-          {dec.bucket} · Ready to close {dec.score}
+          {dec.bucket} · {fitScore === null ? `Decision ${dec.score}` : `Market fit ${fitScore}%`} · Decision {dec.score}
         </span>
       </div>
       <div style={{ fontSize: "13px", color: "#1A1A2E", lineHeight: 1.5 }}>
@@ -9522,6 +9538,11 @@ export default function OperatorConsole({
       tradeId: typeof lead.trade === "string" ? lead.trade : null,
       tradeLabel: lead.trade ? (TRADE_MODULES[lead.trade]?.label ?? lead.trade) : null,
       laborTechScan: lead.laborTechScan ?? null,
+      serviceNeed: lead.serviceNeed ?? null,
+      salesStrategy: lead.salesStrategy ?? null,
+      closeProbability100: typeof lead.salesStrategy?.closeProbability === "number"
+        ? lead.salesStrategy.closeProbability
+        : null,
     };
   }, [selectedKey, rawCalendarTasks, selectedLead]);
 
@@ -9570,7 +9591,9 @@ export default function OperatorConsole({
   const handleStartEmails     = () => startQueue("email_first", "Emails to Send");
   const handleExitQueue       = () => setQueueState(null);
   const toggleFilter = () => setFilterHighPriority((v) => !v);
-  const highPriFilter = (leads) => filterHighPriority ? leads.filter((l) => l.score >= 70 || l.forceAction) : leads;
+  const highPriFilter = (leads) => filterHighPriority
+    ? leads.filter((l) => (marketFitScore(l) ?? l.score ?? 0) >= 70 || l.forceAction)
+    : leads;
 
   async function handleSeed() {
     setSeeding(true);

@@ -666,8 +666,22 @@ async function renderOperatorPage({
       const top = needsByLead[i][0];
       const lead = group.leads[i];
       if (top?.suggestedPitch) {
-        (lead as unknown as { serviceNeed?: { suggestedPitch?: string } }).serviceNeed = {
+        (lead as unknown as {
+          serviceNeed?: {
+            suggestedPitch?: string;
+            needScore?: number;
+            urgency?: string;
+            serviceId?: string;
+            label?: string;
+            reason?: string;
+          };
+        }).serviceNeed = {
           suggestedPitch: top.suggestedPitch,
+          needScore: top.needScore,
+          urgency: top.urgency,
+          serviceId: top.serviceId,
+          label: top.label,
+          reason: top.reason,
         };
       }
       const strategy = generateSalesStrategy(lead, needsByLead[i]);

@@ -68,7 +68,7 @@ function buildLeadContext({ task, workspace, tradeLabel }) {
     evidence: Array.isArray(scan?.evidence) ? scan.evidence.slice(0, 5) : [],
     businessImpact: Array.isArray(scan?.businessImpact) ? scan.businessImpact.slice(0, 3) : [],
     salesAngle: scan?.salesAngle ?? null,
-    closeabilityLabel: quality.isUnknown ? "Incomplete" : (scan?.closeability?.label ?? null),
+    closeabilityLabel: quality.isUnknown ? quality.label : (scan?.closeability?.label ?? null),
     closeabilityScore: closeScore,
     urgency: scan?.urgency?.label ?? null,
     recommendedAction: scan?.recommendedAction ?? null,

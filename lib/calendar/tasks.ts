@@ -111,6 +111,8 @@ export interface TaskItem {
   salesStrategy?: LeadLike["salesStrategy"];
   /** Compact close probability (0–100) lifted onto the task for the card. */
   closeProbability100?: number;
+  /** Top LaborTech service need, used only for market-fit display calibration. */
+  serviceNeed?: LeadLike["serviceNeed"];
   /** Team rep this task is assigned to (lib/scheduling/teamMembers.ts). */
   assignedRepId?: string;
   /** True when the slot was placed manually and must not be auto-moved. */
@@ -242,6 +244,11 @@ export interface LeadLike {
   // from serviceNeedClassifier output).
   serviceNeed?: {
     suggestedPitch?: string | null;
+    needScore?: number | null;
+    urgency?: string | null;
+    serviceId?: string | null;
+    label?: string | null;
+    reason?: string | null;
   } | null;
   // Operator tier classification stamped by the rolling scheduler.
   // CLOSE_NOW (top ~25%) / STRONG (middle ~50%) / TEST (bottom ~25%).
@@ -888,6 +895,7 @@ export function buildTasksFromLeads(
     const displayInsightFields = {
       ...(l.laborTechScan ? { laborTechScan: l.laborTechScan } : {}),
       ...(l.salesStrategy ? { salesStrategy: l.salesStrategy } : {}),
+      ...(l.serviceNeed ? { serviceNeed: l.serviceNeed } : {}),
       ...(typeof l.salesStrategy?.closeProbability === "number"
         ? { closeProbability100: l.salesStrategy.closeProbability }
         : {}),
@@ -961,6 +969,7 @@ export function buildTasksFromLeads(
         ...(callScript ? { callScript } : {}),
         ...(strategy ? { salesStrategy: strategy } : {}),
         ...(scan ? { laborTechScan: scan } : {}),
+        ...(l.serviceNeed ? { serviceNeed: l.serviceNeed } : {}),
         ...(typeof l.leadTier === "string" ? { leadTier: l.leadTier } : {}),
         // Email-enrichment fields (verifiedEmail / emailSource /
         // emailConfidence / emailStatus / emailVerifiedAt) now flow
@@ -1000,6 +1009,7 @@ export function buildTasksFromLeads(
               ? `Reference ${issue} and confirm next step.`
               : "Confirm interest and lock the next concrete commitment."),
         ...(l.laborTechScan ? { laborTechScan: l.laborTechScan } : {}),
+        ...(l.serviceNeed ? { serviceNeed: l.serviceNeed } : {}),
         ...(typeof l.leadTier === "string" ? { leadTier: l.leadTier } : {}),
         ...probFields,
       });

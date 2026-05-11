@@ -521,6 +521,7 @@ function formatCloseability(taskOrScan) {
 }
 
 function closeabilitySourceLabel(source) {
+  if (source === "marketFit.calibrated") return "market-fit display score";
   if (source === "laborTechScan.closeability.score") return "LaborTech scan closeability";
   if (source === "closeProbability100") return "sales strategy close probability";
   if (source === "salesStrategy.closeProbability") return "sales strategy close probability";
@@ -845,8 +846,8 @@ function TaskCard({ task, compact = false, now, isExecuteNow = false, onTaskFeed
               {closeFit ? (
                 <span
                   title={typeof closeFit.pct === "number"
-                    ? `Closeability: ${closeFit.pct}% · Source: ${closeabilitySourceLabel(closeFit.source)}`
-                    : `Closeability incomplete · Source: ${closeabilitySourceLabel(closeFit.source)}`}
+                    ? `Market fit: ${closeFit.pct}% · Source: ${closeabilitySourceLabel(closeFit.source)}`
+                    : `Market fit scan limited · Source: ${closeabilitySourceLabel(closeFit.source)}`}
                   style={CLOSEABILITY_CHIP_STYLE}
                 >
                   {closeFit.label}
@@ -961,8 +962,8 @@ function TaskCard({ task, compact = false, now, isExecuteNow = false, onTaskFeed
         // 1–2 metrics: closeability + (urgency or money).
         const metrics = [];
         const close = formatCloseability(task);
-        if (close?.isUnknown) metrics.push("Close incomplete");
-        else if (typeof close?.pct === "number") metrics.push(`Close ${close.pct}%`);
+        if (close?.isUnknown) metrics.push("Fit scan limited");
+        else if (typeof close?.pct === "number") metrics.push(`Fit ${close.pct}%`);
         if (scan?.urgency?.label) {
           metrics.push(scan.urgency.label);
         } else if (money) {
@@ -5349,7 +5350,7 @@ export default function CalendarCommandCenter({
           flexDirection: "column",
           gap: "10px",
         }}>
-          {/* Top-of-Today Execution Plan — top 5 leads by closeability,
+          {/* Top-of-Today Execution Plan — leads ordered by market-fit display score,
               with one-tap Call / Email and the contact strategy chip
               inline. Shown only in week-view calendar mode where the
               user lands on Today; suppressed in priority view (which
@@ -5372,8 +5373,10 @@ export default function CalendarCommandCenter({
                 return true;
               });
               pool.sort((a, b) => {
-                const sa = a?.laborTechScan?.closeability?.score ?? 0;
-                const sb = b?.laborTechScan?.closeability?.score ?? 0;
+                const qa = resolveLeadQualityDisplay(a);
+                const qb = resolveLeadQualityDisplay(b);
+                const sa = typeof qa.value === "number" ? qa.value : 0;
+                const sb = typeof qb.value === "number" ? qb.value : 0;
                 return sb - sa;
               });
               // Show ALL leads scheduled for today — Today is a routing
