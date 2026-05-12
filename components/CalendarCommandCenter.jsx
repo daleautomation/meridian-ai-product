@@ -11,6 +11,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { palette } from "../lib/theme";
+import { dateFromHydrationTime } from "../lib/hydrationTime";
 import {
   TASK_CATEGORIES,
   CATEGORY_ORDER,
@@ -29,7 +30,6 @@ import {
   isLaunchDayOrBefore,
   getBusinessTodayIso,
   getWeekStartIso,
-  formatWeekStartLabel,
   toBusinessDateIso,
 } from "../lib/dates/businessDate";
 import { getLaborTechServiceFit, buildServiceFitBreakdown } from "../lib/scan/serviceFit";
@@ -69,6 +69,11 @@ const DEBUG_UI =
 
 const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const DAY_FULL  = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_LONG = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
 
 // ── Design tokens ──────────────────────────────────────────────────────
 // 4-step radius scale + 3-tier shadow ladder. Every surface in this
@@ -408,6 +413,33 @@ function dateFromIsoKey(iso) {
   return out;
 }
 
+function formatCivilDate(date, { weekday = null, month = "short" } = {}) {
+  const monthLabel = month === "long" ? MONTH_LONG[date.getMonth()] : MONTH_SHORT[date.getMonth()];
+  const base = `${monthLabel} ${date.getDate()}`;
+  if (weekday === "long") return `${DAY_FULL[date.getDay()]}, ${base}`;
+  if (weekday === "short") return `${DAY_SHORT[date.getDay()]}, ${base}`;
+  return base;
+}
+
+function formatCivilMonthYear(date) {
+  return `${MONTH_LONG[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+function formatCivilClock(date) {
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const hour = date.getHours();
+  return `${hour % 12 || 12}:${minutes} ${hour >= 12 ? "PM" : "AM"}`;
+}
+
+function formatCivilDateTime(date) {
+  return `${formatCivilDate(date)} ${formatCivilClock(date)}`;
+}
+
+function formatBusinessTodayHeading(now) {
+  const businessToday = dateFromIsoKey(toBusinessDateIso(now)) ?? now;
+  return `${DAY_FULL[businessToday.getDay()]}, ${formatCivilDate(businessToday)}`;
+}
+
 // ── DEMO ANCHOR ──────────────────────────────────────────────────────
 // Presentational-only anchor for the LaborTech demo. Pins the calendar's
 // initial visible week to the week containing this date, and forces the
@@ -462,11 +494,7 @@ function laborTechDemoAnchorKey() {
 // so "Day 1 starts Thursday, <date>" stays accurate.
 function laborTechDemoAnchorLabel() {
   try {
-    return laborTechDemoAnchorDate().toLocaleDateString(undefined, {
-      weekday: "long",
-      month: "short",
-      day: "numeric",
-    });
+    return formatCivilDate(laborTechDemoAnchorDate(), { weekday: "long" });
   } catch {
     return "Thursday";
   }
@@ -2987,7 +3015,7 @@ function ExecutionOutcomePanel({
     if (!outcome.lastActionAt) return null;
     const d = new Date(outcome.lastActionAt);
     if (Number.isNaN(d.getTime())) return null;
-    return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+    return formatCivilDateTime(d);
   })();
 
   return (
@@ -3228,7 +3256,7 @@ export function SelectedLeadPanel({
   const blocked = status?.id === "blocked";
   const due = task.dueDate ? new Date(task.dueDate) : null;
   const dueLabel = due
-    ? due.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })
+    ? formatCivilDate(due, { weekday: "short" })
     : null;
   const tradeBadge = task.tradeLabel ?? tradeLabel ?? null;
   const address = task?.linkedLocation ?? null;
@@ -4159,7 +4187,7 @@ function TodayFocusPanel({ tasks, now, executeNow, insights, onTaskFeedback, tra
           Today Focus
         </div>
         <div style={{ fontSize: "18px", fontWeight: 650, color: RAIL.textPrimary, marginTop: "2px" }}>
-          {DAY_FULL[now.getDay()]}, {now.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+          {formatBusinessTodayHeading(now)}
         </div>
       </div>
 
@@ -4649,7 +4677,9 @@ export default function CalendarCommandCenter({
   // effect runs after our intent-aware effect and resets Assist Mode.
   // Today Open Assist Mode = execution intent, not normal selection.
   onEnterAssistMode: externalOnEnterAssistMode,
+  initialNowIso = null,
 }) {
+  const initialNow = useMemo(() => dateFromHydrationTime(initialNowIso), [initialNowIso]);
   // Single source of truth for the calendar's view mode. "all" when the
   // operator is in All Trades mode, otherwise the active trade slug.
   const viewMode = (!tradeId || tradeId === "all") ? "all" : "single";
@@ -4658,7 +4688,7 @@ export default function CalendarCommandCenter({
   // is unchanged. The user can still navigate prev/next/Today freely.
   const [weekOffset, setWeekOffset] = useState(() => {
     try {
-      return laborTechDemoWeekOffset(startOfWeek(new Date()));
+      return laborTechDemoWeekOffset(startOfWeek(initialNow));
     } catch {
       return 0;
     }
@@ -4834,8 +4864,9 @@ export default function CalendarCommandCenter({
     }
   };
 
-  // Generate "now" once per mount so all comparisons line up.
-  const now = useMemo(() => new Date(), []);
+  // Generate "now" from the server-serialized render clock so SSR and
+  // hydration agree while all comparisons still line up.
+  const now = initialNow;
   const baseData = useMemo(() => tasks ?? getMockTasks(), [tasks]);
   // Merge any panel-driven overrides (status changes) on top of the
   // canonical task list. Pure derivation — no mutation.
@@ -5145,7 +5176,7 @@ export default function CalendarCommandCenter({
     return map;
   }, [data, now]);
 
-  const weekLabel = `${weekStart.toLocaleDateString(undefined, { month: "short", day: "numeric" })} – ${days[6].toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
+  const weekLabel = `${formatCivilDate(weekStart)} – ${formatCivilDate(days[6])}`;
 
   // First active day of the visible week — the column that should get
   // the "Day 1 · Start here" emphasis. Pure UI hint; no scheduling
@@ -5178,13 +5209,13 @@ export default function CalendarCommandCenter({
   const dayLabel = (() => {
     const d = new Date(now);
     d.setDate(d.getDate() + dayOffset);
-    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    return formatCivilDate(d);
   })();
   const monthLabel = (() => {
     const d = new Date(now);
     d.setDate(1);
     d.setMonth(d.getMonth() + monthOffset);
-    return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+    return formatCivilMonthYear(d);
   })();
   const headerRangeLabel =
     calendarView === "day" ? dayLabel
@@ -5684,7 +5715,7 @@ export default function CalendarCommandCenter({
               : calendarView === "month" ? "This month at a glance"
               : laborTechDemoAnchorActive()
                 ? `LaborTech launch call plan · Day 1 starts ${laborTechDemoAnchorLabel()}`
-                : `This week's call plan · Week of ${formatWeekStartLabel(dayKey(weekStart))}`}
+                : `This week's call plan · Week of ${formatCivilDate(weekStart)}`}
           </div>
 
           {!hasTradeLeads ? (

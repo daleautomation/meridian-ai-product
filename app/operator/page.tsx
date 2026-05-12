@@ -192,6 +192,7 @@ async function renderOperatorPage({
       // the JSON file matches OperatorConsoleProps — that contract is
       // enforced by the snapshot generator.
       const typedProps = merged as unknown as Parameters<typeof OperatorConsole>[0];
+      const hydrationNow = new Date().toISOString();
       return (
         <OperatorConsole
           {...typedProps}
@@ -199,6 +200,7 @@ async function renderOperatorPage({
           workspace={workspace}
           snapshotGeneratedAt={snap.generatedAt}
           snapshotIsFresh={true}
+          snapshotHydrationNow={hydrationNow}
         />
       );
     }
@@ -905,6 +907,7 @@ async function renderOperatorPage({
       {...mergedSlow}
       snapshotGeneratedAt={slowGeneratedAt}
       snapshotIsFresh={true}
+      snapshotHydrationNow={slowGeneratedAt}
     />
   );
 }
