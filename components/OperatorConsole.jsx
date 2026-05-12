@@ -8406,6 +8406,7 @@ export default function OperatorConsole({
   // the header can render a relative time and offer a manual refresh.
   snapshotGeneratedAt = null,
   snapshotIsFresh = false,
+  snapshotHydrationNow = null,
 }) {
   // Rep filter for the calendar (All / Rep 1 / Rep 2). Display-only —
   // does not change scheduling.
@@ -8414,6 +8415,7 @@ export default function OperatorConsole({
   // Cleared when the user switches trades.
   const [selectedLaborTechServiceId, setSelectedLaborTechServiceId] = useState(null);
   const workspaceAccent = workspace?.branding?.accentLabel ?? null;
+  const hydrationNowIso = snapshotHydrationNow ?? snapshotGeneratedAt ?? "1970-01-01T00:00:00.000Z";
   // Server-supplied set of connected env-var names. Used by
   // getTradeSourceReadiness so the UI does not need to read process.env.
   const connectedEnvSet = useMemo(
@@ -9824,6 +9826,7 @@ export default function OperatorConsole({
             <SnapshotFreshnessPill
               workspaceSlug={workspace.slug}
               generatedAt={snapshotGeneratedAt ?? null}
+              initialNowIso={hydrationNowIso}
             />
           ) : null}
           <span style={S.userName}>{user.name}</span>
@@ -10042,6 +10045,7 @@ export default function OperatorConsole({
             <CalendarCommandCenter
               tasks={calendarTasks}
               insights={operatorInsights}
+              initialNowIso={hydrationNowIso}
               overflowEntries={overflowEntries}
               workspaceSlug={workspace?.slug ?? ""}
               serverExecutionOutcomeMap={serverExecutionOutcomeMap ?? {}}

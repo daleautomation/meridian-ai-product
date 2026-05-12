@@ -14,10 +14,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { formatStableUtcTimestamp, parseHydrationTime } from "../lib/hydrationTime";
 
 interface Props {
   workspaceSlug: string;
   generatedAt: string | null;
+  initialNowIso: string;
 }
 
 const palette = {
@@ -34,9 +36,9 @@ const palette = {
 
 function formatRelative(generatedAtIso: string | null, now: number): { label: string; stale: boolean } {
   if (!generatedAtIso) return { label: "no snapshot", stale: true };
-  const ts = new Date(generatedAtIso).getTime();
-  if (!Number.isFinite(ts)) return { label: "snapshot invalid", stale: true };
-  const ageMs = now - ts;
+  const ts = parseHydrationTime(generatedAtIso);
+  if (ts === null) return { label: "snapshot invalid", stale: true };
+  const ageMs = Math.max(0, now - ts);
   const stale = ageMs > 12 * 60 * 60 * 1000; // >12h
   if (ageMs < 60_000) return { label: "Updated just now", stale: false };
   if (ageMs < 3_600_000) return { label: `Updated ${Math.floor(ageMs / 60_000)} min ago`, stale: false };
@@ -44,20 +46,55 @@ function formatRelative(generatedAtIso: string | null, now: number): { label: st
   return { label: `Updated ${Math.floor(ageMs / 86_400_000)}d ago`, stale: true };
 }
 
-export default function SnapshotFreshnessPill({ workspaceSlug, generatedAt }: Props) {
+function nextFreshnessTickMs(generatedAtIso: string | null, nowMs: number): number {
+  const ts = parseHydrationTime(generatedAtIso);
+  if (ts === null) return 60_000;
+  const ageMs = Math.max(0, nowMs - ts);
+  const minute = 60_000;
+  const hour = 3_600_000;
+  const day = 86_400_000;
+  let nextBoundary = minute;
+  if (ageMs >= day) nextBoundary = (Math.floor(ageMs / day) + 1) * day;
+  else if (ageMs >= hour) nextBoundary = (Math.floor(ageMs / hour) + 1) * hour;
+  else if (ageMs >= minute) nextBoundary = (Math.floor(ageMs / minute) + 1) * minute;
+  const untilBoundary = nextBoundary - ageMs + 100;
+  return Math.min(Math.max(untilBoundary, 1_000), 60_000);
+}
+
+export default function SnapshotFreshnessPill({ workspaceSlug, generatedAt, initialNowIso }: Props) {
   const router = useRouter();
-  const [now, setNow] = useState(() => Date.now());
+  const initialNow = useMemo(
+    () => parseHydrationTime(initialNowIso) ?? parseHydrationTime(generatedAt) ?? 0,
+    [generatedAt, initialNowIso],
+  );
+  const [now, setNow] = useState(initialNow);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Tick once a minute so the relative time stays current without
-  // burning cycles on a re-render storm.
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 60_000);
-    return () => clearInterval(id);
-  }, []);
+    setNow(initialNow);
+  }, [initialNow]);
+
+  // After hydration, tick only when the visible freshness bucket can change.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
+    const schedule = () => {
+      timer = setTimeout(() => {
+        if (cancelled) return;
+        setNow(Date.now());
+        schedule();
+      }, nextFreshnessTickMs(generatedAt, Date.now()));
+    };
+    schedule();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [generatedAt]);
 
   const { label, stale } = useMemo(() => formatRelative(generatedAt, now), [generatedAt, now]);
+  const generatedAtTitle = formatStableUtcTimestamp(generatedAt);
 
   async function handleRefresh() {
     if (refreshing) return;
@@ -107,7 +144,7 @@ export default function SnapshotFreshnessPill({ workspaceSlug, generatedAt }: Pr
         color: stale ? palette.warningText : palette.pillText,
         userSelect: "none",
       }}
-      title={generatedAt ? `Snapshot generated at ${new Date(generatedAt).toLocaleString()}` : "No snapshot available"}
+      title={generatedAtTitle ? `Snapshot generated at ${generatedAtTitle}` : "No snapshot available"}
     >
       <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
         <Dot stale={stale} />

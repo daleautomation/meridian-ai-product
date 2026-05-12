@@ -89,6 +89,8 @@ interface OperatorConsoleProps {
   snapshotGeneratedAt?: string | null;
   /** True when the SSR pulled the cached snapshot. False on slow path. */
   snapshotIsFresh?: boolean;
+  /** Server-render clock used for hydration-stable time-derived labels. */
+  snapshotHydrationNow?: string | null;
 }
 
 declare function OperatorConsole(props: OperatorConsoleProps): React.JSX.Element;

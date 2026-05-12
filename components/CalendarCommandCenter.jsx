@@ -11,6 +11,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { palette } from "../lib/theme";
+import { dateFromHydrationTime } from "../lib/hydrationTime";
 import {
   TASK_CATEGORIES,
   CATEGORY_ORDER,
@@ -4649,7 +4650,9 @@ export default function CalendarCommandCenter({
   // effect runs after our intent-aware effect and resets Assist Mode.
   // Today Open Assist Mode = execution intent, not normal selection.
   onEnterAssistMode: externalOnEnterAssistMode,
+  initialNowIso = null,
 }) {
+  const initialNow = useMemo(() => dateFromHydrationTime(initialNowIso), [initialNowIso]);
   // Single source of truth for the calendar's view mode. "all" when the
   // operator is in All Trades mode, otherwise the active trade slug.
   const viewMode = (!tradeId || tradeId === "all") ? "all" : "single";
@@ -4658,7 +4661,7 @@ export default function CalendarCommandCenter({
   // is unchanged. The user can still navigate prev/next/Today freely.
   const [weekOffset, setWeekOffset] = useState(() => {
     try {
-      return laborTechDemoWeekOffset(startOfWeek(new Date()));
+      return laborTechDemoWeekOffset(startOfWeek(initialNow));
     } catch {
       return 0;
     }
@@ -4834,8 +4837,9 @@ export default function CalendarCommandCenter({
     }
   };
 
-  // Generate "now" once per mount so all comparisons line up.
-  const now = useMemo(() => new Date(), []);
+  // Generate "now" from the server-serialized render clock so SSR and
+  // hydration agree while all comparisons still line up.
+  const now = initialNow;
   const baseData = useMemo(() => tasks ?? getMockTasks(), [tasks]);
   // Merge any panel-driven overrides (status changes) on top of the
   // canonical task list. Pure derivation — no mutation.

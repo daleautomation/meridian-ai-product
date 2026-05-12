@@ -2,6 +2,7 @@ import type { TaskItem } from "../lib/calendar/tasks";
 
 interface CalendarCommandCenterProps {
   tasks?: TaskItem[];
+  initialNowIso?: string | null;
 }
 
 declare function CalendarCommandCenter(
