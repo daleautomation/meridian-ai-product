@@ -230,15 +230,15 @@ html, body {
     background 180ms ease;
 }
 
-.public-link-button {
+.public-site .public-link-button {
   padding: 0 16px;
   color: var(--public-blue);
   background: rgba(239, 246, 255, 0.72);
   border: 1px solid rgba(37, 99, 235, 0.13);
 }
 
-.public-login-button,
-.public-primary-button {
+.public-site .public-login-button,
+.public-site .public-primary-button {
   padding: 0 18px;
   color: #ffffff;
   background: #0f172a;
@@ -246,13 +246,13 @@ html, body {
   box-shadow: 0 14px 28px rgba(15, 23, 42, 0.18);
 }
 
-.public-primary-button {
+.public-site .public-primary-button {
   background: var(--public-blue);
   border-color: var(--public-blue);
   box-shadow: 0 14px 28px rgba(37, 99, 235, 0.25);
 }
 
-.public-secondary-button {
+.public-site .public-secondary-button {
   padding: 0 18px;
   color: var(--public-text);
   background: rgba(255, 255, 255, 0.76);
