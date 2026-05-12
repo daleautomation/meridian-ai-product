@@ -9,7 +9,7 @@
     "lint": "eslint",
     "smoke:field-test": "node scripts/smoke-field-test.mjs",
     "truth:check": "tsx scripts/check-truth-readiness.ts",
-    "truth:backfill:dry": "tsx scripts/backfill-phase1-neon.ts"
+    "truth:backfill:dry": "tsx scripts/backfill-phase1-neon.ts --dry-run"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

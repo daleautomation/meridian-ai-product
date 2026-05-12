@@ -65,10 +65,13 @@ type MigrationSummary = {
 };
 
 function parseArgs(argv: string[]): { execute: boolean; allowProduction: boolean } {
-  const known = new Set(["--execute", "--allow-production"]);
+  const known = new Set(["--dry-run", "--execute", "--allow-production"]);
   const unknown = argv.filter((arg) => !known.has(arg));
   if (unknown.length > 0) {
     throw new Error(`Unknown backfill argument(s): ${unknown.join(", ")}`);
+  }
+  if (argv.includes("--dry-run") && argv.includes("--execute")) {
+    throw new Error("Use either --dry-run or --execute, not both");
   }
   return {
     execute: argv.includes("--execute"),
