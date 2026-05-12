@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { getNeonSql } from "../lib/db/neon";
 import type { DurableExecutionOutcome } from "../lib/execution/serverOutcomeStore";
 import { upsertDurableOutcomeRecordToNeon } from "../lib/execution/executionOutcomeNeonAdapter";
 import type { CompanySnapshot } from "../lib/state/companySnapshotStore";
@@ -22,8 +23,138 @@ const COMPANY_SNAPSHOTS_PATH = path.join(ROOT, "data", "companySnapshots.json");
 const USAGE_EVENTS_PATH = process.env.MERIDIAN_EVENT_LOG_PATH
   ?? path.join(ROOT, "data", "usage-events.jsonl");
 
-if (process.env.DIRECT_DATABASE_URL) {
-  process.env.DATABASE_URL = process.env.DIRECT_DATABASE_URL;
+type BackfillConfig = {
+  execute: boolean;
+  allowProduction: boolean;
+  databaseUrl: string;
+  directDatabaseUrl: string;
+  nodeEnv: string;
+  truthStore: string;
+};
+
+type PlannedExecutionOutcome = {
+  record: DurableExecutionOutcome;
+  latestKeys?: string[];
+};
+
+type UsageEventPlan = {
+  events: UsageEvent[];
+  skippedLines: number;
+};
+
+type MigrationPlan = {
+  executionOutcomes: PlannedExecutionOutcome[];
+  companySnapshots: CompanySnapshot[];
+  usageEvents: UsageEventPlan;
+};
+
+type BackfillStats = {
+  rowsScanned: number;
+  rowsInserted: number;
+  rowsSkipped: number;
+  duplicates: number;
+  failures: number;
+};
+
+type MigrationSummary = {
+  executionOutcomes: BackfillStats;
+  companySnapshots: BackfillStats;
+  usageEvents: BackfillStats;
+  total: BackfillStats;
+  durationMs: number;
+};
+
+function parseArgs(argv: string[]): { execute: boolean; allowProduction: boolean } {
+  const known = new Set(["--execute", "--allow-production"]);
+  const unknown = argv.filter((arg) => !known.has(arg));
+  if (unknown.length > 0) {
+    throw new Error(`Unknown backfill argument(s): ${unknown.join(", ")}`);
+  }
+  return {
+    execute: argv.includes("--execute"),
+    allowProduction: argv.includes("--allow-production")
+      || process.env.MERIDIAN_BACKFILL_ALLOW_PRODUCTION?.trim().toLowerCase() === "true",
+  };
+}
+
+function requireEnv(name: "DATABASE_URL" | "DIRECT_DATABASE_URL"): string {
+  const value = process.env[name]?.trim();
+  if (!value) throw new Error(`${name} is required for Phase 1 Neon backfill safety checks`);
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== "postgres:" && parsed.protocol !== "postgresql:") {
+      throw new Error("invalid_protocol");
+    }
+  } catch {
+    throw new Error(`${name} must be a valid postgres:// or postgresql:// URL`);
+  }
+  return value;
+}
+
+function loadConfig(): BackfillConfig {
+  const args = parseArgs(process.argv.slice(2));
+  const truthStore = process.env.MERIDIAN_TRUTH_STORE?.trim().toLowerCase() ?? "file";
+  const nodeEnv = process.env.NODE_ENV?.trim().toLowerCase() ?? "";
+  if (truthStore === "neon") {
+    throw new Error("Phase 1 backfill is blocked while MERIDIAN_TRUTH_STORE=neon");
+  }
+  if (nodeEnv === "production" && !args.allowProduction) {
+    throw new Error("Phase 1 backfill is blocked under NODE_ENV=production without --allow-production or MERIDIAN_BACKFILL_ALLOW_PRODUCTION=true");
+  }
+  if (args.execute && process.env.MERIDIAN_BACKFILL_CONFIRM?.trim().toLowerCase() !== "true") {
+    throw new Error("Write execution requires --execute and MERIDIAN_BACKFILL_CONFIRM=true");
+  }
+  return {
+    ...args,
+    databaseUrl: requireEnv("DATABASE_URL"),
+    directDatabaseUrl: requireEnv("DIRECT_DATABASE_URL"),
+    nodeEnv: nodeEnv || "(unset)",
+    truthStore,
+  };
+}
+
+function maskSegment(value: string): string {
+  if (value.length <= 2) return "*".repeat(value.length);
+  if (value.length <= 6) return `${value[0]}***${value[value.length - 1]}`;
+  return `${value.slice(0, 2)}***${value.slice(-2)}`;
+}
+
+function describeDatabaseUrl(value: string): { host: string; database: string } {
+  const parsed = new URL(value);
+  const hostname = parsed.hostname;
+  const hostParts = hostname.split(".");
+  const host = hostParts.length > 1
+    ? [maskSegment(hostParts[0]), ...hostParts.slice(1)].join(".")
+    : maskSegment(hostname);
+  const databaseName = decodeURIComponent(parsed.pathname.replace(/^\/+/, "")) || "(none)";
+  return {
+    host,
+    database: maskSegment(databaseName),
+  };
+}
+
+function emptyStats(rowsScanned = 0): BackfillStats {
+  return {
+    rowsScanned,
+    rowsInserted: 0,
+    rowsSkipped: 0,
+    duplicates: 0,
+    failures: 0,
+  };
+}
+
+function addStats(a: BackfillStats, b: BackfillStats): BackfillStats {
+  return {
+    rowsScanned: a.rowsScanned + b.rowsScanned,
+    rowsInserted: a.rowsInserted + b.rowsInserted,
+    rowsSkipped: a.rowsSkipped + b.rowsSkipped,
+    duplicates: a.duplicates + b.duplicates,
+    failures: a.failures + b.failures,
+  };
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }
 
 async function readJson<T>(filePath: string): Promise<T | null> {
@@ -51,11 +182,11 @@ function deterministicUuid(input: string): string {
   ].join("-");
 }
 
-async function backfillExecutionOutcomes(): Promise<number> {
+async function loadExecutionOutcomes(): Promise<PlannedExecutionOutcome[]> {
   const store = await readJson<ExecutionStoreFile>(EXECUTION_OUTCOMES_PATH);
-  if (!store?.byWorkspace) return 0;
+  if (!store?.byWorkspace) return [];
 
-  let count = 0;
+  const planned: PlannedExecutionOutcome[] = [];
   for (const [workspace, ws] of Object.entries(store.byWorkspace)) {
     const latestKeysByEvent = new Map<string, string[]>();
     for (const [key, record] of Object.entries(ws.latestByKey ?? {})) {
@@ -65,40 +196,43 @@ async function backfillExecutionOutcomes(): Promise<number> {
     }
 
     for (const record of ws.history ?? []) {
-      await upsertDurableOutcomeRecordToNeon(record, latestKeysByEvent.get(record.eventId));
-      count += 1;
+      planned.push({
+        record,
+        latestKeys: latestKeysByEvent.get(record.eventId),
+      });
     }
   }
-  return count;
+  return planned;
 }
 
-async function backfillCompanySnapshots(): Promise<number> {
+async function loadCompanySnapshots(): Promise<CompanySnapshot[]> {
   const snapshots = await readJson<Record<string, CompanySnapshot>>(COMPANY_SNAPSHOTS_PATH);
-  if (!snapshots) return 0;
+  if (!snapshots) return [];
 
-  let count = 0;
-  for (const snapshot of Object.values(snapshots)) {
-    await upsertSnapshotToNeon(snapshot);
-    count += 1;
-  }
-  return count;
+  return Object.values(snapshots);
 }
 
-async function backfillUsageEvents(): Promise<number> {
+async function loadUsageEvents(): Promise<UsageEventPlan> {
   let raw: string;
   try {
     raw = await fs.readFile(USAGE_EVENTS_PATH, "utf8");
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return 0;
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      return { events: [], skippedLines: 0 };
+    }
     throw err;
   }
 
-  let count = 0;
+  const events: UsageEvent[] = [];
+  let skippedLines = 0;
   for (const line of raw.split("\n")) {
     if (line.trim().length === 0) continue;
     try {
       const parsed = JSON.parse(line) as Partial<UsageEvent>;
-      if (!parsed.eventType) continue;
+      if (!parsed.eventType) {
+        skippedLines += 1;
+        continue;
+      }
       const event: UsageEvent = {
         eventType: parsed.eventType,
         userId: parsed.userId ?? null,
@@ -127,24 +261,181 @@ async function backfillUsageEvents(): Promise<number> {
         metadata: parsed.metadata ?? {},
         eventId: parsed.eventId ?? deterministicUuid(line),
       };
-      const result = await writeEventToNeon(event);
-      if (result.ok) count += 1;
+      events.push(event);
     } catch {
       // Match current reader behavior: malformed JSONL lines are skipped.
+      skippedLines += 1;
     }
   }
-  return count;
+  return { events, skippedLines };
 }
 
-async function main(): Promise<void> {
-  const executionOutcomes = await backfillExecutionOutcomes();
-  const companySnapshots = await backfillCompanySnapshots();
-  const usageEvents = await backfillUsageEvents();
-  console.log("[phase1-neon-backfill] complete", {
+async function loadMigrationPlan(): Promise<MigrationPlan> {
+  const [executionOutcomes, companySnapshots, usageEvents] = await Promise.all([
+    loadExecutionOutcomes(),
+    loadCompanySnapshots(),
+    loadUsageEvents(),
+  ]);
+  return { executionOutcomes, companySnapshots, usageEvents };
+}
+
+function logMigrationTarget(config: BackfillConfig, plan: MigrationPlan): void {
+  console.log("[phase1-neon-backfill] target", {
+    targetMode: "file-to-neon",
+    truthStore: config.truthStore,
+    nodeEnv: config.nodeEnv,
+    execution: config.execute ? "execute" : "dry-run",
+    databaseUrl: describeDatabaseUrl(config.databaseUrl),
+    directDatabaseUrl: describeDatabaseUrl(config.directDatabaseUrl),
+    countsToMigrate: {
+      executionOutcomes: plan.executionOutcomes.length,
+      companySnapshots: plan.companySnapshots.length,
+      usageEvents: plan.usageEvents.events.length,
+      skippedUsageEventLines: plan.usageEvents.skippedLines,
+    },
+  });
+}
+
+async function executionOutcomeExists(record: DurableExecutionOutcome): Promise<boolean> {
+  const sql = getNeonSql();
+  const rows = (await sql`
+    select 1
+    from execution_outcomes
+    where workspace = ${record.workspace}
+      and idempotency_key = ${record.idempotencyKey}
+    limit 1
+  `) as unknown[];
+  return rows.length > 0;
+}
+
+async function companySnapshotExists(snapshot: CompanySnapshot): Promise<boolean> {
+  const sql = getNeonSql();
+  const rows = (await sql`
+    select 1
+    from company_current_state
+    where company_key = ${snapshot.key}
+    limit 1
+  `) as unknown[];
+  return rows.length > 0;
+}
+
+async function usageEventExists(event: UsageEvent): Promise<boolean> {
+  const sql = getNeonSql();
+  const rows = (await sql`
+    select 1
+    from domain_events
+    where event_id = ${event.eventId}
+    limit 1
+  `) as unknown[];
+  return rows.length > 0;
+}
+
+async function backfillExecutionOutcomes(plan: PlannedExecutionOutcome[], execute: boolean): Promise<BackfillStats> {
+  const stats = emptyStats(plan.length);
+  if (!execute) {
+    stats.rowsSkipped = plan.length;
+    return stats;
+  }
+
+  for (const item of plan) {
+    try {
+      const duplicate = await executionOutcomeExists(item.record);
+      if (duplicate) stats.duplicates += 1;
+      await upsertDurableOutcomeRecordToNeon(item.record, item.latestKeys);
+      if (!duplicate) stats.rowsInserted += 1;
+    } catch (err) {
+      stats.failures += 1;
+      console.error("[phase1-neon-backfill] execution outcome failed", {
+        workspace: item.record.workspace,
+        eventId: item.record.eventId,
+        reason: errorMessage(err),
+      });
+    }
+  }
+  return stats;
+}
+
+async function backfillCompanySnapshots(plan: CompanySnapshot[], execute: boolean): Promise<BackfillStats> {
+  const stats = emptyStats(plan.length);
+  if (!execute) {
+    stats.rowsSkipped = plan.length;
+    return stats;
+  }
+
+  for (const snapshot of plan) {
+    try {
+      const duplicate = await companySnapshotExists(snapshot);
+      if (duplicate) stats.duplicates += 1;
+      await upsertSnapshotToNeon(snapshot);
+      if (!duplicate) stats.rowsInserted += 1;
+    } catch (err) {
+      stats.failures += 1;
+      console.error("[phase1-neon-backfill] company snapshot failed", {
+        companyKey: snapshot.key,
+        reason: errorMessage(err),
+      });
+    }
+  }
+  return stats;
+}
+
+async function backfillUsageEvents(plan: UsageEventPlan, execute: boolean): Promise<BackfillStats> {
+  const stats = emptyStats(plan.events.length + plan.skippedLines);
+  stats.rowsSkipped = plan.skippedLines;
+  if (!execute) {
+    stats.rowsSkipped += plan.events.length;
+    return stats;
+  }
+
+  for (const event of plan.events) {
+    try {
+      const duplicate = await usageEventExists(event);
+      if (duplicate) stats.duplicates += 1;
+      const result = await writeEventToNeon(event);
+      if (!result.ok) {
+        stats.failures += 1;
+        console.error("[phase1-neon-backfill] usage event failed", {
+          eventId: event.eventId,
+          reason: result.reason ?? "insert_failed",
+        });
+      } else if (!duplicate) {
+        stats.rowsInserted += 1;
+      }
+    } catch (err) {
+      stats.failures += 1;
+      console.error("[phase1-neon-backfill] usage event failed", {
+        eventId: event.eventId,
+        reason: errorMessage(err),
+      });
+    }
+  }
+  return stats;
+}
+
+async function runBackfill(config: BackfillConfig, plan: MigrationPlan): Promise<MigrationSummary> {
+  const started = Date.now();
+  const executionOutcomes = await backfillExecutionOutcomes(plan.executionOutcomes, config.execute);
+  const companySnapshots = await backfillCompanySnapshots(plan.companySnapshots, config.execute);
+  const usageEvents = await backfillUsageEvents(plan.usageEvents, config.execute);
+  const total = [executionOutcomes, companySnapshots, usageEvents].reduce(
+    (acc, stats) => addStats(acc, stats),
+    emptyStats(),
+  );
+  return {
     executionOutcomes,
     companySnapshots,
     usageEvents,
-  });
+    total,
+    durationMs: Date.now() - started,
+  };
+}
+
+async function main(): Promise<void> {
+  const config = loadConfig();
+  const plan = await loadMigrationPlan();
+  logMigrationTarget(config, plan);
+  const summary = await runBackfill(config, plan);
+  console.log("[phase1-neon-backfill] complete", summary);
 }
 
 main().catch((err) => {
