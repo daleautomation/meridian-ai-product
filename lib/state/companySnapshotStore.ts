@@ -1,29 +1,33 @@
-// Meridian AI — file-based company snapshot persistence.
+// Meridian AI — company current-state persistence.
 //
-// JSON file at data/companySnapshots.json keyed by companyKey() (see
-// lib/mcp/types.ts). Atomic writes via safeWriteJson.
-//
-// Phase 1 seeded: latest/history per tool.
-// Phase 2 extends (additive, backwards-compatible):
-//   - profile       canonical company record (survives inspector drift)
-//   - status        current pipeline status + statusHistory
-//   - notes         operator/sales notes (append-only)
-//   - scoreHistory  opportunity level + confidence over time — auto-appended
-//                   when a generate_opportunity_summary result is recorded
-//   - lastCheckedAt timestamp of the most recent inspection
-//
-// All new fields are optional. Reads coerce missing values to safe defaults
-// so any snapshot written in Phase 1 keeps working untouched.
+// Public API remains stable while Phase 1 can route current state to file,
+// dual-write, or Neon via MERIDIAN_TRUTH_STORE.
 
-import { promises as fs } from "node:fs";
-import path from "node:path";
-import crypto from "node:crypto";
-import type { CompanyRef, ToolResult } from "@/lib/mcp/types";
-import { companyKey } from "@/lib/mcp/types";
-import { safeWriteJson } from "@/lib/utils/fsSafeWrite";
 import type { ContactResolution } from "@/lib/contacts/types";
-
-// ── Schema ──────────────────────────────────────────────────────────────
+import type { CompanyRef, ToolResult } from "@/lib/mcp/types";
+import { dbReadFallbackEnabled, dualWriteStrict, getTruthStoreMode } from "@/lib/truth/types";
+import {
+  addNoteToFile,
+  clearPaidPresenceOverrideFromFile,
+  getSnapshotFromFile,
+  listSnapshotsFromFile,
+  logDealActionToFile,
+  recordToolResultToFile,
+  setContactPreferencesToFile,
+  setNextActionToFile,
+  setPaidPresenceOverrideToFile,
+  setStatusToFile,
+  upsertContactResolutionToFile,
+  upsertPaidPresenceToFile,
+  upsertProfileToFile,
+} from "./companySnapshotFileAdapter";
+import {
+  getSnapshotFromNeon,
+  listSnapshotsFromNeon,
+  recordToolResultToNeon,
+  setNextActionToNeon,
+  setStatusToNeon,
+} from "./companyCurrentStateNeonAdapter";
 
 export type CompanyProfile = {
   name: string;
@@ -31,132 +35,53 @@ export type CompanyProfile = {
   url?: string;
   location?: string;
   placeId?: string;
-  canonicalizedAt: string;   // ISO — last time profile fields were upserted
+  canonicalizedAt: string;
 };
 
 export type CompanyNote = {
   id: string;
-  author: string;            // userId or "system"
+  author: string;
   body: string;
-  createdAt: string;         // ISO
+  createdAt: string;
   tags?: string[];
 };
 
 export type StatusChange = {
-  status: string;            // e.g. "NEW" | "CONTACTED" | "QUALIFIED" | "PITCHED" | "CLOSED_WON" | "CLOSED_LOST" | "ARCHIVED"
-  changedAt: string;         // ISO
-  changedBy: string;         // userId or "system"
+  status: string;
+  changedAt: string;
+  changedBy: string;
   note?: string;
 };
 
 export type ScorePoint = {
-  at: string;                // ISO — when this score was observed
+  at: string;
   opportunityLevel: "HIGH" | "MEDIUM" | "LOW";
-  confidence: number;        // 0–100
-  recommendedAction: string; // mirrors the summary tool's output
-  sourceTool: string;        // which tool produced it (auditability)
+  confidence: number;
+  recommendedAction: string;
+  sourceTool: string;
 };
 
 export type DealAction = {
-  type: string;               // e.g. "call", "email", "voicemail", "meeting", "follow_up"
-  outcome?: string;           // e.g. "connected", "no_answer", "left_vm", "interested", "not_interested"
+  type: string;
+  outcome?: string;
   note?: string;
   performedBy: string;
-  performedAt: string;        // ISO
-};
-
-export type CompanySnapshot = {
-  key: string;
-  company: CompanyRef;
-  createdAt: string;
-  updatedAt: string;
-  latest: Record<string, ToolResult<unknown>>;
-  history: Array<{ tool: string; timestamp: string; result: ToolResult<unknown> }>;
-  // ── Phase 2 additive fields ──
-  profile?: CompanyProfile;
-  status?: string;
-  statusHistory?: StatusChange[];
-  notes?: CompanyNote[];
-  scoreHistory?: ScorePoint[];
-  lastCheckedAt?: string;
-  // ── Phase 3: deal pipeline fields ──
-  lastAction?: DealAction;
-  nextAction?: string;        // e.g. "call", "follow_up_email", "send_proposal"
-  nextActionDate?: string;    // ISO date
-  contactName?: string;       // primary contact at the company
-  contactPhone?: string;
-  contactEmail?: string;
-  dealActions?: DealAction[];  // full action history
-  // ── Phase 4: call attempt tracking ──
-  callAttempts?: number;
-  consecutiveNoAnswers?: number;
-  lastAttemptType?: string;
-  lastAttemptOutcome?: string;
-  escalationStage?: number;   // 0=fresh, 1=first try, 2=second, 3=voicemail+email, 4=deprioritize
-  // ── Phase 5: durable contact resolution ──
-  // Full ContactResolution payload from the most recent resolveContact run,
-  // persisted so first-render UI has real contact paths without a live call.
-  // Operator-curated contactPhone / contactEmail / contactName remain
-  // authoritative — resolver output is a supplement, not an override.
-  contactResolution?: ContactResolution;
-  contactResolutionCheckedAt?: string;  // ISO — when resolveContact last ran
-  // ── Phase 6: explicit manual override block ──
-  // Operator-entered overrides. When present these win over everything —
-  // resolver output, contactResolution, and the legacy contactPhone/Email
-  // fields. The legacy fields are kept as a soft cache (they may equal the
-  // preferred value). Clearing a preferred* field returns control to the
-  // resolver.
-  preferredPhone?: string;
-  preferredEmail?: string;
-  preferredContactName?: string;
-  preferredContactRole?: string;
-  preferredContactSource?: string;
-  contactNotes?: string;
-  preferredUpdatedAt?: string;         // ISO — when overrides were last set
-  preferredUpdatedBy?: string;         // userId or "system"
-  // ── Phase 11: trade + service bucket classification ──
-  // Optional; when absent the UI falls back to TRADE_DEFAULT ("roofing").
-  // Keys match lib/modules/trades.ts. Stored as plain strings to keep
-  // the snapshot store decoupled from the module types.
-  trade?: string;
-  serviceBucket?: string;
-  // ── Phase 12: paid-ad presence detection ──────────────────────────────
-  // Observable intent signal: is this company actively running paid ads
-  // on Google or Meta? Populated by the `check_paid_presence` tool.
-  // `null` on any axis means "unknown" (prefer null over a false positive).
-  paidPresence?: PaidPresence;
-  paidPresenceCheckedAt?: string;  // ISO — when check_paid_presence last ran
-  // Operator-entered override. Strictly separate from detector output;
-  // the detector NEVER writes this field. Set by setPaidPresenceOverride
-  // (e.g. when a rep verifies ads on a call and wants the signal to
-  // persist across detector re-runs). Not yet read by scoring.
-  paidPresenceOverride?: PaidPresenceOverride;
+  performedAt: string;
 };
 
 export type PaidPresenceConfidence = "high" | "medium" | "low";
-
-// Per-source status:
-//   "confirmed" — detector reached the endpoint and confirmed presence
-//                 or absence of a matching advertiser.
-//   "unknown"   — detector skipped (no credentials, short-circuit flag)
-//                 or the match was below the confidence threshold.
-//   "error"     — detector reached a problem state (network / HTTP non-2xx /
-//                 unparsable response). Implies manual verification needed.
 export type PaidPresenceSourceStatus = "confirmed" | "unknown" | "error";
 
 export type PaidPresence = {
   googleAds: boolean | null;
   metaAds: boolean | null;
   confidence: PaidPresenceConfidence;
-  asOf: string;                // ISO timestamp of the detection run
-  evidenceUrls: string[];      // real links used for verification
-  googleDetail?: string;       // short human-readable detector summary
+  asOf: string;
+  evidenceUrls: string[];
+  googleDetail?: string;
   metaDetail?: string;
   googleStatus?: PaidPresenceSourceStatus;
   metaStatus?: PaidPresenceSourceStatus;
-  // Convenience flag: true when at least one axis is non-"confirmed".
-  // The UI uses this to prompt the rep to open the evidenceUrls and
-  // verify manually, then optionally call setPaidPresenceOverride.
   manualVerificationRequired?: boolean;
 };
 
@@ -166,468 +91,51 @@ export type PaidPresenceOverride = {
   confidence?: PaidPresenceConfidence;
   note?: string;
   evidenceUrls?: string[];
-  updatedAt: string;           // ISO
-  updatedBy?: string;          // operator userId (when known)
+  updatedAt: string;
+  updatedBy?: string;
 };
 
-const STORE_PATH = path.join(process.cwd(), "data", "companySnapshots.json");
-const MAX_HISTORY_PER_TOOL = 20;
-const MAX_SCORE_HISTORY = 100;
-const MAX_STATUS_HISTORY = 50;
-
-// In-process serializer. batch_inspect runs multiple workers that each call
-// recordToolResult several times; chained promises keep read-modify-write
-// pairs from clobbering the temp file during rename.
-let writeQueue: Promise<unknown> = Promise.resolve();
-function serialize<T>(fn: () => Promise<T>): Promise<T> {
-  const next = writeQueue.then(fn, fn);
-  writeQueue = next.catch(() => {});
-  return next;
-}
-
-// ── IO ──────────────────────────────────────────────────────────────────
-
-async function readAll(): Promise<Record<string, CompanySnapshot>> {
-  try {
-    const raw = await fs.readFile(STORE_PATH, "utf8");
-    const parsed = JSON.parse(raw);
-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
-    return parsed as Record<string, CompanySnapshot>;
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return {};
-    console.error("[companySnapshotStore] read failed", e);
-    return {};
-  }
-}
-
-async function writeAll(data: Record<string, CompanySnapshot>): Promise<void> {
-  await safeWriteJson(STORE_PATH, data);
-}
-
-// ── Internal helpers ────────────────────────────────────────────────────
-
-function ensureShape(snap: CompanySnapshot): CompanySnapshot {
-  // Normalize any snapshot read from disk so new fields are present.
-  return {
-    ...snap,
-    statusHistory: snap.statusHistory ?? [],
-    notes: snap.notes ?? [],
-    scoreHistory: snap.scoreHistory ?? [],
-  };
-}
-
-function freshSnapshot(company: CompanyRef, now: string): CompanySnapshot {
-  return {
-    key: companyKey(company),
-    company,
-    createdAt: now,
-    updatedAt: now,
-    latest: {},
-    history: [],
-    statusHistory: [],
-    notes: [],
-    scoreHistory: [],
-  };
-}
-
-type SummaryData = {
-  opportunityLevel?: "HIGH" | "MEDIUM" | "LOW";
-  recommendedAction?: string;
+export type CompanySnapshot = {
+  key: string;
+  company: CompanyRef;
+  createdAt: string;
+  updatedAt: string;
+  latest: Record<string, ToolResult<unknown>>;
+  history: Array<{ tool: string; timestamp: string; result: ToolResult<unknown> }>;
+  profile?: CompanyProfile;
+  status?: string;
+  statusHistory?: StatusChange[];
+  notes?: CompanyNote[];
+  scoreHistory?: ScorePoint[];
+  lastCheckedAt?: string;
+  lastAction?: DealAction;
+  nextAction?: string;
+  nextActionDate?: string;
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  dealActions?: DealAction[];
+  callAttempts?: number;
+  consecutiveNoAnswers?: number;
+  lastAttemptType?: string;
+  lastAttemptOutcome?: string;
+  escalationStage?: number;
+  contactResolution?: ContactResolution;
+  contactResolutionCheckedAt?: string;
+  preferredPhone?: string;
+  preferredEmail?: string;
+  preferredContactName?: string;
+  preferredContactRole?: string;
+  preferredContactSource?: string;
+  contactNotes?: string;
+  preferredUpdatedAt?: string;
+  preferredUpdatedBy?: string;
+  trade?: string;
+  serviceBucket?: string;
+  paidPresence?: PaidPresence;
+  paidPresenceCheckedAt?: string;
+  paidPresenceOverride?: PaidPresenceOverride;
 };
-
-function maybeAppendScorePoint(
-  snap: CompanySnapshot,
-  result: ToolResult<unknown>
-): void {
-  if (result.tool !== "generate_opportunity_summary") return;
-  const data = (result.data ?? {}) as SummaryData;
-  if (!data.opportunityLevel) return;
-  const point: ScorePoint = {
-    at: result.timestamp,
-    opportunityLevel: data.opportunityLevel,
-    confidence: result.confidence,
-    recommendedAction: data.recommendedAction ?? "MONITOR",
-    sourceTool: result.tool,
-  };
-  snap.scoreHistory = [...(snap.scoreHistory ?? []), point].slice(-MAX_SCORE_HISTORY);
-}
-
-function boundHistory(snap: CompanySnapshot): void {
-  const perTool = new Map<string, typeof snap.history>();
-  for (const entry of snap.history) {
-    const list = perTool.get(entry.tool) ?? [];
-    list.push(entry);
-    perTool.set(entry.tool, list);
-  }
-  snap.history = [];
-  for (const list of perTool.values()) {
-    snap.history.push(...list.slice(-MAX_HISTORY_PER_TOOL));
-  }
-  snap.history.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
-}
-
-// ── Public API: Phase 1 (unchanged signatures) ──────────────────────────
-
-export async function getSnapshot(company: CompanyRef): Promise<CompanySnapshot | null> {
-  const all = await readAll();
-  const hit = all[companyKey(company)];
-  return hit ? ensureShape(hit) : null;
-}
-
-export async function listSnapshots(): Promise<CompanySnapshot[]> {
-  const all = await readAll();
-  return Object.values(all)
-    .map(ensureShape)
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-}
-
-export async function recordToolResult<T>(
-  company: CompanyRef,
-  result: ToolResult<T>
-): Promise<CompanySnapshot> {
-  return serialize(() => recordToolResultUnsafe(company, result));
-}
-
-async function recordToolResultUnsafe<T>(
-  company: CompanyRef,
-  result: ToolResult<T>
-): Promise<CompanySnapshot> {
-  const all = await readAll();
-  const key = companyKey(company);
-  const now = new Date().toISOString();
-  const existing = all[key] ? ensureShape(all[key]) : null;
-
-  const snap: CompanySnapshot = existing
-    ? {
-        ...existing,
-        company: { ...existing.company, ...company },
-        updatedAt: now,
-        lastCheckedAt: now,
-        latest: { ...existing.latest, [result.tool]: result as ToolResult<unknown> },
-        history: [
-          ...existing.history,
-          { tool: result.tool, timestamp: result.timestamp, result: result as ToolResult<unknown> },
-        ],
-      }
-    : {
-        ...freshSnapshot(company, now),
-        lastCheckedAt: now,
-        latest: { [result.tool]: result as ToolResult<unknown> },
-        history: [
-          { tool: result.tool, timestamp: result.timestamp, result: result as ToolResult<unknown> },
-        ],
-      };
-
-  maybeAppendScorePoint(snap, result as ToolResult<unknown>);
-  boundHistory(snap);
-
-  all[key] = snap;
-  await writeAll(all);
-  return snap;
-}
-
-// ── Public API: Phase 2 additive ────────────────────────────────────────
-
-export async function upsertProfile(
-  company: CompanyRef,
-  profile: Partial<Omit<CompanyProfile, "canonicalizedAt">>
-): Promise<CompanySnapshot> {
-  return serialize(() => upsertProfileUnsafe(company, profile));
-}
-
-async function upsertProfileUnsafe(
-  company: CompanyRef,
-  profile: Partial<Omit<CompanyProfile, "canonicalizedAt">>
-): Promise<CompanySnapshot> {
-  const all = await readAll();
-  const key = companyKey(company);
-  const now = new Date().toISOString();
-  const existing = all[key] ? ensureShape(all[key]) : freshSnapshot(company, now);
-
-  const nextProfile: CompanyProfile = {
-    name: profile.name ?? existing.profile?.name ?? company.name,
-    domain: profile.domain ?? existing.profile?.domain ?? company.domain,
-    url: profile.url ?? existing.profile?.url ?? company.url,
-    location: profile.location ?? existing.profile?.location ?? company.location,
-    placeId: profile.placeId ?? existing.profile?.placeId ?? company.placeId,
-    canonicalizedAt: now,
-  };
-
-  const next: CompanySnapshot = {
-    ...existing,
-    company: { ...existing.company, ...company },
-    profile: nextProfile,
-    updatedAt: now,
-  };
-
-  all[key] = next;
-  await writeAll(all);
-  return next;
-}
-
-export async function addNote(
-  company: CompanyRef,
-  note: { author: string; body: string; tags?: string[] }
-): Promise<{ snapshot: CompanySnapshot; note: CompanyNote }> {
-  return serialize(() => addNoteUnsafe(company, note));
-}
-
-async function addNoteUnsafe(
-  company: CompanyRef,
-  note: { author: string; body: string; tags?: string[] }
-): Promise<{ snapshot: CompanySnapshot; note: CompanyNote }> {
-  const all = await readAll();
-  const key = companyKey(company);
-  const now = new Date().toISOString();
-  const existing = all[key] ? ensureShape(all[key]) : freshSnapshot(company, now);
-
-  const entry: CompanyNote = {
-    id: crypto.randomUUID(),
-    author: note.author,
-    body: note.body,
-    createdAt: now,
-    tags: note.tags,
-  };
-
-  const next: CompanySnapshot = {
-    ...existing,
-    notes: [...(existing.notes ?? []), entry],
-    updatedAt: now,
-  };
-
-  all[key] = next;
-  await writeAll(all);
-  return { snapshot: next, note: entry };
-}
-
-export async function setStatus(
-  company: CompanyRef,
-  change: { status: string; changedBy: string; note?: string }
-): Promise<{ snapshot: CompanySnapshot; change: StatusChange }> {
-  return serialize(() => setStatusUnsafe(company, change));
-}
-
-async function setStatusUnsafe(
-  company: CompanyRef,
-  change: { status: string; changedBy: string; note?: string }
-): Promise<{ snapshot: CompanySnapshot; change: StatusChange }> {
-  const all = await readAll();
-  const key = companyKey(company);
-  const now = new Date().toISOString();
-  const existing = all[key] ? ensureShape(all[key]) : freshSnapshot(company, now);
-
-  const entry: StatusChange = {
-    status: change.status,
-    changedAt: now,
-    changedBy: change.changedBy,
-    note: change.note,
-  };
-
-  const history = [...(existing.statusHistory ?? []), entry].slice(-MAX_STATUS_HISTORY);
-
-  const next: CompanySnapshot = {
-    ...existing,
-    status: change.status,
-    statusHistory: history,
-    updatedAt: now,
-  };
-
-  all[key] = next;
-  await writeAll(all);
-  return { snapshot: next, change: entry };
-}
-
-// ── Phase 3: deal pipeline actions ─────────────────────────────────────
-
-const MAX_DEAL_ACTIONS = 100;
-
-export async function logDealAction(
-  company: CompanyRef,
-  action: Omit<DealAction, "performedAt"> & { performedAt?: string }
-): Promise<{ snapshot: CompanySnapshot; action: DealAction }> {
-  return serialize(() => logDealActionUnsafe(company, action));
-}
-
-async function logDealActionUnsafe(
-  company: CompanyRef,
-  action: Omit<DealAction, "performedAt"> & { performedAt?: string }
-): Promise<{ snapshot: CompanySnapshot; action: DealAction }> {
-  const all = await readAll();
-  const key = companyKey(company);
-  const now = new Date().toISOString();
-  const existing = all[key] ? ensureShape(all[key]) : freshSnapshot(company, now);
-
-  const entry: DealAction = {
-    type: action.type,
-    outcome: action.outcome,
-    note: action.note,
-    performedBy: action.performedBy,
-    performedAt: action.performedAt ?? now,
-  };
-
-  // Call attempt tracking
-  const isCallAttempt = ["call", "voicemail"].includes(action.type);
-  const callAttempts = (existing.callAttempts ?? 0) + (isCallAttempt ? 1 : 0);
-  const isNoAnswer = action.outcome === "no_answer" || action.outcome === "left_vm";
-  const consecutiveNoAnswers = isNoAnswer
-    ? (existing.consecutiveNoAnswers ?? 0) + 1
-    : (action.outcome === "connected" || action.outcome === "interested") ? 0 : (existing.consecutiveNoAnswers ?? 0);
-
-  // Escalation stage: auto-advance based on consecutive no-answers
-  let escalationStage = existing.escalationStage ?? 0;
-  if (isCallAttempt) {
-    if (consecutiveNoAnswers === 0) escalationStage = 0;
-    else if (consecutiveNoAnswers === 1) escalationStage = 1;
-    else if (consecutiveNoAnswers === 2) escalationStage = 2;
-    else if (consecutiveNoAnswers === 3) escalationStage = 3;
-    else escalationStage = 4;
-  }
-
-  const next: CompanySnapshot = {
-    ...existing,
-    lastAction: entry,
-    dealActions: [...(existing.dealActions ?? []), entry].slice(-MAX_DEAL_ACTIONS),
-    callAttempts,
-    consecutiveNoAnswers,
-    lastAttemptType: isCallAttempt ? action.type : (existing.lastAttemptType ?? undefined),
-    lastAttemptOutcome: isCallAttempt ? action.outcome : (existing.lastAttemptOutcome ?? undefined),
-    escalationStage,
-    updatedAt: now,
-  };
-
-  all[key] = next;
-  await writeAll(all);
-  return { snapshot: next, action: entry };
-}
-
-// ── Phase 5: contact resolution persistence ────────────────────────────
-// Stores the full ContactResolution payload from resolveContact() so first
-// render has real contact data without another round trip. Also lifts the
-// best phone/email into the legacy contactPhone/Email fields, but ONLY if
-// those fields are empty — operator-curated values always win.
-
-export async function upsertContactResolution(
-  company: CompanyRef,
-  resolution: ContactResolution,
-): Promise<CompanySnapshot> {
-  return serialize(() => upsertContactResolutionUnsafe(company, resolution));
-}
-
-async function upsertContactResolutionUnsafe(
-  company: CompanyRef,
-  resolution: ContactResolution,
-): Promise<CompanySnapshot> {
-  const all = await readAll();
-  const key = companyKey(company);
-  const now = new Date().toISOString();
-  const existing = all[key] ? ensureShape(all[key]) : freshSnapshot(company, now);
-
-  // Lift into legacy contactPhone/Email fields only when no operator value
-  // is already stored. Matches the project rule that operator-curated data
-  // is authoritative.
-  const resolvedPhone = resolution.phone ?? undefined;
-  const resolvedEmail = resolution.email ?? undefined;
-  // `resolution.contactName` is the enriched person-level name (Hunter,
-  // site-derived, etc.). `matchedName` is the business entity and must
-  // never be backfilled into the person slot — otherwise "Acme Roofing
-  // LLC" ends up rendered as the contact person on the UI.
-  const resolvedPersonName = resolution.contactName ?? undefined;
-
-  const next: CompanySnapshot = {
-    ...existing,
-    company: { ...existing.company, ...company },
-    contactResolution: resolution,
-    contactResolutionCheckedAt: resolution.lastCheckedAt ?? now,
-    contactPhone: existing.contactPhone ?? resolvedPhone,
-    contactEmail: existing.contactEmail ?? resolvedEmail,
-    contactName: existing.contactName ?? resolvedPersonName,
-    updatedAt: now,
-  };
-
-  all[key] = next;
-  await writeAll(all);
-  return next;
-}
-
-// ── Phase 12: paid-ad presence persistence ────────────────────────────
-// Additive. Writes a fresh PaidPresence snapshot keyed on the company.
-// Operator-curated fields are not touched. Never lifts into any other
-// slot; closeability scoring reads this field directly.
-
-export async function upsertPaidPresence(
-  company: CompanyRef,
-  presence: PaidPresence,
-): Promise<CompanySnapshot> {
-  return serialize(() => upsertPaidPresenceUnsafe(company, presence));
-}
-
-async function upsertPaidPresenceUnsafe(
-  company: CompanyRef,
-  presence: PaidPresence,
-): Promise<CompanySnapshot> {
-  const all = await readAll();
-  const key = companyKey(company);
-  const now = new Date().toISOString();
-  const existing = all[key] ? ensureShape(all[key]) : freshSnapshot(company, now);
-
-  // Detector is never allowed to touch paidPresenceOverride — that slot
-  // is strictly operator-owned.
-  const next: CompanySnapshot = {
-    ...existing,
-    company: { ...existing.company, ...company },
-    paidPresence: presence,
-    paidPresenceCheckedAt: presence.asOf ?? now,
-    updatedAt: now,
-  };
-
-  all[key] = next;
-  await writeAll(all);
-  return next;
-}
-
-// Operator-only writer for the override slot. The detector must never
-// call this. Future scoring can prefer the override when present, but
-// for now the override is purely durable annotation — nothing reads it.
-export async function setPaidPresenceOverride(
-  company: CompanyRef,
-  override: PaidPresenceOverride,
-): Promise<CompanySnapshot> {
-  return serialize(async () => {
-    const all = await readAll();
-    const key = companyKey(company);
-    const now = new Date().toISOString();
-    const existing = all[key] ? ensureShape(all[key]) : freshSnapshot(company, now);
-    const next: CompanySnapshot = {
-      ...existing,
-      company: { ...existing.company, ...company },
-      paidPresenceOverride: { ...override, updatedAt: override.updatedAt ?? now },
-      updatedAt: now,
-    };
-    all[key] = next;
-    await writeAll(all);
-    return next;
-  });
-}
-
-export async function clearPaidPresenceOverride(company: CompanyRef): Promise<CompanySnapshot | null> {
-  return serialize(async () => {
-    const all = await readAll();
-    const key = companyKey(company);
-    const existing = all[key];
-    if (!existing) return null;
-    const { paidPresenceOverride: _drop, ...rest } = ensureShape(existing);
-    void _drop;
-    const next: CompanySnapshot = { ...rest, updatedAt: new Date().toISOString() };
-    all[key] = next;
-    await writeAll(all);
-    return next;
-  });
-}
-
-// ── Phase 6: manual contact overrides ──────────────────────────────────
-// Operator-entered values that take precedence over resolver output. Only
-// fields present in `update` are changed; pass an empty string ("") to
-// clear a field and return that slot to resolver control.
 
 export type ContactPreferencesUpdate = {
   preferredPhone?: string;
@@ -639,76 +147,153 @@ export type ContactPreferencesUpdate = {
   performedBy: string;
 };
 
-export async function setContactPreferences(
-  company: CompanyRef,
-  update: ContactPreferencesUpdate,
-): Promise<CompanySnapshot> {
-  return serialize(() => setContactPreferencesUnsafe(company, update));
+function mergeSnapshots(fileRows: CompanySnapshot[], neonRows: CompanySnapshot[]): CompanySnapshot[] {
+  const byKey = new Map<string, CompanySnapshot>();
+  for (const row of fileRows) byKey.set(row.key, row);
+  for (const row of neonRows) byKey.set(row.key, row);
+  return Array.from(byKey.values())
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 }
 
-async function setContactPreferencesUnsafe(
+export async function getSnapshot(company: CompanyRef): Promise<CompanySnapshot | null> {
+  const mode = getTruthStoreMode();
+  if (mode === "file") return getSnapshotFromFile(company);
+  try {
+    const neonHit = await getSnapshotFromNeon(company);
+    if (neonHit || !dbReadFallbackEnabled()) return neonHit;
+  } catch (err) {
+    if (!dbReadFallbackEnabled()) throw err;
+    console.error("[companySnapshotStore] Neon getSnapshot failed; falling back to file", err);
+  }
+  return getSnapshotFromFile(company);
+}
+
+export async function listSnapshots(): Promise<CompanySnapshot[]> {
+  const mode = getTruthStoreMode();
+  if (mode === "file") return listSnapshotsFromFile();
+  try {
+    const neonRows = await listSnapshotsFromNeon();
+    if (!dbReadFallbackEnabled()) return neonRows;
+    const fileRows = await listSnapshotsFromFile();
+    return mergeSnapshots(fileRows, neonRows);
+  } catch (err) {
+    if (!dbReadFallbackEnabled()) throw err;
+    console.error("[companySnapshotStore] Neon listSnapshots failed; falling back to file", err);
+    return listSnapshotsFromFile();
+  }
+}
+
+export async function recordToolResult<T>(
   company: CompanyRef,
-  update: ContactPreferencesUpdate,
+  result: ToolResult<T>,
 ): Promise<CompanySnapshot> {
-  const all = await readAll();
-  const key = companyKey(company);
-  const now = new Date().toISOString();
-  const existing = all[key] ? ensureShape(all[key]) : freshSnapshot(company, now);
+  const mode = getTruthStoreMode();
+  if (mode === "file") return recordToolResultToFile(company, result);
+  if (mode === "neon") return recordToolResultToNeon(company, result);
+  try {
+    const neonResult = await recordToolResultToNeon(company, result);
+    await recordToolResultToFile(company, result).catch((err) => {
+      console.error("[companySnapshotStore] dual file recordToolResult failed", err);
+    });
+    return neonResult;
+  } catch (err) {
+    console.error("[companySnapshotStore] dual Neon recordToolResult failed", err);
+    if (dualWriteStrict()) throw err;
+    return recordToolResultToFile(company, result);
+  }
+}
 
-  // Treat empty strings as "clear this field" so operators can remove an
-  // override without touching the JSON.
-  const merge = <T extends string | undefined>(incoming: T, current: T): T => {
-    if (incoming === undefined) return current;
-    if (incoming === "") return undefined as T;
-    return incoming;
-  };
-
-  const next: CompanySnapshot = {
-    ...existing,
-    company: { ...existing.company, ...company },
-    preferredPhone: merge(update.preferredPhone, existing.preferredPhone),
-    preferredEmail: merge(update.preferredEmail, existing.preferredEmail),
-    preferredContactName: merge(update.preferredContactName, existing.preferredContactName),
-    preferredContactRole: merge(update.preferredContactRole, existing.preferredContactRole),
-    preferredContactSource: merge(update.preferredContactSource, existing.preferredContactSource),
-    contactNotes: merge(update.contactNotes, existing.contactNotes),
-    preferredUpdatedAt: now,
-    preferredUpdatedBy: update.performedBy,
-    updatedAt: now,
-  };
-
-  all[key] = next;
-  await writeAll(all);
-  return next;
+export async function setStatus(
+  company: CompanyRef,
+  change: { status: string; changedBy: string; note?: string },
+): Promise<{ snapshot: CompanySnapshot; change: StatusChange }> {
+  const mode = getTruthStoreMode();
+  if (mode === "file") return setStatusToFile(company, change);
+  if (mode === "neon") return setStatusToNeon(company, change);
+  try {
+    const neonResult = await setStatusToNeon(company, change);
+    await setStatusToFile(company, change).catch((err) => {
+      console.error("[companySnapshotStore] dual file setStatus failed", err);
+    });
+    return neonResult;
+  } catch (err) {
+    console.error("[companySnapshotStore] dual Neon setStatus failed", err);
+    if (dualWriteStrict()) throw err;
+    return setStatusToFile(company, change);
+  }
 }
 
 export async function setNextAction(
   company: CompanyRef,
-  update: { nextAction: string; nextActionDate?: string; contactName?: string; contactPhone?: string; contactEmail?: string }
+  update: { nextAction: string; nextActionDate?: string; contactName?: string; contactPhone?: string; contactEmail?: string },
 ): Promise<CompanySnapshot> {
-  return serialize(() => setNextActionUnsafe(company, update));
+  const mode = getTruthStoreMode();
+  if (mode === "file") return setNextActionToFile(company, update);
+  if (mode === "neon") return setNextActionToNeon(company, update);
+  try {
+    const neonResult = await setNextActionToNeon(company, update);
+    await setNextActionToFile(company, update).catch((err) => {
+      console.error("[companySnapshotStore] dual file setNextAction failed", err);
+    });
+    return neonResult;
+  } catch (err) {
+    console.error("[companySnapshotStore] dual Neon setNextAction failed", err);
+    if (dualWriteStrict()) throw err;
+    return setNextActionToFile(company, update);
+  }
 }
 
-async function setNextActionUnsafe(
+// Out-of-scope Phase 1 fields keep using the local file adapter so this
+// migration does not become a full CRM/snapshot rewrite.
+export async function upsertProfile(
   company: CompanyRef,
-  update: { nextAction: string; nextActionDate?: string; contactName?: string; contactPhone?: string; contactEmail?: string }
+  profile: Partial<Omit<CompanyProfile, "canonicalizedAt">>,
 ): Promise<CompanySnapshot> {
-  const all = await readAll();
-  const key = companyKey(company);
-  const now = new Date().toISOString();
-  const existing = all[key] ? ensureShape(all[key]) : freshSnapshot(company, now);
+  return upsertProfileToFile(company, profile);
+}
 
-  const next: CompanySnapshot = {
-    ...existing,
-    nextAction: update.nextAction,
-    nextActionDate: update.nextActionDate,
-    contactName: update.contactName ?? existing.contactName,
-    contactPhone: update.contactPhone ?? existing.contactPhone,
-    contactEmail: update.contactEmail ?? existing.contactEmail,
-    updatedAt: now,
-  };
+export async function addNote(
+  company: CompanyRef,
+  note: { author: string; body: string; tags?: string[] },
+): Promise<{ snapshot: CompanySnapshot; note: CompanyNote }> {
+  return addNoteToFile(company, note);
+}
 
-  all[key] = next;
-  await writeAll(all);
-  return next;
+export async function logDealAction(
+  company: CompanyRef,
+  action: Omit<DealAction, "performedAt"> & { performedAt?: string },
+): Promise<{ snapshot: CompanySnapshot; action: DealAction }> {
+  return logDealActionToFile(company, action);
+}
+
+export async function upsertContactResolution(
+  company: CompanyRef,
+  resolution: ContactResolution,
+): Promise<CompanySnapshot> {
+  return upsertContactResolutionToFile(company, resolution);
+}
+
+export async function upsertPaidPresence(
+  company: CompanyRef,
+  presence: PaidPresence,
+): Promise<CompanySnapshot> {
+  return upsertPaidPresenceToFile(company, presence);
+}
+
+export async function setPaidPresenceOverride(
+  company: CompanyRef,
+  override: PaidPresenceOverride,
+): Promise<CompanySnapshot> {
+  return setPaidPresenceOverrideToFile(company, override);
+}
+
+export async function clearPaidPresenceOverride(company: CompanyRef): Promise<CompanySnapshot | null> {
+  return clearPaidPresenceOverrideFromFile(company);
+}
+
+export async function setContactPreferences(
+  company: CompanyRef,
+  update: ContactPreferencesUpdate,
+): Promise<CompanySnapshot> {
+  return setContactPreferencesToFile(company, update);
 }
