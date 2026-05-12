@@ -4,8 +4,9 @@ import { SessionProvider } from "@/components/SessionProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Meridian AI",
-  description: "Meridian — who to call first.",
+  title: "Meridian AI | Operator-grade intelligence systems",
+  description:
+    "Meridian AI audits operations and builds custom intelligence workspaces for cleaner execution, better lead quality, and stronger revenue.",
 };
 
 export const viewport: Viewport = {
