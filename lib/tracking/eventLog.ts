@@ -3,7 +3,7 @@
 // Public API remains stable while Phase 1 can route domain events to file,
 // dual-write, or Neon via MERIDIAN_TRUTH_STORE.
 
-import { dbReadFallbackEnabled, dualWriteStrict, getTruthStoreMode } from "@/lib/truth/types";
+import { dbReadFallbackEnabled, dualWriteStrict, getTruthStoreMode, logTruthStoreModeGuard } from "@/lib/truth/types";
 import {
   EVENT_LOG_PATH,
   readRecentEventsFromFile,
@@ -78,6 +78,7 @@ export function makeEvent(input: Partial<UsageEvent> & { eventType: string }): U
 
 export async function writeEvent(event: UsageEvent): Promise<{ ok: boolean; reason?: string }> {
   const mode = getTruthStoreMode();
+  logTruthStoreModeGuard("event log", mode);
   if (mode === "file") return writeEventToFile(event);
 
   const neonResult = await writeEventToNeon(event);
@@ -97,6 +98,7 @@ export async function writeEvent(event: UsageEvent): Promise<{ ok: boolean; reas
 /** Read recent events for inspection. Skips malformed lines in file mode. */
 export async function readRecentEvents(limit = 200): Promise<UsageEvent[]> {
   const mode = getTruthStoreMode();
+  logTruthStoreModeGuard("event log", mode);
   if (mode === "file") return readRecentEventsFromFile(limit);
 
   try {

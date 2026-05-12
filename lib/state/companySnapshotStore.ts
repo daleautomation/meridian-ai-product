@@ -5,7 +5,7 @@
 
 import type { ContactResolution } from "@/lib/contacts/types";
 import type { CompanyRef, ToolResult } from "@/lib/mcp/types";
-import { dbReadFallbackEnabled, dualWriteStrict, getTruthStoreMode } from "@/lib/truth/types";
+import { dbReadFallbackEnabled, dualWriteStrict, getTruthStoreMode, logTruthStoreModeGuard } from "@/lib/truth/types";
 import {
   addNoteToFile,
   clearPaidPresenceOverrideFromFile,
@@ -157,6 +157,7 @@ function mergeSnapshots(fileRows: CompanySnapshot[], neonRows: CompanySnapshot[]
 
 export async function getSnapshot(company: CompanyRef): Promise<CompanySnapshot | null> {
   const mode = getTruthStoreMode();
+  logTruthStoreModeGuard("company snapshots", mode);
   if (mode === "file") return getSnapshotFromFile(company);
   try {
     const neonHit = await getSnapshotFromNeon(company);
@@ -170,6 +171,7 @@ export async function getSnapshot(company: CompanyRef): Promise<CompanySnapshot 
 
 export async function listSnapshots(): Promise<CompanySnapshot[]> {
   const mode = getTruthStoreMode();
+  logTruthStoreModeGuard("company snapshots", mode);
   if (mode === "file") return listSnapshotsFromFile();
   try {
     const neonRows = await listSnapshotsFromNeon();
@@ -188,6 +190,7 @@ export async function recordToolResult<T>(
   result: ToolResult<T>,
 ): Promise<CompanySnapshot> {
   const mode = getTruthStoreMode();
+  logTruthStoreModeGuard("company snapshots", mode);
   if (mode === "file") return recordToolResultToFile(company, result);
   if (mode === "neon") return recordToolResultToNeon(company, result);
   try {
@@ -208,6 +211,7 @@ export async function setStatus(
   change: { status: string; changedBy: string; note?: string },
 ): Promise<{ snapshot: CompanySnapshot; change: StatusChange }> {
   const mode = getTruthStoreMode();
+  logTruthStoreModeGuard("company snapshots", mode);
   if (mode === "file") return setStatusToFile(company, change);
   if (mode === "neon") return setStatusToNeon(company, change);
   try {
@@ -228,6 +232,7 @@ export async function setNextAction(
   update: { nextAction: string; nextActionDate?: string; contactName?: string; contactPhone?: string; contactEmail?: string },
 ): Promise<CompanySnapshot> {
   const mode = getTruthStoreMode();
+  logTruthStoreModeGuard("company snapshots", mode);
   if (mode === "file") return setNextActionToFile(company, update);
   if (mode === "neon") return setNextActionToNeon(company, update);
   try {

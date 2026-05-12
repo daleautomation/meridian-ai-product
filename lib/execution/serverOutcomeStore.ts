@@ -8,6 +8,7 @@ import {
   dbReadFallbackEnabled,
   dualWriteStrict,
   getTruthStoreMode,
+  logTruthStoreModeGuard,
 } from "@/lib/truth/types";
 import {
   findTerminalDurableOutcomeInFile,
@@ -120,6 +121,7 @@ function mergeOutcomeLists(
 
 export async function recordDurableOutcome(input: DurableOutcomeInput): Promise<RecordResult> {
   const mode = getTruthStoreMode();
+  logTruthStoreModeGuard("execution outcomes", mode);
   if (mode === "file") return recordDurableOutcomeToFile(input);
 
   if (mode === "neon") return recordDurableOutcomeToNeon(input);
@@ -143,6 +145,7 @@ export async function findTerminalDurableOutcome(
   identityKeysInput: Array<string | null | undefined>,
 ): Promise<DurableExecutionOutcome | null> {
   const mode = getTruthStoreMode();
+  logTruthStoreModeGuard("execution outcomes", mode);
   if (mode === "file") return findTerminalDurableOutcomeInFile(workspace, identityKeysInput);
 
   try {
@@ -157,6 +160,7 @@ export async function findTerminalDurableOutcome(
 
 export async function listDurableOutcomes(workspace: string): Promise<DurableExecutionOutcome[]> {
   const mode = getTruthStoreMode();
+  logTruthStoreModeGuard("execution outcomes", mode);
   if (mode === "file") return listDurableOutcomesFromFile(workspace);
 
   try {
@@ -173,6 +177,7 @@ export async function listDurableOutcomes(workspace: string): Promise<DurableExe
 
 export async function loadDurableOutcomeMap(workspace: string): Promise<Record<string, ExecutionOutcomeMapValue>> {
   const mode = getTruthStoreMode();
+  logTruthStoreModeGuard("execution outcomes", mode);
   if (mode === "file") return loadDurableOutcomeMapFromFile(workspace);
 
   try {
