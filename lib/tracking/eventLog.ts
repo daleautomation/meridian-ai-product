@@ -4,6 +4,7 @@
 // dual-write, or Neon via MERIDIAN_TRUTH_STORE.
 
 import { dbReadFallbackEnabled, dualWriteStrict, getTruthStoreMode, logTruthStoreModeGuard } from "@/lib/truth/types";
+import { RUNTIME_NEON_MUTATION_INTENT } from "@/lib/db/neonMutationBarrier";
 import {
   EVENT_LOG_PATH,
   readRecentEventsFromFile,
@@ -81,7 +82,7 @@ export async function writeEvent(event: UsageEvent): Promise<{ ok: boolean; reas
   logTruthStoreModeGuard("event log", mode);
   if (mode === "file") return writeEventToFile(event);
 
-  const neonResult = await writeEventToNeon(event);
+  const neonResult = await writeEventToNeon(event, { mutation: RUNTIME_NEON_MUTATION_INTENT });
   if (neonResult.ok) {
     if (mode === "dual") {
       await writeEventToFile(event).catch((err) => {

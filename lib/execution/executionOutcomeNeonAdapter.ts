@@ -1,6 +1,10 @@
 import crypto from "node:crypto";
 import type { CompanyRef } from "@/lib/mcp/types";
 import { getNeonSql } from "@/lib/db/neon";
+import {
+  assertNeonMutationAllowed,
+  type NeonMutationIntent,
+} from "@/lib/db/neonMutationBarrier";
 import { setNextAction, setStatus } from "@/lib/state/companySnapshotStore";
 import type {
   DurableExecutionOutcome,
@@ -18,6 +22,15 @@ import {
 } from "./durableOutcomeShared";
 
 type OutcomeRow = Record<string, unknown>;
+type NeonMutationOptions = { mutation?: NeonMutationIntent };
+
+function assertOutcomeMutation(operation: string, mutation?: NeonMutationIntent): void {
+  assertNeonMutationAllowed({
+    operation,
+    execute: mutation?.execute ?? false,
+    confirmationEnv: mutation?.confirmationEnv,
+  });
+}
 
 function iso(value: unknown): string {
   if (value instanceof Date) return value.toISOString();
@@ -130,7 +143,12 @@ async function existingFor(input: DurableOutcomeInput): Promise<DurableExecution
   return null;
 }
 
-async function insertOutcome(record: DurableExecutionOutcome, latestKeys: string[]): Promise<boolean> {
+async function insertOutcome(
+  record: DurableExecutionOutcome,
+  latestKeys: string[],
+  mutation?: NeonMutationIntent,
+): Promise<boolean> {
+  assertOutcomeMutation("execution outcome insert", mutation);
   const sql = getNeonSql();
   const response = JSON.stringify({ outcome: record });
   await sql`
@@ -171,9 +189,12 @@ async function insertOutcome(record: DurableExecutionOutcome, latestKeys: string
 export async function upsertDurableOutcomeRecordToNeon(
   record: DurableExecutionOutcome,
   latestKeys = unscopedIdentityKeys(record),
+  options: NeonMutationOptions = {},
 ): Promise<void> {
-  const inserted = await insertOutcome(record, latestKeys);
+  assertOutcomeMutation("execution outcome upsert", options.mutation);
+  const inserted = await insertOutcome(record, latestKeys, options.mutation);
   if (!inserted) {
+    assertOutcomeMutation("execution outcome latest upsert", options.mutation);
     const sql = getNeonSql();
     for (const key of latestKeys) {
       await sql`
@@ -188,7 +209,9 @@ export async function upsertDurableOutcomeRecordToNeon(
 
 export async function recordDurableOutcomeToNeon(
   input: DurableOutcomeInput,
+  options: NeonMutationOptions = {},
 ): Promise<{ outcome: DurableExecutionOutcome; persisted: boolean; crmUpdated: boolean; duplicate: boolean }> {
+  assertOutcomeMutation("execution outcome record", options.mutation);
   const idempotencyKey = deriveIdempotencyKey(input);
   const duplicate = await findDuplicate(input.workspace, idempotencyKey);
   if (duplicate) return { outcome: duplicate, persisted: true, crmUpdated: false, duplicate: true };
@@ -218,7 +241,7 @@ export async function recordDurableOutcomeToNeon(
     metadata: input.metadata ?? {},
   };
 
-  const inserted = await insertOutcome(outcome, unscopedIdentityKeys(outcome));
+  const inserted = await insertOutcome(outcome, unscopedIdentityKeys(outcome), options.mutation);
   if (!inserted) {
     const racedDuplicate = await findDuplicate(input.workspace, idempotencyKey);
     if (racedDuplicate) return { outcome: racedDuplicate, persisted: true, crmUpdated: false, duplicate: true };

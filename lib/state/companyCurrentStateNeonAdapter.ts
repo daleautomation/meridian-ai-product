@@ -1,5 +1,9 @@
 import { companyKey, type CompanyRef, type ToolResult } from "@/lib/mcp/types";
 import { getNeonSql } from "@/lib/db/neon";
+import {
+  assertNeonMutationAllowed,
+  type NeonMutationIntent,
+} from "@/lib/db/neonMutationBarrier";
 import type {
   CompanyProfile,
   CompanySnapshot,
@@ -9,10 +13,19 @@ import type {
 import { ensureCompanySnapshotShape } from "./companySnapshotFileAdapter";
 
 type SnapshotRow = Record<string, unknown>;
+type NeonMutationOptions = { mutation?: NeonMutationIntent };
 
 const MAX_HISTORY_PER_TOOL = 20;
 const MAX_SCORE_HISTORY = 100;
 const MAX_STATUS_HISTORY = 50;
+
+function assertSnapshotMutation(operation: string, mutation?: NeonMutationIntent): void {
+  assertNeonMutationAllowed({
+    operation,
+    execute: mutation?.execute ?? false,
+    confirmationEnv: mutation?.confirmationEnv,
+  });
+}
 
 function iso(value: unknown): string {
   if (value instanceof Date) return value.toISOString();
@@ -115,7 +128,11 @@ function boundHistory(snap: CompanySnapshot): void {
   snap.history.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
 }
 
-export async function upsertSnapshotToNeon(snapshot: CompanySnapshot): Promise<CompanySnapshot> {
+export async function upsertSnapshotToNeon(
+  snapshot: CompanySnapshot,
+  options: NeonMutationOptions = {},
+): Promise<CompanySnapshot> {
+  assertSnapshotMutation("company snapshot upsert", options.mutation);
   const sql = getNeonSql();
   const normalized = ensureCompanySnapshotShape(snapshot);
   await sql`
@@ -170,7 +187,9 @@ export async function listSnapshotsFromNeon(): Promise<CompanySnapshot[]> {
 export async function recordToolResultToNeon<T>(
   company: CompanyRef,
   result: ToolResult<T>,
+  options: NeonMutationOptions = {},
 ): Promise<CompanySnapshot> {
+  assertSnapshotMutation("company snapshot recordToolResult", options.mutation);
   const now = new Date().toISOString();
   const existing = await getSnapshotFromNeon(company);
   const snap: CompanySnapshot = existing
@@ -195,13 +214,15 @@ export async function recordToolResultToNeon<T>(
       };
   maybeAppendScorePoint(snap, result as ToolResult<unknown>);
   boundHistory(snap);
-  return upsertSnapshotToNeon(snap);
+  return upsertSnapshotToNeon(snap, options);
 }
 
 export async function setStatusToNeon(
   company: CompanyRef,
   change: { status: string; changedBy: string; note?: string },
+  options: NeonMutationOptions = {},
 ): Promise<{ snapshot: CompanySnapshot; change: StatusChange }> {
+  assertSnapshotMutation("company snapshot setStatus", options.mutation);
   const now = new Date().toISOString();
   const existing = await getSnapshotFromNeon(company) ?? freshSnapshot(company, now);
   const entry: StatusChange = {
@@ -217,13 +238,15 @@ export async function setStatusToNeon(
     statusHistory: [...(existing.statusHistory ?? []), entry].slice(-MAX_STATUS_HISTORY),
     updatedAt: now,
   };
-  return { snapshot: await upsertSnapshotToNeon(next), change: entry };
+  return { snapshot: await upsertSnapshotToNeon(next, options), change: entry };
 }
 
 export async function setNextActionToNeon(
   company: CompanyRef,
   update: { nextAction: string; nextActionDate?: string; contactName?: string; contactPhone?: string; contactEmail?: string },
+  options: NeonMutationOptions = {},
 ): Promise<CompanySnapshot> {
+  assertSnapshotMutation("company snapshot setNextAction", options.mutation);
   const now = new Date().toISOString();
   const existing = await getSnapshotFromNeon(company) ?? freshSnapshot(company, now);
   const next: CompanySnapshot = {
@@ -236,5 +259,5 @@ export async function setNextActionToNeon(
     contactEmail: update.contactEmail ?? existing.contactEmail,
     updatedAt: now,
   };
-  return upsertSnapshotToNeon(next);
+  return upsertSnapshotToNeon(next, options);
 }

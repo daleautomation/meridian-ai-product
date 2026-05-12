@@ -1,8 +1,13 @@
 import crypto from "node:crypto";
 import { getNeonSql } from "@/lib/db/neon";
+import {
+  assertNeonMutationAllowed,
+  type NeonMutationIntent,
+} from "@/lib/db/neonMutationBarrier";
 import type { UsageEvent } from "./eventLog";
 
 type EventRow = Record<string, unknown>;
+type NeonMutationOptions = { mutation?: NeonMutationIntent };
 
 function clean(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
@@ -51,7 +56,15 @@ function eventFromRow(row: EventRow): UsageEvent {
   };
 }
 
-export async function writeEventToNeon(event: UsageEvent): Promise<{ ok: boolean; reason?: string }> {
+export async function writeEventToNeon(
+  event: UsageEvent,
+  options: NeonMutationOptions = {},
+): Promise<{ ok: boolean; reason?: string }> {
+  assertNeonMutationAllowed({
+    operation: "domain event write",
+    execute: options.mutation?.execute ?? false,
+    confirmationEnv: options.mutation?.confirmationEnv,
+  });
   try {
     const sql = getNeonSql();
     const eventId = event.eventId ?? crypto.randomUUID();

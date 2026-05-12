@@ -10,6 +10,7 @@
     "smoke:field-test": "node scripts/smoke-field-test.mjs",
     "truth:check": "tsx scripts/check-truth-readiness.ts",
     "truth:audit": "tsx scripts/truth-audit.ts",
+    "truth:barriers": "tsx scripts/truth-barriers.ts",
     "truth:backfill:dry": "tsx scripts/backfill-phase1-neon.ts --dry-run"
   },
   "dependencies": {

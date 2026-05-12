@@ -22,6 +22,7 @@ const NEON_SQL_ALLOWED = new Set([
   "scripts/backfill-phase1-neon.ts",
   "scripts/check-truth-readiness.ts",
   "scripts/truth-audit.ts",
+  "scripts/truth-barriers.ts",
 ]);
 const NEON_WRITE_ALLOWED = new Set([
   "lib/execution/serverOutcomeStore.ts",
@@ -29,6 +30,7 @@ const NEON_WRITE_ALLOWED = new Set([
   "lib/tracking/eventLog.ts",
   "scripts/backfill-phase1-neon.ts",
   "scripts/truth-audit.ts",
+  "scripts/truth-barriers.ts",
 ]);
 
 type Status = "pass" | "warn" | "fail" | "skip";

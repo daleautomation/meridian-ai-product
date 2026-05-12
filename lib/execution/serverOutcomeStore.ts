@@ -4,6 +4,7 @@
 // dual-write, or Neon via MERIDIAN_TRUTH_STORE.
 
 import type { ExecutionOutcomeStatus } from "./executionOutcome";
+import { RUNTIME_NEON_MUTATION_INTENT } from "@/lib/db/neonMutationBarrier";
 import {
   dbReadFallbackEnabled,
   dualWriteStrict,
@@ -124,10 +125,10 @@ export async function recordDurableOutcome(input: DurableOutcomeInput): Promise<
   logTruthStoreModeGuard("execution outcomes", mode);
   if (mode === "file") return recordDurableOutcomeToFile(input);
 
-  if (mode === "neon") return recordDurableOutcomeToNeon(input);
+  if (mode === "neon") return recordDurableOutcomeToNeon(input, { mutation: RUNTIME_NEON_MUTATION_INTENT });
 
   try {
-    const neonResult = await recordDurableOutcomeToNeon(input);
+    const neonResult = await recordDurableOutcomeToNeon(input, { mutation: RUNTIME_NEON_MUTATION_INTENT });
     await recordDurableOutcomeToFile(input, { syncCrm: false }).catch((err) => {
       console.error("[serverOutcomeStore] dual file write failed", err);
     });

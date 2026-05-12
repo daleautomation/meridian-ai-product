@@ -23,14 +23,14 @@ export function logTruthStoreModeGuard(context: string, mode = getTruthStoreMode
   loggedTruthStoreContexts.add(key);
 
   if (mode === "file") {
-    console.info(`[truth-store] ${context}: file mode active; Neon writes disabled`);
+    console.info(`[truth-store] FILE MODE ACTIVE: ${context}; Neon writes disabled`);
     if (neonEnv) {
       console.warn(`[truth-store] ${context}: Neon env vars are configured while file mode remains active`);
     }
     return;
   }
 
-  console.info(`[truth-store] ${context}: ${mode} mode intentionally enabled; Neon writes may occur`);
+  console.info(`[truth-store] NEON WRITE MODE ACTIVE: ${context}; MERIDIAN_TRUTH_STORE=${mode}`);
 }
 
 export function dbReadFallbackEnabled(): boolean {
