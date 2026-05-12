@@ -3,6 +3,8 @@ import { loadAllExecutionOutcomes } from "./executionOutcome";
 
 type PullForwardEntry = {
   leadKey?: string | null;
+  companyKey?: string | null;
+  crmKey?: string | null;
   companyName?: string | null;
 };
 
@@ -68,6 +70,8 @@ export function triggerPullForward({
     credentials: "same-origin",
     body: JSON.stringify({
       leadId: candidate.leadKey,
+      companyKey: candidate.companyKey ?? candidate.leadKey,
+      crmKey: candidate.crmKey ?? candidate.companyKey ?? candidate.leadKey,
       workspaceSlug,
       action: "move_to_date",
       scheduledFor,

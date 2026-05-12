@@ -39,6 +39,7 @@ import { getSourceReadiness } from "../../lib/sources/readiness";
 import { ALL_TRADE_ENV_VARS } from "../../lib/modules/tradeSources";
 import { readOperatorSnapshot, writeOperatorSnapshot } from "../../lib/operatorPayload/snapshot";
 import {
+  getDialablePhone,
   withCanonicalPhoneContact,
   type CanonicalPhoneLeadLike,
 } from "../../lib/leads/phone";
@@ -510,6 +511,7 @@ async function renderOperatorPage({
     }
     return ui;
   });
+  const uiLeadById = new Map(uiLeads.map((lead) => [lead.id, lead]));
 
   // Per-rep + per-week + today/this-week workload summary.
   // todayKey resolves in the business timezone so a Vercel function
@@ -621,6 +623,9 @@ async function renderOperatorPage({
     companyName: string;
     location?: string;
     phone?: string;
+    phoneAuthority?: "dialable";
+    companyKey?: string;
+    crmKey?: string;
     serviceLabel: string;
     reason: string;
     needScore: number;
@@ -728,6 +733,13 @@ async function renderOperatorPage({
         `top=${diag?.topFinding?.type ?? "none"}`,
       );
       const strategy = lead.salesStrategy;
+      const dialablePhone = getDialablePhone(lead);
+      const stableServiceCompanyKey = companyKey({
+        name: lead.companyName,
+        domain: lead.website,
+        url: lead.website,
+        location: lead.location,
+      });
       const primary = strategy?.primaryAngle;
       const topObj = strategy?.objections?.[0];
       // Multi-bucket membership — every service this company needs.
@@ -743,9 +755,12 @@ async function renderOperatorPage({
         const list = leadsByService[need.serviceId] ?? (leadsByService[need.serviceId] = []);
         list.push({
           leadKey: lead.id,
+          companyKey: stableServiceCompanyKey,
+          crmKey: stableServiceCompanyKey,
           companyName: lead.companyName,
           location: lead.location,
-          phone: lead.phone,
+          phone: dialablePhone ?? undefined,
+          phoneAuthority: dialablePhone ? "dialable" : undefined,
           serviceLabel: need.label,
           reason: need.reason,
           needScore: need.needScore,
@@ -843,6 +858,8 @@ async function renderOperatorPage({
     // always the strongest available pull.
     overflowEntries: (teamSchedule.overflowEntries ?? []).slice(0, 50).map((e) => ({
       leadKey: e.leadKey,
+      companyKey: uiLeadById.get(e.leadKey)?.companyKey ?? e.leadKey,
+      crmKey: uiLeadById.get(e.leadKey)?.crmKey ?? uiLeadById.get(e.leadKey)?.companyKey ?? e.leadKey,
       companyName: (e as unknown as { companyName?: string }).companyName ?? null,
     })),
     serviceBucketsByTrade,

@@ -61,6 +61,8 @@ interface FilteredLeadEntry {
   companyName: string;
   location?: string;
   phone?: string;
+  companyKey?: string;
+  crmKey?: string;
   serviceLabel: string;
   reason: string;
   needScore: number;
@@ -475,11 +477,18 @@ export default function AllLeadsBucketOverview({
     let failed = 0;
     for (const leadId of ids) {
       try {
+        const lead = drillLeads.find((item) => item.leadKey === leadId);
         const res = await fetch("/api/scheduling/override", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "same-origin",
-          body: JSON.stringify({ leadId, workspaceSlug, action: "move_today" }),
+          body: JSON.stringify({
+            leadId,
+            workspaceSlug,
+            action: "move_today",
+            companyKey: lead?.companyKey ?? leadId,
+            crmKey: lead?.crmKey ?? lead?.companyKey ?? leadId,
+          }),
         });
         if (!res.ok) failed++;
       } catch {
@@ -1284,6 +1293,8 @@ function DrillDown({
                   <SchedulingMenu
                     leadId={lead.leadKey}
                     workspaceSlug={workspaceSlug}
+                    companyKey={lead.companyKey ?? null}
+                    crmKey={lead.crmKey ?? lead.companyKey ?? null}
                     leadName={lead.companyName}
                     reps={reps}
                     hasOverride={

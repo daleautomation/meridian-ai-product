@@ -72,9 +72,11 @@ export async function POST(req: Request) {
   const crmKey = inputCrmKey ?? inputCompanyKey;
   const taskId = stringOrNull(body.taskId);
   const leadId = deriveLeadId(stringOrNull(body.leadId), taskId);
-  if (!companyKey && !crmKey && !leadId && !taskId) {
-    return bad(400, "Missing lead identity");
-  }
+  if (!leadId && !taskId) return bad(400, "Missing lead/task identity");
+  if (!companyKey && !crmKey && !leadId && !taskId) return bad(400, "Missing lead identity");
+
+  const sourceSurface = stringOrNull(body.sourceSurface);
+  if (!sourceSurface) return bad(400, "Missing sourceSurface");
 
   const metadata = body.metadata && typeof body.metadata === "object"
     ? body.metadata as Record<string, unknown>
@@ -90,7 +92,7 @@ export async function POST(req: Request) {
     leadId,
     taskId,
     operatorId: session.id,
-    sourceSurface: stringOrNull(body.sourceSurface) ?? "unknown",
+    sourceSurface,
     outcomeStatus,
     occurredAt: stringOrNull(body.occurredAt),
     nextAction,
@@ -102,6 +104,15 @@ export async function POST(req: Request) {
     metadata,
     companyName: stringOrNull(body.companyName),
   });
+
+  const attributionGrade =
+    result.persisted
+    && !!session.id
+    && !!workspace
+    && !!sourceSurface
+    && !!outcomeStatus
+    && (!!leadId || !!taskId)
+    && (!!companyKey || !!crmKey);
 
   const event = makeEvent({
     eventId: result.outcome.eventId,
@@ -132,12 +143,25 @@ export async function POST(req: Request) {
       persisted: result.persisted,
       crmUpdated: result.crmUpdated,
       duplicate: result.duplicate,
+      attributionGrade,
+      attributionKind: attributionGrade ? "commission" : "analytics",
     },
   });
   await writeEvent(event);
 
+  if (!result.persisted) {
+    return NextResponse.json({
+      ok: false,
+      error: "durable_persistence_failed",
+      outcome: result.outcome,
+      persisted: false,
+      crmUpdated: false,
+      duplicate: result.duplicate,
+    }, { status: 503 });
+  }
+
   return NextResponse.json({
-    ok: result.persisted,
+    ok: true,
     outcome: result.outcome,
     persisted: result.persisted,
     crmUpdated: result.crmUpdated,

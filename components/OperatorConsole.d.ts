@@ -28,7 +28,7 @@ interface OperatorConsoleProps {
    *  successful outbound outcome can pull the next eligible lead
    *  forward into today via the existing override layer. Order is the
    *  team scheduler's priority (highest-value first). */
-  overflowEntries?: Array<{ leadKey: string; companyName?: string | null }>;
+  overflowEntries?: Array<{ leadKey: string; companyKey?: string | null; crmKey?: string | null; companyName?: string | null }>;
   teamWorkload?: {
     perRep: Array<{ id: string; name: string; total: number; today?: number }>;
     perWeek: Record<string, number>;

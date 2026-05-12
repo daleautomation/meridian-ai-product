@@ -26,6 +26,9 @@ import {
   type ScheduleOverrideAction,
 } from "@/lib/scheduling/overrideStore";
 import { makeEvent, writeEvent } from "@/lib/tracking/eventLog";
+import { isTerminalStatusValue } from "@/lib/crm/statusTaxonomy";
+import { findTerminalDurableOutcome } from "@/lib/execution/serverOutcomeStore";
+import { listSnapshots } from "@/lib/state/companySnapshotStore";
 
 const VALID_ACTIONS: ScheduleOverrideAction[] = [
   "move_today",
@@ -38,10 +41,21 @@ const VALID_ACTIONS: ScheduleOverrideAction[] = [
   "clear",
 ];
 
+const ACTIVATING_ACTIONS: ScheduleOverrideAction[] = [
+  "move_today",
+  "move_tomorrow",
+  "move_next_week",
+  "move_to_date",
+  "follow_up",
+  "assign_rep",
+];
+
 interface OverrideRequest {
   leadId?: unknown;
   workspaceSlug?: unknown;
   action?: unknown;
+  companyKey?: unknown;
+  crmKey?: unknown;
   repId?: unknown;
   /** Required when action === "move_to_date" — must be a YYYY-MM-DD
    *  weekday in the future or today. */
@@ -55,6 +69,27 @@ interface OverrideRequest {
 
 function bad(status: number, error: string) {
   return NextResponse.json({ ok: false, error }, { status });
+}
+
+function stringOrNull(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+async function terminalBlockReason(
+  workspaceSlug: string,
+  identityKeys: string[],
+): Promise<string | null> {
+  const durable = await findTerminalDurableOutcome(workspaceSlug, identityKeys);
+  if (durable) return `terminal durable outcome: ${durable.outcomeStatus}`;
+
+  const snapshots = await listSnapshots();
+  for (const snap of snapshots) {
+    const keys = [snap.key, snap.company?.name, snap.profile?.name].filter((key): key is string => typeof key === "string" && key.length > 0);
+    if (keys.some((key) => identityKeys.includes(key)) && isTerminalStatusValue(snap.status)) {
+      return `terminal CRM status: ${snap.status}`;
+    }
+  }
+  return null;
 }
 
 export async function POST(req: Request) {
@@ -71,6 +106,8 @@ export async function POST(req: Request) {
   const leadId = typeof body.leadId === "string" ? body.leadId : "";
   const workspaceSlug = typeof body.workspaceSlug === "string" ? body.workspaceSlug : "";
   const action = body.action as ScheduleOverrideAction;
+  const companyKey = stringOrNull(body.companyKey);
+  const crmKey = stringOrNull(body.crmKey);
   const repId = typeof body.repId === "string" ? body.repId : null;
 
   if (!leadId) return bad(400, "Missing leadId");
@@ -94,6 +131,12 @@ export async function POST(req: Request) {
       return bad(400, "move_to_date requires a YYYY-MM-DD weekday in the future");
     }
     scheduledFor = validated;
+  }
+
+  if (ACTIVATING_ACTIONS.includes(action)) {
+    const identityKeys = Array.from(new Set([leadId, companyKey, crmKey].filter((key): key is string => !!key)));
+    const reason = await terminalBlockReason(workspaceSlug, identityKeys);
+    if (reason) return bad(409, `Terminal company cannot be moved active (${reason})`);
   }
 
   // Honor a system-source attribution when the request is already
@@ -138,8 +181,8 @@ export async function POST(req: Request) {
       operatorId: session.id,
       workspace: workspaceSlug,
       leadId,
-      companyKey: leadId,
-      crmKey: leadId,
+      companyKey: companyKey ?? leadId,
+      crmKey: crmKey ?? companyKey ?? leadId,
       sourceSurface: trustedSystemSource === "system:pull_forward" ? "system_pull_forward" : "scheduling_override",
       metadata: {
         action,
