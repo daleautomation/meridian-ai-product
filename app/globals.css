@@ -1053,7 +1053,7 @@ html, body {
 
 .public-workspace-console {
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(230px, 0.8fr);
+  grid-template-columns: 1fr;
   gap: 12px;
 }
 
@@ -1067,10 +1067,6 @@ html, body {
     linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(239, 246, 255, 0.70)),
     rgba(255, 255, 255, 0.82);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
-}
-
-.public-lead-queue-panel {
-  grid-row: span 2;
 }
 
 .public-console-header {
