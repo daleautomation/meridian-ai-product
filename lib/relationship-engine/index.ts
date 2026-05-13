@@ -2,6 +2,7 @@
 
 export * from "./primitives";
 export * from "./adapters";
+export * from "./consumers/internalConsumers";
 export * from "./dto/boundaries";
 export * from "./followups/policies";
 export * from "./lifecycle/validation";

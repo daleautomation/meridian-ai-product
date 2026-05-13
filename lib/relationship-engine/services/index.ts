@@ -8,3 +8,4 @@ export * from "./summaries";
 export * from "./feeds";
 export * from "./queues";
 export * from "./readService";
+export * from "./diagnostics";

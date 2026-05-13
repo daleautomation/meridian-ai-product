@@ -6,22 +6,18 @@
 import type { WorkspaceConfig } from "@/config/workspaces";
 import {
   createRelationshipEngineReadService,
+  type RelationshipEngineRepositoryDiagnostics,
+  type RelationshipEngineRepositoryModeLabel,
   type RelationshipEngineReadRepositories,
   type RelationshipEngineReadService,
 } from "@/lib/relationship-engine";
 
-export type RelationshipEngineApiRepositoryMode = "read_only_unwired";
+export type RelationshipEngineApiRepositoryMode = Extract<RelationshipEngineRepositoryModeLabel, "read_only_unwired">;
 
 export interface RelationshipEngineReadServiceBinding {
   service: RelationshipEngineReadService;
   repositoryMode: RelationshipEngineApiRepositoryMode;
-  diagnostics: {
-    relationshipStore: "unwired";
-    timelineStore: "unwired";
-    followUpStore: "unwired";
-    scoringStore: "unwired";
-    readOnly: true;
-  };
+  diagnostics: RelationshipEngineRepositoryDiagnostics;
 }
 
 export function createRelationshipEngineReadServiceForWorkspace(
