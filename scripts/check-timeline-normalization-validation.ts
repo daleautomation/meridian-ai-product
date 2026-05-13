@@ -7,6 +7,7 @@ import {
   validateTimelineEventIntegrity,
   type SourceCrmActivity,
   type SourceFollowUpTask,
+  type TimelineEvent,
 } from "@/lib/relationship-engine";
 
 const now = "2026-05-13T15:30:00.000Z";
@@ -73,7 +74,7 @@ assert.ok(
 const invalidTaxonomy = validateTimelineEventIntegrity({
   ...replayA.events[0],
   type: "owner_assigned",
-});
+} as unknown as TimelineEvent);
 assert.equal(invalidTaxonomy.ok, false, "non-overlapping taxonomy must reject cross-category event types");
 assert.ok(
   invalidTaxonomy.issues.some((issue) => issue.code === "invalid_category_type"),
