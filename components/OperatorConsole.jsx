@@ -10444,16 +10444,16 @@ export default function OperatorConsole({
 const S = {
   root: { minHeight: "100vh", background: palette.bg, color: palette.textPrimary, fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', sans-serif" },
 
-  header: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 24px", borderBottom: `1px solid ${palette.border}`, background: palette.surface, gap: "16px" },
-  headerLeft: { display: "flex", alignItems: "center", gap: "10px" },
+  header: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", padding: "11px 24px", borderBottom: `1px solid ${palette.border}`, background: palette.surface, gap: "12px 16px" },
+  headerLeft: { display: "flex", alignItems: "center", gap: "10px", minWidth: 0 },
 
-  tabBar: { display: "flex", alignItems: "center", gap: "4px", padding: "3px", background: palette.surfaceHover, borderRadius: "9px", border: `1px solid ${palette.border}` },
+  tabBar: { display: "flex", alignItems: "center", flexWrap: "wrap", gap: "4px", padding: "3px", background: palette.surfaceHover, borderRadius: "9px", border: `1px solid ${palette.border}`, maxWidth: "100%" },
   tabBtn: { padding: "6px 14px", fontSize: "12px", fontWeight: 500, color: palette.textSecondary, background: "transparent", border: "1px solid transparent", borderRadius: "7px", cursor: "pointer", letterSpacing: "0.01em", whiteSpace: "nowrap" },
   tabBtnActive: { padding: "6px 14px", fontSize: "12px", fontWeight: 600, color: palette.blue, background: palette.surface, border: `1px solid ${palette.blueBorder}`, borderRadius: "7px", cursor: "pointer", letterSpacing: "0.01em", whiteSpace: "nowrap", boxShadow: "0 1px 2px rgba(15,23,42,0.05)" },
   logo: { width: "28px", height: "28px", borderRadius: "7px", background: palette.blue, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", fontWeight: 700 },
   hTitle: { fontSize: "14px", fontWeight: 600 },
   hSub: { fontSize: "11px", color: palette.textTertiary },
-  headerRight: { display: "flex", alignItems: "center", gap: "16px" },
+  headerRight: { display: "flex", alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap", gap: "10px 16px", minWidth: 0 },
   stat: { fontSize: "11px", color: palette.textTertiary },
   userName: { fontSize: "12px", color: palette.textSecondary, fontWeight: 500 },
 
