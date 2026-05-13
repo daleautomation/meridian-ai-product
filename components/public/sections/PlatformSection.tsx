@@ -11,9 +11,10 @@ export function PlatformSection() {
       />
       <div className="public-module-grid">
         {platformModules.map((module) => (
-          <div key={module}>
+          <div key={module.title}>
             <span />
-            {module}
+            <strong>{module.title}</strong>
+            <p>{module.text}</p>
           </div>
         ))}
       </div>
