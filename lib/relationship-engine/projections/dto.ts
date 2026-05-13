@@ -25,6 +25,7 @@ export type RelationshipSummaryProjectionKind = "relationship_summary";
 
 export type ProjectionInputSource =
   | "RelationshipEntity"
+  | "RelationshipSummaryProjection"
   | "TimelineEvent"
   | "PromiseRecord"
   | "HealthScoreTrace"

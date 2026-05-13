@@ -3,10 +3,51 @@
 import type { RelationshipMcpDto } from "../dto/boundaries";
 import type { RelationshipSummary } from "../relationship/entities";
 import type { RelationshipSummaryProjection } from "./dto";
+import type {
+  RelationshipFeedProjection,
+  RelationshipQueueProjection,
+  RelationshipTimelineProjection,
+} from "./operatorReadModels";
 
 export interface RelationshipSummaryProjectionMcpOptions {
   allowedActions?: string[];
   evidenceRequired?: string[];
+}
+
+export interface RelationshipFeedMcpDto {
+  feedKind: RelationshipFeedProjection["feedKind"];
+  itemId: string;
+  relationshipId: string;
+  title: string;
+  body: string;
+  occurredAt: string;
+  confidence: string;
+  timelineReferences: string[];
+  evidenceRequired: string[];
+}
+
+export interface RelationshipQueueMcpDto {
+  queueKind: RelationshipQueueProjection["queueKind"];
+  itemId: string;
+  relationshipId: string;
+  rank: number;
+  whyItExists: string;
+  confidence: string;
+  visibleTo: string[];
+  timelineReferences: string[];
+  evidenceRequired: string[];
+  reviewOnly: true;
+}
+
+export interface RelationshipTimelineMcpDto {
+  relationshipId: string;
+  groups: Array<{
+    groupKind: RelationshipTimelineProjection["groups"][number]["groupKind"];
+    label: string;
+    itemCount: number;
+  }>;
+  evidenceRequired: string[];
+  reviewOnly: true;
 }
 
 export function relationshipSummaryForQueue(
@@ -46,4 +87,58 @@ export function relationshipSummaryProjectionToCompactText(
     `Confidence: ${projection.explanation.confidence}`,
   ];
   return parts.join("; ");
+}
+
+export function relationshipFeedProjectionToMcpDtos(
+  projection: RelationshipFeedProjection,
+): RelationshipFeedMcpDto[] {
+  return projection.items.map((item) => ({
+    feedKind: projection.feedKind,
+    itemId: item.id,
+    relationshipId: item.relationshipId,
+    title: item.title,
+    body: item.body,
+    occurredAt: item.occurredAt,
+    confidence: item.confidence,
+    timelineReferences: item.timelineReferences,
+    evidenceRequired: item.missingDataEffects
+      .filter((effect) => effect.effect === "lowers_confidence" || effect.effect === "limits_visibility")
+      .map((effect) => effect.field),
+  }));
+}
+
+export function relationshipQueueProjectionToMcpDtos(
+  projection: RelationshipQueueProjection,
+): RelationshipQueueMcpDto[] {
+  return projection.items.map((item) => ({
+    queueKind: projection.queueKind,
+    itemId: item.id,
+    relationshipId: item.relationshipId,
+    rank: item.rank,
+    whyItExists: item.whyItExists,
+    confidence: item.confidence,
+    visibleTo: item.ownerVisibility.visibleTo,
+    timelineReferences: item.timelineReferences,
+    evidenceRequired: item.missingDataEffects
+      .filter((effect) => effect.effect === "lowers_confidence" || effect.effect === "limits_visibility")
+      .map((effect) => effect.field),
+    reviewOnly: true,
+  }));
+}
+
+export function relationshipTimelineProjectionToMcpDto(
+  projection: RelationshipTimelineProjection,
+): RelationshipTimelineMcpDto {
+  return {
+    relationshipId: projection.relationshipId,
+    groups: projection.groups.map((group) => ({
+      groupKind: group.groupKind,
+      label: group.label,
+      itemCount: group.items.length,
+    })),
+    evidenceRequired: projection.missingDataEffects
+      .filter((effect) => effect.effect === "lowers_confidence" || effect.effect === "limits_visibility")
+      .map((effect) => effect.field),
+    reviewOnly: true,
+  };
 }

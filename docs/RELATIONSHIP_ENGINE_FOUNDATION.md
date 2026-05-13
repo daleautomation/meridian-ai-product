@@ -10,6 +10,7 @@ This pass adds safe internal scaffolding only. It does not enable production sco
 - `lib/relationship-engine/lifecycle/validation.ts` validates lifecycle transitions, normalizes legacy status aliases, and enforces transition reasons.
 - `lib/relationship-engine/scoring/shadowHealthScore.ts` emits trace-only shadow `HealthScoreTrace` objects with no scoring formula.
 - `lib/relationship-engine/projections/*` builds read-only `RelationshipSummaryProjection` read models with deterministic ordering, explanation metadata, and integrity validation.
+- `lib/relationship-engine/projections/operatorReadModels.ts` builds safe operator feed, queue, and timeline DTOs from canonical projections and relationship memory only.
 - `lib/relationship-engine/queue/builder.ts` enforces queue candidate requirements without ranking or dispatching work.
 - `lib/relationship-engine/repositories/*` prepares read-only file/Neon adapter capability boundaries and empty placeholders.
 
@@ -21,6 +22,8 @@ This pass adds safe internal scaffolding only. It does not enable production sco
 - Queue candidates require why-now, evidence, next-action reason, and owner visibility.
 - Shadow score traces carry evidence and missing-data effects, but do not calculate production scores.
 - Relationship summary projections derive only from canonical entities, timeline events, promise records, health traces, and follow-up instructions.
+- Operator feed and queue read models derive only from `RelationshipSummaryProjection`, `TimelineEvent`, `PromiseRecord`, `HealthScoreTrace`, and `FollowUpInstruction`.
+- Queue read-model ordering is deterministic scaffolding only; it uses stable sort keys and tie-breakers, not production scoring weights.
 - Lifecycle transitions require valid canonical state movement and a non-empty reason.
 
 ## Fixture strategy TODOs
@@ -33,3 +36,4 @@ This pass adds safe internal scaffolding only. It does not enable production sco
 - TODO: Add score trace fixture tests before any production score weights are introduced.
 - TODO: Add queue candidate fixture tests for deterministic IDs and required evidence.
 - TODO: Promote `scripts/check-relationship-summary-projection.ts` into table fixtures for complete, stale, missing-data, invalid-lifecycle, and replay scenarios.
+- TODO: Promote `scripts/check-relationship-read-models.ts` into table fixtures for queue replay, feed ordering, stale projections, ranking stability, duplicate events, and missing-data queue warnings.
