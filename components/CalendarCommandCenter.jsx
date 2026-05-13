@@ -4415,7 +4415,7 @@ function TodayFocusPanel({ tasks, now, executeNow, insights, onTaskFeedback, tra
 
 // ── Day column ─────────────────────────────────────────────────────────
 
-function DayColumn({ date, tasks, isToday, now, onTaskFeedback, selectedTaskId, onSelectTask, linkedCountFor, viewMode = "single", isFirstActive = false, isPreLaunch = false }) {
+function DayColumn({ date, tasks, isToday, now, onTaskFeedback, selectedTaskId, onSelectTask, linkedCountFor, viewMode = "single", isFirstActive = false, isPreLaunch = false, readOnly = false }) {
   const grouped = useMemo(() => {
     const out = {};
     for (const t of tasks) {
@@ -5976,6 +5976,7 @@ export default function CalendarCommandCenter({
                     viewMode={viewMode}
                     isFirstActive={isDayOneCol || (isTodayCol && items.length > 0)}
                     isPreLaunch={isPreLaunchCol}
+                    readOnly={readOnly}
                   />
                 </div>
               );
@@ -6030,6 +6031,7 @@ export default function CalendarCommandCenter({
                     viewMode={viewMode}
                     isFirstActive={isFirstActive}
                     isPreLaunch={isPreLaunch}
+                    readOnly={readOnly}
                   />
                 );
               })}
