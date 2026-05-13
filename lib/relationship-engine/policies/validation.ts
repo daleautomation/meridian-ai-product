@@ -27,7 +27,12 @@ export const RELATIONSHIP_ENGINE_VALIDATION_REQUIREMENTS: ValidationRequirement[
   {
     area: "timeline_normalization",
     severity: "error",
-    requirement: "Every inbound event must normalize into exactly one TimelineEvent category/type pair with relationshipId, occurredAt, recordedAt, source, confidence, and dedupeKey when available.",
+    requirement: "Every accepted TimelineEvent must pass taxonomy, evidence, timestamp, confidence, dedupe key, and category payload validation before it can influence summaries, scores, queues, or repositories.",
+  },
+  {
+    area: "timeline_normalization",
+    severity: "error",
+    requirement: "Duplicate imports must collapse by deterministic dedupe key and emit an explainable warning; conflicts must not silently create additional relationship memory.",
   },
   {
     area: "queue_ranking",

@@ -20,6 +20,7 @@ import {
   baseTimelineParts,
   emptyNormalizationResult,
   normalizeIsoTimestamp,
+  normalizeOptionalIsoTimestamp,
   stableTimelineEventId,
   type TimelineNormalizationResult,
 } from "./common";
@@ -86,7 +87,9 @@ export function normalizeUsageEventToTimelineEvent(
       evidence: base.evidence,
       confidence: base.confidence,
       dedupeKey: base.dedupeKey,
-      ...(usageEvent.nextActionDate ? { dueAt: normalizeIsoTimestamp(usageEvent.nextActionDate, context.now) } : {}),
+      ...(normalizeOptionalIsoTimestamp(usageEvent.nextActionDate)
+        ? { dueAt: normalizeIsoTimestamp(usageEvent.nextActionDate, context.now) }
+        : {}),
       ...(base.actorId && base.actorId !== "system" ? { ownerId: base.actorId } : {}),
       reason: usageEvent.nextAction ?? "Usage event requested follow-up",
     };

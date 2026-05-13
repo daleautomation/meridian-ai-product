@@ -17,4 +17,5 @@ export * from "./scoring/healthScoreTrace";
 export * from "./scoring/shadowHealthScore";
 export * from "./timeline/events";
 export * from "./timeline/normalizers";
+export * from "./timeline/validation";
 export * from "./verticals/config";

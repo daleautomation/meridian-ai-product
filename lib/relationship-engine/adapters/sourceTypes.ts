@@ -111,8 +111,12 @@ export type TimelineSourceKind =
   | "usage_event"
   | "execution_outcome";
 
+export type TimelineNormalizationWarningSource =
+  | TimelineSourceKind
+  | "timeline_event";
+
 export interface TimelineNormalizationWarning {
-  source: TimelineSourceKind;
+  source: TimelineNormalizationWarningSource;
   sourceId: string;
   reason: string;
 }
