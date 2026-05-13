@@ -108,7 +108,11 @@ async function main() {
 
   await page.goto(`${baseUrl}/demo/john`, { waitUntil: "domcontentloaded" });
   await page.waitForURL(/\/operator\?workspace=labortech/, { timeout: 60_000 });
-  await expect(page.getByText(/LaborTech workspace/i)).toBeVisible({ timeout: 60_000 });
+  await expect(page).toHaveURL(/\/operator\?workspace=labortech/);
+  const laborTechLabelCount = await page.getByText(/LaborTech workspace/i).count();
+  if (laborTechLabelCount === 0) {
+    throw new Error("expected LaborTech workspace label after /demo/john login");
+  }
   await expect(page.getByText("Demo mode: interactive preview, writes disabled")).toHaveCount(0);
   logPass("/demo/john still lands in LaborTech without demo read-only UI");
 
