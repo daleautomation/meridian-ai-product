@@ -25,8 +25,9 @@ export interface RelationshipEngineReadServiceBinding {
 }
 
 export function createRelationshipEngineReadServiceForWorkspace(
-  _workspace: WorkspaceConfig,
+  workspace: WorkspaceConfig,
 ): RelationshipEngineReadServiceBinding {
+  void workspace;
   return {
     service: createRelationshipEngineReadService(createUnwiredReadOnlyRepositories()),
     repositoryMode: "read_only_unwired",
