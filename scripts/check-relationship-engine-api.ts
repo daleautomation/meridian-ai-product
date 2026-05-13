@@ -85,6 +85,18 @@ async function main(): Promise<void> {
     "reactivation_candidates",
   ]);
 
+  const workflows = await apiJson(
+    "workflows",
+    `workspace=labortech&relationshipIds=${relationshipId}&asOf=${now}&limit=50`,
+    admin,
+    fixtureBinding,
+  );
+  assert.equal(workflows.status, 200);
+  assert.equal(workflows.body.data.kind, "relationship_workflow_projection");
+  assert.equal(workflows.body.data.boundary.workflowExecutionAllowed, false);
+  assert.equal(workflows.body.data.boundary.automationAllowed, false);
+  assert.deepEqual(workflows.body.meta.deterministic.collectionOrder, firstQueues.body.meta.deterministic.collectionOrder);
+
   const projection = await apiJson(
     "projection",
     `workspace=labortech&relationshipId=${relationshipId}&asOf=${now}`,
@@ -111,6 +123,7 @@ async function main(): Promise<void> {
   console.log("relationship engine api check passed", {
     summaryConfidence: summary.body.meta.confidence,
     queueKinds: firstQueues.body.data.queues.map((queue: { queueKind: string }) => queue.queueKind),
+    workflowGroups: workflows.body.data.groups.map((group: { groupKind: string }) => group.groupKind),
     healthRepositoryMode: health.body.data.repositoryMode,
     readOnly: health.body.meta.readOnly,
   });

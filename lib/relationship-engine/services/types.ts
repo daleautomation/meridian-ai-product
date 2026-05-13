@@ -36,6 +36,7 @@ import type {
   RelationshipQueueProjection,
   RelationshipTimelineProjection,
 } from "../projections/operatorReadModels";
+import type { RelationshipWorkflowProjection } from "../workflowIntegration";
 
 export type RelationshipEngineReadRelationshipRepository = Pick<
   RelationshipRepository,
@@ -146,6 +147,10 @@ export interface RelationshipProjectionBundle {
   timeline: RelationshipTimelineProjection;
   feeds: RelationshipFeedProjectionSet;
   queues: RelationshipQueueProjectionSet;
+}
+
+export interface RelationshipWorkflowProjectionSet {
+  workflow: RelationshipWorkflowProjection;
 }
 
 export interface RelationshipPageCollector<TQuery, TItem> {

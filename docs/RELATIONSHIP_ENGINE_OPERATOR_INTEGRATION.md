@@ -106,12 +106,14 @@ Forbidden:
 
 - Operator relationship health overview.
 - Review-only relationship queue panel.
+- Relationship workflow visibility panel with maintenance, follow-up, health,
+  warm opportunity, and reactivation review groupings.
 - Relationship timeline display readiness panel.
 - Relationship summary display counts.
 - Safe diagnostics panel.
 - Admin-only diagnostics metadata panel.
 - Stale relationship and missing-data visibility through diagnostics metadata.
-- Deterministic replay and ordering metadata display.
+- Deterministic replay, queue ordering, and workflow grouping metadata display.
 
 The current repository binding is still `read_only_unwired`, so real
 relationship rows, timelines, and queue items render as honest empty states
@@ -130,6 +132,8 @@ Planned fixture-backed coverage:
 - Queue rendering consistency tests: render queue projections with reversed
   canonical input order and assert queue order, rank keys, explanations,
   evidence references, and missing-data effects remain stable.
+- Workflow grouping tests: build workflow visibility from reversed feed/queue
+  inputs and assert group order, item order, evidence, and read-only boundaries.
 - Diagnostics panel tests: verify health, normalization, projection, queue,
   repository, and deterministic replay metadata render without raw internals.
 - Stale relationship visibility tests: seed stale timeline/projection fixtures

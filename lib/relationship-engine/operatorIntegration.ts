@@ -29,6 +29,10 @@ import type {
   RelationshipFeedProjection,
   RelationshipQueueProjection,
 } from "./projections/operatorReadModels";
+import {
+  projectRelationshipWorkflowIntegration,
+  type RelationshipWorkflowProjection,
+} from "./workflowIntegration";
 import type { IsoDateString, WorkspaceId } from "./primitives";
 import { asIsoDateString } from "./timeline/normalizers/common";
 
@@ -69,12 +73,16 @@ export interface RelationshipEngineOperatorSurface {
     repositoriesAllowed: false;
     writesAllowed: false;
     queueExecutionAllowed: false;
+    workflowExecutionAllowed: false;
     automationAllowed: false;
+    remindersAllowed: false;
+    notificationsAllowed: false;
     rawInternalsAllowed: false;
   };
   health: RelationshipEngineHealthModel;
   feeds: RelationshipFeedProjection[];
   queues: RelationshipQueueProjection[];
+  workflows: RelationshipWorkflowProjection;
   diagnostics: {
     relationshipEngine: RelationshipEngineDiagnosticsResult["diagnostics"]["relationshipEngine"];
     projectionIntegrity: RelationshipEngineDiagnosticsResult["diagnostics"]["projectionIntegrity"];
@@ -134,6 +142,11 @@ export async function buildRelationshipEngineOperatorSurface(args: {
     const diagnostics = await diagnosticsConsumer.getDiagnostics();
     const queues = orderedValues(queuesResult.data, QUEUE_ORDER);
     const feeds = orderedValues(feedsResult.data, FEED_ORDER);
+    const workflows = projectRelationshipWorkflowIntegration({
+      generatedAt,
+      queues,
+      feeds,
+    });
 
     return {
       kind: "relationship_engine_operator_surface",
@@ -148,6 +161,7 @@ export async function buildRelationshipEngineOperatorSurface(args: {
       health: diagnostics.health,
       feeds,
       queues,
+      workflows,
       diagnostics: {
         relationshipEngine: diagnostics.diagnostics.relationshipEngine,
         projectionIntegrity: diagnostics.diagnostics.projectionIntegrity,
@@ -205,7 +219,10 @@ function operatorBoundary(): RelationshipEngineOperatorSurface["boundary"] {
     repositoriesAllowed: false,
     writesAllowed: false,
     queueExecutionAllowed: false,
+    workflowExecutionAllowed: false,
     automationAllowed: false,
+    remindersAllowed: false,
+    notificationsAllowed: false,
     rawInternalsAllowed: false,
   };
 }
@@ -216,6 +233,7 @@ function relationshipEngineApiEndpoints(): string[] {
     "/api/relationship-engine/timeline",
     "/api/relationship-engine/feeds",
     "/api/relationship-engine/queues",
+    "/api/relationship-engine/workflows",
     "/api/relationship-engine/projection",
     "/api/relationship-engine/health",
   ];
@@ -252,6 +270,11 @@ function degradedSurface(
     },
     feeds: [],
     queues: [],
+    workflows: projectRelationshipWorkflowIntegration({
+      generatedAt,
+      queues: [],
+      feeds: [],
+    }),
     diagnostics: {
       relationshipEngine: degradedDiagnostic("Relationship Engine operator surface failed to load."),
       projectionIntegrity: degradedDiagnostic("Projection diagnostics are unavailable."),

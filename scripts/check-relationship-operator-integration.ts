@@ -25,7 +25,10 @@ async function main(): Promise<void> {
   assert.equal(adminSurface.boundary.repositoriesAllowed, false);
   assert.equal(adminSurface.boundary.writesAllowed, false);
   assert.equal(adminSurface.boundary.queueExecutionAllowed, false);
+  assert.equal(adminSurface.boundary.workflowExecutionAllowed, false);
   assert.equal(adminSurface.boundary.automationAllowed, false);
+  assert.equal(adminSurface.boundary.remindersAllowed, false);
+  assert.equal(adminSurface.boundary.notificationsAllowed, false);
   assert.equal(adminSurface.health.readOnlyGuarantees.notifications, false);
   assert.equal(adminSurface.health.readOnlyGuarantees.neonWrites, false);
   assert.equal(adminSurface.health.readOnlyGuarantees.productionScoring, false);
@@ -39,6 +42,16 @@ async function main(): Promise<void> {
     "reactivation_candidates",
   ]);
   assert.equal(adminSurface.queues.length, 6);
+  assert.equal(adminSurface.workflows.kind, "relationship_workflow_projection");
+  assert.equal(adminSurface.workflows.boundary.workflowExecutionAllowed, false);
+  assert.deepEqual(adminSurface.workflows.ordering.groupOrder, [
+    "needs_relationship_attention",
+    "stale_relationship_review",
+    "follow_up_review",
+    "retention_review",
+    "warm_opportunity_review",
+    "reactivation_review",
+  ]);
   assert.equal(adminSurface.access.adminDiagnosticsVisible, true);
   assert.ok(adminSurface.adminDiagnostics, "admin users should receive safe admin diagnostics metadata");
   assert.equal(adminSurface.metadata.repositoryMode, "read_only_file");
@@ -52,6 +65,7 @@ async function main(): Promise<void> {
   const panelMarkup = renderToStaticMarkup(createElement(RelationshipEngineOperatorPanel, { surface: adminSurface as never }));
   assert.match(panelMarkup, /Relationship Engine/);
   assert.match(panelMarkup, /Operator review surfaces/);
+  assert.match(panelMarkup, /Relationship workflow visibility/);
 
   const clientSurface = await buildRelationshipEngineOperatorSurface({ workspace, user: client, now });
   assert.equal(clientSurface.access.adminDiagnosticsVisible, false);
@@ -76,6 +90,7 @@ async function main(): Promise<void> {
   console.log("relationship operator integration check passed", {
     repositoryMode: adminSurface.metadata.repositoryMode,
     queueKinds: adminSurface.queues.map((queue) => queue.queueKind),
+    workflowGroups: adminSurface.workflows.groups.map((group) => group.groupKind),
     adminDiagnosticsVisible: adminSurface.access.adminDiagnosticsVisible,
     clientDiagnosticsVisible: clientSurface.access.adminDiagnosticsVisible,
   });

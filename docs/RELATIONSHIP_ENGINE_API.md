@@ -10,6 +10,7 @@ service-backed.
 - `GET /api/relationship-engine/timeline?workspace=&relationshipId=`
 - `GET /api/relationship-engine/feeds?workspace=`
 - `GET /api/relationship-engine/queues?workspace=`
+- `GET /api/relationship-engine/workflows?workspace=`
 - `GET /api/relationship-engine/projection?workspace=&relationshipId=`
 - `GET /api/relationship-engine/health?workspace=`
 
@@ -43,6 +44,7 @@ read facade:
 - `getRelationshipTimeline`
 - `getRelationshipFeeds`
 - `getRelationshipQueues`
+- `getRelationshipWorkflowContext`
 - `getRelationshipProjection`
 
 Repository wiring is isolated behind
@@ -80,12 +82,15 @@ and issues are surfaced under `meta.validation`, `meta.warnings`,
 
 Responses are stable when callers provide the same canonical data and the same
 `asOf` timestamp. The API serializes object keys deterministically and emits
-feeds and queues as ordered arrays:
+feeds, queues, and workflow groups as ordered arrays:
 
 - feeds: `relationship_activity`, `operator_relationship`,
   `relationship_momentum`, `overdue_relationship`, `relationship_change`
 - queues: `needs_attention`, `overdue_follow_ups`, `cooling_relationships`,
   `retention_risk`, `warm_opportunities`, `reactivation_candidates`
+- workflow groups: `needs_relationship_attention`, `stale_relationship_review`,
+  `follow_up_review`, `retention_review`, `warm_opportunity_review`,
+  `reactivation_review`
 
 Queue and feed ordering still comes from the projection services. Route
 handlers never rank or sort items by business meaning.
@@ -107,6 +112,7 @@ Current API checks live in `scripts/check-relationship-engine-api.ts` and cover:
 - relationship-not-found validation
 - mutation method rejection
 - deterministic queue serialization with fixed `asOf`
+- workflow endpoint read-only boundary and deterministic grouping metadata
 - projection-safe feed and queue arrays
 - health endpoint read facade usage
 

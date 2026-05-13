@@ -70,6 +70,62 @@ interface FeedProjection {
   }>;
 }
 
+interface WorkflowSummary {
+  relationshipId: string;
+  displayName: string;
+  lifecycle: string;
+  confidence: Confidence;
+  missingDataEffects?: MissingDataEffect[];
+  whyNow?: {
+    summary?: string;
+    reasonCodes?: string[];
+    explanations?: string[];
+    timelineReferences?: string[];
+    evidenceReferences?: unknown[];
+  };
+  deterministicOrder?: {
+    sourceQueueKind?: string;
+    sourceQueueRank?: number;
+    sourceQueueRankKey?: string;
+    sortKey?: string;
+  };
+}
+
+interface WorkflowGroup {
+  groupKind: string;
+  label: string;
+  description: string;
+  items: WorkflowSummary[];
+  confidence: Confidence;
+  sourceQueueKinds?: string[];
+  ordering?: { strategy?: string; productionScoring?: boolean; itemSortKeys?: string[]; tieBreakers?: string[] };
+  validation?: { ok?: boolean; issues?: IssueSummary[] };
+}
+
+interface WorkflowProjection {
+  boundary?: {
+    reviewOnly?: boolean;
+    workflowExecutionAllowed?: boolean;
+    automationAllowed?: boolean;
+    remindersAllowed?: boolean;
+    notificationsAllowed?: boolean;
+    persistenceAllowed?: boolean;
+    neonWritesAllowed?: boolean;
+  };
+  groups?: WorkflowGroup[];
+  visibility?: {
+    overdueRelationships?: WorkflowSummary[];
+    dormantRelationships?: WorkflowSummary[];
+    warmOpportunities?: WorkflowSummary[];
+  };
+  metadata?: {
+    groupCounts?: Record<string, number>;
+    confidence?: Confidence;
+    missingDataEffects?: MissingDataEffect[];
+  };
+  explanation?: { notes?: string[] };
+}
+
 interface DiagnosticSurface {
   status: "ok" | "warning" | "error" | "not_configured" | string;
   summary: string;
@@ -105,6 +161,7 @@ interface OperatorSurface {
   };
   queues?: QueueProjection[];
   feeds?: FeedProjection[];
+  workflows?: WorkflowProjection;
   diagnostics?: Record<string, DiagnosticSurface>;
   adminDiagnostics?: {
     metadata?: {
@@ -142,6 +199,7 @@ export default function RelationshipEngineOperatorPanel({
 
   const queues = Array.isArray(surface.queues) ? surface.queues : [];
   const feeds = Array.isArray(surface.feeds) ? surface.feeds : [];
+  const workflows = surface.workflows;
   const health = surface.health ?? {};
   const metadata = surface.metadata ?? {};
   const queueItemCount = metadata.summaryDisplay?.queueItemCount ?? queues.reduce((sum, queue) => sum + queue.items.length, 0);
@@ -182,11 +240,87 @@ export default function RelationshipEngineOperatorPanel({
         <SummaryTimelinePanel surface={surface} />
       </div>
 
+      <WorkflowVisibilityPanel workflows={workflows} />
       <QueueReviewPanel queues={queues} />
       <FeedPanel feeds={feeds} />
       <DiagnosticsPanel diagnostics={surface.diagnostics ?? {}} metadata={metadata} />
       <AdminDiagnosticsPanel surface={surface} />
     </section>
+  );
+}
+
+function WorkflowVisibilityPanel({ workflows }: { workflows?: WorkflowProjection }) {
+  const groups = Array.isArray(workflows?.groups) ? workflows.groups : [];
+  const visibility = workflows?.visibility ?? {};
+  return (
+    <section style={styles.card}>
+      <SectionHeader title="Relationship workflow visibility" detail="Review-only workflow intelligence" />
+      <div style={styles.grid4}>
+        <MetricCard label="Workflow groups" value={groups.length} detail={workflows?.boundary?.reviewOnly ? "Review-only DTOs" : "Visibility metadata"} />
+        <MetricCard label="Overdue visible" value={visibility.overdueRelationships?.length ?? 0} detail="No reminders sent" />
+        <MetricCard label="Dormant visible" value={visibility.dormantRelationships?.length ?? 0} detail="No reactivation automation" />
+        <MetricCard label="Warm opportunities" value={visibility.warmOpportunities?.length ?? 0} detail="No outreach execution" />
+      </div>
+      <div style={styles.workflowBoundary}>
+        {[
+          ["Workflow execution", workflows?.boundary?.workflowExecutionAllowed === false],
+          ["Automation", workflows?.boundary?.automationAllowed === false],
+          ["Reminders", workflows?.boundary?.remindersAllowed === false],
+          ["Notifications", workflows?.boundary?.notificationsAllowed === false],
+          ["Persistence", workflows?.boundary?.persistenceAllowed === false],
+          ["Neon writes", workflows?.boundary?.neonWritesAllowed === false],
+        ].map(([name, blocked]) => (
+          <span key={String(name)} style={blocked ? styles.blocked : styles.unknown}>{name}: {blocked ? "blocked" : "unknown"}</span>
+        ))}
+      </div>
+      {groups.length === 0 ? (
+        <EmptyPanel title="No workflow groups returned" body="Workflow visibility remains empty until queue projections provide relationship review items." />
+      ) : (
+        <div style={styles.workflowGrid}>
+          {groups.map((group) => (
+            <article key={group.groupKind} style={styles.workflowCard}>
+              <div style={styles.queueHead}>
+                <div>
+                  <div style={styles.queueTitle}>{group.label || formatKind(group.groupKind)}</div>
+                  <p style={styles.smallCopy}>{group.description}</p>
+                </div>
+                <StatusPill label={`${group.items.length} visible`} status={group.validation?.ok === false ? "warning" : group.confidence} />
+              </div>
+              <div style={styles.ordering}>
+                <span>Ordering: {group.ordering?.strategy ?? "deterministic_workflow_grouping_v0"}</span>
+                <span>Production scoring: {group.ordering?.productionScoring === false ? "off" : "unknown"}</span>
+                <span>Sources: {(group.sourceQueueKinds ?? []).join(", ") || "service queues"}</span>
+              </div>
+              {group.items.length === 0 ? (
+                <div style={styles.emptyInline}>No relationships are visible in this workflow group.</div>
+              ) : (
+                group.items.slice(0, 3).map((item) => <WorkflowItemCard key={`${group.groupKind}:${item.relationshipId}`} item={item} />)
+              )}
+            </article>
+          ))}
+        </div>
+      )}
+      <p style={styles.smallCopy}>{workflows?.explanation?.notes?.[0] ?? "Workflow contexts inform operator review but do not execute actions."}</p>
+    </section>
+  );
+}
+
+function WorkflowItemCard({ item }: { item: WorkflowSummary }) {
+  return (
+    <div style={styles.queueItem}>
+      <div style={styles.queueItemHead}>
+        <div>
+          <div style={styles.itemTitle}>{item.displayName}</div>
+          <div style={styles.smallCopy}>{item.lifecycle} · {item.deterministicOrder?.sourceQueueKind ?? "workflow"} rank {item.deterministicOrder?.sourceQueueRank ?? "n/a"}</div>
+        </div>
+        <StatusPill label={`confidence ${item.confidence}`} status={item.confidence} />
+      </div>
+      <p style={styles.copy}>{item.whyNow?.summary ?? "Relationship is visible for workflow review."}</p>
+      <p style={styles.smallCopy}>
+        Reasons {(item.whyNow?.reasonCodes ?? []).join(", ") || "service supplied"} · evidence refs {(item.whyNow?.evidenceReferences ?? []).length} · timeline refs {(item.whyNow?.timelineReferences ?? []).length}
+      </p>
+      <MissingEffects effects={item.missingDataEffects} />
+    </div>
   );
 }
 
@@ -741,6 +875,28 @@ const styles: Record<string, CSSProperties> = {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
     gap: "12px",
+  },
+  workflowBoundary: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "10px",
+    margin: "12px 0",
+    fontSize: "11px",
+  },
+  workflowGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: "12px",
+    marginTop: "12px",
+  },
+  workflowCard: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    padding: "14px",
+    borderRadius: "14px",
+    border: `1px solid ${palette.borderLight}`,
+    background: palette.bluePale,
   },
   queueCard: {
     display: "flex",
