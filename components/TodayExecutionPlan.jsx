@@ -56,6 +56,7 @@ export default function TodayExecutionPlan({
   onSkipTask,
   leadByKey,
   serverExecutionOutcomeMap = {},
+  readOnly = false,
 }) {
   // Brief "just routed" state on the queue row itself — mirrors the
   // calendar card's pulse so the eye reads the launch as one motion.
@@ -401,9 +402,11 @@ export default function TodayExecutionPlan({
                 </button>
                 {tel ? (
                   <a
-                    href={tel}
-                    title={`Call ${phone}`}
-                    onClick={() => {
+                    href={readOnly ? undefined : tel}
+                    title={readOnly ? "Demo mode is read-only; calling is disabled." : `Call ${phone}`}
+                    aria-disabled={readOnly}
+                    onClick={(e) => {
+                      if (readOnly) { e.preventDefault(); return; }
                       trackEvent({
                         eventType: "today_call_direct",
                         taskId: task.id ?? null,
@@ -415,22 +418,24 @@ export default function TodayExecutionPlan({
                     }}
                     style={{
                       fontSize: "11px", fontWeight: 700,
-                      color: palette.blue,
-                      background: palette.bluePale,
-                      border: `1px solid ${palette.blueBorder}`,
+                      color: readOnly ? palette.textTertiary : palette.blue,
+                      background: readOnly ? palette.surfaceHover : palette.bluePale,
+                      border: `1px solid ${readOnly ? palette.borderLight : palette.blueBorder}`,
                       borderRadius: "999px",
                       padding: "5px 11px",
                       textDecoration: "none",
                       whiteSpace: "nowrap",
+                      cursor: readOnly ? "not-allowed" : "pointer",
                     }}
                   >
-                    Call Direct
+                    {readOnly ? "Call disabled in demo" : "Call Direct"}
                   </a>
                 ) : null}
                 {typeof onSkipTask === "function" ? (
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); onSkipTask(task); }}
+                    disabled={readOnly}
                     title="Skip — advance to the next lead"
                     style={{
                       fontSize: "11px", fontWeight: 600,
@@ -439,7 +444,8 @@ export default function TodayExecutionPlan({
                       border: `1px solid ${palette.borderLight}`,
                       borderRadius: "999px",
                       padding: "5px 11px",
-                      cursor: "pointer",
+                      cursor: readOnly ? "not-allowed" : "pointer",
+                      opacity: readOnly ? 0.65 : 1,
                       whiteSpace: "nowrap",
                     }}
                   >

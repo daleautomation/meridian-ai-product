@@ -634,7 +634,7 @@ function executionStatusFor(task) {
 
 // ── TaskCard ───────────────────────────────────────────────────────────
 
-function TaskCard({ task, compact = false, now, isExecuteNow = false, onTaskFeedback, isSelected = false, onSelect, onOpen, pipelineLinkedCount = 0, viewMode = "single" }) {
+function TaskCard({ task, compact = false, now, isExecuteNow = false, onTaskFeedback, isSelected = false, onSelect, onOpen, pipelineLinkedCount = 0, viewMode = "single", readOnly = false }) {
   const cat = TASK_CATEGORIES[task.category] ?? TASK_CATEGORIES.priority;
   const pri = priorityTone(task.priority);
   const overdue = isOverdue(task, now);
@@ -1245,13 +1245,13 @@ function TaskCard({ task, compact = false, now, isExecuteNow = false, onTaskFeed
       )}
 
       {onTaskFeedback && task.status !== "done" && (
-        <FeedbackControls task={task} onTaskFeedback={onTaskFeedback} />
+        <FeedbackControls task={task} onTaskFeedback={onTaskFeedback} readOnly={readOnly} />
       )}
     </div>
   );
 }
 
-function FeedbackControls({ task, onTaskFeedback }) {
+function FeedbackControls({ task, onTaskFeedback, readOnly = false }) {
   const showAcceptOverride = task.workflowAdjusted && !task.feedbackApplied;
   const handle = (type) => (e) => {
     e.stopPropagation();
@@ -1283,33 +1283,38 @@ function FeedbackControls({ task, onTaskFeedback }) {
     }}>
       {showAcceptOverride && (
         <>
-          <FeedbackButton onClick={handle("accept_adjustment")}>Accept</FeedbackButton>
-          <FeedbackButton onClick={handle("override_adjustment")}>Override</FeedbackButton>
+          <FeedbackButton onClick={readOnly ? stop : handle("accept_adjustment")} disabled={readOnly}>Accept</FeedbackButton>
+          <FeedbackButton onClick={readOnly ? stop : handle("override_adjustment")} disabled={readOnly}>Override</FeedbackButton>
         </>
       )}
       {telHref ? (
         <a
-          href={telHref}
-          onClick={stop}
+          href={readOnly ? undefined : telHref}
+          onClick={(e) => { stop(e); if (readOnly) e.preventDefault(); }}
+          aria-disabled={readOnly}
+          title={readOnly ? "Demo mode is read-only; calling is disabled." : undefined}
           style={{
             fontSize: "10px",
             fontWeight: 700,
             letterSpacing: "0.04em",
             padding: "3px 9px",
             borderRadius: "999px",
-            color: palette.blue,
-            background: palette.bluePale,
-            border: `1px solid ${palette.blueBorder}`,
+            color: readOnly ? palette.textTertiary : palette.blue,
+            background: readOnly ? palette.surfaceHover : palette.bluePale,
+            border: `1px solid ${readOnly ? palette.borderLight : palette.blueBorder}`,
             textDecoration: "none",
+            cursor: readOnly ? "not-allowed" : "pointer",
           }}
         >
-          Call Now
+          {readOnly ? "Call disabled" : "Call Now"}
         </a>
       ) : null}
       {smsHref ? (
         <a
-          href={smsHref}
-          onClick={stop}
+          href={readOnly ? undefined : smsHref}
+          onClick={(e) => { stop(e); if (readOnly) e.preventDefault(); }}
+          aria-disabled={readOnly}
+          title={readOnly ? "Demo mode is read-only; texting is disabled." : undefined}
           style={{
             fontSize: "10px",
             fontWeight: 700,
@@ -1320,6 +1325,8 @@ function FeedbackControls({ task, onTaskFeedback }) {
             background: palette.surfaceHover,
             border: `1px solid ${palette.border}`,
             textDecoration: "none",
+            cursor: readOnly ? "not-allowed" : "pointer",
+            opacity: readOnly ? 0.65 : 1,
           }}
         >
           Text
@@ -1344,11 +1351,12 @@ function FeedbackControls({ task, onTaskFeedback }) {
   );
 }
 
-function FeedbackButton({ onClick, children }) {
+function FeedbackButton({ onClick, children, disabled = false }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       onMouseEnter={(e) => {
         e.currentTarget.style.background = palette.surfaceHover;
         e.currentTarget.style.color = palette.textPrimary;
@@ -1371,7 +1379,8 @@ function FeedbackButton({ onClick, children }) {
         borderLeft: `1px solid ${palette.borderLight}`,
         borderRadius: R.xs,
         padding: "3px 8px",
-        cursor: "pointer",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.65 : 1,
         transition: EASE,
       }}
     >
@@ -4712,6 +4721,7 @@ function DayColumn({ date, tasks, isToday, now, onTaskFeedback, selectedTaskId, 
                         onSelect={onSelectTask}
                         pipelineLinkedCount={typeof linkedCountFor === "function" ? linkedCountFor(t) : 0}
                         viewMode={viewMode}
+                        readOnly={readOnly}
                       />
                     </div>
                   );
@@ -4768,6 +4778,7 @@ function DayColumn({ date, tasks, isToday, now, onTaskFeedback, selectedTaskId, 
                       onSelect={onSelectTask}
                       pipelineLinkedCount={typeof linkedCountFor === "function" ? linkedCountFor(t) : 0}
                       viewMode={viewMode}
+                      readOnly={readOnly}
                     />
                   </div>
                 );
@@ -5828,6 +5839,7 @@ export default function CalendarCommandCenter({
                   onOpenAssist={handleOpenAssist}
                   leadByKey={null}
                   serverExecutionOutcomeMap={serverExecutionOutcomeMap}
+                  readOnly={readOnly}
                 />
                 <FieldTestDiagnosticsPanel tasksByDay={tasksByDay} dataTotal={data.length} />
               </>
@@ -5932,6 +5944,7 @@ export default function CalendarCommandCenter({
               onSelectTask={handleSelectTask}
               onTaskFeedback={onTaskFeedback}
               linkedCountFor={linkedCountFor}
+              readOnly={readOnly}
             />
           ) : calendarView === "day" ? (
             (() => {
@@ -6081,7 +6094,7 @@ export default function CalendarCommandCenter({
 // Now and Capital Allocation. Cards click into the same SelectedLead
 // flow as the calendar.
 
-function OperatorView({ ranked, now, selectedTaskId, onSelectTask, onTaskFeedback, linkedCountFor }) {
+function OperatorView({ ranked, now, selectedTaskId, onSelectTask, onTaskFeedback, linkedCountFor, readOnly = false }) {
   if (!Array.isArray(ranked) || ranked.length === 0) {
     return (
       <div style={{
@@ -6120,6 +6133,7 @@ function OperatorView({ ranked, now, selectedTaskId, onSelectTask, onTaskFeedbac
               isSelected={selectedTaskId === t.id}
               onSelect={onSelectTask}
               pipelineLinkedCount={typeof linkedCountFor === "function" ? linkedCountFor(t) : 0}
+              readOnly={readOnly}
             />
           </div>
         );
