@@ -17,10 +17,11 @@ export function WorkspacesSection() {
     <section id="workspaces" className="public-section public-split-section">
       <div>
         <span className="public-eyebrow">Workspaces</span>
-        <h2>Personalized command centers for teams that execute.</h2>
+        <h2>The workspace is where visibility becomes daily momentum.</h2>
         <p>
-          Meridian workspaces are built around the way each business sells,
-          services clients, tracks ownership, and measures outcomes.
+          Meridian workspaces are built around how each business sells, services
+          clients, tracks ownership, and measures outcomes, so operators can see
+          the next move before momentum cools.
         </p>
         <div className="public-pill-row">
           {workspaceAudiences.map((audience) => (
@@ -142,7 +143,7 @@ export function WorkspacesSection() {
       </div>
       <SectionCta
         eyebrow="Custom workspace"
-        text="See how a Meridian workspace can be built around your pipeline, data, team, and execution rules."
+        text="See how a Meridian workspace can be built around your pipeline, data, team, ownership rules, and execution rhythm."
         primaryHref={REQUEST_DEMO_HREF}
         primaryLabel="Request Workspace Demo"
         secondaryHref={START_AUDIT_HREF}

@@ -6,7 +6,7 @@ export function NotMeridianSection() {
     <section className="public-section public-not-section">
       <SectionIntro
         eyebrow="Meridian is not"
-        title="Not another place to store work. A system for moving it."
+        title="Not another place to store work. A system for moving it with confidence."
         text="Meridian sits between strategy and execution: operator intelligence, workflow orchestration, accountability systems, and operational visibility in one custom-built workspace."
       />
       <div className="public-not-grid">

@@ -11,8 +11,8 @@ export function AuditsSection() {
     <section id="audits" className="public-section public-audit-section">
       <SectionIntro
         eyebrow="Audits"
-        title="Start with a focused audit."
-        text="Walk away with a clear diagnosis, priority fixes, workflow maps, and a roadmap for turning your business into an operator-grade system."
+        title="A focused audit makes the invisible operational cost visible."
+        text="Walk away with a clear diagnosis of missed follow-up, stale leads, unclear handoffs, priority drift, and the workspace roadmap that turns the business into an operator-grade system."
       />
       <div className="public-audit-grid">
         {auditTiers.map((tier, index) => (
@@ -38,7 +38,7 @@ export function AuditsSection() {
       </div>
       <SectionCta
         eyebrow="Audit request"
-        text="Get the operational truth first: where work leaks, who owns it, and what the workspace should become."
+        text="Get the operational truth first: where work leaks, who owns it, what should happen next, and what the workspace should become."
         primaryHref={START_AUDIT_HREF}
         primaryLabel="Start Audit"
         secondaryHref={REQUEST_DEMO_HREF}

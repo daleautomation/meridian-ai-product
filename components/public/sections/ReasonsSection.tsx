@@ -11,7 +11,7 @@ export function ReasonsSection() {
     <section className="public-section">
       <SectionIntro
         eyebrow="Why businesses use Meridian"
-        title="Because operational drag is expensive when nobody can see it."
+        title="Because operational drag is expensive when nobody can feel where it starts."
         text="Meridian gives teams the structure to prioritize the right work, assign it clearly, and keep momentum visible from first signal through outcome."
       />
       <div className="public-reason-grid">
@@ -25,7 +25,7 @@ export function ReasonsSection() {
       </div>
       <SectionCta
         eyebrow="Operating clarity"
-        text="If the team is busy but the system feels unclear, Meridian starts by finding the hidden leaks."
+        text="If the team is busy but the system feels unclear, Meridian starts by finding the hidden leaks and turning them into owned movement."
         primaryHref={START_AUDIT_HREF}
         primaryLabel="Start Audit"
         secondaryHref={REQUEST_DEMO_HREF}
