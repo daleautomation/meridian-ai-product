@@ -1,5 +1,10 @@
-import { auditTiers } from "@/content/public/home";
 import { SectionIntro } from "@/components/public/ui/SectionIntro";
+import { SectionCta } from "@/components/public/ui/SectionCta";
+import {
+  auditTiers,
+  REQUEST_DEMO_HREF,
+  START_AUDIT_HREF,
+} from "@/content/public/home";
 
 export function AuditsSection() {
   return (
@@ -7,7 +12,7 @@ export function AuditsSection() {
       <SectionIntro
         eyebrow="Audits"
         title="Start with a focused audit."
-        text="Walk away with a clear diagnosis, priority fixes, and a roadmap for turning your business into an operator-grade system."
+        text="Walk away with a clear diagnosis, priority fixes, workflow maps, and a roadmap for turning your business into an operator-grade system."
       />
       <div className="public-audit-grid">
         {auditTiers.map((tier, index) => (
@@ -31,6 +36,14 @@ export function AuditsSection() {
           </article>
         ))}
       </div>
+      <SectionCta
+        eyebrow="Audit request"
+        text="Get the operational truth first: where work leaks, who owns it, and what the workspace should become."
+        primaryHref={START_AUDIT_HREF}
+        primaryLabel="Start Audit"
+        secondaryHref={REQUEST_DEMO_HREF}
+        secondaryLabel="Request Demo"
+      />
     </section>
   );
 }

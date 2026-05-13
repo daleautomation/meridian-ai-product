@@ -1,5 +1,10 @@
-import { services } from "@/content/public/home";
 import { SectionIntro } from "@/components/public/ui/SectionIntro";
+import { SectionCta } from "@/components/public/ui/SectionCta";
+import {
+  REQUEST_DEMO_HREF,
+  services,
+  START_AUDIT_HREF,
+} from "@/content/public/home";
 
 export function ServicesSection() {
   return (
@@ -7,7 +12,7 @@ export function ServicesSection() {
       <SectionIntro
         eyebrow="Services"
         title="Modular services that become one operating system."
-        text="Start with a focused business problem, then connect the findings into a workspace your team can run every day."
+        text="Start with a focused business problem, then convert the findings into workflow maps, operator playbooks, execution queues, and reporting your team can run every day."
       />
       <div className="public-service-grid">
         {services.map((service, index) => (
@@ -21,6 +26,14 @@ export function ServicesSection() {
           </article>
         ))}
       </div>
+      <SectionCta
+        eyebrow="Start point"
+        text="Most teams start with an audit, then build the workspace once the workflow is clear."
+        primaryHref={START_AUDIT_HREF}
+        primaryLabel="Start Audit"
+        secondaryHref={REQUEST_DEMO_HREF}
+        secondaryLabel="Request Demo"
+      />
     </section>
   );
 }

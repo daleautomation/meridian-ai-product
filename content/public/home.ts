@@ -4,6 +4,14 @@ export const START_AUDIT_HREF =
   "mailto:hello@meridian.ai?subject=Meridian%20AI%20business%20audit";
 export const CLIENT_LOGIN_HREF = "/login?next=/operator";
 
+export const trustProofPoints = [
+  "Built from real operational workflows",
+  "Designed around execution",
+  "Every workspace is custom-built",
+  "Operator-first infrastructure",
+  "Signal -> workflow -> execution -> attribution",
+] as const;
+
 export const services = [
   {
     title: "AI Business Audit",
@@ -39,6 +47,126 @@ export const services = [
     title: "Client Portal / Internal Dashboard Buildout",
     text: "Client-facing or internal dashboards that make status, ownership, and next actions obvious.",
     outcome: "Visibility layer",
+  },
+] as const;
+
+export const audienceCards = [
+  {
+    title: "Agencies",
+    pain: "Client work, lead response, fulfillment status, and reporting live in separate places.",
+    fix: "Meridian connects intake, ownership, delivery queues, and client-ready visibility.",
+    becomes: "A calmer agency operating room with every account, promise, and next action visible.",
+  },
+  {
+    title: "Contractors",
+    pain: "High-intent estimate requests get buried behind site visits, callbacks, and manual scheduling.",
+    fix: "Meridian scores inquiries, prepares call plans, and keeps follow-up attached to an owner.",
+    becomes: "A lead execution workspace that protects revenue from slow response and missed handoffs.",
+  },
+  {
+    title: "Real estate teams",
+    pain: "Deals, buyer signals, showing notes, lender steps, and follow-up reminders scatter fast.",
+    fix: "Meridian turns relationship context into prioritized tasks, briefs, and deal visibility.",
+    becomes: "A deal command center where the next move is clear before momentum cools.",
+  },
+  {
+    title: "Founders",
+    pain: "The business depends on founder memory for priorities, outreach, delivery, and decisions.",
+    fix: "Meridian externalizes the operating logic into dashboards, queues, and accountable workflows.",
+    becomes: "A founder command center that turns scattered judgment into repeatable execution.",
+  },
+  {
+    title: "Sales organizations",
+    pain: "Reps chase volume while strong-fit leads, stale opportunities, and next steps blur together.",
+    fix: "Meridian adds closeability scoring, AI briefings, and attribution around what actually moves.",
+    becomes: "A revenue workspace that ranks the day by signal, ownership, and expected impact.",
+  },
+  {
+    title: "Service businesses",
+    pain: "Intake, service delivery, customer updates, and repeat follow-up depend on manual coordination.",
+    fix: "Meridian builds the routing, status, reporting, and follow-up layer around your service model.",
+    becomes: "An execution system where customer work moves without disappearing between tools.",
+  },
+  {
+    title: "Operations teams",
+    pain: "Leaders cannot see where work stalls, who owns it, or which workflows create outcomes.",
+    fix: "Meridian maps the workflow, assigns accountability, and reports movement back to the team.",
+    becomes: "An operational visibility layer with fewer blind spots and cleaner ownership.",
+  },
+] as const;
+
+export const notMeridianCards = [
+  {
+    title: "Generic CRM",
+    not: "A database that waits for people to remember the next step.",
+    meridian: "Execution infrastructure that scores, routes, prepares, and tracks the work.",
+  },
+  {
+    title: "Noisy dashboard",
+    not: "More charts without ownership, timing, or operational consequence.",
+    meridian: "Operator visibility that shows what matters, who owns it, and what happens next.",
+  },
+  {
+    title: "Disconnected AI tool",
+    not: "A prompt box sitting outside the actual workflow.",
+    meridian: "Operator intelligence embedded into lead queues, call plans, reports, and attribution.",
+  },
+  {
+    title: "Templated automation agency",
+    not: "Reusable zaps and generic playbooks forced onto a unique business.",
+    meridian: "Custom workflow orchestration built from how your team really sells and executes.",
+  },
+] as const;
+
+export const businessReasons = [
+  {
+    title: "Follow-up gaps",
+    text: "High-fit opportunities stop leaking because every signal gets an owner, timing, and next action.",
+  },
+  {
+    title: "Scattered workflows",
+    text: "The work moves through one operating rhythm instead of inboxes, spreadsheets, and memory.",
+  },
+  {
+    title: "Unclear ownership",
+    text: "Leads, tasks, handoffs, and client promises show who is responsible before work stalls.",
+  },
+  {
+    title: "Weak lead prioritization",
+    text: "Closeability, urgency, fit, source quality, and timeline become visible before the team spends time.",
+  },
+  {
+    title: "Disconnected systems",
+    text: "Dashboards, queues, AI briefings, and reports align around the same operational truth.",
+  },
+  {
+    title: "Operational blind spots",
+    text: "Revenue leaks, stale handoffs, and workflow bottlenecks surface while they can still be fixed.",
+  },
+] as const;
+
+export const receiveGroups = [
+  {
+    title: "Audit deliverables",
+    text: "A clear operating diagnosis that shows where revenue, ownership, and execution are breaking down.",
+    items: [
+      "Operator playbooks",
+      "Workflow maps",
+      "Lead scoring systems",
+      "Revenue leak diagnosis",
+      "Priority fix roadmap",
+    ],
+  },
+  {
+    title: "Workspace build deliverables",
+    text: "A custom-built command center your team can use to run daily work with more confidence.",
+    items: [
+      "Execution queues",
+      "AI briefings",
+      "Reporting layers",
+      "Attribution systems",
+      "Dashboard infrastructure",
+    ],
   },
 ] as const;
 

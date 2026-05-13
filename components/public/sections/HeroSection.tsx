@@ -9,12 +9,12 @@ export function HeroSection() {
   return (
     <section className="public-hero">
       <div className="public-hero-copy">
-        <span className="public-eyebrow">Operator-grade intelligence</span>
-        <h1>Operator-grade intelligence systems for modern businesses.</h1>
+        <span className="public-eyebrow">Operator-first infrastructure</span>
+        <h1>Custom AI workspaces for businesses that need execution clarity.</h1>
         <p>
-          Meridian AI audits your operation, identifies revenue leaks, and
-          builds custom AI-powered workspaces that help your team know what to
-          do next.
+          Meridian AI audits real workflows, identifies revenue leaks, and
+          builds operator-grade workspaces that turn signal into owned,
+          trackable execution.
         </p>
         <div className="public-hero-actions">
           <a className="public-primary-button" href={START_AUDIT_HREF}>
@@ -25,9 +25,9 @@ export function HeroSection() {
           </a>
         </div>
         <div className="public-hero-proof" aria-label="Meridian operating loop">
-          <span>Audit</span>
-          <span>Workspace</span>
-          <span>Operator flow</span>
+          <span>Built from real operational workflows</span>
+          <span>Every workspace is custom-built</span>
+          <span>Designed around execution</span>
         </div>
       </div>
       <div className="public-hero-panel" aria-label="Meridian platform preview">
