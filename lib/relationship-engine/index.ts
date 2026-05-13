@@ -16,6 +16,7 @@ export * from "./repositories/interfaces";
 export * from "./repositories/placeholders";
 export * from "./scoring/healthScoreTrace";
 export * from "./scoring/shadowHealthScore";
+export * from "./services";
 export * from "./timeline/events";
 export * from "./timeline/normalizers";
 export * from "./timeline/validation";
