@@ -4,10 +4,13 @@ import {
   followUpProgression,
   leadQueuePreview,
   operatorWorkspaceStats,
+  REQUEST_DEMO_HREF,
+  START_AUDIT_HREF,
   workspaceAudiences,
   workspaceExamples,
   workspacePreviewCards,
 } from "@/content/public/home";
+import { SectionCta } from "@/components/public/ui/SectionCta";
 
 export function WorkspacesSection() {
   return (
@@ -94,7 +97,7 @@ export function WorkspacesSection() {
 
           <div className="public-execution-panel">
             <div className="public-console-header">
-              <span>Today's execution queue</span>
+              <span>Today&apos;s execution queue</span>
               <strong>Call plan + follow-up state</strong>
             </div>
             <div className="public-execution-list">
@@ -137,6 +140,14 @@ export function WorkspacesSection() {
           ))}
         </div>
       </div>
+      <SectionCta
+        eyebrow="Custom workspace"
+        text="See how a Meridian workspace can be built around your pipeline, data, team, and execution rules."
+        primaryHref={REQUEST_DEMO_HREF}
+        primaryLabel="Request Workspace Demo"
+        secondaryHref={START_AUDIT_HREF}
+        secondaryLabel="Start Audit"
+      />
     </section>
   );
 }
