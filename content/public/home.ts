@@ -189,6 +189,165 @@ export const workspacePreviewCards = [
   },
 ] as const;
 
+export const operatorWorkspaceStats = [
+  {
+    label: "Execution tasks generated",
+    value: "22",
+    detail: "Owner, due window, and source reason attached",
+  },
+  {
+    label: "Revenue leaks detected",
+    value: "3",
+    detail: "Unowned follow-up and stale handoff risk",
+  },
+  {
+    label: "AI briefings ready",
+    value: "8",
+    detail: "Call plan, objections, and next actions prepared",
+  },
+] as const;
+
+export const leadQueuePreview = [
+  {
+    company: "Harbor View Remodels",
+    request: "Kitchen addition estimate",
+    score: 91,
+    owner: "Maya Chen",
+    state: "High closeability opportunity",
+    nextAction: "Call in 18 min",
+    signal: "Budget stated, timeline inside 45 days",
+  },
+  {
+    company: "Northline Property Group",
+    request: "Multi-site maintenance bid",
+    score: 84,
+    owner: "Jon Bell",
+    state: "AI-prepared briefing ready",
+    nextAction: "Send scope confirmation",
+    signal: "Decision maker engaged twice",
+  },
+  {
+    company: "Blue Oak Dental",
+    request: "After-hours service inquiry",
+    score: 76,
+    owner: "Priya Shah",
+    state: "Next action scheduled",
+    nextAction: "Follow up at 2:40 PM",
+    signal: "Urgency high, pricing question open",
+  },
+] as const;
+
+export const deepReportPreview = {
+  title: "Deep Report",
+  subtitle: "Harbor View Remodels diagnostic brief",
+  severity: "Signal severity: High",
+  summary:
+    "High-fit inbound request with visible urgency, clear budget language, and a follow-up gap from the last estimate cycle.",
+  findings: [
+    {
+      label: "Revenue leak",
+      value: "$18k estimate risk",
+      detail: "Prior quote stalled after no owner was assigned for day-two follow-up.",
+    },
+    {
+      label: "Lead quality",
+      value: "Strong fit",
+      detail: "Scope matches high-margin service line and timeline is inside the target window.",
+    },
+    {
+      label: "Conversion bottleneck",
+      value: "Scope clarity",
+      detail: "Customer asked for phasing; operator needs a two-option talk track.",
+    },
+    {
+      label: "Operational gap",
+      value: "Handoff delay",
+      detail: "Estimate review and consult scheduling live in separate owner queues.",
+    },
+  ],
+  actions: [
+    "Open with timeline confirmation",
+    "Offer two-phase scope option",
+    "Schedule consult before sending estimate",
+  ],
+} as const;
+
+export const executionQueuePreview = [
+  {
+    time: "09:10",
+    title: "Call plan generated",
+    owner: "Maya Chen",
+    status: "Ready",
+    detail: "Qualification prompts and objection map attached",
+  },
+  {
+    time: "10:30",
+    title: "Estimate follow-up",
+    owner: "Jon Bell",
+    status: "In progress",
+    detail: "Revenue leak flagged from dormant quote",
+  },
+  {
+    time: "13:45",
+    title: "Decision maker confirmation",
+    owner: "Priya Shah",
+    status: "Queued",
+    detail: "Verify buying role before proposal draft",
+  },
+  {
+    time: "16:20",
+    title: "Next action scheduled",
+    owner: "Maya Chen",
+    status: "Scheduled",
+    detail: "Follow-up state moves from prepared to booked",
+  },
+] as const;
+
+export const followUpProgression = [
+  "Captured",
+  "Scored",
+  "Briefed",
+  "Assigned",
+  "Scheduled",
+] as const;
+
+export const intelligenceLayerLinks = [
+  {
+    title: "Audits",
+    text: "Find revenue leaks, quality signals, bottlenecks, and operational gaps.",
+    output: "Diagnostic map",
+  },
+  {
+    title: "Workflows",
+    text: "Turn findings into owner-aware actions, routing rules, and follow-up timing.",
+    output: "Execution logic",
+  },
+  {
+    title: "Workspaces",
+    text: "Surface live queues, briefs, call plans, and status in one operator console.",
+    output: "Daily command view",
+  },
+  {
+    title: "Operators",
+    text: "Keep every high-signal opportunity attached to a human owner and next action.",
+    output: "Accountability layer",
+  },
+  {
+    title: "Reporting",
+    text: "Measure generated work, completed actions, attribution, and remaining leaks.",
+    output: "Proof of movement",
+  },
+] as const;
+
+export const attributionSignals = [
+  "Audit signal converted to workflow",
+  "22 execution tasks generated",
+  "3 revenue leaks detected",
+  "High closeability opportunity routed",
+  "AI-prepared briefing ready",
+  "Next action scheduled",
+] as const;
+
 export const operatingSteps = [
   "Audit the business",
   "Identify the revenue leaks",
