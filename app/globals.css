@@ -1864,7 +1864,7 @@ html, body {
   overflow: hidden;
   width: min(1180px, calc(100% - 40px));
   margin: 58px auto 0;
-  padding: clamp(34px, 6vw, 64px);
+  padding: clamp(34px, 6vw, 64px) clamp(34px, 6vw, 64px) clamp(106px, 8vw, 126px);
   border: 1px solid rgba(37, 99, 235, 0.18);
   border-radius: 38px;
   background:
@@ -2233,7 +2233,7 @@ html, body {
   }
 
   .public-final-cta {
-    padding: 34px 24px;
+    padding: 34px 24px 96px;
   }
 
   .public-final-cta::after {
