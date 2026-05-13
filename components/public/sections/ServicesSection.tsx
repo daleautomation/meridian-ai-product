@@ -15,6 +15,7 @@ export function ServicesSection() {
             <span className="public-card-index">
               {String(index + 1).padStart(2, "0")}
             </span>
+            <span className="public-card-outcome">{service.outcome}</span>
             <h3>{service.title}</h3>
             <p>{service.text}</p>
           </article>

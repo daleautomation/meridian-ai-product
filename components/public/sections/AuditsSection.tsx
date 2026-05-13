@@ -10,13 +10,19 @@ export function AuditsSection() {
         text="Walk away with a clear diagnosis, priority fixes, and a roadmap for turning your business into an operator-grade system."
       />
       <div className="public-audit-grid">
-        {auditTiers.map((tier) => (
-          <article className="public-pricing-card" key={tier.name}>
+        {auditTiers.map((tier, index) => (
+          <article
+            className={`public-pricing-card${
+              index === 1 ? " public-pricing-card-featured" : ""
+            }`}
+            key={tier.name}
+          >
             <div>
               <span>{tier.name}</span>
               <strong>{tier.price}</strong>
             </div>
             <p>{tier.bestFor}</p>
+            <span className="public-audit-signal">{tier.signal}</span>
             <ul>
               {tier.points.map((point) => (
                 <li key={point}>{point}</li>
