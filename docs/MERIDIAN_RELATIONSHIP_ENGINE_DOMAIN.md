@@ -133,6 +133,7 @@ Use these folders under `lib/relationship-engine`:
 - `scoring/*`: score traces and score policies.
 - `followups/*`: promises, cadence, follow-up instructions.
 - `queue/*`: explainable operator candidate contracts.
+- `projections/*`: canonical read-model builders, explanation metadata, deterministic ordering helpers, and projection validation.
 - `repositories/*`: persistence interfaces only.
 - `verticals/*`: allowed customization.
 - `dto/*`: API, MCP, and UI boundary contracts.
@@ -144,7 +145,7 @@ Use these folders under `lib/relationship-engine`:
 - Score traces: assert component totals, evidence presence, model version, missing-data effects, and score range.
 - Timeline normalization: dedupe, category/type validation, timestamp validation, source validation, confidence validation.
 - Queue ranking: require why-now, next-best-action, owner visibility, confidence, evidence, and deterministic tie-breakers.
-- Relationship summaries: prove summaries project from canonical entities, timeline, promise records, and health traces only.
+- Relationship summaries: prove summaries project from canonical entities, timeline, promise records, health traces, and follow-up instructions only.
 
 ## 11. Biggest architectural risks
 

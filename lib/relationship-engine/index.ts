@@ -6,6 +6,7 @@ export * from "./dto/boundaries";
 export * from "./followups/policies";
 export * from "./lifecycle/validation";
 export * from "./policies/validation";
+export * from "./projections";
 export * from "./queue/candidate";
 export * from "./queue/builder";
 export * from "./relationship/entities";
