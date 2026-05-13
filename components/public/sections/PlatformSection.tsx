@@ -16,7 +16,7 @@ export function PlatformSection() {
       <div className="public-intelligence-layer" aria-label="Meridian intelligence layer diagram">
         <div className="public-intelligence-core">
           <span>Meridian OS</span>
-          <strong>Signal -> Workflow -> Execution -> Attribution</strong>
+          <strong>{"Signal -> Workflow -> Execution -> Attribution"}</strong>
           <p>
             A shared intelligence layer that keeps audits, workspaces, operators,
             and reports aligned around real next actions.
