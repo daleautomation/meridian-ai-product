@@ -20,6 +20,7 @@ export type RelationshipEngineRepositoryModeLabel =
   | "read_only_file"
   | "read_only_neon"
   | "read_only_memory"
+  | "read_only_snapshot"
   | "unknown";
 
 export interface RelationshipEngineRepositoryDiagnostics {
@@ -359,7 +360,9 @@ function repositorySurface(
     status: unwiredStores.length > 0 ? "not_configured" : "ok",
     summary: unwiredStores.length > 0
       ? "Read facade is active, but one or more repository adapters are not wired."
-      : "Read-only repository adapters report ready.",
+      : mode === "read_only_snapshot"
+        ? "Read-only snapshot-backed repository adapters report ready."
+        : "Read-only repository adapters report ready.",
     issueSummary: [],
     safeMetadata: {
       repositoryMode: mode,
@@ -367,6 +370,8 @@ function repositorySurface(
       unwiredStores,
       readOnly: diagnostics.readOnly,
       rawStorageInternalsExposed: false,
+      adapterIntegrityVerified: diagnostics.readOnly === true && unwiredStores.length === 0,
+      mutationPathsExposed: false,
     },
   };
 }

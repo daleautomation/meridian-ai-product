@@ -72,6 +72,7 @@ const READ_ONLY_GUARANTEES = {
   productionScoring: false,
   neonWrites: false,
   timelinePersistence: false,
+  autonomousWorkflows: false,
 } as const;
 
 export interface RelationshipEngineApiRequestInput {
