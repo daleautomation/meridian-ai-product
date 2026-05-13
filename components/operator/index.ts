@@ -6,3 +6,4 @@
 // Pull components out one at a time as the styles get hoisted.
 
 export { default as SourceReadinessBar } from "./SourceReadinessBar";
+export { default as RelationshipEngineOperatorPanel } from "./RelationshipEngineOperatorPanel";

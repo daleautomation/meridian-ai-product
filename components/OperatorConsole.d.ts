@@ -1,3 +1,5 @@
+import type { RelationshipEngineOperatorSurface } from "../lib/relationship-engine/operatorIntegration";
+
 interface WorkspaceProp {
   id: string;
   name: string;
@@ -91,6 +93,8 @@ interface OperatorConsoleProps {
   snapshotIsFresh?: boolean;
   /** Server-render clock used for hydration-stable time-derived labels. */
   snapshotHydrationNow?: string | null;
+  /** Read-only Relationship Engine operator/admin visibility surface. */
+  relationshipEngineOperatorSurface?: RelationshipEngineOperatorSurface | null;
 }
 
 declare function OperatorConsole(props: OperatorConsoleProps): React.JSX.Element;

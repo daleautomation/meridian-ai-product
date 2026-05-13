@@ -38,6 +38,7 @@ import { getWorkspaceAccess } from "../../lib/workspaceAccess";
 import { getSourceReadiness } from "../../lib/sources/readiness";
 import { ALL_TRADE_ENV_VARS } from "../../lib/modules/tradeSources";
 import { readOperatorSnapshot, writeOperatorSnapshot } from "../../lib/operatorPayload/snapshot";
+import { buildRelationshipEngineOperatorSurface } from "../../lib/relationship-engine/operatorIntegration";
 import {
   getDialablePhone,
   withCanonicalPhoneContact,
@@ -154,6 +155,11 @@ async function renderOperatorPage({
     return <WorkspacePicker workspaces={userWorkspaces} userName={user.name ?? user.id} />;
   }
 
+  const relationshipEngineOperatorSurface = await buildRelationshipEngineOperatorSurface({
+    workspace,
+    user,
+  });
+
   // ── Snapshot fast-path ──────────────────────────────────────────────
   // Pre-baked operator payload at data/snapshots/<slug>-operator.json.
   // When present and unexpired we skip every heavy compute step
@@ -211,6 +217,7 @@ async function renderOperatorPage({
           {...typedProps}
           user={{ name: user.name ?? user.id, id: user.id }}
           workspace={workspace}
+          relationshipEngineOperatorSurface={relationshipEngineOperatorSurface}
           snapshotGeneratedAt={snap.generatedAt}
           snapshotIsFresh={true}
           snapshotHydrationNow={hydrationNow}
@@ -922,6 +929,7 @@ async function renderOperatorPage({
       user={{ name: user.name ?? user.id, id: user.id }}
       workspace={workspace}
       {...mergedSlow}
+      relationshipEngineOperatorSurface={relationshipEngineOperatorSurface}
       snapshotGeneratedAt={slowGeneratedAt}
       snapshotIsFresh={true}
       snapshotHydrationNow={slowGeneratedAt}

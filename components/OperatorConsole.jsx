@@ -24,6 +24,7 @@ import LeadEmailAction from "./LeadEmailAction";
 import ContactStrategyPanel from "./ContactStrategyPanel";
 import { WORKFLOW, SHELL_GRID } from "./workflowLayout";
 import LeadWorkflowDrawer from "./LeadWorkflowDrawer";
+import RelationshipEngineOperatorPanel from "./operator/RelationshipEngineOperatorPanel";
 import { buildTasksFromLeads, taskAnchorIso } from "../lib/calendar/tasks";
 import {
   deriveOutcomeEventsFromPipelineMap,
@@ -8404,6 +8405,7 @@ export default function OperatorConsole({
   pendingReviews, calendarEvents, recentActivities,
   // Snapshot freshness — passed by the operator page so the pill in
   // the header can render a relative time and offer a manual refresh.
+  relationshipEngineOperatorSurface = null,
   snapshotGeneratedAt = null,
   snapshotIsFresh = false,
   snapshotHydrationNow = null,
@@ -9813,6 +9815,13 @@ export default function OperatorConsole({
           >
             History
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("relationships")}
+            style={activeTab === "relationships" ? S.tabBtnActive : S.tabBtn}
+          >
+            Relationships
+          </button>
         </nav>
         <div className="meridian-stats" style={S.headerRight}>
           {activeTab !== "calendar" && (
@@ -9839,7 +9848,11 @@ export default function OperatorConsole({
           future effects can depend on it; React reconciliation re-renders
           children on prop change without the remount sledgehammer. */}
       <div id="meridian-body" style={S.body}>
-        {activeTab === "deals" ? (
+        {activeTab === "relationships" ? (
+          <main id="meridian-main" style={{ ...S.main, padding: "20px 24px 40px" }}>
+            <RelationshipEngineOperatorPanel surface={relationshipEngineOperatorSurface} />
+          </main>
+        ) : activeTab === "deals" ? (
           <main id="meridian-main" style={{ ...S.main, padding: "20px 24px 40px" }}>
             <DealsPipeline
               dealsHook={rootDeals}
