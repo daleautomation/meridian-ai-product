@@ -1,11 +1,10 @@
 // Meridian Relationship Engine — canonical relationship summary projection.
 
-import type { EngineContext, EvidenceRef, IsoDateString, TimelineEventId } from "../primitives";
+import type { EngineContext, IsoDateString, TimelineEventId } from "../primitives";
 import type { FollowUpInstruction, PromiseRecord } from "../followups/policies";
 import type { RelationshipEntity, RelationshipSummary } from "../relationship/entities";
 import type { HealthScoreTrace } from "../scoring/healthScoreTrace";
 import type {
-  FollowUpTimelineEvent,
   OutcomeTimelineEvent,
   OwnerAssignmentTimelineEvent,
   TimelineEvent,
