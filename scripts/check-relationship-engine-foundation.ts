@@ -13,6 +13,7 @@ import {
 import assert from "node:assert/strict";
 
 const now = "2026-05-13T14:37:00.000Z";
+const fixtureRelationshipId = "relationship:workspace:test:alpha";
 
 async function main() {
 const normalized = normalizeTimelineSources({
@@ -20,6 +21,7 @@ const normalized = normalizeTimelineSources({
   crmActivities: [
     {
       id: "crm-1",
+      relationshipId: fixtureRelationshipId,
       companyKey: "company:alpha",
       companyName: "Alpha Roofing",
       performedAt: "2026-05-13T12:00:00.000Z",
@@ -32,6 +34,7 @@ const normalized = normalizeTimelineSources({
   followUpTasks: [
     {
       id: "fu-1",
+      relationshipId: fixtureRelationshipId,
       companyKey: "company:alpha",
       companyName: "Alpha Roofing",
       taskType: "follow_up_call",
@@ -52,6 +55,7 @@ const normalized = normalizeTimelineSources({
       workspace: "workspace:test",
       leadId: "lead-1",
       taskId: "task-1",
+      relationshipId: fixtureRelationshipId,
       companyKey: "company:alpha",
       crmKey: "crm:alpha",
       companyName: "Alpha Roofing",
@@ -69,6 +73,7 @@ const normalized = normalizeTimelineSources({
     {
       eventId: "outcome-1",
       workspace: "workspace:test",
+      relationshipId: fixtureRelationshipId,
       companyKey: "company:alpha",
       crmKey: "crm:alpha",
       leadId: "lead-1",

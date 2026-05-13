@@ -115,7 +115,11 @@ function deterministicCandidateId(input: QueueCandidateSkeletonInput): QueueCand
 }
 
 function resolveQueueSummary(input: QueueCandidateSummaryInput): RelationshipSummary {
-  return "summary" in input && input.kind === "relationship_summary" ? input.summary : input;
+  return isRelationshipSummaryProjection(input) ? input.summary : input;
+}
+
+function isRelationshipSummaryProjection(input: QueueCandidateSummaryInput): input is RelationshipSummaryProjection {
+  return "kind" in input && input.kind === "relationship_summary";
 }
 
 function hash(parts: string[]): string {
