@@ -4,7 +4,6 @@
 // integration. They are not production repositories and should be replaced by
 // explicit file/Neon adapters only after migrations and read/write tests exist.
 
-import type { WorkspaceId } from "../primitives";
 import type { ReadOnlyTimelineSourceAdapter, RepositoryAdapterCapabilities } from "./boundaries";
 import { assertReadOnlyCapabilities } from "./boundaries";
 
@@ -21,16 +20,16 @@ export function createEmptyReadOnlyTimelineSourceAdapter(
   assertReadOnlyCapabilities(capabilities);
   return {
     capabilities,
-    async listCrmActivities(_workspaceId: WorkspaceId) {
+    async listCrmActivities() {
       return [];
     },
-    async listFollowUpTasks(_workspaceId: WorkspaceId) {
+    async listFollowUpTasks() {
       return [];
     },
-    async listUsageEvents(_workspaceId: WorkspaceId) {
+    async listUsageEvents() {
       return [];
     },
-    async listExecutionOutcomes(_workspaceId: WorkspaceId) {
+    async listExecutionOutcomes() {
       return [];
     },
   };

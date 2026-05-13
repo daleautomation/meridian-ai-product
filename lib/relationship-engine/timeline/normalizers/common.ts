@@ -122,7 +122,6 @@ export function makeEvidenceRef(input: {
   return {
     id: `evidence:${stableHash([input.source, input.sourceId, input.label])}`,
     source: input.source,
-    sourceId: input.sourceId,
     label: input.label,
     ...(input.value === undefined ? {} : { value: input.value }),
     observedAt: input.observedAt,

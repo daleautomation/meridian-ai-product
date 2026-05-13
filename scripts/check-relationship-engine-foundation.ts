@@ -12,6 +12,7 @@ import {
 
 const now = "2026-05-13T14:37:00.000Z";
 
+async function main() {
 const normalized = normalizeTimelineSources({
   context: { now, workspaceId: "workspace:test" },
   crmActivities: [
@@ -141,15 +142,21 @@ if (candidate.rankScore !== 0 || candidate.visibleTo.length !== 1) {
   throw new Error("Queue candidate skeleton violated foundation defaults");
 }
 
-const adapter = createEmptyReadOnlyTimelineSourceAdapter(READ_ONLY_FILE_ADAPTER_CAPABILITIES);
-const adapterRows = await adapter.listCrmActivities("workspace:test" as never);
-if (adapterRows.length !== 0 || adapter.capabilities.canAppendTimelineEvents) {
-  throw new Error("Read-only placeholder adapter must stay empty and non-mutating");
+  const adapter = createEmptyReadOnlyTimelineSourceAdapter(READ_ONLY_FILE_ADAPTER_CAPABILITIES);
+  const adapterRows = await adapter.listCrmActivities("workspace:test" as never);
+  if (adapterRows.length !== 0 || adapter.capabilities.canAppendTimelineEvents) {
+    throw new Error("Read-only placeholder adapter must stay empty and non-mutating");
+  }
+
+  console.log("relationship-engine foundation check passed", {
+    events: normalized.events.map((event) => `${event.category}:${event.type}`),
+    warnings: normalized.warnings.length,
+    scoreModelVersion: trace.modelVersion,
+    candidateId: candidate.id,
+  });
 }
 
-console.log("relationship-engine foundation check passed", {
-  events: normalized.events.map((event) => `${event.category}:${event.type}`),
-  warnings: normalized.warnings.length,
-  scoreModelVersion: trace.modelVersion,
-  candidateId: candidate.id,
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
 });
