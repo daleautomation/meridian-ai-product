@@ -7,7 +7,6 @@
 import type {
   ConfidenceLevel,
   EngineContext,
-  EvidenceRef,
   IsoDateString,
   RelationshipId,
   TimelineEventId,
