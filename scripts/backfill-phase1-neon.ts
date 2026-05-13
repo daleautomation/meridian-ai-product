@@ -2,6 +2,10 @@ import crypto from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { getNeonSql } from "../lib/db/neon";
+import {
+  assertNeonMutationAllowed,
+  type NeonMutationIntent,
+} from "../lib/db/neonMutationBarrier";
 import type { DurableExecutionOutcome } from "../lib/execution/serverOutcomeStore";
 import { upsertDurableOutcomeRecordToNeon } from "../lib/execution/executionOutcomeNeonAdapter";
 import type { CompanySnapshot } from "../lib/state/companySnapshotStore";
@@ -30,6 +34,7 @@ type BackfillConfig = {
   directDatabaseUrl: string;
   nodeEnv: string;
   truthStore: string;
+  mutation: NeonMutationIntent;
 };
 
 type PlannedExecutionOutcome = {
@@ -113,6 +118,10 @@ function loadConfig(): BackfillConfig {
     directDatabaseUrl: requireEnv("DIRECT_DATABASE_URL"),
     nodeEnv: nodeEnv || "(unset)",
     truthStore,
+    mutation: {
+      execute: args.execute,
+      confirmationEnv: "MERIDIAN_BACKFILL_CONFIRM",
+    },
   };
 }
 
@@ -283,6 +292,10 @@ async function loadMigrationPlan(): Promise<MigrationPlan> {
 }
 
 function logMigrationTarget(config: BackfillConfig, plan: MigrationPlan): void {
+  console.log(`[phase1-neon-backfill] ${config.execute ? "WRITE EXECUTION ENABLED" : "DRY RUN ONLY"}`);
+  console.log(`[phase1-neon-backfill] ${config.truthStore === "file" ? "FILE MODE ACTIVE" : "NEON WRITE MODE ACTIVE"}`, {
+    truthStore: config.truthStore,
+  });
   console.log("[phase1-neon-backfill] target", {
     targetMode: "file-to-neon",
     truthStore: config.truthStore,
@@ -333,9 +346,9 @@ async function usageEventExists(event: UsageEvent): Promise<boolean> {
   return rows.length > 0;
 }
 
-async function backfillExecutionOutcomes(plan: PlannedExecutionOutcome[], execute: boolean): Promise<BackfillStats> {
+async function backfillExecutionOutcomes(config: BackfillConfig, plan: PlannedExecutionOutcome[]): Promise<BackfillStats> {
   const stats = emptyStats(plan.length);
-  if (!execute) {
+  if (!config.execute) {
     stats.rowsSkipped = plan.length;
     return stats;
   }
@@ -344,7 +357,7 @@ async function backfillExecutionOutcomes(plan: PlannedExecutionOutcome[], execut
     try {
       const duplicate = await executionOutcomeExists(item.record);
       if (duplicate) stats.duplicates += 1;
-      await upsertDurableOutcomeRecordToNeon(item.record, item.latestKeys);
+      await upsertDurableOutcomeRecordToNeon(item.record, item.latestKeys, { mutation: config.mutation });
       if (!duplicate) stats.rowsInserted += 1;
     } catch (err) {
       stats.failures += 1;
@@ -358,9 +371,9 @@ async function backfillExecutionOutcomes(plan: PlannedExecutionOutcome[], execut
   return stats;
 }
 
-async function backfillCompanySnapshots(plan: CompanySnapshot[], execute: boolean): Promise<BackfillStats> {
+async function backfillCompanySnapshots(config: BackfillConfig, plan: CompanySnapshot[]): Promise<BackfillStats> {
   const stats = emptyStats(plan.length);
-  if (!execute) {
+  if (!config.execute) {
     stats.rowsSkipped = plan.length;
     return stats;
   }
@@ -369,7 +382,7 @@ async function backfillCompanySnapshots(plan: CompanySnapshot[], execute: boolea
     try {
       const duplicate = await companySnapshotExists(snapshot);
       if (duplicate) stats.duplicates += 1;
-      await upsertSnapshotToNeon(snapshot);
+      await upsertSnapshotToNeon(snapshot, { mutation: config.mutation });
       if (!duplicate) stats.rowsInserted += 1;
     } catch (err) {
       stats.failures += 1;
@@ -382,10 +395,10 @@ async function backfillCompanySnapshots(plan: CompanySnapshot[], execute: boolea
   return stats;
 }
 
-async function backfillUsageEvents(plan: UsageEventPlan, execute: boolean): Promise<BackfillStats> {
+async function backfillUsageEvents(config: BackfillConfig, plan: UsageEventPlan): Promise<BackfillStats> {
   const stats = emptyStats(plan.events.length + plan.skippedLines);
   stats.rowsSkipped = plan.skippedLines;
-  if (!execute) {
+  if (!config.execute) {
     stats.rowsSkipped += plan.events.length;
     return stats;
   }
@@ -394,7 +407,7 @@ async function backfillUsageEvents(plan: UsageEventPlan, execute: boolean): Prom
     try {
       const duplicate = await usageEventExists(event);
       if (duplicate) stats.duplicates += 1;
-      const result = await writeEventToNeon(event);
+      const result = await writeEventToNeon(event, { mutation: config.mutation });
       if (!result.ok) {
         stats.failures += 1;
         console.error("[phase1-neon-backfill] usage event failed", {
@@ -416,10 +429,16 @@ async function backfillUsageEvents(plan: UsageEventPlan, execute: boolean): Prom
 }
 
 async function runBackfill(config: BackfillConfig, plan: MigrationPlan): Promise<MigrationSummary> {
+  if (config.execute) {
+    assertNeonMutationAllowed({
+      operation: "phase1 backfill",
+      ...config.mutation,
+    });
+  }
   const started = Date.now();
-  const executionOutcomes = await backfillExecutionOutcomes(plan.executionOutcomes, config.execute);
-  const companySnapshots = await backfillCompanySnapshots(plan.companySnapshots, config.execute);
-  const usageEvents = await backfillUsageEvents(plan.usageEvents, config.execute);
+  const executionOutcomes = await backfillExecutionOutcomes(config, plan.executionOutcomes);
+  const companySnapshots = await backfillCompanySnapshots(config, plan.companySnapshots);
+  const usageEvents = await backfillUsageEvents(config, plan.usageEvents);
   const total = [executionOutcomes, companySnapshots, usageEvents].reduce(
     (acc, stats) => addStats(acc, stats),
     emptyStats(),

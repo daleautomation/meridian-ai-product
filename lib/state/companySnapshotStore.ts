@@ -4,8 +4,9 @@
 // dual-write, or Neon via MERIDIAN_TRUTH_STORE.
 
 import type { ContactResolution } from "@/lib/contacts/types";
+import { RUNTIME_NEON_MUTATION_INTENT } from "@/lib/db/neonMutationBarrier";
 import type { CompanyRef, ToolResult } from "@/lib/mcp/types";
-import { dbReadFallbackEnabled, dualWriteStrict, getTruthStoreMode } from "@/lib/truth/types";
+import { dbReadFallbackEnabled, dualWriteStrict, getTruthStoreMode, logTruthStoreModeGuard } from "@/lib/truth/types";
 import {
   addNoteToFile,
   clearPaidPresenceOverrideFromFile,
@@ -157,6 +158,7 @@ function mergeSnapshots(fileRows: CompanySnapshot[], neonRows: CompanySnapshot[]
 
 export async function getSnapshot(company: CompanyRef): Promise<CompanySnapshot | null> {
   const mode = getTruthStoreMode();
+  logTruthStoreModeGuard("company snapshots", mode);
   if (mode === "file") return getSnapshotFromFile(company);
   try {
     const neonHit = await getSnapshotFromNeon(company);
@@ -170,6 +172,7 @@ export async function getSnapshot(company: CompanyRef): Promise<CompanySnapshot 
 
 export async function listSnapshots(): Promise<CompanySnapshot[]> {
   const mode = getTruthStoreMode();
+  logTruthStoreModeGuard("company snapshots", mode);
   if (mode === "file") return listSnapshotsFromFile();
   try {
     const neonRows = await listSnapshotsFromNeon();
@@ -188,10 +191,11 @@ export async function recordToolResult<T>(
   result: ToolResult<T>,
 ): Promise<CompanySnapshot> {
   const mode = getTruthStoreMode();
+  logTruthStoreModeGuard("company snapshots", mode);
   if (mode === "file") return recordToolResultToFile(company, result);
-  if (mode === "neon") return recordToolResultToNeon(company, result);
+  if (mode === "neon") return recordToolResultToNeon(company, result, { mutation: RUNTIME_NEON_MUTATION_INTENT });
   try {
-    const neonResult = await recordToolResultToNeon(company, result);
+    const neonResult = await recordToolResultToNeon(company, result, { mutation: RUNTIME_NEON_MUTATION_INTENT });
     await recordToolResultToFile(company, result).catch((err) => {
       console.error("[companySnapshotStore] dual file recordToolResult failed", err);
     });
@@ -208,10 +212,11 @@ export async function setStatus(
   change: { status: string; changedBy: string; note?: string },
 ): Promise<{ snapshot: CompanySnapshot; change: StatusChange }> {
   const mode = getTruthStoreMode();
+  logTruthStoreModeGuard("company snapshots", mode);
   if (mode === "file") return setStatusToFile(company, change);
-  if (mode === "neon") return setStatusToNeon(company, change);
+  if (mode === "neon") return setStatusToNeon(company, change, { mutation: RUNTIME_NEON_MUTATION_INTENT });
   try {
-    const neonResult = await setStatusToNeon(company, change);
+    const neonResult = await setStatusToNeon(company, change, { mutation: RUNTIME_NEON_MUTATION_INTENT });
     await setStatusToFile(company, change).catch((err) => {
       console.error("[companySnapshotStore] dual file setStatus failed", err);
     });
@@ -228,10 +233,11 @@ export async function setNextAction(
   update: { nextAction: string; nextActionDate?: string; contactName?: string; contactPhone?: string; contactEmail?: string },
 ): Promise<CompanySnapshot> {
   const mode = getTruthStoreMode();
+  logTruthStoreModeGuard("company snapshots", mode);
   if (mode === "file") return setNextActionToFile(company, update);
-  if (mode === "neon") return setNextActionToNeon(company, update);
+  if (mode === "neon") return setNextActionToNeon(company, update, { mutation: RUNTIME_NEON_MUTATION_INTENT });
   try {
-    const neonResult = await setNextActionToNeon(company, update);
+    const neonResult = await setNextActionToNeon(company, update, { mutation: RUNTIME_NEON_MUTATION_INTENT });
     await setNextActionToFile(company, update).catch((err) => {
       console.error("[companySnapshotStore] dual file setNextAction failed", err);
     });
