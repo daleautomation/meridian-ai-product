@@ -97,7 +97,7 @@ export function WorkspacesSection() {
 
           <div className="public-execution-panel">
             <div className="public-console-header">
-              <span>Today's execution queue</span>
+              <span>Today&apos;s execution queue</span>
               <strong>Call plan + follow-up state</strong>
             </div>
             <div className="public-execution-list">
