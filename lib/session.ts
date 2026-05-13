@@ -25,6 +25,12 @@ function sign(payload: string): string {
   return b64url(crypto.createHmac("sha256", getSecret()).update(payload).digest());
 }
 
+export function isSecureSessionRequest(req: Request): boolean {
+  const fwdProto = req.headers.get("x-forwarded-proto") ?? "";
+  return fwdProto.split(",").map((s) => s.trim()).includes("https")
+    || process.env.NODE_ENV === "production";
+}
+
 export type SessionPayload = { uid: string; exp: number };
 
 export function createSessionToken(uid: string): { token: string; maxAge: number } {
@@ -39,7 +45,18 @@ export function verifySessionToken(token: string | undefined): SessionPayload | 
   const parts = token.split(".");
   if (parts.length !== 3) return null;
   const [uid, expStr, sig] = parts;
-  const expected = sign(`${uid}.${expStr}`);
+  let expected: string;
+  try {
+    expected = sign(`${uid}.${expStr}`);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(
+      `[auth-session] verify_failed reason=session_secret_unavailable detail="${
+        err instanceof Error ? err.message : String(err)
+      }"`,
+    );
+    return null;
+  }
   if (sig.length !== expected.length) return null;
   if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
   const exp = Number(expStr);

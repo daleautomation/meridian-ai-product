@@ -7,11 +7,15 @@ import { readRecentEvents } from "@/lib/tracking/eventLog";
 // N events as JSON, newest last. Useful for Dylan to inspect John's
 // usage post-session without shelling into the box.
 import { getSession } from "@/lib/auth";
+import { isAdminOperator } from "@/lib/workspaceAccess";
 
 export async function GET(req: Request) {
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!isAdminOperator(session)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   const url = new URL(req.url);
   const limitRaw = Number(url.searchParams.get("limit") ?? "200");
