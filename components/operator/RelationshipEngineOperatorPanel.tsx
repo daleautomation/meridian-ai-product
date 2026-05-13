@@ -210,9 +210,9 @@ export default function RelationshipEngineOperatorPanel({
       <div style={styles.hero}>
         <div>
           <div style={styles.eyebrow}>Relationship Engine</div>
-          <h1 style={styles.title}>Operator review surfaces</h1>
+          <h1 style={styles.title}>Operator intelligence panel</h1>
           <p style={styles.copy}>
-            Read-only relationship intelligence, queue explainability, timeline readiness, and diagnostics visibility.
+            Read-only diagnostics, workflow visibility, queue explainability, and timeline readiness in one review flow.
           </p>
         </div>
         <div style={styles.heroMeta}>
@@ -233,18 +233,18 @@ export default function RelationshipEngineOperatorPanel({
         <MetricCard label="Confidence" value={metadata.confidence?.overall ?? "low"} detail="Service envelope metadata" />
       </div>
 
-      <ReadOnlyGuarantees surface={surface} />
-
-      <div style={styles.twoCol}>
-        <HealthPanel health={health} />
-        <SummaryTimelinePanel surface={surface} />
+      <div style={styles.operatorFlow}>
+        <ReadOnlyGuarantees surface={surface} />
+        <div style={styles.twoCol}>
+          <HealthPanel health={health} />
+          <SummaryTimelinePanel surface={surface} />
+        </div>
+        <WorkflowVisibilityPanel workflows={workflows} />
+        <QueueReviewPanel queues={queues} />
+        <FeedPanel feeds={feeds} />
+        <DiagnosticsPanel diagnostics={surface.diagnostics ?? {}} metadata={metadata} />
+        <AdminDiagnosticsPanel surface={surface} />
       </div>
-
-      <WorkflowVisibilityPanel workflows={workflows} />
-      <QueueReviewPanel queues={queues} />
-      <FeedPanel feeds={feeds} />
-      <DiagnosticsPanel diagnostics={surface.diagnostics ?? {}} metadata={metadata} />
-      <AdminDiagnosticsPanel surface={surface} />
     </section>
   );
 }
@@ -667,15 +667,19 @@ const styles: Record<string, CSSProperties> = {
   shell: {
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: "12px",
     color: palette.textPrimary,
+    maxHeight: "calc(100vh - 118px)",
+    overflowY: "auto",
+    overscrollBehavior: "contain",
+    paddingRight: "4px",
   },
   hero: {
     display: "flex",
     justifyContent: "space-between",
-    gap: "16px",
+    gap: "14px",
     alignItems: "flex-start",
-    padding: "22px",
+    padding: "18px",
     borderRadius: "18px",
     border: `1px solid ${palette.borderLight}`,
     background: `linear-gradient(135deg, ${palette.surface} 0%, ${palette.bluePale} 100%)`,
@@ -696,7 +700,7 @@ const styles: Record<string, CSSProperties> = {
   },
   title: {
     margin: "4px 0 8px",
-    fontSize: "28px",
+    fontSize: "24px",
     lineHeight: 1.1,
     letterSpacing: "-0.03em",
   },
@@ -725,7 +729,7 @@ const styles: Record<string, CSSProperties> = {
     fontSize: "13px",
   },
   card: {
-    padding: "16px",
+    padding: "14px",
     borderRadius: "16px",
     border: `1px solid ${palette.borderLight}`,
     background: palette.surface,
@@ -733,13 +737,18 @@ const styles: Record<string, CSSProperties> = {
   },
   grid4: {
     display: "grid",
-    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-    gap: "12px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+    gap: "10px",
   },
   twoCol: {
     display: "grid",
-    gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
-    gap: "16px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+    gap: "12px",
+  },
+  operatorFlow: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
   },
   metricCard: {
     padding: "14px",
@@ -776,7 +785,7 @@ const styles: Record<string, CSSProperties> = {
   },
   guardGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
     gap: "8px",
     marginBottom: "10px",
   },
@@ -873,8 +882,8 @@ const styles: Record<string, CSSProperties> = {
   },
   queueGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: "12px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+    gap: "10px",
   },
   workflowBoundary: {
     display: "flex",
@@ -885,8 +894,8 @@ const styles: Record<string, CSSProperties> = {
   },
   workflowGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: "12px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+    gap: "10px",
     marginTop: "12px",
   },
   workflowCard: {

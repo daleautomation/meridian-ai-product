@@ -1277,6 +1277,14 @@ function LeadRow({ lead, index, isSelected, onSelect, sectionBucket }) {
   const phone = getDialablePhone(lead);
   const fitScore = marketFitScore(lead);
   const fitLabel = fitScore === null ? null : `Fit ${fitScore}%`;
+  const serviceId = lead?.decision?.primaryOpportunity?.services?.[0]?.id ?? null;
+  const serviceCfg = serviceId ? getServiceCatalogEntry(serviceId) : null;
+  const serviceLabel =
+    serviceCfg?.shortLabel
+    ?? lead?.laborTechScan?.primaryService
+    ?? lead?.primaryServiceLabel
+    ?? lead?.serviceBucket
+    ?? null;
 
   // Click guard: prevent the row's onSelect when interacting with the
   // primary Call button.
@@ -1303,6 +1311,19 @@ function LeadRow({ lead, index, isSelected, onSelect, sectionBucket }) {
       <div style={S.rowLeft}>
         <div style={S.rowNameLine}>
           <span style={S.rowName}>{lead.name}</span>
+          {serviceLabel ? (
+            <span
+              title={`Service bucket: ${serviceLabel}`}
+              style={{
+                ...S.serviceBucketChip,
+                fontSize: "9px",
+                padding: "2px 7px",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {serviceLabel}
+            </span>
+          ) : null}
           {lead.location && <span style={S.rowLoc}>{lead.location}</span>}
         </div>
         {decision ? (
@@ -8413,6 +8434,7 @@ export default function OperatorConsole({
   // Rep filter for the calendar (All / Rep 1 / Rep 2). Display-only —
   // does not change scheduling.
   const [selectedRepId, setSelectedRepId] = useState("all");
+  const [selectedOperatorQueue, setSelectedOperatorQueue] = useState("shared");
   // Selected LaborTech service drives the per-trade filtered list.
   // Cleared when the user switches trades.
   const [selectedLaborTechServiceId, setSelectedLaborTechServiceId] = useState(null);
@@ -9570,9 +9592,73 @@ export default function OperatorConsole({
     return finalPool;
   }, [rawCalendarTasks, calendarVisibility, selectedLaborTechServiceId, selectedTradeId, serviceBucketsByTrade, primaryServiceByLeadKey, selectedRepId]);
 
+  const operatorQueueOptions = useMemo(() => {
+    const normalizeId = (value) => (value == null ? "" : String(value).trim().toLowerCase());
+    const currentUserIds = new Set([user?.id, user?.name].map(normalizeId).filter(Boolean));
+    const isAssignedToCurrentUser = (task) => currentUserIds.has(normalizeId(task?.assignedRepId));
+    const isUnassigned = (task) => !normalizeId(task?.assignedRepId);
+    const needsReview = (task) => {
+      const status = normalizeId(task?.status);
+      const category = normalizeId(task?.category);
+      const priority = normalizeId(task?.priority);
+      return status.includes("review") || category === "admin" || priority === "needs_review";
+    };
+    const isIntern = (task) => normalizeId(task?.assignedRepId).includes("intern");
+    const countMatching = (fn) => (calendarTasks ?? []).reduce((sum, task) => sum + (fn(task) ? 1 : 0), 0);
+    const teamReps = Array.isArray(teamWorkload?.perRep) ? teamWorkload.perRep : [];
+    const repAssignedCount = countMatching((task) => !isUnassigned(task));
+    const base = [
+      { id: "my", label: "My Leads", count: countMatching(isAssignedToCurrentUser) },
+      { id: "unassigned", label: "Unassigned", count: countMatching(isUnassigned) },
+      { id: "shared", label: "Shared Queue", count: calendarTasks?.length ?? 0 },
+      { id: "intern", label: "Intern Queue", count: countMatching(isIntern) },
+      { id: "needs-review", label: "Needs Review", count: countMatching(needsReview) },
+      { id: "rep-queues", label: "Rep Queues", count: repAssignedCount },
+    ];
+    const reps = teamReps.map((rep) => ({
+      id: `rep:${rep.id}`,
+      label: rep.name,
+      count: countMatching((task) => normalizeId(task?.assignedRepId) === normalizeId(rep.id)),
+      group: "Rep Queues",
+    }));
+    return [...base, ...reps];
+  }, [calendarTasks, teamWorkload?.perRep, user?.id, user?.name]);
+
+  const operatorQueueVisibleTasks = useMemo(() => {
+    const normalizeId = (value) => (value == null ? "" : String(value).trim().toLowerCase());
+    const currentUserIds = new Set([user?.id, user?.name].map(normalizeId).filter(Boolean));
+    const source = Array.isArray(calendarTasks) ? calendarTasks : [];
+    if (selectedOperatorQueue === "shared") return source;
+    if (selectedOperatorQueue === "my") {
+      return source.filter((task) => currentUserIds.has(normalizeId(task?.assignedRepId)));
+    }
+    if (selectedOperatorQueue === "unassigned") {
+      return source.filter((task) => !normalizeId(task?.assignedRepId));
+    }
+    if (selectedOperatorQueue === "intern") {
+      return source.filter((task) => normalizeId(task?.assignedRepId).includes("intern"));
+    }
+    if (selectedOperatorQueue === "needs-review") {
+      return source.filter((task) => {
+        const status = normalizeId(task?.status);
+        const category = normalizeId(task?.category);
+        const priority = normalizeId(task?.priority);
+        return status.includes("review") || category === "admin" || priority === "needs_review";
+      });
+    }
+    if (selectedOperatorQueue === "rep-queues") {
+      return source.filter((task) => !!normalizeId(task?.assignedRepId));
+    }
+    if (selectedOperatorQueue.startsWith("rep:")) {
+      const repId = selectedOperatorQueue.slice(4);
+      return source.filter((task) => normalizeId(task?.assignedRepId) === normalizeId(repId));
+    }
+    return source;
+  }, [calendarTasks, selectedOperatorQueue, user?.id, user?.name]);
+
   const businessTodayTaskCount = useMemo(() => {
     const todayKey = getBusinessTodayIso();
-    return (calendarTasks ?? []).filter((task) => {
+    return (operatorQueueVisibleTasks ?? []).filter((task) => {
       if (!task || task.status === "done") return false;
       const id = task.id ?? "";
       const title = task.title ?? "";
@@ -9580,7 +9666,7 @@ export default function OperatorConsole({
       const anchor = taskAnchorIso(task);
       return anchor ? toBusinessDateIso(anchor) === todayKey : false;
     }).length;
-  }, [calendarTasks]);
+  }, [operatorQueueVisibleTasks]);
 
   // Workflow-task lookup for the All Leads inline panels — finds the
   // matching call task in calendarTasks by linkedLeadId so the same
@@ -9643,7 +9729,7 @@ export default function OperatorConsole({
   // Legend entries — only services that appear in the visible tasks.
   const calendarServiceLegend = useMemo(() => {
     const seen = new Map();
-    for (const t of calendarTasks) {
+    for (const t of operatorQueueVisibleTasks) {
       const sid = t?.primaryServiceId;
       if (!sid || seen.has(sid)) continue;
       const cfg = getServiceCatalogEntry(sid);
@@ -9662,7 +9748,7 @@ export default function OperatorConsole({
       );
     }
     return list;
-  }, [calendarTasks]);
+  }, [operatorQueueVisibleTasks]);
 
   const serviceFilterLabel = useMemo(() => {
     if (!selectedLaborTechServiceId) return null;
@@ -9799,14 +9885,14 @@ export default function OperatorConsole({
             onClick={() => setActiveTab("calendar")}
             style={activeTab === "calendar" ? S.tabBtnActive : S.tabBtn}
           >
-            Today
+            Calendar
           </button>
           <button
             type="button"
             onClick={() => setActiveTab("cards")}
             style={activeTab === "cards" ? S.tabBtnActive : S.tabBtn}
           >
-            All Leads
+            Scheduling
           </button>
           <button
             type="button"
@@ -9867,6 +9953,65 @@ export default function OperatorConsole({
                 Up Next + Momentum) is now the single execution surface.
                 Decision flow state is still computed in case other surfaces
                 need it; the floating priority card no longer renders. */}
+            <div
+              role="group"
+              aria-label="Operator queue ownership"
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: "6px",
+                padding: "8px 10px",
+                marginBottom: "6px",
+                background: palette.surface,
+                border: `1px solid ${palette.borderLight}`,
+                borderRadius: "8px",
+                fontSize: "11px",
+                color: palette.textSecondary,
+              }}
+            >
+              <span style={{ fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", marginRight: "4px", color: palette.textTertiary }}>
+                Ownership
+              </span>
+              {operatorQueueOptions.map((queue) => {
+                const active = selectedOperatorQueue === queue.id;
+                const isRep = queue.group === "Rep Queues";
+                return (
+                  <button
+                    key={queue.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedRepId("all");
+                      setSelectedOperatorQueue(queue.id);
+                    }}
+                    aria-pressed={active}
+                    title={isRep ? `Rep Queues · ${queue.label}` : queue.label}
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: active ? 800 : 650,
+                      padding: isRep ? "3px 8px" : "4px 9px",
+                      borderRadius: "999px",
+                      border: `1px solid ${active ? palette.blueBorder : palette.border}`,
+                      background: active ? palette.bluePale : (isRep ? "#F8FAFC" : palette.surfaceHover),
+                      color: active ? palette.blue : palette.textSecondary,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      gap: "5px",
+                      alignItems: "center",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <span>{queue.label}</span>
+                    <span style={{ fontVariantNumeric: "tabular-nums", color: active ? palette.blue : palette.textTertiary }}>
+                      {queue.count}
+                    </span>
+                  </button>
+                );
+              })}
+              <span style={{ marginLeft: "auto", color: palette.textTertiary }}>
+                {operatorQueueVisibleTasks.length} visible
+              </span>
+            </div>
             <div
               role="group"
               aria-label="Calendar visibility"
@@ -9963,7 +10108,8 @@ export default function OperatorConsole({
                   );
                 })}
               </div>
-            ) : calendarServiceLegend.length > 0 ? (
+            ) : null}
+            {calendarServiceLegend.length > 0 ? (
               <div
                 role="group"
                 aria-label="LaborTech service legend"
@@ -10056,7 +10202,7 @@ export default function OperatorConsole({
               </div>
             ) : null}
             <CalendarCommandCenter
-              tasks={calendarTasks}
+              tasks={operatorQueueVisibleTasks}
               insights={operatorInsights}
               initialNowIso={hydrationNowIso}
               overflowEntries={overflowEntries}

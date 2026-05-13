@@ -70,19 +70,19 @@ export function displayLeadStatus(input) {
 // ── Sub-label / cross-tab hint copy ──────────────────────────────────
 
 const TAB_LABEL = {
-  today:      "Today",
-  "all-leads":"All Leads",
+  today:      "Calendar",
+  "all-leads":"Scheduling",
   history:    "History",
 };
 
 const SOURCE_SUBLABEL = {
-  today:      "Viewing lead from Today",
-  "all-leads":"Viewing lead from All Leads",
+  today:      "Viewing lead from Calendar",
+  "all-leads":"Viewing lead from Scheduling",
   history:    "Viewing lead from History",
 };
 
 const CROSS_TAB_HINT = {
-  today:      "This lead also appears in All Leads.",
+  today:      "This lead also appears in Scheduling.",
   "all-leads":"Scheduled in your call plan.",
   history:    "Previously worked lead.",
 };
