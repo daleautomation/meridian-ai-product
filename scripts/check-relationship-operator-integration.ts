@@ -44,6 +44,23 @@ async function main(): Promise<void> {
   assert.equal(adminSurface.queues.length, 6);
   assert.equal(adminSurface.workflows.kind, "relationship_workflow_projection");
   assert.equal(adminSurface.workflows.boundary.workflowExecutionAllowed, false);
+  assert.equal(adminSurface.multiOperatorWorkflows.kind, "multi_operator_workflow_orchestration");
+  assert.equal(adminSurface.multiOperatorWorkflows.boundary.autoAssignmentAllowed, false);
+  assert.equal(adminSurface.multiOperatorWorkflows.boundary.assignmentMutationAllowed, false);
+  assert.equal(adminSurface.multiOperatorWorkflows.boundary.queueExecutionAllowed, false);
+  assert.equal(adminSurface.multiOperatorWorkflows.boundary.workflowExecutionAllowed, false);
+  assert.equal(adminSurface.multiOperatorWorkflows.boundary.automationAllowed, false);
+  assert.equal(adminSurface.multiOperatorWorkflows.boundary.notificationsAllowed, false);
+  assert.equal(adminSurface.multiOperatorWorkflows.boundary.neonWritesAllowed, false);
+  assert.deepEqual(adminSurface.multiOperatorWorkflows.ordering.groupOrder, [
+    "my_relationships",
+    "unassigned_review",
+    "shared_review",
+    "intern_queue",
+    "needs_escalation",
+    "needs_manager_review",
+    "follow_up_review",
+  ]);
   assert.deepEqual(adminSurface.workflows.ordering.groupOrder, [
     "needs_relationship_attention",
     "stale_relationship_review",
@@ -65,6 +82,8 @@ async function main(): Promise<void> {
   const panelMarkup = renderToStaticMarkup(createElement(RelationshipEngineOperatorPanel, { surface: adminSurface as never }));
   assert.match(panelMarkup, /Relationship Engine/);
   assert.match(panelMarkup, /Operator review surfaces/);
+  assert.match(panelMarkup, /Multi-operator workload orchestration/);
+  assert.match(panelMarkup, /Intern queue/);
   assert.match(panelMarkup, /Relationship workflow visibility/);
 
   const clientSurface = await buildRelationshipEngineOperatorSurface({ workspace, user: client, now });
@@ -77,9 +96,11 @@ async function main(): Promise<void> {
   assert.equal(/password|cookie|token|DATABASE_URL|connectionString/i.test(serialized), false);
 
   const integrationSource = readFileSync("lib/relationship-engine/operatorIntegration.ts", "utf8");
+  const multiOperatorSource = readFileSync("lib/relationship-engine/multiOperatorWorkflowOrchestration.ts", "utf8");
   const panelSource = readFileSync("components/operator/RelationshipEngineOperatorPanel.tsx", "utf8");
   for (const [label, source] of [
     ["operator integration", integrationSource],
+    ["multi-operator orchestration", multiOperatorSource],
     ["operator panel", panelSource],
   ] as const) {
     assert.equal(/relationship-engine\/repositories|from "\.\/repositories|from "\.\.\/repositories/.test(source), false, `${label} must not import repositories`);
@@ -91,6 +112,7 @@ async function main(): Promise<void> {
     repositoryMode: adminSurface.metadata.repositoryMode,
     queueKinds: adminSurface.queues.map((queue) => queue.queueKind),
     workflowGroups: adminSurface.workflows.groups.map((group) => group.groupKind),
+    multiOperatorGroups: adminSurface.multiOperatorWorkflows.groups.map((group) => group.groupKind),
     adminDiagnosticsVisible: adminSurface.access.adminDiagnosticsVisible,
     clientDiagnosticsVisible: clientSurface.access.adminDiagnosticsVisible,
   });
