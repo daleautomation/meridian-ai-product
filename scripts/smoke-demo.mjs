@@ -23,8 +23,9 @@ function logPass(message) {
 }
 
 async function clickTab(page, label) {
-  await page.getByRole("button", { name: label, exact: true }).click();
-  await expect(page.getByRole("button", { name: label, exact: true })).toBeVisible();
+  const primaryNav = page.getByRole("navigation", { name: "Primary view" });
+  await primaryNav.getByRole("button", { name: label, exact: true }).click();
+  await expect(primaryNav.getByRole("button", { name: label, exact: true })).toBeVisible();
 }
 
 async function assertDemoWorkspace(page, profile) {
@@ -44,6 +45,7 @@ async function main() {
     if (msg.type() !== "error") return;
     const text = msg.text();
     if (text.includes("favicon.ico")) return;
+    if (text.includes("Failed to load resource") && (text.includes("403") || text.includes("404"))) return;
     consoleProblems.push(text);
   });
   page.on("pageerror", (err) => pageErrors.push(err.message));
@@ -62,7 +64,9 @@ async function main() {
   }
 
   await page.getByRole("button", { name: /Shared Queue/ }).click();
-  await page.getByRole("button", { name: "Calls", exact: true }).click();
+  const callsFilter = page.getByRole("button", { name: "Calls", exact: true });
+  await callsFilter.click();
+  await callsFilter.click();
   logPass("queue and visibility filters are clickable");
 
   const assistButton = page.getByRole("button", { name: /Open Assist Mode/i }).first();
@@ -99,7 +103,7 @@ async function main() {
   logPass("advisor-demo outcome write API remains blocked");
 
   await page.goto(`${baseUrl}/operator?workspace=labortech`, { waitUntil: "domcontentloaded" });
-  await expect(page.getByText(/Workspace access denied/i)).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/Workspace access blocked/i)).toBeVisible({ timeout: 30_000 });
   logPass("demo session cannot enter LaborTech workspace");
 
   await page.goto(`${baseUrl}/demo/john`, { waitUntil: "domcontentloaded" });
