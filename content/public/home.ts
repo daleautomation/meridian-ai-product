@@ -5,11 +5,85 @@ export const START_AUDIT_HREF =
 export const CLIENT_LOGIN_HREF = "/login?next=/operator";
 
 export const trustProofPoints = [
-  "Built from real operational workflows",
-  "Designed around execution",
+  "Missed follow-up becomes owned execution",
+  "Scattered systems become one operating rhythm",
   "Every workspace is custom-built",
   "Operator-first infrastructure",
-  "Signal -> workflow -> execution -> attribution",
+  "Signal -> workflow -> assignment -> execution -> attribution",
+] as const;
+
+export const openingNarrative = {
+  eyebrow: "Operational clarity",
+  title: "Most teams do not need another dashboard. They need the work to make sense.",
+  text: "Meridian starts where operators feel the drag: scattered workflows, stale leads, unclear ownership, noisy reporting, and teams reacting from memory instead of moving from a shared operating truth.",
+  quote:
+    "The goal is not more dashboards. The goal is operational clarity.",
+  arc: [
+    "Pain",
+    "Diagnosis",
+    "Visibility",
+    "Workspace",
+    "Execution",
+    "Attribution",
+    "Control",
+  ],
+} as const;
+
+export const beforeAfterStory = {
+  eyebrow: "Before Meridian / After Meridian",
+  title: "The shift is emotional before it is technical: chaos becomes calm execution.",
+  text: "Meridian turns daily operational anxiety into a visible system of priority, ownership, preparation, and proof.",
+  before: [
+    {
+      title: "Missed follow-up",
+      text: "Good opportunities sit in inboxes, CRM notes, and founder memory until urgency cools.",
+    },
+    {
+      title: "Scattered systems",
+      text: "Dashboards, spreadsheets, calendars, and conversations each show part of the truth.",
+    },
+    {
+      title: "Unclear priorities",
+      text: "Teams stay busy without knowing which work is most likely to move revenue.",
+    },
+    {
+      title: "Disconnected teams",
+      text: "Handoffs happen without ownership, timing, or a reliable next action.",
+    },
+  ],
+  after: [
+    {
+      title: "Owned workflows",
+      text: "Every high-signal item has an owner, reason, due window, and next step.",
+    },
+    {
+      title: "Prioritized queues",
+      text: "Operators start from ranked work instead of searching through noise.",
+    },
+    {
+      title: "AI-prepared execution",
+      text: "Briefs, call plans, risks, and prompts arrive before the team acts.",
+    },
+    {
+      title: "Operational calm",
+      text: "Momentum, attribution, and bottlenecks become visible while they can still be managed.",
+    },
+  ],
+} as const;
+
+export const operatorPrinciples = [
+  {
+    title: "Good systems reduce cognitive load.",
+    text: "The operator should not carry the whole business in their head.",
+  },
+  {
+    title: "Execution should feel visible.",
+    text: "Work needs state, owner, timing, and consequence before it can move with confidence.",
+  },
+  {
+    title: "Momentum should be trackable.",
+    text: "A team should know what moved, what stalled, and which actions created value.",
+  },
 ] as const;
 
 export const services = [
@@ -474,6 +548,39 @@ export const attributionSignals = [
   "High closeability opportunity routed",
   "AI-prepared briefing ready",
   "Next action scheduled",
+] as const;
+
+export const signalExecutionSteps = [
+  {
+    stage: "Signal",
+    title: "A real business event enters the system",
+    text: "Lead intent, customer context, source quality, urgency, and missing data become visible.",
+  },
+  {
+    stage: "Workflow",
+    title: "Meridian maps what should happen next",
+    text: "Routing rules, qualification logic, and escalation paths turn signal into an operating path.",
+  },
+  {
+    stage: "Assignment",
+    title: "Ownership attaches before work can drift",
+    text: "The right person receives the item with timing, reason, and expected outcome.",
+  },
+  {
+    stage: "Execution",
+    title: "AI prepares the operator for action",
+    text: "Briefs, call plans, objections, and follow-up language are ready at the moment of work.",
+  },
+  {
+    stage: "Reporting",
+    title: "Movement becomes visible",
+    text: "Completed actions, stale tasks, bottlenecks, and generated work roll back into the command view.",
+  },
+  {
+    stage: "Attribution",
+    title: "The business learns what created value",
+    text: "Source, owner, workflow, and outcome connect so teams can repeat what works.",
+  },
 ] as const;
 
 export const operatingSteps = [

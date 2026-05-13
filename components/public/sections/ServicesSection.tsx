@@ -10,9 +10,9 @@ export function ServicesSection() {
   return (
     <section id="services" className="public-section">
       <SectionIntro
-        eyebrow="Services"
-        title="Modular services that become one operating system."
-        text="Start with a focused business problem, then convert the findings into workflow maps, operator playbooks, execution queues, and reporting your team can run every day."
+        eyebrow="Diagnosis"
+        title="First Meridian names the operational drag. Then it turns the diagnosis into system design."
+        text="Start with the clearest pain point, then convert the findings into workflow maps, operator playbooks, execution queues, and reporting your team can run every day."
       />
       <div className="public-service-grid">
         {services.map((service, index) => (
@@ -28,7 +28,7 @@ export function ServicesSection() {
       </div>
       <SectionCta
         eyebrow="Start point"
-        text="Most teams start with an audit, then build the workspace once the workflow is clear."
+        text="Most teams start by locating the leak, then build the workspace once the workflow is clear."
         primaryHref={START_AUDIT_HREF}
         primaryLabel="Start Audit"
         secondaryHref={REQUEST_DEMO_HREF}

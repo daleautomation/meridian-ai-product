@@ -9,12 +9,12 @@ export function HeroSection() {
   return (
     <section className="public-hero">
       <div className="public-hero-copy">
-        <span className="public-eyebrow">Operator-first infrastructure</span>
-        <h1>Custom AI workspaces for businesses that need execution clarity.</h1>
+        <span className="public-eyebrow">From scattered work to operator clarity</span>
+        <h1>Turn operational chaos into a workspace that knows what should happen next.</h1>
         <p>
-          Meridian AI audits real workflows, identifies revenue leaks, and
-          builds operator-grade workspaces that turn signal into owned,
-          trackable execution.
+          Meridian AI audits the places where follow-up gets missed, ownership
+          gets unclear, and teams lose momentum, then builds operator-grade
+          workspaces that turn signal into owned, trackable execution.
         </p>
         <div className="public-hero-actions">
           <a className="public-primary-button" href={START_AUDIT_HREF}>
@@ -25,9 +25,9 @@ export function HeroSection() {
           </a>
         </div>
         <div className="public-hero-proof" aria-label="Meridian operating loop">
-          <span>Built from real operational workflows</span>
+          <span>Scattered systems become one operating rhythm</span>
           <span>Every workspace is custom-built</span>
-          <span>Designed around execution</span>
+          <span>Designed around execution, not noise</span>
         </div>
       </div>
       <div className="public-hero-panel" aria-label="Meridian platform preview">

@@ -6,8 +6,8 @@ export function ProcessSection() {
     <section className="public-section public-process-section">
       <SectionIntro
         eyebrow="How Meridian works"
-        title="From diagnosis to daily operating rhythm."
-        text="The work begins with evidence, turns into a practical system, and keeps improving as your team executes."
+        title="From diagnosis to control, the operating rhythm compounds."
+        text="The work begins with evidence, turns into a practical system, and keeps improving as your team executes with visible ownership and attribution."
       />
       <ol className="public-process-list">
         {operatingSteps.map((step, index) => (

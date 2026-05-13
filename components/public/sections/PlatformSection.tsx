@@ -10,13 +10,13 @@ export function PlatformSection() {
     <section id="platform" className="public-section">
       <SectionIntro
         eyebrow="Meridian Intelligence Layer"
-        title="Infrastructure that turns audit signals into accountable execution."
-        text="Meridian connects diagnostics, workflow rules, operator ownership, and reporting so the system shows what moved, what leaked, and what should happen next."
+        title="Control comes from one intelligence layer, not more disconnected views."
+        text="Meridian connects diagnostics, workflow rules, operator ownership, reporting, and attribution so the system shows what moved, what leaked, and what should happen next."
       />
       <div className="public-intelligence-layer" aria-label="Meridian intelligence layer diagram">
         <div className="public-intelligence-core">
           <span>Meridian OS</span>
-          <strong>{"Signal -> Workflow -> Execution -> Attribution"}</strong>
+          <strong>{"Signal -> Workflow -> Assignment -> Execution -> Attribution"}</strong>
           <p>
             A shared intelligence layer that keeps audits, workspaces, operators,
             and reports aligned around real next actions.

@@ -13,10 +13,10 @@ export function PublicHeader() {
         <span>Meridian AI</span>
       </Link>
       <nav className="public-nav" aria-label="Meridian website navigation">
+        <a href="#transformation">Before / After</a>
         <a href="#services">Services</a>
-        <a href="#who-for">Who for</a>
         <a href="#audits">Audits</a>
-        <a href="#receive">Deliverables</a>
+        <a href="#signal-to-execution">Signal flow</a>
         <a href="#workspaces">Workspaces</a>
       </nav>
       <div className="public-header-actions">
