@@ -12,12 +12,14 @@ import { getSession } from "@/lib/auth";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { safeWriteJson } from "@/lib/utils/fsSafeWrite";
+import { isAdminOperator } from "@/lib/workspaceAccess";
 
 export const dynamic = "force-dynamic";
 
 export async function POST() {
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!isAdminOperator(user)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const results: Record<string, unknown> = {};
 

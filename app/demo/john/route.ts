@@ -1,8 +1,4 @@
-import { NextResponse } from "next/server";
-import { getTenantById } from "@/config/tenants";
-import { createSessionToken, SESSION_COOKIE } from "@/lib/session";
-import { makeEvent, writeEvent } from "@/lib/tracking/eventLog";
-import { isDemoAllowedHost, describeDemoAllowlist } from "@/lib/demo/access";
+import { createDemoSessionResponse, resolveDemoProfile } from "@/lib/demo/session";
 
 // Meridian — Friendlier demo entry point at /demo/john.
 //
@@ -15,75 +11,10 @@ import { isDemoAllowedHost, describeDemoAllowlist } from "@/lib/demo/access";
 // Fires a session_start tracking event so the post-session review
 // shows when John actually entered the workspace.
 
-const TARGET_USER = "john";
-const TARGET_WORKSPACE = "labortech";
-
 export async function GET(req: Request) {
-  // Prefer the forwarded host (Vercel sets x-forwarded-host to the
-  // public domain; the raw host header is the function's internal
-  // hostname). Falling back to host avoids dev-only regressions.
-  const requestHost =
-    req.headers.get("x-forwarded-host")
-    ?? req.headers.get("host")
-    ?? "";
-  if (!isDemoAllowedHost(requestHost)) {
-    // eslint-disable-next-line no-console
-    console.log(
-      `[demo/john] forbidden host="${requestHost}" allowlist="${describeDemoAllowlist()}"`,
-    );
-    return NextResponse.json(
-      { error: "Demo entry disabled in this environment" },
-      { status: 403 },
-    );
-  }
-
-  const tenant = getTenantById(TARGET_USER);
-  if (!tenant) {
-    return NextResponse.json({ error: "Demo tenant unavailable" }, { status: 500 });
-  }
-
-  const { token, maxAge } = createSessionToken(tenant.id);
-  const fwdProto = req.headers.get("x-forwarded-proto") ?? "";
-  const isHttps =
-    fwdProto.split(",").map((s) => s.trim()).includes("https")
-    || process.env.NODE_ENV === "production";
-
-  const fwdHost =
-    req.headers.get("x-forwarded-host")
-    ?? req.headers.get("host")
-    ?? new URL(req.url).host;
-  const proto = isHttps ? "https" : "http";
-  const redirectUrl = new URL(
-    `/operator?workspace=${encodeURIComponent(TARGET_WORKSPACE)}`,
-    `${proto}://${fwdHost}`,
-  );
-
-  const res = NextResponse.redirect(redirectUrl, { status: 302 });
-  res.cookies.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: isHttps,
-    path: "/",
-    maxAge,
+  return createDemoSessionResponse({
+    req,
+    profile: resolveDemoProfile("john"),
+    entry: "/demo/john",
   });
-
-  // Fire-and-forget session_start event so the post-session review
-  // sees John's first action timestamp.
-  try {
-    await writeEvent(makeEvent({
-      eventType: "session_start",
-      userId: tenant.id,
-      workspace: TARGET_WORKSPACE,
-      metadata: {
-        entry: "/demo/john",
-        host: fwdHost,
-        userAgent: req.headers.get("user-agent") ?? "",
-      },
-    }));
-  } catch { /* fail silent */ }
-
-  // eslint-disable-next-line no-console
-  console.log(`[demo/john] redirect→${redirectUrl.toString()} host="${fwdHost}" secure=${isHttps}`);
-
-  return res;
 }

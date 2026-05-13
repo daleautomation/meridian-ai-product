@@ -6,6 +6,7 @@ import {
   recordDurableOutcome,
 } from "@/lib/execution/serverOutcomeStore";
 import { makeEvent, writeEvent } from "@/lib/tracking/eventLog";
+import { canMutateWorkspace, getWorkspaceAccess } from "@/lib/workspaceAccess";
 
 function bad(status: number, error: string) {
   return NextResponse.json({ ok: false, error }, { status });
@@ -44,10 +45,6 @@ function eventTypeForOutcome(status: string): string {
   }
 }
 
-function hasWorkspaceAccess(session: { id: string; workspaces?: string[] }, workspace: string): boolean {
-  return session.id === workspace || (session.workspaces ?? []).includes(workspace);
-}
-
 export async function POST(req: Request) {
   const session = await getSession();
   if (!session) return bad(401, "Unauthorized");
@@ -61,7 +58,9 @@ export async function POST(req: Request) {
 
   const workspace = stringOrNull(body.workspace) ?? session.workspaces?.[0] ?? null;
   if (!workspace) return bad(400, "Missing workspace");
-  if (!hasWorkspaceAccess(session, workspace)) return bad(403, "Workspace not accessible");
+  const access = getWorkspaceAccess(session, workspace);
+  if (!access.ok) return bad(access.status, "Workspace not accessible");
+  if (!canMutateWorkspace(session, access.workspace)) return bad(403, "Workspace is read-only for this session");
 
   const outcomeStatus = body.outcomeStatus;
   if (!isDurableOutcomeStatus(outcomeStatus)) return bad(400, "Invalid outcomeStatus");
@@ -175,7 +174,8 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const workspace = stringOrNull(url.searchParams.get("workspace")) ?? session.workspaces?.[0] ?? null;
   if (!workspace) return bad(400, "Missing workspace");
-  if (!hasWorkspaceAccess(session, workspace)) return bad(403, "Workspace not accessible");
+  const access = getWorkspaceAccess(session, workspace);
+  if (!access.ok) return bad(access.status, "Workspace not accessible");
   const outcomes = await listDurableOutcomes(workspace);
   return NextResponse.json({ ok: true, outcomes });
 }

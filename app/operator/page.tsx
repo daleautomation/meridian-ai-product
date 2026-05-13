@@ -30,11 +30,11 @@ import { getTradeServices } from "../../lib/services/tradeServiceConfig";
 import { getService as getServiceCatalogEntry } from "../../lib/services/serviceCatalog";
 import { generateSalesStrategy } from "../../lib/sales/salesStrategy";
 import {
-  getWorkspaceBySlug,
   listWorkspacesForUser,
   defaultWorkspaceFor,
   type WorkspaceConfig,
 } from "../../config/workspaces";
+import { getWorkspaceAccess } from "../../lib/workspaceAccess";
 import { getSourceReadiness } from "../../lib/sources/readiness";
 import { ALL_TRADE_ENV_VARS } from "../../lib/modules/tradeSources";
 import { readOperatorSnapshot, writeOperatorSnapshot } from "../../lib/operatorPayload/snapshot";
@@ -129,10 +129,22 @@ async function renderOperatorPage({
   // Resolve the active workspace.
   let workspace: WorkspaceConfig | null = null;
   if (requestedSlug) {
-    const candidate = getWorkspaceBySlug(requestedSlug);
-    if (candidate && userWorkspaces.some((w) => w.id === candidate.id)) {
-      workspace = candidate;
+    const access = getWorkspaceAccess(user, requestedSlug);
+    if (!access.ok) {
+      // eslint-disable-next-line no-console
+      console.log(
+        `[workspace-auth] denied user=${user.id} role=${user.accessRole} ` +
+        `requested=${requestedSlug} reason=${access.reason}`,
+      );
+      return (
+        <WorkspaceAccessDeniedState
+          requestedSlug={requestedSlug}
+          workspaces={userWorkspaces}
+          reason={access.reason}
+        />
+      );
     }
+    workspace = access.workspace;
   }
   if (!workspace) {
     if (userWorkspaces.length === 1) {
@@ -150,7 +162,8 @@ async function renderOperatorPage({
   // exactly the props the slow-path would have produced. Snapshot is
   // refreshed by the slow-path after each successful render so warm
   // containers stay current. Disable with MERIDIAN_DISABLE_SNAPSHOT=1.
-  const snapshotEnabled = process.env.MERIDIAN_DISABLE_SNAPSHOT !== "1";
+  const isolateDemoData = workspace.access.dataMode === "demo";
+  const snapshotEnabled = process.env.MERIDIAN_DISABLE_SNAPSHOT !== "1" && !isolateDemoData;
   if (snapshotEnabled) {
     const tSnap = Date.now();
     const snap = await readOperatorSnapshot(workspace.slug);
@@ -310,7 +323,7 @@ async function renderOperatorPage({
     `today="${new Date().toISOString().slice(0, 10)}"`,
   );
 
-  const recentActivitiesAll = await getAllActivities();
+  const recentActivitiesAll = isolateDemoData ? [] : await getAllActivities();
 
   const EMPTY_GLOBAL_SCHEDULE: ReturnType<typeof buildGlobalLeadSchedule> = {
     entries: [],
@@ -555,9 +568,11 @@ async function renderOperatorPage({
 
   // Pipeline + CRM still come from existing stores (empty when nothing
   // has been logged yet — honest empty).
-  const snapshots = await listSnapshots();
+  const snapshots = isolateDemoData ? [] : await listSnapshots();
   const pipelineMap = buildPipelineMapFromSnapshots(snapshots);
-  const durableOutcomeMap = await loadDurableOutcomeMap(workspace.slug);
+  const durableOutcomeMap: Record<string, ExecutionOutcomeMapValue> = isolateDemoData
+    ? {}
+    : await loadDurableOutcomeMap(workspace.slug);
 
   const roi = { totalLeads: uiLeads.length, contacted: 0, interested: 0, closedWon: 0, closedLost: 0 };
   for (const snap of snapshots) {
@@ -590,13 +605,15 @@ async function renderOperatorPage({
   const today = new Date();
   const calStart = new Date(today); calStart.setDate(calStart.getDate() - 7);
   const calEnd = new Date(today); calEnd.setDate(calEnd.getDate() + 7);
-  const calendarEvents = await getCalendarEvents(
-    calStart.toISOString().split("T")[0],
-    calEnd.toISOString().split("T")[0]
-  );
+  const calendarEvents = isolateDemoData
+    ? []
+    : await getCalendarEvents(
+      calStart.toISOString().split("T")[0],
+      calEnd.toISOString().split("T")[0]
+    );
 
   const recentActivities = recentActivitiesAll;
-  const jobHistory = await getJobHistory();
+  const jobHistory = isolateDemoData ? [] : await getJobHistory();
   const lastJob = jobHistory[0] ?? null;
   const pendingReviews: unknown[] = [];
 
@@ -897,7 +914,7 @@ async function renderOperatorPage({
   }
 
   // Apply persisted overrides on top of the freshly computed lists.
-  const overridesSlow = await listOverrides(workspace.slug);
+  const overridesSlow = isolateDemoData ? [] : await listOverrides(workspace.slug);
   const mergedSlow = applyScheduleOverrides(operatorProps, overridesSlow);
 
   return (
@@ -1223,6 +1240,43 @@ function NoWorkspaceState({ userName }: { userName: string }) {
   );
 }
 
+function WorkspaceAccessDeniedState({
+  requestedSlug,
+  workspaces,
+  reason,
+}: {
+  requestedSlug: string;
+  workspaces: WorkspaceConfig[];
+  reason: string;
+}) {
+  const message =
+    reason === "unknown_workspace"
+      ? "That workspace link does not match a known Meridian workspace."
+      : "Your account is signed in, but it is not authorized for that workspace.";
+  return (
+    <div style={pickerStyles.root}>
+      <div style={pickerStyles.card}>
+        <div style={pickerStyles.brand}>MERIDIAN</div>
+        <div style={pickerStyles.sub}>Workspace access blocked</div>
+        <p style={pickerStyles.empty}>
+          {message} Requested workspace: {requestedSlug}.
+        </p>
+        {workspaces.length > 0 ? (
+          <div style={pickerStyles.list}>
+            {workspaces.map((ws) => (
+              <Link key={ws.id} href={`/operator?workspace=${ws.slug}`} style={pickerStyles.item}>
+                <div style={pickerStyles.itemName}>{ws.branding?.displayName ?? ws.name}</div>
+                <div style={pickerStyles.itemMeta}>Open authorized workspace</div>
+              </Link>
+            ))}
+          </div>
+        ) : null}
+        <Link href="/login" style={pickerStyles.loginLink}>Use a different login</Link>
+      </div>
+    </div>
+  );
+}
+
 const pickerStyles: Record<string, React.CSSProperties> = {
   root: {
     minHeight: "100dvh",
@@ -1260,4 +1314,5 @@ const pickerStyles: Record<string, React.CSSProperties> = {
   itemName: { fontSize: "15px", fontWeight: 600, color: "#1A1A2E" },
   itemMeta: { fontSize: "12px", color: "#64748B", marginTop: "4px" },
   empty: { fontSize: "13px", color: "#64748B", lineHeight: 1.5, marginTop: "16px" },
+  loginLink: { display: "inline-block", marginTop: "16px", fontSize: "13px", color: "#2563EB" },
 };

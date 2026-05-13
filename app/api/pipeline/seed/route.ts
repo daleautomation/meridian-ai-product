@@ -12,6 +12,7 @@ import { getSession } from "@/lib/auth";
 import { callTool } from "@/lib/mcp/registry";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { isAdminOperator } from "@/lib/workspaceAccess";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300; // 5 min — batch inspect can be slow
@@ -19,6 +20,7 @@ export const maxDuration = 300; // 5 min — batch inspect can be slow
 export async function GET() {
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!isAdminOperator(user)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const ranked = await callTool("rank_companies", { limit: 500 });
   const data = ranked.data as { total: number; ranked: unknown[] } | null;
@@ -35,6 +37,7 @@ export async function GET() {
 export async function POST(req: Request) {
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!isAdminOperator(user)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const url = new URL(req.url);
   const skipInspect = url.searchParams.has("skipInspect");

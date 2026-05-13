@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { findTenantByCredentials, toPublicUser } from "@/config/tenants";
-import { createSessionToken, SESSION_COOKIE } from "@/lib/session";
+import { createSessionToken, isSecureSessionRequest, SESSION_COOKIE } from "@/lib/session";
 
 export async function POST(req: Request) {
   let body: { username?: string; password?: string; workspace?: string };
@@ -25,16 +25,22 @@ export async function POST(req: Request) {
   if (!tenant) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
-  const { token, maxAge } = createSessionToken(tenant.id);
+  let token: string;
+  let maxAge: number;
+  try {
+    ({ token, maxAge } = createSessionToken(tenant.id));
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(
+      `[login-debug] session_create_failed user=${tenant.id} detail="${
+        err instanceof Error ? err.message : String(err)
+      }"`,
+    );
+    return NextResponse.json({ error: "Authentication is not configured" }, { status: 500 });
+  }
   const res = NextResponse.json({ user: toPublicUser(tenant) });
-  // ngrok-aware cookie: serves HTTPS to the browser but proxies HTTP
-  // to the dev server. Detect the inbound protocol via x-forwarded-
-  // proto so SameSite=Lax cookies work both in plain dev (HTTP) and
-  // over the ngrok tunnel (HTTPS). NODE_ENV check stays as the
-  // production fallback.
   const fwdProto = req.headers.get("x-forwarded-proto") ?? "";
-  const isHttps = fwdProto.split(",").map((s) => s.trim()).includes("https")
-    || process.env.NODE_ENV === "production";
+  const isHttps = isSecureSessionRequest(req);
   res.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",

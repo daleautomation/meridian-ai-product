@@ -14,6 +14,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { callTool, hasTool, listTools } from "@/lib/mcp/registry";
+import { isAdminOperator } from "@/lib/workspaceAccess";
 
 type RpcRequest =
   | { method: "tools/list"; params?: Record<string, unknown> }
@@ -26,7 +27,8 @@ async function authorize(req: NextRequest): Promise<{ ok: true } | { ok: false; 
     if (presented && presented === secret) return { ok: true };
   }
   const user = await getSession();
-  if (user) return { ok: true };
+  if (user && isAdminOperator(user)) return { ok: true };
+  if (user) return { ok: false, reason: "forbidden" };
   return { ok: false, reason: "unauthorized" };
 }
 
@@ -34,8 +36,8 @@ export async function GET(req: NextRequest) {
   const auth = await authorize(req);
   if (!auth.ok) {
     return NextResponse.json(
-      { ok: false, error: "Unauthorized" },
-      { status: 401 }
+      { ok: false, error: auth.reason === "forbidden" ? "Forbidden" : "Unauthorized" },
+      { status: auth.reason === "forbidden" ? 403 : 401 }
     );
   }
   return NextResponse.json({
@@ -50,8 +52,8 @@ export async function POST(req: NextRequest) {
   const auth = await authorize(req);
   if (!auth.ok) {
     return NextResponse.json(
-      { ok: false, error: "Unauthorized" },
-      { status: 401 }
+      { ok: false, error: auth.reason === "forbidden" ? "Forbidden" : "Unauthorized" },
+      { status: auth.reason === "forbidden" ? 403 : 401 }
     );
   }
 

@@ -15,6 +15,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { canMutateWorkspace, getWorkspaceAccess } from "@/lib/workspaceAccess";
 
 function snapshotFile(slug: string): string {
   const safe = slug.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -31,9 +32,12 @@ export async function POST(req: Request) {
   if (!workspace) {
     return NextResponse.json({ ok: false, error: "Missing workspace" }, { status: 400 });
   }
-  const userWorkspaces = session.workspaces ?? [];
-  if (!userWorkspaces.includes(workspace) && session.id !== workspace) {
-    return NextResponse.json({ ok: false, error: "Workspace not accessible" }, { status: 403 });
+  const access = getWorkspaceAccess(session, workspace);
+  if (!access.ok) {
+    return NextResponse.json({ ok: false, error: "Workspace not accessible" }, { status: access.status });
+  }
+  if (!canMutateWorkspace(session, access.workspace)) {
+    return NextResponse.json({ ok: false, error: "Workspace is read-only for this session" }, { status: 403 });
   }
 
   // Read the existing snapshot, rewrite with expiresAt in the past so

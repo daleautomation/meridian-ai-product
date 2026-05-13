@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { makeEvent, writeEvent } from "@/lib/tracking/eventLog";
+import { getWorkspaceAccess } from "@/lib/workspaceAccess";
 
 // Meridian — Usage event tracking endpoint.
 //
@@ -31,6 +32,12 @@ export async function POST(req: Request) {
   const workspace =
     typeof body.workspace === "string" ? body.workspace
     : (session?.workspaces?.[0] ?? null);
+  if (session && workspace) {
+    const access = getWorkspaceAccess(session, workspace);
+    if (!access.ok) {
+      return NextResponse.json({ ok: false, error: "workspace_not_accessible" }, { status: access.status });
+    }
+  }
 
   const event = makeEvent({
     eventType,

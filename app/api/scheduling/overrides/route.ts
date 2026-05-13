@@ -10,6 +10,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { listOverrides } from "@/lib/scheduling/overrideStore";
+import { getWorkspaceAccess } from "@/lib/workspaceAccess";
 
 export async function GET(req: Request) {
   const session = await getSession();
@@ -20,6 +21,10 @@ export async function GET(req: Request) {
   const workspace = url.searchParams.get("workspace") ?? "";
   if (!workspace) {
     return NextResponse.json({ ok: false, error: "Missing workspace" }, { status: 400 });
+  }
+  const access = getWorkspaceAccess(session, workspace);
+  if (!access.ok) {
+    return NextResponse.json({ ok: false, error: "Workspace not accessible" }, { status: access.status });
   }
   const overrides = await listOverrides(workspace);
   return NextResponse.json({ ok: true, overrides });

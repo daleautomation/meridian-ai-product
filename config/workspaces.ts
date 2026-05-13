@@ -1,3 +1,5 @@
+import type { AccessRole } from "./tenants";
+
 // Meridian — workspace (tenant) config.
 //
 // One workspace = one company instance of the product. The public Meridian
@@ -13,6 +15,11 @@ export type WorkspaceConfig = {
   defaultModule: ModuleId;
   enabledModules: ModuleId[];
   comingSoonModules: ModuleId[];
+  access: {
+    allowedRoles: AccessRole[];
+    dataMode: "client" | "demo";
+    readOnlyByDefault: boolean;
+  };
   branding?: {
     displayName?: string;
     accentLabel?: string;
@@ -27,14 +34,36 @@ export const WORKSPACES: Record<string, WorkspaceConfig> = {
     defaultModule: "roofing",
     enabledModules: ["roofing"],
     comingSoonModules: ["hvac", "plumbing", "remodeling"],
+    access: {
+      allowedRoles: ["client_user", "admin_operator"],
+      dataMode: "client",
+      readOnlyByDefault: false,
+    },
     branding: {
       displayName: "LaborTech",
       accentLabel: "LaborTech workspace",
     },
   },
+  "advisor-demo": {
+    id: "advisor-demo",
+    name: "Advisor Demo",
+    slug: "advisor-demo",
+    defaultModule: "roofing",
+    enabledModules: ["roofing"],
+    comingSoonModules: ["hvac", "plumbing", "remodeling"],
+    access: {
+      allowedRoles: ["demo_viewer", "advisor_viewer", "admin_operator"],
+      dataMode: "demo",
+      readOnlyByDefault: true,
+    },
+    branding: {
+      displayName: "Meridian Demo",
+      accentLabel: "Advisor demo workspace",
+    },
+  },
 };
 
-export const WORKSPACE_ORDER: string[] = ["labortech"];
+export const WORKSPACE_ORDER: string[] = ["labortech", "advisor-demo"];
 
 export function getWorkspaceBySlug(slug: string | undefined | null): WorkspaceConfig | null {
   if (!slug) return null;

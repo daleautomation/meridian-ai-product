@@ -29,6 +29,7 @@ import { makeEvent, writeEvent } from "@/lib/tracking/eventLog";
 import { isTerminalStatusValue } from "@/lib/crm/statusTaxonomy";
 import { findTerminalDurableOutcome } from "@/lib/execution/serverOutcomeStore";
 import { listSnapshots } from "@/lib/state/companySnapshotStore";
+import { canMutateWorkspace, getWorkspaceAccess } from "@/lib/workspaceAccess";
 
 const VALID_ACTIONS: ScheduleOverrideAction[] = [
   "move_today",
@@ -115,10 +116,9 @@ export async function POST(req: Request) {
   if (!VALID_ACTIONS.includes(action)) return bad(400, "Invalid action");
   if (action === "assign_rep" && !repId) return bad(400, "assign_rep requires repId");
 
-  const userWorkspaces = session.workspaces ?? [];
-  if (!userWorkspaces.includes(workspaceSlug) && session.id !== workspaceSlug) {
-    return bad(403, "Workspace not accessible");
-  }
+  const access = getWorkspaceAccess(session, workspaceSlug);
+  if (!access.ok) return bad(access.status, "Workspace not accessible");
+  if (!canMutateWorkspace(session, access.workspace)) return bad(403, "Workspace is read-only for this session");
 
   const now = new Date();
   let scheduledFor: string | null = null;

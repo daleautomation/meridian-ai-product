@@ -9,6 +9,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { runDailyPipeline, saveJobResult, getJobHistory, type DailyJobOptions } from "@/lib/pipeline/dailyJob";
+import { isAdminOperator } from "@/lib/workspaceAccess";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300; // 5 min
@@ -26,6 +27,7 @@ function isAuthorized(req: Request): boolean {
 export async function GET() {
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!isAdminOperator(user)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const history = await getJobHistory();
   return NextResponse.json({ ok: true, history });
@@ -37,6 +39,9 @@ export async function POST(req: Request) {
   const cronAuthed = isAuthorized(req);
   if (!user && !cronAuthed) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  if (user && !isAdminOperator(user) && !cronAuthed) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
   // Parse options from request body (optional)

@@ -8,10 +8,18 @@
 
 export type ModuleId = "roofing";
 
+export type AccessRole =
+  | "demo_viewer"
+  | "advisor_viewer"
+  | "client_user"
+  | "admin_operator";
+
 export type Tenant = {
   id: string;
   name: string;
   password: string;
+  loginEnabled?: boolean;
+  accessRole: AccessRole;
   modules: ModuleId[];
   geo: string[];
   workspaces: string[];
@@ -20,6 +28,7 @@ export type Tenant = {
 export type PublicUser = {
   id: string;
   name: string;
+  accessRole: AccessRole;
   modules: ModuleId[];
   geo: string[];
   workspaces: string[];
@@ -35,14 +44,16 @@ export const TENANTS: Record<string, Tenant> = {
     id: "dylan",
     name: "Dylan",
     password: "meridian",
+    accessRole: "admin_operator",
     modules: ["roofing"],
     geo: [],
-    workspaces: ["labortech"],
+    workspaces: ["labortech", "advisor-demo"],
   },
   john: {
     id: "john",
     name: "John",
     password: "labortech",
+    accessRole: "client_user",
     modules: ["roofing"],
     geo: [],
     workspaces: ["labortech"],
@@ -51,14 +62,62 @@ export const TENANTS: Record<string, Tenant> = {
     id: "labortech",
     name: "LaborTech",
     password: "labortech",
+    accessRole: "client_user",
     modules: ["roofing"],
     geo: [],
     workspaces: ["labortech"],
   },
+  max: {
+    id: "max",
+    name: "Max",
+    password: "",
+    loginEnabled: false,
+    accessRole: "advisor_viewer",
+    modules: ["roofing"],
+    geo: [],
+    workspaces: ["advisor-demo"],
+  },
+  advisor: {
+    id: "advisor",
+    name: "Advisor Demo",
+    password: "",
+    loginEnabled: false,
+    accessRole: "advisor_viewer",
+    modules: ["roofing"],
+    geo: [],
+    workspaces: ["advisor-demo"],
+  },
+  investor: {
+    id: "investor",
+    name: "Investor Demo",
+    password: "",
+    loginEnabled: false,
+    accessRole: "advisor_viewer",
+    modules: ["roofing"],
+    geo: [],
+    workspaces: ["advisor-demo"],
+  },
+  "public-demo": {
+    id: "public-demo",
+    name: "Demo Viewer",
+    password: "",
+    loginEnabled: false,
+    accessRole: "demo_viewer",
+    modules: ["roofing"],
+    geo: [],
+    workspaces: ["advisor-demo"],
+  },
 };
 
 export function toPublicUser(t: Tenant): PublicUser {
-  return { id: t.id, name: t.name, modules: t.modules, geo: t.geo, workspaces: t.workspaces };
+  return {
+    id: t.id,
+    name: t.name,
+    accessRole: t.accessRole,
+    modules: t.modules,
+    geo: t.geo,
+    workspaces: t.workspaces,
+  };
 }
 
 export function getTenantById(id: string): Tenant | null {
@@ -71,6 +130,7 @@ export function findTenantByCredentials(
 ): Tenant | null {
   const t = TENANTS[username.toLowerCase().trim()];
   if (!t) return null;
+  if (t.loginEnabled === false) return null;
   if (t.password.length !== password.length) return null;
   let mismatch = 0;
   for (let i = 0; i < t.password.length; i++) {
