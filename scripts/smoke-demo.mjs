@@ -72,7 +72,7 @@ async function main() {
   const assistButton = page.getByRole("button", { name: /Open Assist Mode/i }).first();
   await expect(assistButton).toBeVisible({ timeout: 30_000 });
   await assistButton.click();
-  await expect(page.getByText(/Call disabled in demo/)).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/Call disabled in demo/).first()).toBeVisible({ timeout: 30_000 });
   logPass("lead inspection panel opens while call execution stays disabled");
 
   const calledButton = page.getByRole("button", { name: "Called", exact: true }).first();
