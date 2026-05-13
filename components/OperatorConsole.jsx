@@ -5463,6 +5463,7 @@ function TradeLeadsPortfolio({
   tradeReadiness,
   onImport,
   importState,
+  readOnly = false,
   selectedServiceAngleId,
   onSelectServiceAngle,
   onClearServiceAngle,
@@ -5659,7 +5660,8 @@ function TradeLeadsPortfolio({
               <button
                 type="button"
                 onClick={onImport}
-                disabled={importState?.loading}
+                disabled={importState?.loading || readOnly}
+                title={readOnly ? "Demo mode is read-only; lead imports are disabled." : undefined}
                 style={{
                   fontSize: "13px",
                   fontWeight: 600,
@@ -5668,12 +5670,16 @@ function TradeLeadsPortfolio({
                   border: `1px solid ${palette.blueBorder}`,
                   borderRadius: "10px",
                   padding: "10px 16px",
-                  cursor: importState?.loading ? "default" : "pointer",
-                  opacity: importState?.loading ? 0.7 : 1,
+                  cursor: importState?.loading || readOnly ? "not-allowed" : "pointer",
+                  opacity: importState?.loading || readOnly ? 0.7 : 1,
                   transition: "all 180ms cubic-bezier(0.4, 0, 0.2, 1)",
                 }}
               >
-                {importState?.loading ? `Adding ${tradeLabel} leads…` : `Add ${tradeLabel} leads`}
+                {importState?.loading
+                  ? `Adding ${tradeLabel} leads…`
+                  : readOnly
+                    ? "Import disabled in demo"
+                    : `Add ${tradeLabel} leads`}
               </button>
             )}
             <button
@@ -8439,6 +8445,13 @@ export default function OperatorConsole({
   // Cleared when the user switches trades.
   const [selectedLaborTechServiceId, setSelectedLaborTechServiceId] = useState(null);
   const workspaceAccent = workspace?.branding?.accentLabel ?? null;
+  const isReadOnlyWorkspace =
+    workspace?.access?.readOnlyByDefault === true || workspace?.access?.dataMode === "demo";
+  const workspaceModeLabel = workspace?.access?.dataMode === "demo"
+    ? "Demo mode"
+    : isReadOnlyWorkspace
+      ? "Read-only"
+      : null;
   const hydrationNowIso = snapshotHydrationNow ?? snapshotGeneratedAt ?? "1970-01-01T00:00:00.000Z";
   // Server-supplied set of connected env-var names. Used by
   // getTradeSourceReadiness so the UI does not need to read process.env.
@@ -8947,6 +8960,14 @@ export default function OperatorConsole({
   });
 
   const handleImportTradeLeads = useCallback(async () => {
+    if (isReadOnlyWorkspace) {
+      setImportState({
+        loading: false,
+        message: "Demo mode is read-only. Imports are disabled, but tabs, filters, and lead inspection stay available.",
+        kind: "error",
+      });
+      return;
+    }
     setImportState({ loading: true, message: null, kind: null });
     try {
       const res = await fetch("/api/ingestion/trade-leads", {
@@ -8997,7 +9018,7 @@ export default function OperatorConsole({
         message: `Import failed: ${(err instanceof Error ? err.message : "unknown error")}`,
       });
     }
-  }, [selectedTradeId]);
+  }, [selectedTradeId, isReadOnlyWorkspace]);
 
   // ── Intelligence scope ──
   // Derived best-effort from props the operator console already has.
@@ -9791,6 +9812,11 @@ export default function OperatorConsole({
             <div style={S.hSub}>
               {workspaceAccent ? workspaceAccent : "Who to call first"}
             </div>
+            {workspaceModeLabel ? (
+              <div style={S.workspaceModeBadge}>
+                {workspaceModeLabel}: interactive preview, writes disabled
+              </div>
+            ) : null}
             {Array.isArray(sourceReadiness) && sourceReadiness.length > 0 && (
               <div style={{ marginTop: "8px" }}>
                 <SourceReadiness items={sourceReadiness} compact />
@@ -9922,6 +9948,8 @@ export default function OperatorConsole({
               workspaceSlug={workspace.slug}
               generatedAt={snapshotGeneratedAt ?? null}
               initialNowIso={hydrationNowIso}
+              readOnly={isReadOnlyWorkspace}
+              readOnlyReason="Demo mode keeps snapshot refresh disabled."
             />
           ) : null}
           <span style={S.userName}>{user.name}</span>
@@ -10208,6 +10236,7 @@ export default function OperatorConsole({
               overflowEntries={overflowEntries}
               workspaceSlug={workspace?.slug ?? ""}
               serverExecutionOutcomeMap={serverExecutionOutcomeMap ?? {}}
+              readOnly={isReadOnlyWorkspace}
               onTaskFeedback={handleTaskFeedback}
               tradeId={selectedTradeId}
               tradeLabel={TRADE_MODULES[selectedTradeId]?.label ?? "Roofing"}
@@ -10222,6 +10251,7 @@ export default function OperatorConsole({
               prioritizedAngles={prioritizedAngles}
               onImportTradeLeads={handleImportTradeLeads}
               importState={importState}
+              readOnly={isReadOnlyWorkspace}
               selectedTaskId={selectedTaskId}
               onSelectTask={handleSelectTaskFromCalendar}
               onSwitchTab={handleSwitchTabFromStrip}
@@ -10352,6 +10382,7 @@ export default function OperatorConsole({
               tradeReadiness={tradeReadiness}
               onImport={handleImportTradeLeads}
               importState={importState}
+              readOnly={isReadOnlyWorkspace}
               selectedServiceAngleId={selectedServiceAngleId}
               onSelectServiceAngle={handleSelectServiceAngle}
               onClearServiceAngle={handleClearServiceAngle}
@@ -10415,8 +10446,9 @@ export default function OperatorConsole({
                   onSwitchTab={handleSwitchTabFromStrip}
                   selectedLead={selectedLead}
                   onLeadUpdate={handleUpdate}
-                  hunterAvailable={hunterAvailable}
+                  hunterAvailable={!isReadOnlyWorkspace && hunterAvailable}
                   onOpenDeepReport={() => setDeepReportOpen(true)}
+                  readOnly={isReadOnlyWorkspace}
                 />
               ) : null}
             />
@@ -10453,6 +10485,7 @@ const S = {
   logo: { width: "28px", height: "28px", borderRadius: "7px", background: palette.blue, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", fontWeight: 700 },
   hTitle: { fontSize: "14px", fontWeight: 600 },
   hSub: { fontSize: "11px", color: palette.textTertiary },
+  workspaceModeBadge: { marginTop: "6px", display: "inline-flex", alignItems: "center", gap: "6px", padding: "3px 9px", borderRadius: "999px", border: `1px solid ${palette.blueBorder}`, background: palette.bluePale, color: palette.blue, fontSize: "11px", fontWeight: 700 },
   headerRight: { display: "flex", alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap", gap: "10px 16px", minWidth: 0 },
   stat: { fontSize: "11px", color: palette.textTertiary },
   userName: { fontSize: "12px", color: palette.textSecondary, fontWeight: 500 },

@@ -111,7 +111,7 @@ let lastDevLogKey = "";
 // Compact bucket-portfolio panel. Shows up to 6 service angles for
 // the selected trade with their lead count + readiness. Reads as a
 // portfolio summary, not a dashboard.
-function ServiceAnglesPanel({ tradeLabel, bucketPortfolio, prioritizedAngles, hasTradeLeads, onImport, importState, selectedServiceAngleId, onSelectServiceAngle, onClearServiceAngle }) {
+function ServiceAnglesPanel({ tradeLabel, bucketPortfolio, prioritizedAngles, hasTradeLeads, onImport, importState, readOnly = false, selectedServiceAngleId, onSelectServiceAngle, onClearServiceAngle }) {
   // Prefer the prioritized list when available — it carries
   // Focus Now / Build Next / Monitor labels in the right order.
   const sourceList = (Array.isArray(prioritizedAngles) && prioritizedAngles.length > 0)
@@ -247,7 +247,8 @@ function ServiceAnglesPanel({ tradeLabel, bucketPortfolio, prioritizedAngles, ha
           <button
             type="button"
             onClick={onImport}
-            disabled={importState?.loading}
+            disabled={importState?.loading || readOnly}
+            title={readOnly ? "Demo mode is read-only; lead imports are disabled." : undefined}
             onFocus={applyFocusRing}
             onBlur={clearFocusRing}
             style={{
@@ -261,8 +262,8 @@ function ServiceAnglesPanel({ tradeLabel, bucketPortfolio, prioritizedAngles, ha
               borderLeft: `1px solid ${palette.blueBorder}`,
               borderRadius: R.xs + 2,
               padding: "6px 10px",
-              cursor: importState?.loading ? "default" : "pointer",
-              opacity: importState?.loading ? 0.7 : 1,
+              cursor: importState?.loading || readOnly ? "not-allowed" : "pointer",
+              opacity: importState?.loading || readOnly ? 0.7 : 1,
               alignSelf: "flex-start",
               marginTop: "2px",
               transition: EASE,
@@ -270,6 +271,8 @@ function ServiceAnglesPanel({ tradeLabel, bucketPortfolio, prioritizedAngles, ha
           >
             {importState?.loading
               ? `Importing ${tradeLabel ?? "trade"}…`
+              : readOnly
+                ? "Import disabled in demo"
               : `Import ${tradeLabel ?? "trade"} leads`}
           </button>
           {importState?.message && (
@@ -3016,6 +3019,7 @@ function ExecutionOutcomePanel({
   overflowEntries = [],
   workspaceSlug = "",
   serverExecutionOutcomeMap = {},
+  readOnly = false,
 }) {
   const router = useRouter();
   const [outcome, setOutcome] = useState(() => getDefaultExecutionOutcome());
@@ -3057,6 +3061,7 @@ function ExecutionOutcomePanel({
   // a workspaceSlug to authorize against. Failures are logged but
   // never surfaced — the outcome save itself is independent.
   const firePullForward = (newStatus) => {
+    if (readOnly) return;
     triggerPullForward({
       status: newStatus,
       overflowEntries,
@@ -3067,6 +3072,7 @@ function ExecutionOutcomePanel({
   };
 
   const postDurableOutcome = (next, patch) => {
+    if (readOnly) return;
     if (!workspaceSlug || !taskId || !next?.status || next.status === "Not Contacted") return;
     const patchKeys = Object.keys(patch ?? {});
     setPersistState("saving");
@@ -3111,6 +3117,7 @@ function ExecutionOutcomePanel({
   };
 
   const apply = (patch) => {
+    if (readOnly) return;
     const prevStatus = prevStatusRef.current;
     const next = updateExecutionOutcome(outcome, patch);
     setOutcome(next);
@@ -3171,10 +3178,12 @@ function ExecutionOutcomePanel({
           fontSize: "10px",
           fontWeight: 700,
           letterSpacing: "0.06em",
-          color: persistState === "local_only" ? palette.warning : palette.blue,
+          color: readOnly ? palette.textTertiary : persistState === "local_only" ? palette.warning : palette.blue,
           textTransform: "uppercase",
         }}>
-          {persistState === "persisted"
+          {readOnly
+            ? "Read-only demo"
+            : persistState === "persisted"
             ? "Saved to Meridian"
             : persistState === "saving"
               ? "Saving to Meridian"
@@ -3193,6 +3202,8 @@ function ExecutionOutcomePanel({
               key={s}
               type="button"
               onClick={() => apply({ status: s })}
+              disabled={readOnly}
+              title={readOnly ? "Demo mode is read-only; outcomes are disabled." : undefined}
               style={{
                 fontSize: "10px",
                 fontWeight: 700,
@@ -3202,7 +3213,8 @@ function ExecutionOutcomePanel({
                 border: `1px solid ${isActive ? palette.blue : palette.borderLight}`,
                 borderRadius: "999px",
                 padding: "3px 9px",
-                cursor: "pointer",
+                cursor: readOnly ? "not-allowed" : "pointer",
+                opacity: readOnly && !isActive ? 0.62 : 1,
                 whiteSpace: "nowrap",
                 transition: "background 200ms cubic-bezier(0.22, 1, 0.36, 1)",
               }}
@@ -3220,6 +3232,8 @@ function ExecutionOutcomePanel({
             key={b.label}
             type="button"
             onClick={() => apply({ status: b.status })}
+            disabled={readOnly}
+            title={readOnly ? "Demo mode is read-only; outcomes are disabled." : undefined}
             style={{
               fontSize: "11px",
               fontWeight: 800,
@@ -3229,7 +3243,8 @@ function ExecutionOutcomePanel({
               border: `1px solid ${b.tone.border}`,
               borderRadius: "8px",
               padding: "5px 10px",
-              cursor: "pointer",
+              cursor: readOnly ? "not-allowed" : "pointer",
+              opacity: readOnly ? 0.65 : 1,
               whiteSpace: "nowrap",
             }}
           >
@@ -3244,6 +3259,7 @@ function ExecutionOutcomePanel({
         value={outcome.notes}
         onChange={(e) => setOutcome((prev) => ({ ...prev, notes: e.target.value }))}
         onBlur={() => apply({ notes: outcome.notes })}
+        disabled={readOnly}
         placeholder="Notes from this call…"
         style={{
           fontSize: "12px",
@@ -3270,6 +3286,7 @@ function ExecutionOutcomePanel({
             min={0}
             step={100}
             value={outcome.estimatedValue ?? ""}
+            disabled={readOnly}
             onChange={(e) => {
               const v = e.target.value === "" ? null : Number(e.target.value);
               setOutcome((prev) => ({ ...prev, estimatedValue: Number.isFinite(v) ? v : null }));
@@ -3296,6 +3313,7 @@ function ExecutionOutcomePanel({
           <input
             type="date"
             value={outcome.nextFollowupDate ?? ""}
+            disabled={readOnly}
             onChange={(e) => apply({ nextFollowupDate: e.target.value || null })}
             style={{
               fontSize: "12px",
@@ -3359,6 +3377,7 @@ export function SelectedLeadPanel({
   overflowEntries = [],
   workspaceSlug = "",
   serverExecutionOutcomeMap = {},
+  readOnly = false,
 }) {
   const router = useRouter();
   // Popover state removed — Call Now now fires tel: directly. No
@@ -3436,6 +3455,7 @@ export function SelectedLeadPanel({
       : (phone || null);
   const callable = !!telHref && !blocked;
   const handlePrimaryCall = (e) => {
+    if (readOnly) { if (e?.preventDefault) e.preventDefault(); return; }
     if (!callable) { if (e?.preventDefault) e.preventDefault(); return; }
     if (typeof onMutate === "function") onMutate(task.id, { status: "in_progress" });
     if (typeof onOpen === "function") onOpen(task);
@@ -3834,8 +3854,9 @@ export function SelectedLeadPanel({
             The phone number renders inline below for visibility on
             desktop softphone setups. Single click, single intent. */}
         <a
-          href={telHref ?? undefined}
+          href={!readOnly ? telHref ?? undefined : undefined}
           onClick={(e) => {
+            if (readOnly) { e.preventDefault(); return; }
             if (!telHref) { e.preventDefault(); return; }
             if (callMode !== "active" && typeof onEnterCallMode === "function") {
               onEnterCallMode(task);
@@ -3887,8 +3908,9 @@ export function SelectedLeadPanel({
               serviceBucketId: task?.laborTechScan?.primaryService ?? null,
             });
           }}
-          aria-label={telHref ? `Call ${company} now` : "Call unavailable"}
-          aria-disabled={!telHref}
+          aria-label={readOnly ? "Call disabled in demo mode" : telHref ? `Call ${company} now` : "Call unavailable"}
+          aria-disabled={readOnly || !telHref}
+          title={readOnly ? "Demo mode is read-only; calling is disabled." : undefined}
           onFocus={applyFocusRing}
           onBlur={clearFocusRing}
           style={{
@@ -3899,21 +3921,21 @@ export function SelectedLeadPanel({
             gap: "8px",
             fontSize: "13px",
             fontWeight: 800,
-            color: telHref ? "#FFFFFF" : palette.textTertiary,
-            background: telHref ? palette.blue : palette.surfaceHover,
-            border: telHref ? `1px solid ${palette.blue}` : `1px solid ${palette.borderLight}`,
+            color: !readOnly && telHref ? "#FFFFFF" : palette.textTertiary,
+            background: !readOnly && telHref ? palette.blue : palette.surfaceHover,
+            border: !readOnly && telHref ? `1px solid ${palette.blue}` : `1px solid ${palette.borderLight}`,
             borderRadius: "10px",
             padding: "11px 12px",
-            cursor: telHref ? "pointer" : "not-allowed",
+            cursor: !readOnly && telHref ? "pointer" : "not-allowed",
             transition: "background 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms ease",
             letterSpacing: "0.02em",
-            boxShadow: telHref ? "0 1px 2px rgba(37,99,235,0.20), 0 8px 22px -8px rgba(37,99,235,0.45)" : "none",
+            boxShadow: !readOnly && telHref ? "0 1px 2px rgba(37,99,235,0.20), 0 8px 22px -8px rgba(37,99,235,0.45)" : "none",
             textDecoration: "none",
-            pointerEvents: telHref ? "auto" : "none",
+            pointerEvents: "auto",
           }}
         >
-          <span>{telHref ? "Call Now" : "Call unavailable"}</span>
-          {telHref && phoneDisplay ? (
+          <span>{readOnly ? "Call disabled in demo" : telHref ? "Call Now" : "Call unavailable"}</span>
+          {!readOnly && telHref && phoneDisplay ? (
             <span style={{
               fontSize: "12px",
               fontWeight: 700,
@@ -3982,6 +4004,8 @@ export function SelectedLeadPanel({
                     key={o.id}
                     type="button"
                     onClick={() => onRecordOutcome?.(o.id)}
+                    disabled={readOnly}
+                    title={readOnly ? "Demo mode is read-only; call outcomes are disabled." : undefined}
                     style={{
                       fontSize: "12px",
                       fontWeight: 700,
@@ -3990,7 +4014,8 @@ export function SelectedLeadPanel({
                       border: `1px solid ${tone.border}`,
                       borderRadius: "10px",
                       padding: "8px 10px",
-                      cursor: "pointer",
+                      cursor: readOnly ? "not-allowed" : "pointer",
+                      opacity: readOnly ? 0.65 : 1,
                       letterSpacing: "0.02em",
                       textAlign: "center",
                     }}
@@ -4015,6 +4040,7 @@ export function SelectedLeadPanel({
                 onChange={(e) => onChangeNote?.(e.target.value)}
                 placeholder="What happened on the call?"
                 rows={3}
+                disabled={readOnly}
                 style={{
                   width: "100%",
                   fontSize: "12px",
@@ -4057,7 +4083,9 @@ export function SelectedLeadPanel({
           <button
             type="button"
             onClick={() => onMutate?.(task.id, { status: "done", feedbackApplied: true, feedbackReason: "Marked contacted" })}
-            style={SECONDARY_BUTTON}
+            disabled={readOnly}
+            title={readOnly ? "Demo mode is read-only; lead status changes are disabled." : undefined}
+            style={readOnly ? { ...SECONDARY_BUTTON, cursor: "not-allowed", opacity: 0.65 } : SECONDARY_BUTTON}
             onFocus={applyFocusRing}
             onBlur={clearFocusRing}
           >
@@ -4066,7 +4094,9 @@ export function SelectedLeadPanel({
           <button
             type="button"
             onClick={() => onMutate?.(task.id, { category: "followup", priority: "medium", feedbackApplied: true, feedbackReason: "Moved to follow up" })}
-            style={SECONDARY_BUTTON}
+            disabled={readOnly}
+            title={readOnly ? "Demo mode is read-only; lead status changes are disabled." : undefined}
+            style={readOnly ? { ...SECONDARY_BUTTON, cursor: "not-allowed", opacity: 0.65 } : SECONDARY_BUTTON}
             onFocus={applyFocusRing}
             onBlur={clearFocusRing}
           >
@@ -4075,7 +4105,9 @@ export function SelectedLeadPanel({
           <button
             type="button"
             onClick={() => onMutate?.(task.id, { status: "done", priority: "low", feedbackApplied: true, feedbackReason: "Killed" })}
-            style={{ ...SECONDARY_BUTTON, color: palette.danger, borderColor: "#FECACA", background: palette.dangerBg }}
+            disabled={readOnly}
+            title={readOnly ? "Demo mode is read-only; lead status changes are disabled." : undefined}
+            style={{ ...SECONDARY_BUTTON, color: palette.danger, borderColor: "#FECACA", background: palette.dangerBg, ...(readOnly ? { cursor: "not-allowed", opacity: 0.65 } : null) }}
             onFocus={applyFocusRing}
             onBlur={clearFocusRing}
           >
@@ -4095,6 +4127,7 @@ export function SelectedLeadPanel({
         overflowEntries={overflowEntries}
         workspaceSlug={workspaceSlug}
         serverExecutionOutcomeMap={serverExecutionOutcomeMap}
+        readOnly={readOnly}
       />
 
     </aside>
@@ -4216,7 +4249,7 @@ const SECONDARY_BUTTON = {
   transition: EASE,
 };
 
-function TodayFocusPanel({ tasks, now, executeNow, insights, onTaskFeedback, tradeLabel, hasTradeLeads = true, tradeReadiness, bucketPortfolio, prioritizedAngles, onImport, importState, selectedServiceAngleId, selectedServiceAngleLabel, onClearServiceAngle, onSelectServiceAngle, hasAngleLeads = true }) {
+function TodayFocusPanel({ tasks, now, executeNow, insights, onTaskFeedback, tradeLabel, hasTradeLeads = true, tradeReadiness, bucketPortfolio, prioritizedAngles, onImport, importState, readOnly = false, selectedServiceAngleId, selectedServiceAngleLabel, onClearServiceAngle, onSelectServiceAngle, hasAngleLeads = true }) {
   const reducedMotion = usePrefersReducedMotion();
 
   // Operator-level overrides — UI-only, never mutate scoring/scheduling.
@@ -4340,6 +4373,7 @@ function TodayFocusPanel({ tasks, now, executeNow, insights, onTaskFeedback, tra
           hasTradeLeads={hasTradeLeads}
           onImport={onImport}
           importState={importState}
+          readOnly={readOnly}
           selectedServiceAngleId={selectedServiceAngleId}
           onSelectServiceAngle={onSelectServiceAngle}
           onClearServiceAngle={onClearServiceAngle}
@@ -4810,6 +4844,7 @@ export default function CalendarCommandCenter({
   // Today Open Assist Mode = execution intent, not normal selection.
   onEnterAssistMode: externalOnEnterAssistMode,
   initialNowIso = null,
+  readOnly = false,
 }) {
   const initialNow = useMemo(() => dateFromHydrationTime(initialNowIso), [initialNowIso]);
   // Single source of truth for the calendar's view mode. "all" when the
@@ -5115,6 +5150,7 @@ export default function CalendarCommandCenter({
     });
   };
   const handleTaskMutation = (taskId, patch) => {
+    if (readOnly) return;
     if (!taskId) return;
     setTaskOverrides((prev) => ({ ...prev, [taskId]: { ...(prev[taskId] ?? {}), ...patch } }));
   };
@@ -5131,6 +5167,7 @@ export default function CalendarCommandCenter({
   }, [data, now]);
 
   const enterCallMode = (task) => {
+    if (readOnly) return;
     if (!task) return;
     setSelectedTaskId(task.id);
     setCallMode("active");
@@ -5142,6 +5179,7 @@ export default function CalendarCommandCenter({
   // Outcome → task patch + advance. Patches stay local via
   // handleTaskMutation; the queue is recomputed on the next render.
   const recordOutcomeAndAdvance = (outcomeId) => {
+    if (readOnly) return;
     const current = data.find((t) => t.id === selectedTaskId);
     if (!current) {
       setCallMode("idle");
@@ -6026,6 +6064,7 @@ export default function CalendarCommandCenter({
               overflowEntries={overflowEntries}
               workspaceSlug={workspaceSlug}
               serverExecutionOutcomeMap={serverExecutionOutcomeMap}
+              readOnly={readOnly}
             />
           )}
         />
