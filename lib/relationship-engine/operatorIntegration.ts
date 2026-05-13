@@ -33,8 +33,13 @@ import {
   projectRelationshipWorkflowIntegration,
   type RelationshipWorkflowProjection,
 } from "./workflowIntegration";
+import {
+  projectMultiOperatorWorkflowOrchestration,
+  type MultiOperatorWorkflowOrchestrationProjection,
+  type MultiOperatorWorkflowViewerContext,
+} from "./multiOperatorWorkflowOrchestration";
 import type { IsoDateString, WorkspaceId } from "./primitives";
-import { asIsoDateString } from "./timeline/normalizers/common";
+import { asIsoDateString, asOperatorId } from "./timeline/normalizers/common";
 
 const FEED_ORDER: Array<keyof RelationshipFeedProjectionSet> = [
   "relationship_activity",
@@ -83,6 +88,7 @@ export interface RelationshipEngineOperatorSurface {
   feeds: RelationshipFeedProjection[];
   queues: RelationshipQueueProjection[];
   workflows: RelationshipWorkflowProjection;
+  multiOperatorWorkflows: MultiOperatorWorkflowOrchestrationProjection;
   diagnostics: {
     relationshipEngine: RelationshipEngineDiagnosticsResult["diagnostics"]["relationshipEngine"];
     projectionIntegrity: RelationshipEngineDiagnosticsResult["diagnostics"]["projectionIntegrity"];
@@ -147,6 +153,11 @@ export async function buildRelationshipEngineOperatorSurface(args: {
       queues,
       feeds,
     });
+    const multiOperatorWorkflows = projectMultiOperatorWorkflowOrchestration({
+      generatedAt,
+      workflow: workflows,
+      viewer: operatorWorkflowViewer(args.user, adminOperator),
+    });
 
     return {
       kind: "relationship_engine_operator_surface",
@@ -162,6 +173,7 @@ export async function buildRelationshipEngineOperatorSurface(args: {
       feeds,
       queues,
       workflows,
+      multiOperatorWorkflows,
       diagnostics: {
         relationshipEngine: diagnostics.diagnostics.relationshipEngine,
         projectionIntegrity: diagnostics.diagnostics.projectionIntegrity,
@@ -245,6 +257,11 @@ function degradedSurface(
   generatedAt: IsoDateString,
   safeError: string,
 ): RelationshipEngineOperatorSurface {
+  const workflows = projectRelationshipWorkflowIntegration({
+    generatedAt,
+    queues: [],
+    feeds: [],
+  });
   return {
     kind: "relationship_engine_operator_surface",
     status: "degraded",
@@ -270,10 +287,11 @@ function degradedSurface(
     },
     feeds: [],
     queues: [],
-    workflows: projectRelationshipWorkflowIntegration({
+    workflows,
+    multiOperatorWorkflows: projectMultiOperatorWorkflowOrchestration({
       generatedAt,
-      queues: [],
-      feeds: [],
+      workflow: workflows,
+      viewer: operatorWorkflowViewer({ id: "unknown", name: "Unknown operator", accessRole: "client_user", modules: [], geo: [], workspaces: [] }, adminOperator),
     }),
     diagnostics: {
       relationshipEngine: degradedDiagnostic("Relationship Engine operator surface failed to load."),
@@ -308,6 +326,19 @@ function degradedSurface(
       },
     },
     safeError,
+  };
+}
+
+function operatorWorkflowViewer(
+  user: PublicUser,
+  adminOperator: boolean,
+): MultiOperatorWorkflowViewerContext {
+  return {
+    operatorId: asOperatorId(user.id),
+    label: user.name ?? user.id,
+    role: adminOperator ? "account_manager" : "operator",
+    sourceAccessRole: user.accessRole,
+    visibilityScope: adminOperator ? "manager_review" : "assigned_and_shared_review",
   };
 }
 

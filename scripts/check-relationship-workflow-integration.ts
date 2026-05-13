@@ -10,6 +10,7 @@ import {
   asTouchpointId,
   projectAllRelationshipFeeds,
   projectAllRelationshipQueues,
+  projectMultiOperatorWorkflowOrchestration,
   projectRelationshipSummary,
   projectRelationshipWorkflowIntegration,
   type EvidenceRef,
@@ -27,12 +28,14 @@ const active = relationship("relationship:workflow:active", "Active Follow Up", 
 const retention = relationship("relationship:workflow:retention", "Retention Risk", LIFECYCLE_STATE.RETENTION_RISK, "cool", operatorA);
 const opportunity = relationship("relationship:workflow:opportunity", "Warm Opportunity", LIFECYCLE_STATE.OPPORTUNITY, "hot", operatorB);
 const dormant = relationship("relationship:workflow:dormant", "Dormant Account", LIFECYCLE_STATE.DORMANT, "cold", undefined);
+const shared = relationship("relationship:workflow:shared", "Shared Account", LIFECYCLE_STATE.ACTIVE, "warm", operatorA, [operatorB]);
 
 const timelineEvents = [
   touchpointEvent(active.id, "timeline:workflow:active:touchpoint", "2026-05-11T09:00:00.000Z", "Active call", operatorA),
   outcomeEvent(retention.id, "timeline:workflow:retention:outcome", "2026-05-10T10:00:00.000Z", "deal_lost", "Renewal at risk", operatorA),
   outcomeEvent(opportunity.id, "timeline:workflow:opportunity:outcome", "2026-05-13T10:00:00.000Z", "meeting_booked", "Meeting booked", operatorB),
   touchpointEvent(dormant.id, "timeline:workflow:dormant:touchpoint", "2025-10-01T12:00:00.000Z", "Dormant note", operatorB),
+  touchpointEvent(shared.id, "timeline:workflow:shared:touchpoint", "2025-12-15T12:00:00.000Z", "Shared note", operatorA),
 ];
 
 const followUps: FollowUpInstruction[] = [{
@@ -45,7 +48,7 @@ const followUps: FollowUpInstruction[] = [{
   evidence: [evidence("follow-up:active", "Overdue follow-up", "2026-05-12T17:00:00.000Z")],
 }];
 
-const summaries = [active, retention, opportunity, dormant].map((entity) => projectRelationshipSummary({
+const summaries = [active, retention, opportunity, dormant, shared].map((entity) => projectRelationshipSummary({
   context: { now, workspaceId },
   relationship: entity,
   timelineEvents,
@@ -70,8 +73,25 @@ const replay = projectRelationshipWorkflowIntegration({
   queues: [...queues].reverse().map((queue) => ({ ...queue, items: [...queue.items].reverse() })),
   feeds: [...feeds].reverse(),
 });
+const multiOperatorViewer = {
+  operatorId: operatorA,
+  label: "Operator A",
+  role: "operator" as const,
+  visibilityScope: "assigned_and_shared_review" as const,
+};
+const multiOperator = projectMultiOperatorWorkflowOrchestration({
+  generatedAt: now,
+  workflow,
+  viewer: multiOperatorViewer,
+});
+const multiReplay = projectMultiOperatorWorkflowOrchestration({
+  generatedAt: now,
+  workflow: replay,
+  viewer: multiOperatorViewer,
+});
 
 assert.deepEqual(replay, workflow, "Workflow grouping must replay deterministically under input reordering.");
+assert.deepEqual(multiReplay, multiOperator, "Multi-operator segmentation must replay deterministically under input reordering.");
 assert.equal(workflow.boundary.reviewOnly, true);
 assert.equal(workflow.boundary.workflowExecutionAllowed, false);
 assert.equal(workflow.boundary.automationAllowed, false);
@@ -101,13 +121,47 @@ assert.ok(workflow.metadata.missingDataEffects.some((effect) => effect.reason ==
 assert.equal(workflow.workflowContexts.relationshipMaintenance.reviewOnly, true);
 assert.equal(workflow.workflowContexts.followUpReview.groupKinds[0], "follow_up_review");
 assert.equal(workflow.workflowContexts.dormantReactivationReview.groupKinds[0], "reactivation_review");
+assert.equal(multiOperator.boundary.reviewOnly, true);
+assert.equal(multiOperator.boundary.autoAssignmentAllowed, false);
+assert.equal(multiOperator.boundary.assignmentMutationAllowed, false);
+assert.equal(multiOperator.boundary.queueExecutionAllowed, false);
+assert.equal(multiOperator.boundary.workflowExecutionAllowed, false);
+assert.equal(multiOperator.boundary.automationAllowed, false);
+assert.equal(multiOperator.boundary.remindersAllowed, false);
+assert.equal(multiOperator.boundary.notificationsAllowed, false);
+assert.equal(multiOperator.boundary.persistenceAllowed, false);
+assert.equal(multiOperator.boundary.neonWritesAllowed, false);
+assert.equal(multiOperator.boundary.productionScoringAllowed, false);
+assert.deepEqual(multiOperator.ordering.groupOrder, [
+  "my_relationships",
+  "unassigned_review",
+  "shared_review",
+  "intern_queue",
+  "needs_escalation",
+  "needs_manager_review",
+  "follow_up_review",
+]);
+assert.ok(multiGroup("my_relationships").items.some((item) => item.relationshipId === active.id));
+assert.ok(multiGroup("unassigned_review").items.some((item) => item.relationshipId === dormant.id));
+assert.ok(multiGroup("shared_review").items.some((item) => item.relationshipId === shared.id));
+assert.ok(multiGroup("intern_queue").items.some((item) => item.relationshipId === opportunity.id));
+assert.ok(multiGroup("needs_escalation").items.some((item) => item.relationshipId === dormant.id));
+assert.ok(multiGroup("needs_manager_review").items.some((item) => item.relationshipId === retention.id));
+assert.ok(multiGroup("follow_up_review").items.some((item) => item.relationshipId === active.id));
+assert.ok(multiOperator.items.every((item) => item.assignedOperator.whyAssigned));
+assert.ok(multiOperator.items.every((item) => item.assignmentVisibility.visibilityReason));
+assert.ok(multiOperator.items.every((item) => item.deterministicOrder.sortKey));
 
 const source = readFileSync("lib/relationship-engine/workflowIntegration.ts", "utf8");
+const multiOperatorSource = readFileSync("lib/relationship-engine/multiOperatorWorkflowOrchestration.ts", "utf8");
 assert.equal(/relationship-engine\/repositories|from "\.\/repositories|from "\.\.\/repositories/.test(source), false);
 assert.equal(/executeQueue|sendNotification|createReminder|writeOperatorSnapshot|neonWrite\s*\(|method:\s*["']POST["']/i.test(source), false);
+assert.equal(/relationship-engine\/repositories|from "\.\/repositories|from "\.\.\/repositories/.test(multiOperatorSource), false);
+assert.equal(/executeQueue|sendNotification|createReminder|writeOperatorSnapshot|neonWrite\s*\(|method:\s*["']POST["']|method:\s*["']PATCH["']/i.test(multiOperatorSource), false);
 
 console.log("relationship workflow integration check passed", {
   groupCounts: workflow.metadata.groupCounts,
+  multiOperatorGroupCounts: multiOperator.metadata.groupCounts,
   overdueVisible: workflow.visibility.overdueRelationships.length,
   dormantVisible: workflow.visibility.dormantRelationships.length,
   warmVisible: workflow.visibility.warmOpportunities.length,
@@ -120,12 +174,19 @@ function group(kind: (typeof workflow.groups)[number]["groupKind"]) {
   return found;
 }
 
+function multiGroup(kind: (typeof multiOperator.groups)[number]["groupKind"]) {
+  const found = multiOperator.groups.find((candidate) => candidate.groupKind === kind);
+  assert.ok(found, `Missing multi-operator workflow group ${kind}`);
+  return found;
+}
+
 function relationship(
   id: string,
   displayName: string,
   lifecycle: RelationshipEntity["lifecycle"],
   warmth: RelationshipEntity["warmth"]["band"],
   ownerId: ReturnType<typeof asOperatorId> | undefined,
+  collaboratorIds: ReturnType<typeof asOperatorId>[] = [],
 ): RelationshipEntity {
   return {
     id: asRelationshipId(id),
@@ -143,12 +204,20 @@ function relationship(
       evidence: [evidence(`${id}:warmth`, "Warmth fixture", "2026-05-13T09:00:00.000Z")],
       confidence: "medium",
     },
-    assignments: ownerId ? [{
-      ownerId,
-      assignedAt: asIsoDateString("2026-05-13T09:00:00.000Z"),
-      visibility: "primary_owner",
-      reason: "Workflow fixture owner",
-    }] : [],
+    assignments: [
+      ...(ownerId ? [{
+        ownerId,
+        assignedAt: asIsoDateString("2026-05-13T09:00:00.000Z"),
+        visibility: "primary_owner" as const,
+        reason: "Workflow fixture owner",
+      }] : []),
+      ...collaboratorIds.map((collaboratorId) => ({
+        ownerId: collaboratorId,
+        assignedAt: asIsoDateString("2026-05-13T09:00:00.000Z"),
+        visibility: "collaborator" as const,
+        reason: "Workflow fixture collaborator",
+      })),
+    ],
     audit: {
       createdAt: asIsoDateString("2026-05-13T09:00:00.000Z"),
       updatedAt: asIsoDateString("2026-05-13T10:00:00.000Z"),

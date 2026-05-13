@@ -126,6 +126,114 @@ interface WorkflowProjection {
   explanation?: { notes?: string[] };
 }
 
+interface MultiOperatorWorkflowItem {
+  relationshipId: string;
+  displayName: string;
+  lifecycle: string;
+  confidence: Confidence;
+  assignedOperator?: {
+    operatorId?: string;
+    assignmentState?: "assigned" | "unassigned" | string;
+    whyAssigned?: string;
+    confidence?: Confidence;
+  };
+  workflowOwnership?: {
+    ownershipState?: string;
+    visibleOperatorCount?: number;
+    whyOwned?: string;
+  };
+  assignmentVisibility?: {
+    visibilityState?: string;
+    visibleToViewer?: boolean;
+    visibilityReason?: string;
+    confidence?: Confidence;
+  };
+  assignmentConfidence?: {
+    level?: Confidence;
+    reason?: string;
+  };
+  sharedWorkflowState?: {
+    shared?: boolean;
+    reason?: string;
+  };
+  internReviewState?: {
+    state?: string;
+    visibleInInternQueue?: boolean;
+    managerReviewRequired?: boolean;
+    reason?: string;
+  };
+  escalationReviewState?: {
+    state?: string;
+    reasonCodes?: string[];
+    reason?: string;
+  };
+  whyAssigned?: string;
+  whyVisible?: string;
+  missingDataEffects?: MissingDataEffect[];
+  sourceWorkflowGroupKinds?: string[];
+  deterministicOrder?: {
+    primaryGroupKind?: string;
+    primaryGroupRank?: number;
+    sourceWorkflowGroupKind?: string;
+    sourceQueueKind?: string;
+    sourceQueueRank?: number;
+    sourceQueueRankKey?: string;
+    itemRank?: number;
+    sortKey?: string;
+    displayedInGroupKinds?: string[];
+  };
+}
+
+interface MultiOperatorWorkflowGroup {
+  groupKind: string;
+  label: string;
+  description: string;
+  roleAudience?: string[];
+  visibilityReason?: string;
+  items: MultiOperatorWorkflowItem[];
+  confidence: Confidence;
+  reviewOnly?: boolean;
+  ordering?: { strategy?: string; productionScoring?: boolean; itemSortKeys?: string[]; tieBreakers?: string[] };
+}
+
+interface MultiOperatorWorkflowProjection {
+  boundary?: {
+    reviewOnly?: boolean;
+    autoAssignmentAllowed?: boolean;
+    assignmentMutationAllowed?: boolean;
+    queueExecutionAllowed?: boolean;
+    workflowExecutionAllowed?: boolean;
+    automationAllowed?: boolean;
+    remindersAllowed?: boolean;
+    notificationsAllowed?: boolean;
+    persistenceAllowed?: boolean;
+    neonWritesAllowed?: boolean;
+    productionScoringAllowed?: boolean;
+    uiDerivedOwnershipAllowed?: boolean;
+  };
+  viewer?: {
+    label?: string;
+    role?: string;
+    visibilityScope?: string;
+  };
+  groups?: MultiOperatorWorkflowGroup[];
+  workloadSummary?: {
+    myRelationships?: number;
+    unassignedReview?: number;
+    sharedReview?: number;
+    internQueue?: number;
+    needsEscalation?: number;
+    needsManagerReview?: number;
+    followUpReview?: number;
+  };
+  metadata?: {
+    confidence?: Confidence;
+    groupCounts?: Record<string, number>;
+    assignmentOverlap?: Array<{ relationshipId?: string; primaryGroupKind?: string; displayedInGroupKinds?: string[] }>;
+  };
+  explanation?: { notes?: string[] };
+}
+
 interface DiagnosticSurface {
   status: "ok" | "warning" | "error" | "not_configured" | string;
   summary: string;
@@ -162,6 +270,7 @@ interface OperatorSurface {
   queues?: QueueProjection[];
   feeds?: FeedProjection[];
   workflows?: WorkflowProjection;
+  multiOperatorWorkflows?: MultiOperatorWorkflowProjection;
   diagnostics?: Record<string, DiagnosticSurface>;
   adminDiagnostics?: {
     metadata?: {
@@ -200,6 +309,7 @@ export default function RelationshipEngineOperatorPanel({
   const queues = Array.isArray(surface.queues) ? surface.queues : [];
   const feeds = Array.isArray(surface.feeds) ? surface.feeds : [];
   const workflows = surface.workflows;
+  const multiOperatorWorkflows = surface.multiOperatorWorkflows;
   const health = surface.health ?? {};
   const metadata = surface.metadata ?? {};
   const queueItemCount = metadata.summaryDisplay?.queueItemCount ?? queues.reduce((sum, queue) => sum + queue.items.length, 0);
@@ -210,9 +320,9 @@ export default function RelationshipEngineOperatorPanel({
       <div style={styles.hero}>
         <div>
           <div style={styles.eyebrow}>Relationship Engine</div>
-          <h1 style={styles.title}>Operator intelligence panel</h1>
+          <h1 style={styles.title}>Operator review surfaces</h1>
           <p style={styles.copy}>
-            Read-only diagnostics, workflow visibility, queue explainability, and timeline readiness in one review flow.
+            Multi-operator workload visibility, workflow explainability, queue separation, and timeline readiness in one review flow.
           </p>
         </div>
         <div style={styles.heroMeta}>
@@ -226,7 +336,7 @@ export default function RelationshipEngineOperatorPanel({
         <div style={styles.warningBox}>{surface.safeError}</div>
       ) : null}
 
-      <div style={styles.grid4}>
+      <div style={styles.metricGrid}>
         <MetricCard label="Relationships visible" value={metadata.summaryDisplay?.relationshipCount ?? 0} detail="From relationship-engine queues only" />
         <MetricCard label="Review queue items" value={queueItemCount} detail="Review-only; no execution path" />
         <MetricCard label="Feed items" value={feedItemCount} detail="Projection DTOs, not UI-derived" />
@@ -239,6 +349,7 @@ export default function RelationshipEngineOperatorPanel({
           <HealthPanel health={health} />
           <SummaryTimelinePanel surface={surface} />
         </div>
+        <MultiOperatorWorkflowPanel orchestration={multiOperatorWorkflows} />
         <WorkflowVisibilityPanel workflows={workflows} />
         <QueueReviewPanel queues={queues} />
         <FeedPanel feeds={feeds} />
@@ -246,6 +357,100 @@ export default function RelationshipEngineOperatorPanel({
         <AdminDiagnosticsPanel surface={surface} />
       </div>
     </section>
+  );
+}
+
+function MultiOperatorWorkflowPanel({ orchestration }: { orchestration?: MultiOperatorWorkflowProjection }) {
+  const groups = Array.isArray(orchestration?.groups) ? orchestration.groups : [];
+  const summary = orchestration?.workloadSummary ?? {};
+  return (
+    <section style={styles.card}>
+      <SectionHeader
+        title="Multi-operator workload orchestration"
+        detail={`${orchestration?.viewer?.label ?? "Operator"} · ${formatKind(orchestration?.viewer?.role ?? "review")}`}
+      />
+      <div style={styles.metricGrid}>
+        <MetricCard label="My relationships" value={summary.myRelationships ?? 0} detail="Assigned to current operator" />
+        <MetricCard label="Unassigned review" value={summary.unassignedReview ?? 0} detail="Visible without auto-assignment" />
+        <MetricCard label="Shared review" value={summary.sharedReview ?? 0} detail="Ownership clarity surface" />
+        <MetricCard label="Intern queue" value={summary.internQueue ?? 0} detail="Review-only intern triage" />
+        <MetricCard label="Escalation" value={summary.needsEscalation ?? 0} detail="Human review required" />
+        <MetricCard label="Manager review" value={summary.needsManagerReview ?? 0} detail="Account-manager visibility" />
+        <MetricCard label="Follow-ups" value={summary.followUpReview ?? 0} detail="No reminders sent" />
+        <MetricCard label="Confidence" value={orchestration?.metadata?.confidence ?? "unknown"} detail="Assignment-aware grouping" />
+      </div>
+      <div style={styles.workflowBoundary}>
+        {[
+          ["Auto-assignment", orchestration?.boundary?.autoAssignmentAllowed === false],
+          ["Assignment mutation", orchestration?.boundary?.assignmentMutationAllowed === false],
+          ["Queue execution", orchestration?.boundary?.queueExecutionAllowed === false],
+          ["Automation", orchestration?.boundary?.automationAllowed === false],
+          ["Reminders", orchestration?.boundary?.remindersAllowed === false],
+          ["Notifications", orchestration?.boundary?.notificationsAllowed === false],
+          ["Persistence", orchestration?.boundary?.persistenceAllowed === false],
+          ["Neon writes", orchestration?.boundary?.neonWritesAllowed === false],
+        ].map(([name, blocked]) => (
+          <span key={String(name)} style={blocked ? styles.blocked : styles.unknown}>{name}: {blocked ? "blocked" : "unknown"}</span>
+        ))}
+      </div>
+      {groups.length === 0 ? (
+        <EmptyPanel title="No multi-operator groups returned" body="Operator workload segmentation remains empty until workflow projections provide relationship review items." />
+      ) : (
+        <div style={styles.workflowGrid}>
+          {groups.map((group) => (
+            <article key={group.groupKind} style={styles.workflowCard}>
+              <div style={styles.queueHead}>
+                <div>
+                  <div style={styles.queueTitle}>{group.label || formatKind(group.groupKind)}</div>
+                  <p style={styles.smallCopy}>{group.description}</p>
+                </div>
+                <StatusPill label={`${group.items.length} visible`} status={group.confidence} />
+              </div>
+              <div style={styles.ordering}>
+                <span>Audience: {(group.roleAudience ?? []).map(formatKind).join(", ") || "operators"}</span>
+                <span>Reason: {group.visibilityReason ?? "relationship-engine assignment visibility"}</span>
+                <span>Production scoring: {group.ordering?.productionScoring === false ? "off" : "unknown"}</span>
+              </div>
+              {group.items.length === 0 ? (
+                <div style={styles.emptyInline}>No relationships are visible in this operator segment.</div>
+              ) : (
+                group.items.slice(0, 3).map((item) => (
+                  <MultiOperatorWorkflowItemCard key={`${group.groupKind}:${item.relationshipId}`} item={item} />
+                ))
+              )}
+            </article>
+          ))}
+        </div>
+      )}
+      <p style={styles.smallCopy}>
+        {orchestration?.explanation?.notes?.[0] ?? "Multi-operator orchestration organizes visibility only; it never assigns or executes work."}
+      </p>
+    </section>
+  );
+}
+
+function MultiOperatorWorkflowItemCard({ item }: { item: MultiOperatorWorkflowItem }) {
+  return (
+    <div style={styles.queueItem}>
+      <div style={styles.queueItemHead}>
+        <div>
+          <div style={styles.itemTitle}>{item.displayName}</div>
+          <div style={styles.smallCopy}>
+            {formatKind(item.workflowOwnership?.ownershipState ?? "visibility")} · primary {formatKind(item.deterministicOrder?.primaryGroupKind ?? "review")}
+          </div>
+        </div>
+        <StatusPill label={`confidence ${item.confidence}`} status={item.confidence} />
+      </div>
+      <p style={styles.copy}>{item.assignmentVisibility?.visibilityReason ?? item.whyVisible ?? "Relationship is visible for operator review."}</p>
+      <p style={styles.smallCopy}>
+        Assigned {item.assignedOperator?.operatorId ?? "unassigned"} · assignment confidence {item.assignmentConfidence?.level ?? "unknown"} · source groups {(item.sourceWorkflowGroupKinds ?? []).map(formatKind).join(", ") || "workflow"}
+      </p>
+      <p style={styles.smallCopy}>
+        Intern {formatKind(item.internReviewState?.state ?? "unknown")} · escalation {formatKind(item.escalationReviewState?.state ?? "standard_review")}
+        {(item.escalationReviewState?.reasonCodes ?? []).length > 0 ? ` · reasons ${(item.escalationReviewState?.reasonCodes ?? []).join(", ")}` : ""}
+      </p>
+      <MissingEffects effects={item.missingDataEffects} />
+    </div>
   );
 }
 
@@ -740,6 +945,12 @@ const styles: Record<string, CSSProperties> = {
     gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
     gap: "10px",
   },
+  metricGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+    gap: "10px",
+    marginTop: "14px",
+  },
   twoCol: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
@@ -771,12 +982,14 @@ const styles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
+    flexWrap: "wrap",
     gap: "12px",
     marginBottom: "12px",
   },
   sectionTitle: {
     margin: 0,
     fontSize: "16px",
+    lineHeight: 1.2,
     letterSpacing: "-0.02em",
   },
   sectionDetail: {
