@@ -3,10 +3,15 @@
 import {
   projectRelationshipTimeline,
 } from "../projections";
+import {
+  projectRelationshipWorkflowIntegration,
+  type RelationshipWorkflowIssue,
+} from "../workflowIntegration";
 import type {
   RelationshipByIdReadRequest,
   RelationshipCollectionReadRequest,
   RelationshipEngineReadRepositories,
+  RelationshipServiceIssue,
 } from "./types";
 import { RelationshipProjectionOrchestrationService } from "./projections";
 import { readModelValidationIssues, serviceResult } from "./validation";
@@ -69,6 +74,33 @@ export class RelationshipEngineReadService {
     return this.orchestration.getRelationshipQueues(request);
   }
 
+  async getRelationshipWorkflowContext(request: RelationshipCollectionReadRequest) {
+    const [queuesResult, feedsResult] = await Promise.all([
+      this.getRelationshipQueues(request),
+      this.getRelationshipFeeds(request),
+    ]);
+    const workflow = projectRelationshipWorkflowIntegration({
+      generatedAt: request.context.now,
+      queues: Object.values(queuesResult.data),
+      feeds: Object.values(feedsResult.data),
+    });
+    const workflowIssues = workflow.validation.issues.map(workflowIssueToServiceIssue);
+    const issues = [
+      ...queuesResult.validation.issues,
+      ...feedsResult.validation.issues,
+      ...workflowIssues,
+    ];
+    return serviceResult({
+      data: workflow,
+      generatedAt: request.context.now,
+      issues,
+      warnings: issues.filter((issue) => issue.severity === "warning"),
+      confidence: workflow.metadata.confidence,
+      evidence: workflow.relationshipSummaries.flatMap((summary) => summary.whyNow.evidenceReferences),
+      missingDataEffects: workflow.metadata.missingDataEffects,
+    });
+  }
+
   getRelationshipProjection(request: RelationshipByIdReadRequest) {
     return this.orchestration.getRelationshipProjection(request);
   }
@@ -78,4 +110,14 @@ export function createRelationshipEngineReadService(
   repositories: RelationshipEngineReadRepositories,
 ): RelationshipEngineReadService {
   return new RelationshipEngineReadService(repositories);
+}
+
+function workflowIssueToServiceIssue(issue: RelationshipWorkflowIssue): RelationshipServiceIssue {
+  return {
+    severity: issue.severity,
+    code: issue.code,
+    message: issue.message,
+    ...(issue.relationshipId ? { relationshipId: issue.relationshipId } : {}),
+    ...(issue.groupKind ? { source: `relationship_workflow:${issue.groupKind}` } : { source: "relationship_workflow" }),
+  };
 }

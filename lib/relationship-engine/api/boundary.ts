@@ -33,6 +33,7 @@ export type RelationshipEngineApiEndpoint =
   | "timeline"
   | "feeds"
   | "queues"
+  | "workflows"
   | "projection"
   | "health";
 
@@ -58,6 +59,7 @@ const ENDPOINTS: RelationshipEngineApiEndpoint[] = [
   "timeline",
   "feeds",
   "queues",
+  "workflows",
   "projection",
   "health",
 ];
@@ -174,6 +176,10 @@ export async function handleRelationshipEngineApiRequest(input: RelationshipEngi
           binding,
         );
       }
+      case "workflows": {
+        const result = await binding.service.getRelationshipWorkflowContext(collectionRequest(parsed));
+        return apiResult(input.endpoint, result, result.data, parsed, access.workspace, binding);
+      }
       case "projection": {
         const result = await binding.service.getRelationshipProjection({
           context: parsed.context,
@@ -284,7 +290,7 @@ function parseRelationshipEngineQuery(
     options: options.options,
     deterministic: {
       generatedAtSource: asOfProvided ? "query_asOf" : "server_clock",
-      collectionOrder: endpoint === "queues" ? QUEUE_ORDER : endpoint === "feeds" ? FEED_ORDER : [],
+      collectionOrder: endpoint === "queues" || endpoint === "workflows" ? QUEUE_ORDER : endpoint === "feeds" ? FEED_ORDER : [],
     },
   };
 }
