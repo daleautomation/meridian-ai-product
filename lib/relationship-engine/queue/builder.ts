@@ -18,9 +18,12 @@ import type {
   QueueCandidate,
   QueueEscalationReason,
 } from "./candidate";
+import type { RelationshipSummaryProjection } from "../projections/dto";
+
+export type QueueCandidateSummaryInput = RelationshipSummary | RelationshipSummaryProjection;
 
 export interface QueueCandidateSkeletonInput {
-  summary: RelationshipSummary;
+  summary: QueueCandidateSummaryInput;
   generatedAt: IsoDateString;
   whyNow: string;
   nextBestAction: NextBestAction;
@@ -70,16 +73,17 @@ export function validateQueueCandidateSkeleton(
 export function buildQueueCandidateSkeleton(input: QueueCandidateSkeletonInput): QueueCandidate {
   const failures = validateQueueCandidateSkeleton(input);
   if (failures.length > 0) throw new InvalidQueueCandidateError(failures);
+  const summary = resolveQueueSummary(input.summary);
 
   return {
     id: deterministicCandidateId(input),
-    relationshipId: input.summary.relationshipId,
+    relationshipId: summary.relationshipId,
     ...(input.ownerId ? { ownerId: input.ownerId } : {}),
     generatedAt: input.generatedAt,
     rankScore: input.rankScore ?? 0,
     whyNow: input.whyNow,
     nextBestAction: input.nextBestAction,
-    summary: input.summary,
+    summary,
     ...(input.healthTrace ? { healthTrace: input.healthTrace } : {}),
     visibleTo: input.visibleTo,
     confidence: input.confidence ?? "unknown",
@@ -99,14 +103,19 @@ export function noQueueCandidates(reason: string): {
 }
 
 function deterministicCandidateId(input: QueueCandidateSkeletonInput): QueueCandidateId {
+  const summary = resolveQueueSummary(input.summary);
   const parts = [
-    input.summary.relationshipId,
+    summary.relationshipId,
     input.generatedAt,
     input.whyNow,
     input.nextBestAction.kind,
     input.visibleTo.join(","),
   ];
   return `queue-candidate:${hash(parts)}` as QueueCandidateId;
+}
+
+function resolveQueueSummary(input: QueueCandidateSummaryInput): RelationshipSummary {
+  return "summary" in input && input.kind === "relationship_summary" ? input.summary : input;
 }
 
 function hash(parts: string[]): string {
