@@ -12,11 +12,14 @@ import {
   type RelationshipEngineReadService,
 } from "@/lib/relationship-engine";
 import { createReadOnlyFileRelationshipAdapterBundle } from "@/lib/relationship-engine/repositories/readOnlyAdapters";
-import { relationshipReadOnlyDataSourceState } from "@/lib/relationship-engine/repositories/readOnlyDataSources";
+import {
+  relationshipReadOnlyDataSourceState,
+  type RelationshipReadOnlyDataSourceState,
+} from "@/lib/relationship-engine/repositories/readOnlyDataSources";
 
 export type RelationshipEngineApiRepositoryMode = Extract<
   RelationshipEngineRepositoryModeLabel,
-  "read_only_unwired" | "read_only_file" | "read_only_memory" | "read_only_snapshot"
+  "read_only_unwired" | "read_only_file" | "read_only_memory"
 >;
 
 export interface RelationshipEngineReadServiceBinding {
@@ -37,7 +40,7 @@ export function createRelationshipEngineReadServiceForWorkspace(
     return {
       service: createRelationshipEngineReadService(bundle.repositories),
       repositoryMode: sourceState.mode,
-      diagnostics: readyDiagnostics(),
+      diagnostics: readyDiagnostics(sourceState),
     };
   }
 
@@ -54,13 +57,14 @@ export function createRelationshipEngineReadServiceForWorkspace(
   };
 }
 
-function readyDiagnostics(): RelationshipEngineRepositoryDiagnostics {
+function readyDiagnostics(sourceState: RelationshipReadOnlyDataSourceState): RelationshipEngineRepositoryDiagnostics {
   return {
     relationshipStore: "ready",
     timelineStore: "ready",
     followUpStore: "ready",
     scoringStore: "ready",
     readOnly: true,
+    sourceReadiness: sourceState.sources,
   };
 }
 

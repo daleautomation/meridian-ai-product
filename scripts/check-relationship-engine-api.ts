@@ -98,7 +98,10 @@ async function main(): Promise<void> {
   const health = await apiJson("health", `workspace=advisor-demo&asOf=${now}`, advisor);
   assert.equal(health.status, 200);
   assert.equal(health.body.data.service, "RelationshipEngineReadService");
-  assert.ok(["read_only_file", "read_only_snapshot", "read_only_unwired"].includes(health.body.data.repositoryMode));
+  assert.ok(["read_only_file", "read_only_unwired"].includes(health.body.data.repositoryMode));
+  if (health.body.data.repositoryMode === "read_only_file") {
+    assert.equal(typeof health.body.data.diagnostics.sourceReadiness.operatorSnapshot, "boolean");
+  }
   assert.equal(health.body.meta.readOnly.neonWrites, false);
 
   const mutation = await relationshipEngineReadOnlyMethodNotAllowed().json();

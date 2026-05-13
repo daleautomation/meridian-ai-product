@@ -12,7 +12,7 @@ export interface RelationshipReadOnlyDataSourceState {
   ready: boolean;
   mode: Extract<
     RelationshipEngineRepositoryModeLabel,
-    "read_only_file" | "read_only_snapshot"
+    "read_only_file"
   >;
   sources: {
     companySnapshots: boolean;
@@ -39,7 +39,7 @@ export function relationshipReadOnlyDataSourceState(
   };
   return {
     ready: Object.values(sources).some(Boolean),
-    mode: operatorSnapshot ? "read_only_snapshot" : "read_only_file",
+    mode: "read_only_file",
     sources,
   };
 }

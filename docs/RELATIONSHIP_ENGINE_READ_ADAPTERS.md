@@ -25,8 +25,7 @@ Same source data plus same `asOf` yields the same projections, queues, feeds, an
 ## Repository modes
 
 - `read_only_unwired`: service facade active, no real adapter data.
-- `read_only_file`: deterministic file-backed sources are available.
-- `read_only_snapshot`: an operator snapshot is available and participates in read-only identity discovery.
+- `read_only_file`: deterministic file-backed sources are available. This includes mixed file reads where an operator snapshot participates in identity discovery; diagnostics expose `sourceReadiness.operatorSnapshot` separately.
 - `read_only_memory`: available for deterministic in-memory fixtures.
 
 Repository readiness only reports ready when read adapters are wired and stores expose no mutation paths.

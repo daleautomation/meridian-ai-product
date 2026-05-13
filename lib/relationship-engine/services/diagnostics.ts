@@ -20,8 +20,16 @@ export type RelationshipEngineRepositoryModeLabel =
   | "read_only_file"
   | "read_only_neon"
   | "read_only_memory"
-  | "read_only_snapshot"
   | "unknown";
+
+export interface RelationshipEngineRepositorySourceReadiness {
+  companySnapshots: boolean;
+  crmActivities: boolean;
+  usageEvents: boolean;
+  executionOutcomes: boolean;
+  followUps: boolean;
+  operatorSnapshot: boolean;
+}
 
 export interface RelationshipEngineRepositoryDiagnostics {
   relationshipStore: "ready" | "unwired" | "unknown";
@@ -29,6 +37,7 @@ export interface RelationshipEngineRepositoryDiagnostics {
   followUpStore: "ready" | "unwired" | "unknown";
   scoringStore: "ready" | "unwired" | "unknown";
   readOnly: true;
+  sourceReadiness?: RelationshipEngineRepositorySourceReadiness;
 }
 
 export interface RelationshipEngineDiagnosticsRequest {
@@ -360,15 +369,14 @@ function repositorySurface(
     status: unwiredStores.length > 0 ? "not_configured" : "ok",
     summary: unwiredStores.length > 0
       ? "Read facade is active, but one or more repository adapters are not wired."
-      : mode === "read_only_snapshot"
-        ? "Read-only snapshot-backed repository adapters report ready."
-        : "Read-only repository adapters report ready.",
+      : "Read-only repository adapters report ready.",
     issueSummary: [],
     safeMetadata: {
       repositoryMode: mode,
       stores,
       unwiredStores,
       readOnly: diagnostics.readOnly,
+      sourceReadiness: diagnostics.sourceReadiness ?? null,
       rawStorageInternalsExposed: false,
       adapterIntegrityVerified: diagnostics.readOnly === true && unwiredStores.length === 0,
       mutationPathsExposed: false,

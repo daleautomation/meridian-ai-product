@@ -32,7 +32,7 @@ async function main(): Promise<void> {
 
     const state = relationshipReadOnlyDataSourceState(workspace, dataDir);
     assert.equal(state.ready, true);
-    assert.equal(state.mode, "read_only_snapshot");
+    assert.equal(state.mode, "read_only_file");
     assert.equal(state.sources.operatorSnapshot, true);
 
     const sourceState = await readRelationshipAdapterSourceState({
@@ -94,6 +94,7 @@ async function main(): Promise<void> {
 
     console.log("relationship read adapter check passed", {
       repositoryMode: state.mode,
+      operatorSnapshot: state.sources.operatorSnapshot,
       relationshipId,
       timelineItems: timelineItemIds.length,
       warningCodes: timeline.warnings.map((issue) => issue.code),
