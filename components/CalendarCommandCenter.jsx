@@ -4601,7 +4601,7 @@ function DayColumn({ date, tasks, isToday, now, onTaskFeedback, selectedTaskId, 
               Day 1 of execution
             </div>
             <div style={{ color: palette.textSecondary }}>
-              Use this day to begin testing your approach. Pull from the priority queue or trade lists when you're ready to start dialing.
+              Use this day to begin testing your approach. Pull from the priority queue or trade lists when you&apos;re ready to start dialing.
             </div>
           </div>
         ) : (
