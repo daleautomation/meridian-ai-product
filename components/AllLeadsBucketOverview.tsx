@@ -593,7 +593,7 @@ function Breadcrumb({
 }) {
   return (
     <nav
-      aria-label="All Leads breadcrumb"
+      aria-label="Scheduling breadcrumb"
       style={{
         display: "flex",
         alignItems: "center",
@@ -605,7 +605,7 @@ function Breadcrumb({
         userSelect: "none",
       }}
     >
-      <CrumbButton onClick={onClickAllLeads} muted>All Leads</CrumbButton>
+      <CrumbButton onClick={onClickAllLeads} muted>Scheduling</CrumbButton>
       <Sep />
       {bucketLabel ? (
         <CrumbButton onClick={onClickTrade} muted>{tradeLabel}</CrumbButton>
@@ -776,10 +776,10 @@ function Overview({
       >
         <div>
           <div style={{ fontSize: "11px", fontWeight: 600, color: palette.textTertiary, letterSpacing: "0.04em" }}>
-            ALL LEADS · {tradeLabel.toUpperCase()}
+            SCHEDULING · {tradeLabel.toUpperCase()}
           </div>
           <div style={{ fontSize: "18px", fontWeight: 700, color: palette.text, marginTop: "2px" }}>
-            {isAllTradesMode ? "Cross-trade campaign overview" : "Service-bucket overview"}
+            {isAllTradesMode ? "Cross-trade scheduling overview" : "Service-bucket scheduling"}
           </div>
           <div style={{ fontSize: "12px", color: palette.textMuted, marginTop: "4px" }}>
             {isAllTradesMode

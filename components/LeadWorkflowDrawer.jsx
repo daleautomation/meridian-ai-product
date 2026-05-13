@@ -71,7 +71,10 @@ export default function LeadWorkflowDrawer({
         maxHeight: WORKFLOW.panelMaxHeight,
         minHeight: 0,
         maxWidth: WORKFLOW.drawerMaxWidth,
-        overflow: "visible",
+        overflowX: "visible",
+        overflowY: "auto",
+        overscrollBehavior: "contain",
+        paddingRight: "2px",
       }}
     >
       {/* OPERATOR — always rendered, full size. SelectedLeadPanel

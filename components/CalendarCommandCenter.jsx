@@ -700,6 +700,172 @@ function TaskCard({ task, compact = false, now, isExecuteNow = false, onTaskFeed
       ? "0 1px 2px rgba(15,23,42,0.05), 0 12px 28px -10px rgba(15,23,42,0.16)"
       : cardShadow;
 
+  const isAll = viewMode === "all";
+  const serviceText =
+    (typeof serviceShortLabel === "string" && serviceShortLabel.trim()) ||
+    (typeof task?.serviceBucketLabel === "string" && task.serviceBucketLabel.trim()) ||
+    (typeof task?.laborTechScan?.primaryService === "string" && task.laborTechScan.primaryService.trim()) ||
+    null;
+  const tradeText = isAll
+    ? (
+        (typeof tradeShortLabel === "string" && tradeShortLabel.trim()) ||
+        (typeof task?.tradeLabel === "string" && task.tradeLabel.trim()) ||
+        (typeof task?.tradeId === "string" && task.tradeId.trim()) ||
+        null
+      )
+    : null;
+  const serviceUsesColor = !!(serviceText && serviceColor);
+  const serviceFg = serviceUsesColor ? serviceColor : palette.textSecondary;
+  const serviceBg = serviceUsesColor ? (serviceAccent || "transparent") : palette.surfaceHover;
+  const serviceBorder = serviceUsesColor ? `${serviceColor}33` : palette.borderLight;
+  const tradeUsesColor = !!(tradeText && tradeColor);
+  const tradeFg = tradeUsesColor ? tradeColor : palette.textSecondary;
+  const tradeBg = tradeUsesColor ? (tradeAccent || "transparent") : palette.surfaceHover;
+  const tradeBorder = tradeUsesColor ? `${tradeColor}33` : palette.borderLight;
+  const closeFit = formatCloseability(task);
+  const statusChip = blocked
+    ? { label: "Blocked", color: palette.danger, bg: palette.dangerBg, border: "#FECACA" }
+    : overdue
+      ? { label: "Overdue", color: palette.danger, bg: palette.dangerBg, border: "#FECACA" }
+      : callNow
+        ? { label: "Call now", color: palette.blue, bg: palette.bluePale, border: palette.blueBorder }
+        : null;
+
+  if (compact) {
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        aria-pressed={isSelected}
+        data-task-id={task.id ?? undefined}
+        title={
+          (() => {
+            const opener = task?.salesStrategy?.callPlan?.opener || task?.callScript || null;
+            const cp = closeFit ? closeFit.label : null;
+            return [task.linkedCompany, cp, serviceText, opener].filter(Boolean).join(" · ");
+          })()
+        }
+        onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleClick();
+          }
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.boxShadow = hoverShadow; }}
+        onMouseLeave={(e) => { e.currentTarget.style.boxShadow = cardShadow; }}
+        onFocus={applyFocusRing}
+        onBlur={clearFocusRing}
+        style={{
+          padding: "6px 8px",
+          borderRadius: R.xs + 2,
+          background: isSelected ? "rgba(37,99,235,0.045)" : palette.surface,
+          borderTop: `1px solid ${blocked || overdue ? "#FECACA" : palette.borderLight}`,
+          borderRight: `1px solid ${blocked || overdue ? "#FECACA" : palette.borderLight}`,
+          borderBottom: `1px solid ${blocked || overdue ? "#FECACA" : palette.borderLight}`,
+          borderLeft: `3px solid ${leftBorder}`,
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1fr) auto",
+          gap: "6px",
+          alignItems: "center",
+          boxShadow: cardShadow,
+          transition: EASE,
+          cursor: "pointer",
+          opacity: cardOpacity,
+          outline: "none",
+          minHeight: "38px",
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <div style={{
+            fontSize: "12px",
+            fontWeight: 750,
+            color: palette.textPrimary,
+            lineHeight: 1.2,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}>
+            {task.linkedCompany ?? task.title}
+          </div>
+          <div style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "4px",
+            alignItems: "center",
+            marginTop: "4px",
+            minWidth: 0,
+          }}>
+            {serviceText ? (
+              <span title={`Service: ${serviceText}`} style={{
+                fontSize: "9px",
+                fontWeight: 800,
+                letterSpacing: "0.05em",
+                padding: "1px 6px",
+                borderRadius: "999px",
+                color: serviceFg,
+                background: serviceBg,
+                border: `1px solid ${serviceBorder}`,
+                textTransform: "uppercase",
+                whiteSpace: "nowrap",
+              }}>
+                {serviceText}
+              </span>
+            ) : null}
+            {tradeText ? (
+              <span title={`Trade: ${tradeText}`} style={{
+                fontSize: "9px",
+                fontWeight: 700,
+                letterSpacing: "0.05em",
+                padding: "1px 6px",
+                borderRadius: "999px",
+                color: tradeFg,
+                background: tradeBg,
+                border: `1px solid ${tradeBorder}`,
+                textTransform: "uppercase",
+                whiteSpace: "nowrap",
+              }}>
+                {tradeText}
+              </span>
+            ) : null}
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "flex-end", flexDirection: "column", gap: "4px", minWidth: "fit-content" }}>
+          {closeFit ? (
+            <span title={typeof closeFit.pct === "number"
+              ? `Market fit: ${closeFit.pct}% · Source: ${closeabilitySourceLabel(closeFit.source)}`
+              : `Market fit scan limited · Source: ${closeabilitySourceLabel(closeFit.source)}`}
+              style={{
+                ...CLOSEABILITY_CHIP_STYLE,
+                fontSize: "9px",
+                padding: "1px 6px",
+              }}
+            >
+              {closeFit.label}
+            </span>
+          ) : null}
+          {statusChip ? (
+            <span style={{
+              fontSize: "9px",
+              fontWeight: 800,
+              letterSpacing: "0.05em",
+              padding: "1px 6px",
+              borderRadius: "999px",
+              color: statusChip.color,
+              background: statusChip.bg,
+              border: `1px solid ${statusChip.border}`,
+              textTransform: "uppercase",
+              whiteSpace: "nowrap",
+            }}>
+              {statusChip.label}
+            </span>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       role="button"
@@ -768,22 +934,8 @@ function TaskCard({ task, compact = false, now, isExecuteNow = false, onTaskFeed
          The standalone left priority pill has been removed; the row's
          left side stays empty so the company-name row reads cleanly. */}
       {(() => {
-        const isAll = viewMode === "all";
         const priorityKey = typeof task.priority === "string" ? task.priority : "";
         const priorityText = priorityKey ? `${priorityKey.toUpperCase()} PRIORITY` : null;
-        const serviceText =
-          (typeof serviceShortLabel === "string" && serviceShortLabel.trim()) ||
-          (typeof task?.serviceBucketLabel === "string" && task.serviceBucketLabel.trim()) ||
-          (typeof task?.laborTechScan?.primaryService === "string" && task.laborTechScan.primaryService.trim()) ||
-          null;
-        const tradeText = isAll
-          ? (
-              (typeof tradeShortLabel === "string" && tradeShortLabel.trim()) ||
-              (typeof task?.tradeLabel === "string" && task.tradeLabel.trim()) ||
-              (typeof task?.tradeId === "string" && task.tradeId.trim()) ||
-              null
-            )
-          : null;
 
         if (DEBUG_UI && typeof console !== "undefined") {
           // eslint-disable-next-line no-console
@@ -811,16 +963,6 @@ function TaskCard({ task, compact = false, now, isExecuteNow = false, onTaskFeed
           }
         }
 
-        const serviceUsesColor = !!(serviceText && serviceColor);
-        const serviceFg = serviceUsesColor ? serviceColor : palette.textSecondary;
-        const serviceBg = serviceUsesColor ? (serviceAccent || "transparent") : palette.surfaceHover;
-        const serviceBorder = serviceUsesColor ? `${serviceColor}33` : palette.borderLight;
-
-        const tradeUsesColor = !!(tradeText && tradeColor);
-        const tradeFg = tradeUsesColor ? tradeColor : palette.textSecondary;
-        const tradeBg = tradeUsesColor ? (tradeAccent || "transparent") : palette.surfaceHover;
-        const tradeBorder = tradeUsesColor ? `${tradeColor}33` : palette.borderLight;
-
         const chipBase = {
           fontSize: "9px",
           fontWeight: 700,
@@ -833,8 +975,6 @@ function TaskCard({ task, compact = false, now, isExecuteNow = false, onTaskFeed
           textOverflow: "ellipsis",
           textTransform: "uppercase",
         };
-
-        const closeFit = formatCloseability(task);
 
         return (
           <div style={{
@@ -4303,9 +4443,9 @@ function DayColumn({ date, tasks, isToday, now, onTaskFeedback, selectedTaskId, 
   const hasTierData =
     tierCounts.CLOSE_NOW + tierCounts.STRONG + tierCounts.TEST > 0;
 
-  // Open / breathing column styling — lighter borders so the grid
-  // reads as context, not a boxed-in panel. Day-1 gets a stronger
-  // blue accent so it anchors the rollout plan ("Start here").
+  // Execution-lane styling — compact, queue-first lanes instead of
+  // roomy calendar columns. Day-1 keeps a blue rail so launch order
+  // stays obvious without consuming vertical space.
   const dimBorder = "rgba(15,23,42,0.05)";
   // Pre-launch days fade to a softer border so the eye skips past them
   // and lands on Day 1. Same border family, lower contrast.
@@ -4316,11 +4456,11 @@ function DayColumn({ date, tasks, isToday, now, onTaskFeedback, selectedTaskId, 
   return (
     <div style={{
       flex: "1 1 0",
-      minWidth: "180px",
+      minWidth: 0,
       display: "flex",
       flexDirection: "column",
-      gap: "12px",
-      padding: "14px",
+      gap: "8px",
+      padding: "10px",
       borderRadius: R.sm,
       background: isFirstActive
         ? "rgba(37,99,235,0.045)"
@@ -4338,12 +4478,11 @@ function DayColumn({ date, tasks, isToday, now, onTaskFeedback, selectedTaskId, 
     }}>
       {isFirstActive ? (
         <div style={{
-          fontSize: "9px", fontWeight: 800, letterSpacing: "0.12em",
+          fontSize: "9px", fontWeight: 800, letterSpacing: "0.10em",
           color: palette.blue, textTransform: "uppercase",
-          marginBottom: "-4px",
           lineHeight: 1.3,
         }}>
-          Start here — highest probability opportunities
+          Start here
         </div>
       ) : isPreLaunch ? (
         <div style={{
@@ -4354,7 +4493,7 @@ function DayColumn({ date, tasks, isToday, now, onTaskFeedback, selectedTaskId, 
           Pre-launch
         </div>
       ) : null}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "6px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "6px" }}>
         <div>
           <div style={{
             fontSize: "10px", fontWeight: 600, letterSpacing: "0.08em",
@@ -4364,26 +4503,34 @@ function DayColumn({ date, tasks, isToday, now, onTaskFeedback, selectedTaskId, 
             {DAY_SHORT[date.getDay()]}
           </div>
           <div style={{
-            fontSize: "14px", fontWeight: 600,
+            fontSize: "13px", fontWeight: 700,
             color: isToday ? palette.textPrimary : palette.textSecondary,
           }}>
             {date.getDate()}
           </div>
         </div>
-        <span style={{ fontSize: "10px", color: palette.textTertiary }}>
-          {tasks.length} {tasks.length === 1 ? "item" : "items"}
+        <span style={{
+          fontSize: "10px",
+          fontWeight: 700,
+          color: tasks.length > 0 ? palette.textPrimary : palette.textTertiary,
+          background: palette.surface,
+          border: `1px solid ${palette.borderLight}`,
+          borderRadius: "999px",
+          padding: "2px 7px",
+        }}>
+          {tasks.length}
         </span>
       </div>
 
-      {isFirstActive ? (
+      {isFirstActive && tasks.length === 0 ? (
         <div style={{
-          padding: "10px 11px",
+          padding: "8px 9px",
           borderRadius: R.xs + 2,
           background: "linear-gradient(180deg, rgba(37,99,235,0.07) 0%, rgba(37,99,235,0.03) 100%)",
           border: `1px solid rgba(37,99,235,0.22)`,
           display: "flex",
           flexDirection: "column",
-          gap: "6px",
+          gap: "4px",
         }}>
           <div style={{
             fontSize: "11px", fontWeight: 800,
@@ -4400,21 +4547,6 @@ function DayColumn({ date, tasks, isToday, now, onTaskFeedback, selectedTaskId, 
               ? "Start here — focus on these calls first."
               : "Use this day to begin testing your approach."}
           </div>
-          <ul style={{
-            margin: "2px 0 0 0",
-            padding: "0 0 0 14px",
-            listStyle: "disc",
-            display: "flex",
-            flexDirection: "column",
-            gap: "3px",
-            fontSize: "10.5px",
-            color: palette.textSecondary,
-            lineHeight: 1.4,
-          }}>
-            <li>Focus on the highest-priority opportunities first.</li>
-            <li>Use these calls to test messaging and openers.</li>
-            <li>Adjust approach based on what you hear back.</li>
-          </ul>
         </div>
       ) : null}
 
@@ -4423,7 +4555,7 @@ function DayColumn({ date, tasks, isToday, now, onTaskFeedback, selectedTaskId, 
           fontSize: "10px", fontWeight: 600,
           color: palette.textSecondary,
           letterSpacing: "0.02em",
-          padding: "5px 7px",
+          padding: "4px 6px",
           borderRadius: R.xs + 2,
           background: palette.surfaceHover,
           border: `1px solid ${palette.borderLight}`,
@@ -4469,7 +4601,7 @@ function DayColumn({ date, tasks, isToday, now, onTaskFeedback, selectedTaskId, 
               Day 1 of execution
             </div>
             <div style={{ color: palette.textSecondary }}>
-              Use this day to begin testing your approach. Pull from the priority queue or trade lists when you're ready to start dialing.
+              Use this day to begin testing your approach. Pull from the priority queue or trade lists when you&apos;re ready to start dialing.
             </div>
           </div>
         ) : (
@@ -4525,7 +4657,7 @@ function DayColumn({ date, tasks, isToday, now, onTaskFeedback, selectedTaskId, 
                   </div>
                 ) : null}
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
                 {items.map((t) => {
                   const isPriority = priorityIds.has(t.id);
                   return (
@@ -4581,7 +4713,7 @@ function DayColumn({ date, tasks, isToday, now, onTaskFeedback, selectedTaskId, 
                 </div>
               ) : null}
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
               {items.map((t) => {
                 const isPriority = priorityIds.has(t.id);
                 return (
@@ -5579,8 +5711,8 @@ export default function CalendarCommandCenter({
       <div style={{
         display: "flex",
         flexDirection: "column",
-        gap: "20px",
-        padding: "4px 32px 28px",
+        gap: "14px",
+        padding: "4px 22px 24px",
       }}>
         {/* TOP: trust strip + execution plan (full width). */}
         <div style={{
@@ -5700,7 +5832,7 @@ export default function CalendarCommandCenter({
           minWidth: 0,
           display: "flex",
           flexDirection: "column",
-          gap: "10px",
+          gap: "8px",
           paddingBottom: "20px",
           borderBottom: "1px solid rgba(15, 23, 42, 0.08)",
         }}>
@@ -5809,17 +5941,15 @@ export default function CalendarCommandCenter({
           ) : (
             <div style={{
               display: "grid",
-              gridTemplateColumns: "repeat(7, minmax(200px, 1fr))",
-              gap: "20px",
-              // Calendar grid body — vertical flow ONLY (page handles
-              // vertical scroll). Horizontal scroll stays here for
-              // narrow viewports so the seven-day layout doesn't
-              // force page-level horizontal scroll.
+              gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+              gap: "10px",
+              // Calendar lanes are queue cards, not oversized day
+              // columns. They wrap naturally on narrow screens so the
+              // page keeps one vertical scroll and no horizontal trap.
               width: "100%",
-              overflowX: "auto",
+              overflowX: "visible",
               overflowY: "visible",
-              paddingBottom: "20px",
-              backgroundImage: "linear-gradient(to bottom, transparent calc(100% - 28px), rgba(15,23,42,0.02))",
+              paddingBottom: "12px",
             }}>
               {days.map((d) => {
                 const k = dayKey(d);
