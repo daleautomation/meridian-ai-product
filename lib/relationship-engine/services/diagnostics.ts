@@ -22,12 +22,22 @@ export type RelationshipEngineRepositoryModeLabel =
   | "read_only_memory"
   | "unknown";
 
+export interface RelationshipEngineRepositorySourceReadiness {
+  companySnapshots: boolean;
+  crmActivities: boolean;
+  usageEvents: boolean;
+  executionOutcomes: boolean;
+  followUps: boolean;
+  operatorSnapshot: boolean;
+}
+
 export interface RelationshipEngineRepositoryDiagnostics {
   relationshipStore: "ready" | "unwired" | "unknown";
   timelineStore: "ready" | "unwired" | "unknown";
   followUpStore: "ready" | "unwired" | "unknown";
   scoringStore: "ready" | "unwired" | "unknown";
   readOnly: true;
+  sourceReadiness?: RelationshipEngineRepositorySourceReadiness;
 }
 
 export interface RelationshipEngineDiagnosticsRequest {
@@ -366,7 +376,10 @@ function repositorySurface(
       stores,
       unwiredStores,
       readOnly: diagnostics.readOnly,
+      sourceReadiness: diagnostics.sourceReadiness ?? null,
       rawStorageInternalsExposed: false,
+      adapterIntegrityVerified: diagnostics.readOnly === true && unwiredStores.length === 0,
+      mutationPathsExposed: false,
     },
   };
 }

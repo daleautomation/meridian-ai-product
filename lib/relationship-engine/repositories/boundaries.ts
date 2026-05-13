@@ -8,7 +8,7 @@
 import type { SourceCrmActivity, SourceExecutionOutcome, SourceFollowUpTask, SourceUsageEvent } from "../adapters/sourceTypes";
 import type { WorkspaceId } from "../primitives";
 
-export type RelationshipEngineStorageKind = "file" | "neon" | "memory" | "external";
+export type RelationshipEngineStorageKind = "file" | "neon" | "memory" | "snapshot" | "external";
 export type RelationshipEngineRepositoryMode = "read_only" | "write_prepared";
 
 export interface RepositoryAdapterCapabilities {
@@ -41,6 +41,26 @@ export const READ_ONLY_FILE_ADAPTER_CAPABILITIES: RepositoryAdapterCapabilities 
 
 export const READ_ONLY_NEON_ADAPTER_CAPABILITIES: RepositoryAdapterCapabilities = {
   storage: "neon",
+  mode: "read_only",
+  canReadTimelineSources: true,
+  canWriteRelationships: false,
+  canAppendTimelineEvents: false,
+  canWriteScores: false,
+  canWriteQueueCandidates: false,
+};
+
+export const READ_ONLY_MEMORY_ADAPTER_CAPABILITIES: RepositoryAdapterCapabilities = {
+  storage: "memory",
+  mode: "read_only",
+  canReadTimelineSources: true,
+  canWriteRelationships: false,
+  canAppendTimelineEvents: false,
+  canWriteScores: false,
+  canWriteQueueCandidates: false,
+};
+
+export const READ_ONLY_SNAPSHOT_ADAPTER_CAPABILITIES: RepositoryAdapterCapabilities = {
+  storage: "snapshot",
   mode: "read_only",
   canReadTimelineSources: true,
   canWriteRelationships: false,

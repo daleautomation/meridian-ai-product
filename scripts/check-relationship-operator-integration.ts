@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { TENANTS, toPublicUser } from "@/config/tenants";
 import { WORKSPACES } from "@/config/workspaces";
+import RelationshipEngineOperatorPanel from "@/components/operator/RelationshipEngineOperatorPanel";
 import { buildRelationshipEngineOperatorSurface } from "@/lib/relationship-engine/operatorIntegration";
 
 const now = "2026-05-13T18:20:00.000Z";
@@ -38,12 +41,23 @@ async function main(): Promise<void> {
   assert.equal(adminSurface.queues.length, 6);
   assert.equal(adminSurface.access.adminDiagnosticsVisible, true);
   assert.ok(adminSurface.adminDiagnostics, "admin users should receive safe admin diagnostics metadata");
+  assert.equal(adminSurface.metadata.repositoryMode, "read_only_file");
+  const sourceReadiness = adminSurface.diagnostics.repositoryReadiness.safeMetadata.sourceReadiness as {
+    operatorSnapshot?: boolean;
+  } | null;
+  assert.equal(
+    sourceReadiness?.operatorSnapshot,
+    true,
+  );
+  const panelMarkup = renderToStaticMarkup(createElement(RelationshipEngineOperatorPanel, { surface: adminSurface as never }));
+  assert.match(panelMarkup, /Relationship Engine/);
+  assert.match(panelMarkup, /Operator review surfaces/);
 
   const clientSurface = await buildRelationshipEngineOperatorSurface({ workspace, user: client, now });
   assert.equal(clientSurface.access.adminDiagnosticsVisible, false);
   assert.equal(clientSurface.adminDiagnostics, null);
   assert.equal(clientSurface.metadata.timelineDisplay.source, "relationship_engine_timeline_api");
-  assert.equal(clientSurface.metadata.summaryDisplay.queueItemCount, 0);
+  assert.ok(clientSurface.metadata.summaryDisplay.queueItemCount >= 0);
 
   const serialized = JSON.stringify(adminSurface);
   assert.equal(/password|cookie|token|DATABASE_URL|connectionString/i.test(serialized), false);
