@@ -23,6 +23,8 @@ import type {
   TimelineSourceKind,
 } from "../../adapters/sourceTypes";
 
+export const UNKNOWN_OCCURRED_AT = "1970-01-01T00:00:00.000Z" as IsoDateString;
+
 export interface TimelineNormalizationResult<T extends TimelineEvent = TimelineEvent> {
   event: T | null;
   warnings: TimelineNormalizationWarning[];
@@ -86,6 +88,16 @@ export function normalizeIsoTimestamp(
   return asIsoDateString(date.toISOString());
 }
 
+export function normalizeOptionalIsoTimestamp(value: string | null | undefined): IsoDateString | undefined {
+  if (!isValidTimestampInput(value)) return undefined;
+  return asIsoDateString(new Date(value).toISOString());
+}
+
+export function isValidTimestampInput(value: string | null | undefined): value is string {
+  if (typeof value !== "string" || value.trim().length === 0) return false;
+  return !Number.isNaN(new Date(value).getTime());
+}
+
 export function relationshipIdFromSource(ref: SourceRelationshipRef): RelationshipId {
   if (ref.relationshipId && ref.relationshipId.trim().length > 0) {
     return asRelationshipId(ref.relationshipId.trim());
@@ -145,11 +157,21 @@ export function baseTimelineParts(input: {
   evidenceNotes?: string;
 }): BaseTimelineParts {
   const fallbackRecordedAt = input.context.defaultRecordedAt ?? input.context.now;
-  const occurredAt = normalizeIsoTimestamp(input.occurredAt, fallbackRecordedAt);
-  const recordedAt = normalizeIsoTimestamp(input.recordedAt, fallbackRecordedAt);
+  const occurredAtFallback = normalizeOptionalIsoTimestamp(input.recordedAt) ?? UNKNOWN_OCCURRED_AT;
+  const occurredAt = normalizeIsoTimestamp(input.occurredAt, occurredAtFallback);
+  const recordedAtFallback =
+    normalizeOptionalIsoTimestamp(input.recordedAt)
+    ?? normalizeOptionalIsoTimestamp(input.occurredAt)
+    ?? fallbackRecordedAt;
+  const recordedAt = normalizeIsoTimestamp(input.recordedAt, recordedAtFallback);
   const relationshipId = relationshipIdFromSource({
     ...input.sourceRef,
     workspace: input.sourceRef.workspace ?? input.context.workspaceId,
+  });
+  const confidence = input.confidence ?? defaultTimelineConfidence({
+    sourceRef: input.sourceRef,
+    occurredAt: input.occurredAt,
+    recordedAt: input.recordedAt,
   });
   const dedupeKey = stableDedupeKey([
     input.source,
@@ -171,12 +193,12 @@ export function baseTimelineParts(input: {
         sourceId: input.sourceId,
         label: input.evidenceLabel,
         observedAt: occurredAt,
-        confidence: input.confidence,
+        confidence,
         value: input.evidenceValue,
         notes: input.evidenceNotes,
       }),
     ],
-    confidence: input.confidence ?? "medium",
+    confidence,
     dedupeKey,
   };
 }
@@ -193,6 +215,25 @@ export function clean(value: string | null | undefined): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function defaultTimelineConfidence(input: {
+  sourceRef: SourceRelationshipRef;
+  occurredAt?: string | null;
+  recordedAt?: string | null;
+}): ConfidenceLevel {
+  const hasStableIdentity = Boolean(
+    clean(input.sourceRef.relationshipId)
+    ?? clean(input.sourceRef.crmKey)
+    ?? clean(input.sourceRef.companyKey)
+    ?? clean(input.sourceRef.leadId)
+    ?? clean(input.sourceRef.taskId)
+    ?? clean(input.sourceRef.companyName),
+  );
+  const hasUsableEventTime =
+    isValidTimestampInput(input.occurredAt)
+    || isValidTimestampInput(input.recordedAt);
+  return hasStableIdentity && hasUsableEventTime ? "medium" : "low";
 }
 
 function stableHash(parts: Array<string | null | undefined>): string {

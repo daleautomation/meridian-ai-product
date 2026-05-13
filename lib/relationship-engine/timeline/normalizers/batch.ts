@@ -13,6 +13,7 @@ import type {
   TimelineNormalizationWarning,
 } from "../../adapters/sourceTypes";
 import type { TimelineEvent } from "../events";
+import { validateTimelineEventIntegrity } from "../validation";
 import { normalizeCrmActivityToTimelineEvent } from "./crmActivity";
 import { normalizeExecutionOutcomeToTimelineEvent } from "./executionOutcome";
 import { normalizeFollowUpTaskToTimelineEvent } from "./followUpTask";
@@ -32,6 +33,11 @@ export interface TimelineNormalizationBatchResult {
   warnings: TimelineNormalizationWarning[];
 }
 
+export interface TimelineDedupeResult {
+  events: TimelineEvent[];
+  warnings: TimelineNormalizationWarning[];
+}
+
 export function normalizeTimelineSources(
   input: TimelineNormalizationBatchInput,
 ): TimelineNormalizationBatchResult {
@@ -45,8 +51,65 @@ export function normalizeTimelineSources(
     ...(input.executionOutcomes ?? []).map((outcome) =>
       normalizeExecutionOutcomeToTimelineEvent(outcome, input.context)),
   ];
+  const validation = validateNormalizedEvents(
+    results.flatMap((result) => result.event ? [result.event] : []),
+  );
+  const deduped = dedupeTimelineEvents(validation.events);
   return {
-    events: sortTimelineEvents(results.flatMap((result) => result.event ? [result.event] : [])),
-    warnings: results.flatMap((result) => result.warnings),
+    events: deduped.events,
+    warnings: [
+      ...results.flatMap((result) => result.warnings),
+      ...validation.warnings,
+      ...deduped.warnings,
+    ],
+  };
+}
+
+export function validateNormalizedEvents(events: TimelineEvent[]): TimelineDedupeResult {
+  const accepted: TimelineEvent[] = [];
+  const warnings: TimelineNormalizationWarning[] = [];
+
+  for (const event of events) {
+    const validation = validateTimelineEventIntegrity(event);
+    warnings.push(...validation.issues.map((issue) => ({
+      source: "timeline_event" as const,
+      sourceId: event.id,
+      reason: `${issue.severity}:${issue.code}: ${issue.message}`,
+    })));
+    if (validation.ok) {
+      accepted.push(event);
+    }
+  }
+
+  return {
+    events: sortTimelineEvents(accepted),
+    warnings,
+  };
+}
+
+export function dedupeTimelineEvents(events: TimelineEvent[]): TimelineDedupeResult {
+  const warnings: TimelineNormalizationWarning[] = [];
+  const byKey = new Map<string, TimelineEvent>();
+
+  for (const event of sortTimelineEvents(events)) {
+    const key = event.dedupeKey ?? event.id;
+    const existing = byKey.get(key);
+    if (!existing) {
+      byKey.set(key, event);
+      continue;
+    }
+
+    warnings.push({
+      source: "timeline_event",
+      sourceId: event.id,
+      reason: existing.id === event.id
+        ? `duplicate_event: discarded duplicate import for dedupeKey ${key}.`
+        : `dedupe_conflict: discarded ${event.id}; ${existing.id} already owns dedupeKey ${key}.`,
+    });
+  }
+
+  return {
+    events: sortTimelineEvents([...byKey.values()]),
+    warnings,
   };
 }

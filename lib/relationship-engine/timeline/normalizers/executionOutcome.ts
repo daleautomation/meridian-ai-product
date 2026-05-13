@@ -17,6 +17,7 @@ import {
   asTouchpointId,
   baseTimelineParts,
   normalizeIsoTimestamp,
+  normalizeOptionalIsoTimestamp,
   stableTimelineEventId,
   type TimelineNormalizationResult,
 } from "./common";
@@ -80,7 +81,9 @@ export function normalizeExecutionOutcomeToTimelineEvent(
       evidence: base.evidence,
       confidence: base.confidence,
       dedupeKey: base.dedupeKey,
-      ...(outcome.nextActionDate ? { dueAt: normalizeIsoTimestamp(outcome.nextActionDate, context.now) } : {}),
+      ...(normalizeOptionalIsoTimestamp(outcome.nextActionDate)
+        ? { dueAt: normalizeIsoTimestamp(outcome.nextActionDate, context.now) }
+        : {}),
       ...(base.actorId && base.actorId !== "system" ? { ownerId: base.actorId } : {}),
       reason: outcome.nextAction ?? "Execution outcome requested follow-up",
     };

@@ -10,7 +10,9 @@ import {
   asOperatorId,
   baseTimelineParts,
   emptyNormalizationResult,
+  isValidTimestampInput,
   normalizeIsoTimestamp,
+  normalizeOptionalIsoTimestamp,
   stableTimelineEventId,
   type TimelineNormalizationResult,
 } from "./common";
@@ -28,9 +30,12 @@ export function normalizeFollowUpTaskToTimelineEvent(
   }
 
   const type = followUpEventType(task, context.now);
+  const dueAt = normalizeOptionalIsoTimestamp(task.dueAt);
+  const completedAt = normalizeOptionalIsoTimestamp(task.completedAt);
+  const createdAt = normalizeOptionalIsoTimestamp(task.createdAt);
   const occurredAt = type === "follow_up_completed"
-    ? task.completedAt ?? task.dueAt ?? task.createdAt
-    : task.dueAt ?? task.createdAt;
+    ? completedAt ?? dueAt ?? createdAt
+    : dueAt ?? createdAt;
   const base = baseTimelineParts({
     source: "follow_up_task",
     sourceId: task.id,
@@ -55,7 +60,7 @@ export function normalizeFollowUpTaskToTimelineEvent(
     evidence: base.evidence,
     confidence: base.confidence,
     dedupeKey: base.dedupeKey,
-    ...(task.dueAt ? { dueAt: normalizeIsoTimestamp(task.dueAt, context.now) } : {}),
+    ...(dueAt ? { dueAt } : {}),
     ...(type === "follow_up_completed" ? { completedAt: base.occurredAt } : {}),
     ...(task.assignedUserId ? { ownerId: asOperatorId(task.assignedUserId) } : {}),
     reason: task.title,
@@ -68,6 +73,12 @@ function followUpEventType(
   now: string,
 ): FollowUpTimelineEvent["type"] {
   if (task.status === "completed") return "follow_up_completed";
-  if (task.status === "open" && task.dueAt && task.dueAt < now) return "follow_up_missed";
+  if (
+    task.status === "open"
+    && isValidTimestampInput(task.dueAt)
+    && normalizeIsoTimestamp(task.dueAt, now) < normalizeIsoTimestamp(now, now)
+  ) {
+    return "follow_up_missed";
+  }
   return "follow_up_scheduled";
 }
