@@ -83,7 +83,7 @@ export default function RelationshipPriorityWorkspace({
             <div style={styles.sectionHeader}>
               <div>
                 <div style={styles.sectionKicker}>{activeNavLabel(activeNav)}</div>
-                <h2 style={styles.sectionTitle}>Who deserves attention first</h2>
+              <h2 style={styles.sectionTitle}>{laneTitle(activeNav)}</h2>
               </div>
               <div style={styles.mutedText}>
                 {visibleQueue.length} relationships
@@ -91,20 +91,28 @@ export default function RelationshipPriorityWorkspace({
             </div>
 
             <div style={styles.queueList}>
-              {visibleQueue.map((card, index) => (
-                <PriorityCard
-                  key={card.id}
-                  card={card}
-                  selected={selected?.id === card.id}
-                  dominant={index === 0}
-                  onSelect={() => setSelectedId(card.id)}
-                />
-              ))}
-              {visibleQueue.length === 0 ? (
-                <div style={styles.emptyState}>
-                  No relationships in this lane. Priority work stays in the main queue.
-                </div>
-              ) : null}
+              {activeNav === "outcomes" ? (
+                <OutcomesLane model={model} />
+              ) : activeNav === "assistant" ? (
+                <AssistantLane model={model} selected={selected} />
+              ) : (
+                <>
+                  {visibleQueue.map((card, index) => (
+                    <PriorityCard
+                      key={card.id}
+                      card={card}
+                      selected={selected?.id === card.id}
+                      dominant={index === 0}
+                      onSelect={() => setSelectedId(card.id)}
+                    />
+                  ))}
+                  {visibleQueue.length === 0 ? (
+                    <div style={styles.emptyState}>
+                      No relationships in this lane. Priority work stays in the main queue.
+                    </div>
+                  ) : null}
+                </>
+              )}
             </div>
           </div>
 
@@ -134,11 +142,70 @@ function activeNavLabel(nav: RelationshipPriorityNavId): string {
   return "Priority queue";
 }
 
+function laneTitle(nav: RelationshipPriorityNavId): string {
+  if (nav === "recovery") return "Relationships that need recovery";
+  if (nav === "follow-up") return "Follow-ups due before momentum fades";
+  if (nav === "outcomes") return "Execution outcomes ready to capture";
+  if (nav === "assistant") return "AI assistance for the selected relationship";
+  return "Who deserves attention first";
+}
+
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div style={styles.metricCard}>
       <div style={styles.metricValue}>{value}</div>
       <div style={styles.metricLabel}>{label}</div>
+    </div>
+  );
+}
+
+function OutcomesLane({ model }: { model: RelationshipPriorityWorkspaceModel }) {
+  return (
+    <div style={styles.specialLane}>
+      <div style={styles.specialLaneHero}>
+        <div style={styles.sectionKicker}>Outcomes</div>
+        <h3 style={styles.specialLaneTitle}>Capture only what changes the next action.</h3>
+        <p style={styles.specialLaneCopy}>
+          Meridian keeps outcome work compressed: one result, one next step, one owner.
+        </p>
+      </div>
+      {model.outcomeNotes.map((outcome) => (
+        <div key={outcome.id} style={styles.outcomeCard}>
+          <span style={styles.outcomeIcon}>OK</span>
+          <div>
+            <strong>{outcome.label}</strong>
+            <div style={styles.mutedText}>{outcome.detail}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AssistantLane({
+  model,
+  selected,
+}: {
+  model: RelationshipPriorityWorkspaceModel;
+  selected: RelationshipPriorityCard | null;
+}) {
+  return (
+    <div style={styles.specialLane}>
+      <div style={styles.assistantHero}>
+        <div style={styles.sectionKicker}>Assistant</div>
+        <h3 style={styles.specialLaneTitle}>
+          {selected ? `Work the angle for ${selected.company}` : "Select a relationship to activate the assistant"}
+        </h3>
+        <p style={styles.specialLaneCopy}>
+          The assistant starts from the selected relationship&apos;s signals, not a blank chat.
+        </p>
+      </div>
+      {model.assistantPrompts.map((prompt) => (
+        <button key={prompt} type="button" style={styles.assistantPromptCard}>
+          <span style={styles.assistantSpark}>*</span>
+          {prompt}
+        </button>
+      ))}
     </div>
   );
 }
@@ -784,5 +851,86 @@ const styles: Record<string, CSSProperties> = {
     background: palette.surfaceGlass,
     color: palette.textSecondary,
     fontSize: "14px",
+  },
+  specialLane: {
+    display: "grid",
+    gap: "12px",
+  },
+  specialLaneHero: {
+    padding: "24px",
+    border: `1px solid ${palette.border}`,
+    borderRadius: "26px",
+    background: "linear-gradient(135deg, #FFFFFF, #F8FAFC)",
+    boxShadow: palette.shadow,
+  },
+  assistantHero: {
+    padding: "24px",
+    border: `1px solid ${palette.blueBorder}`,
+    borderRadius: "26px",
+    background: "linear-gradient(135deg, rgba(239,246,255,0.95), #FFFFFF)",
+    boxShadow: "0 22px 58px rgba(37,99,235,0.10)",
+  },
+  specialLaneTitle: {
+    margin: "8px 0 8px",
+    fontSize: "28px",
+    lineHeight: 1.05,
+    letterSpacing: "-0.045em",
+  },
+  specialLaneCopy: {
+    margin: 0,
+    maxWidth: "620px",
+    color: palette.textSecondary,
+    fontSize: "14px",
+    lineHeight: 1.45,
+  },
+  outcomeCard: {
+    display: "flex",
+    gap: "12px",
+    alignItems: "flex-start",
+    padding: "17px",
+    border: `1px solid ${palette.border}`,
+    borderRadius: "22px",
+    background: palette.surfaceGlass,
+    boxShadow: palette.shadow,
+  },
+  outcomeIcon: {
+    display: "grid",
+    placeItems: "center",
+    width: "32px",
+    height: "32px",
+    borderRadius: "12px",
+    background: palette.successBg,
+    color: palette.success,
+    fontSize: "11px",
+    fontWeight: 900,
+    flexShrink: 0,
+  },
+  assistantPromptCard: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    width: "100%",
+    padding: "18px",
+    border: `1px solid ${palette.blueBorder}`,
+    borderRadius: "22px",
+    background: palette.surface,
+    color: palette.textPrimary,
+    boxShadow: palette.shadow,
+    cursor: "pointer",
+    fontSize: "15px",
+    fontWeight: 760,
+    textAlign: "left",
+  },
+  assistantSpark: {
+    display: "grid",
+    placeItems: "center",
+    width: "30px",
+    height: "30px",
+    borderRadius: "12px",
+    background: palette.bluePale,
+    color: palette.blue,
+    fontSize: "16px",
+    fontWeight: 900,
+    flexShrink: 0,
   },
 };
