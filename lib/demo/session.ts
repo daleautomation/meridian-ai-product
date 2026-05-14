@@ -12,6 +12,7 @@ type DemoSessionInput = {
   tenant?: Tenant | null;
   workspaceSlug?: string | null;
   entry: string;
+  destination?: "operator" | "relationship-priority";
 };
 
 function forwardedHost(req: Request, url: URL): string {
@@ -68,10 +69,15 @@ export async function createDemoSessionResponse(input: DemoSessionInput) {
     return NextResponse.json({ error: "Authentication is not configured" }, { status: 500 });
   }
 
+  const destination = input.destination
+    ?? (url.searchParams.get("surface") === "relationship-priority" ? "relationship-priority" : "operator");
   const isHttps = isSecureSessionRequest(req);
   const proto = isHttps ? "https" : "http";
+  const operatorPath = destination === "relationship-priority"
+    ? "/operator/relationship-priority"
+    : "/operator";
   const redirectUrl = new URL(
-    `/operator?workspace=${encodeURIComponent(access.workspace.slug)}`,
+    `${operatorPath}?workspace=${encodeURIComponent(access.workspace.slug)}`,
     `${proto}://${fwdHost}`,
   );
   const res = NextResponse.redirect(redirectUrl, { status: 302 });
