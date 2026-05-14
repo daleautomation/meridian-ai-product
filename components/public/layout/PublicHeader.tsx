@@ -1,8 +1,8 @@
 import Link from "next/link";
 import {
   CLIENT_LOGIN_HREF,
-  REQUEST_DEMO_HREF,
-  START_AUDIT_HREF,
+  REQUEST_WORKSPACE_HREF,
+  VISIBILITY_SCAN_HREF,
 } from "@/content/public/home";
 
 export function PublicHeader() {
@@ -13,18 +13,18 @@ export function PublicHeader() {
         <span>Meridian AI</span>
       </Link>
       <nav className="public-nav" aria-label="Meridian website navigation">
-        <a href="#transformation">Before / After</a>
-        <a href="#services">Services</a>
-        <a href="#audits">Audits</a>
-        <a href="#signal-to-execution">Signal flow</a>
-        <a href="#workspaces">Workspaces</a>
+        <a href="#utility-products">Products</a>
+        <a href="#vertical-workspaces">Workspaces</a>
+        <a href="#roofing-intelligence">Roofing</a>
+        <a href="#built-from-field">Field-built</a>
+        <a href="#live-systems">Proof</a>
       </nav>
       <div className="public-header-actions">
-        <a className="public-link-button" href={START_AUDIT_HREF}>
-          Start Audit
+        <a className="public-link-button" href={VISIBILITY_SCAN_HREF}>
+          Visibility Scan
         </a>
-        <a className="public-link-button" href={REQUEST_DEMO_HREF}>
-          Request Demo
+        <a className="public-link-button" href={REQUEST_WORKSPACE_HREF}>
+          Request Workspace
         </a>
         <Link className="public-login-button" href={CLIENT_LOGIN_HREF}>
           Client Login

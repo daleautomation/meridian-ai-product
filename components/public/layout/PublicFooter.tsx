@@ -1,17 +1,17 @@
 import Link from "next/link";
 import {
   CLIENT_LOGIN_HREF,
-  REQUEST_DEMO_HREF,
-  START_AUDIT_HREF,
+  REQUEST_WORKSPACE_HREF,
+  VISIBILITY_SCAN_HREF,
 } from "@/content/public/home";
 
 export function PublicFooter() {
   return (
     <footer className="public-footer">
       <span>Meridian AI</span>
-      <span>Operator-grade intelligence systems.</span>
-      <a href={START_AUDIT_HREF}>Start Audit</a>
-      <a href={REQUEST_DEMO_HREF}>Request Demo</a>
+      <span>Operator-grade growth and intelligence systems.</span>
+      <a href={VISIBILITY_SCAN_HREF}>Visibility Scan</a>
+      <a href={REQUEST_WORKSPACE_HREF}>Request Workspace</a>
       <Link href={CLIENT_LOGIN_HREF}>Client Login</Link>
     </footer>
   );
