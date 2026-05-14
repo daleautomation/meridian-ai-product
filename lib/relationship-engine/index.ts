@@ -24,3 +24,4 @@ export * from "./timeline/validation";
 export * from "./verticals/config";
 export * from "./workflowIntegration";
 export * from "./multiOperatorWorkflowOrchestration";
+export * from "./workflowContinuity";

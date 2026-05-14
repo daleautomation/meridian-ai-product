@@ -52,6 +52,17 @@ async function main(): Promise<void> {
   assert.equal(adminSurface.multiOperatorWorkflows.boundary.automationAllowed, false);
   assert.equal(adminSurface.multiOperatorWorkflows.boundary.notificationsAllowed, false);
   assert.equal(adminSurface.multiOperatorWorkflows.boundary.neonWritesAllowed, false);
+  assert.equal(adminSurface.workflowContinuity.kind, "operator_workflow_continuity_projection");
+  assert.equal(adminSurface.workflowContinuity.boundary.hiddenWorkflowStateAllowed, false);
+  assert.equal(adminSurface.workflowContinuity.boundary.autoAssignmentAllowed, false);
+  assert.equal(adminSurface.workflowContinuity.boundary.assignmentMutationAllowed, false);
+  assert.equal(adminSurface.workflowContinuity.boundary.queueExecutionAllowed, false);
+  assert.equal(adminSurface.workflowContinuity.boundary.workflowExecutionAllowed, false);
+  assert.equal(adminSurface.workflowContinuity.boundary.automationAllowed, false);
+  assert.equal(adminSurface.workflowContinuity.boundary.remindersAllowed, false);
+  assert.equal(adminSurface.workflowContinuity.boundary.notificationsAllowed, false);
+  assert.equal(adminSurface.workflowContinuity.boundary.neonWritesAllowed, false);
+  assert.equal(adminSurface.workflowContinuity.boundary.productionScoringAllowed, false);
   assert.deepEqual(adminSurface.multiOperatorWorkflows.ordering.groupOrder, [
     "my_relationships",
     "unassigned_review",
@@ -69,6 +80,28 @@ async function main(): Promise<void> {
     "warm_opportunity_review",
     "reactivation_review",
   ]);
+  assert.deepEqual(adminSurface.workflowContinuity.ordering.groupOrder, [
+    "in_review",
+    "shared_review",
+    "escalated_review",
+    "manager_review",
+    "waiting_for_review",
+    "dormant_relationship_review",
+    "follow_up_continuity_review",
+  ]);
+  assert.deepEqual(adminSurface.workflowContinuity.ordering.reviewStateOrder, [
+    "not_reviewed",
+    "in_review",
+    "reviewed",
+    "shared_review",
+    "escalated_review",
+    "manager_review",
+    "waiting_for_followup_review",
+    "dormant_review",
+  ]);
+  assert.ok(adminSurface.workflowContinuity.items.every((item) => item.handoff.workflowContinuitySummary.workflowProgressionVisible));
+  assert.ok(adminSurface.workflowContinuity.items.every((item) => item.explainability.whyVisible));
+  assert.ok(adminSurface.workflowContinuity.items.every((item) => item.explainability.assignmentContext));
   assert.equal(adminSurface.access.adminDiagnosticsVisible, true);
   assert.ok(adminSurface.adminDiagnostics, "admin users should receive safe admin diagnostics metadata");
   assert.equal(adminSurface.metadata.repositoryMode, "read_only_file");
@@ -83,6 +116,8 @@ async function main(): Promise<void> {
   assert.match(panelMarkup, /Relationship Engine/);
   assert.match(panelMarkup, /Operator review surfaces/);
   assert.match(panelMarkup, /Multi-operator workload orchestration/);
+  assert.match(panelMarkup, /Workflow continuity and handoffs/);
+  assert.match(panelMarkup, /Review-state visibility only/);
   assert.match(panelMarkup, /Intern queue/);
   assert.match(panelMarkup, /Relationship workflow visibility/);
 
@@ -97,10 +132,12 @@ async function main(): Promise<void> {
 
   const integrationSource = readFileSync("lib/relationship-engine/operatorIntegration.ts", "utf8");
   const multiOperatorSource = readFileSync("lib/relationship-engine/multiOperatorWorkflowOrchestration.ts", "utf8");
+  const continuitySource = readFileSync("lib/relationship-engine/workflowContinuity.ts", "utf8");
   const panelSource = readFileSync("components/operator/RelationshipEngineOperatorPanel.tsx", "utf8");
   for (const [label, source] of [
     ["operator integration", integrationSource],
     ["multi-operator orchestration", multiOperatorSource],
+    ["workflow continuity", continuitySource],
     ["operator panel", panelSource],
   ] as const) {
     assert.equal(/relationship-engine\/repositories|from "\.\/repositories|from "\.\.\/repositories/.test(source), false, `${label} must not import repositories`);
@@ -113,6 +150,7 @@ async function main(): Promise<void> {
     queueKinds: adminSurface.queues.map((queue) => queue.queueKind),
     workflowGroups: adminSurface.workflows.groups.map((group) => group.groupKind),
     multiOperatorGroups: adminSurface.multiOperatorWorkflows.groups.map((group) => group.groupKind),
+    continuityGroups: adminSurface.workflowContinuity.groups.map((group) => group.groupKind),
     adminDiagnosticsVisible: adminSurface.access.adminDiagnosticsVisible,
     clientDiagnosticsVisible: clientSurface.access.adminDiagnosticsVisible,
   });
