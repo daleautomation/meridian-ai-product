@@ -30,7 +30,7 @@ export function FastUtilityProductsSection() {
               <span>Outcome</span>
               <p>{product.outcome}</p>
             </div>
-            <a href={VISIBILITY_SCAN_HREF}>{product.cta}</a>
+            <a href={"href" in product ? product.href : VISIBILITY_SCAN_HREF}>{product.cta}</a>
           </article>
         ))}
       </div>

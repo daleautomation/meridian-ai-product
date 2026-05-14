@@ -5,7 +5,7 @@ export const START_AUDIT_HREF =
 export const EXPLORE_SYSTEMS_HREF = "#utility-products";
 export const REQUEST_WORKSPACE_HREF = REQUEST_DEMO_HREF;
 export const VISIBILITY_SCAN_HREF = START_AUDIT_HREF;
-export const ROOFING_INTELLIGENCE_HREF = "#roofing-intelligence";
+export const ROOFING_INTELLIGENCE_HREF = "/roofing-intelligence";
 export const BOOK_STRATEGY_CALL_HREF =
   "mailto:hello@meridian.ai?subject=Meridian%20strategy%20call";
 export const CLIENT_LOGIN_HREF = "/login?next=/operator";
@@ -24,6 +24,7 @@ export const fastUtilityProducts = [
     outcome: "A focused lead set with fit signals, contact paths, and a clear first action.",
     cta: "Find roofing leads",
     price: "Lightweight scan pricing",
+    href: ROOFING_INTELLIGENCE_HREF,
   },
   {
     title: "Review Recovery System",
