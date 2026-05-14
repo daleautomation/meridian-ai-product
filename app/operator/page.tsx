@@ -13,10 +13,7 @@ import { getAllActivities, getCalendarEvents } from "../../lib/state/crmStore";
 import { getJobHistory } from "../../lib/pipeline/dailyJob";
 import OperatorConsole from "../../components/OperatorConsole";
 import { groupByDecision, type LeadDecision } from "../../lib/scoring/decision";
-import {
-  loadWorkspaceLeads,
-  SOURCE_BACKED_MODULES,
-} from "../../lib/ingestion/loadWorkspaceLeads";
+import { SOURCE_BACKED_MODULES } from "../../lib/ingestion/loadWorkspaceLeads";
 import { cachedLoadWorkspaceLeads } from "../../lib/ingestion/cache/cachedWorkspaceLeads";
 import type { NormalizedLead } from "../../lib/leads/normalizedLead";
 import { buildGlobalLeadSchedule, buildRollingTeamSchedule } from "../../lib/scheduling/leadSchedule";
@@ -38,7 +35,6 @@ import { getWorkspaceAccess } from "../../lib/workspaceAccess";
 import { getSourceReadiness } from "../../lib/sources/readiness";
 import { ALL_TRADE_ENV_VARS } from "../../lib/modules/tradeSources";
 import { readOperatorSnapshot, writeOperatorSnapshot } from "../../lib/operatorPayload/snapshot";
-import { buildRelationshipEngineOperatorSurface } from "../../lib/relationship-engine/operatorIntegration";
 import {
   getDialablePhone,
   withCanonicalPhoneContact,
@@ -62,6 +58,14 @@ import {
 export const dynamic = "force-dynamic";
 
 type SearchParams = { workspace?: string | string[] };
+
+const VERBOSE_OPERATOR_LOGS = process.env.MERIDIAN_OPERATOR_VERBOSE === "1";
+const verboseOperatorLog: typeof console.log = (...args) => {
+  if (VERBOSE_OPERATOR_LOGS) {
+    // eslint-disable-next-line no-console
+    console.log(...args);
+  }
+};
 
 export default async function OperatorPage(props: {
   searchParams?: Promise<SearchParams>;
@@ -155,16 +159,12 @@ async function renderOperatorPage({
     return <WorkspacePicker workspaces={userWorkspaces} userName={user.name ?? user.id} />;
   }
 
-  const relationshipEngineOperatorSurface = await buildRelationshipEngineOperatorSurface({
-    workspace,
-    user,
-  });
-
   // ── Snapshot fast-path ──────────────────────────────────────────────
   // Pre-baked operator payload at data/snapshots/<slug>-operator.json.
   // When present and unexpired we skip every heavy compute step
-  // (Google Places ingestion, diagnostics, sales-strategy generation,
-  // service-bucket aggregation, scheduling) and hand OperatorConsole
+  // (Google Places ingestion, relationship-engine diagnostics,
+  // sales-strategy generation, service-bucket aggregation, scheduling)
+  // and hand OperatorConsole
   // exactly the props the slow-path would have produced. Snapshot is
   // refreshed by the slow-path after each successful render so warm
   // containers stay current. Disable with MERIDIAN_DISABLE_SNAPSHOT=1.
@@ -217,7 +217,7 @@ async function renderOperatorPage({
           {...typedProps}
           user={{ name: user.name ?? user.id, id: user.id }}
           workspace={workspace}
-          relationshipEngineOperatorSurface={relationshipEngineOperatorSurface}
+          relationshipEngineOperatorSurface={null}
           snapshotGeneratedAt={snap.generatedAt}
           snapshotIsFresh={true}
           snapshotHydrationNow={hydrationNow}
@@ -227,12 +227,18 @@ async function renderOperatorPage({
   }
 
   // ── Workspace lead load (single bridge into ingestion) ──────────────
-  // Load every module that has a wired source (its own seed file). The
-  // OperatorConsole's trade selector filters by lead.trade so trades
-  // stay separated — never cross-contaminate companies between modules.
+  // Load only source-backed modules that are enabled for this workspace.
+  // LaborTech currently enables roofing only; loading every source-backed
+  // trade here ran scans/scheduling for inactive modules before first paint.
   const moduleId = workspace.defaultModule;
+  const enabledSourceModules = workspace.enabledModules.filter((mid) =>
+    SOURCE_BACKED_MODULES.includes(mid as (typeof SOURCE_BACKED_MODULES)[number]),
+  );
   const moduleLoadList: string[] = Array.from(
-    new Set<string>([moduleId, ...SOURCE_BACKED_MODULES]),
+    new Set<string>([
+      moduleId,
+      ...enabledSourceModules,
+    ].filter((mid) => SOURCE_BACKED_MODULES.includes(mid as (typeof SOURCE_BACKED_MODULES)[number]))),
   );
   // eslint-disable-next-line no-console
   console.log(
@@ -274,7 +280,7 @@ async function renderOperatorPage({
   // eslint-disable-next-line no-console
   console.log(
     `[field-test-ingestion] perModuleCap=60 modules=${moduleLoadList.length} ` +
-    `aggregate=${decided.length} expected≥120 ` +
+    `aggregate=${decided.length} enabledModules=${workspace.enabledModules.join(",")} ` +
     `googleKeyPresent=${!!(process.env.GOOGLE_PLACES_API_KEY || process.env.GOOGLE_API_KEY)} ` +
     `byModule={${decidedByModule.map((g) => `${g.mid}:${g.leads.length}(${g.cacheStatus})`).join(",")}}`,
   );
@@ -432,7 +438,7 @@ async function renderOperatorPage({
     perTrade[t].scheduled++;
   }
   for (const [t, c] of Object.entries(perTrade)) {
-    console.log(
+    verboseOperatorLog(
       `[schedule] trade=${t} callNow=${c.callNow} callThisWeek=${c.callThisWeek} ` +
       `scheduled=${c.scheduled}`,
     );
@@ -461,8 +467,7 @@ async function renderOperatorPage({
       { source: "Manual Upload", reason: "Operator-curated supplemental list" },
     ];
     for (const hint of SOURCE_EXPANSION_HINTS) {
-      // eslint-disable-next-line no-console
-      console.log(
+      verboseOperatorLog(
         `[source-expansion-needed] source="${hint.source}" reason="${hint.reason}"`,
       );
     }
@@ -486,8 +491,7 @@ async function renderOperatorPage({
   for (const [date, day] of Object.entries(teamSchedule.perDay)) {
     const scheduled = day.calls;
     const shortage = Math.max(0, DAILY_TARGET - scheduled);
-    // eslint-disable-next-line no-console
-    console.log(
+    verboseOperatorLog(
       `[schedule-volume] date="${date}" target=${DAILY_TARGET} ` +
       `scheduled=${scheduled} shortage=${shortage}`,
     );
@@ -509,7 +513,7 @@ async function renderOperatorPage({
   // Only fields the existing UI reads are populated; the rest stay
   // undefined so legacy diagnostics gracefully degrade.
   for (const l of decided) {
-    console.log(
+    verboseOperatorLog(
       `[contact] lead="${l.companyName}" phone=${l.phone ? "present" : "missing"} ` +
       `email=${l.email ? "present" : "missing"}`,
     );
@@ -723,17 +727,17 @@ async function renderOperatorPage({
       }
       const strategy = generateSalesStrategy(lead, needsByLead[i]);
       lead.salesStrategy = strategy;
-      console.log(
+      verboseOperatorLog(
         `[sales-strategy] lead="${lead.companyName}" close=${strategy.closeProbability} ` +
         `primary="${strategy.primaryAngle?.label ?? "n/a"}"`,
       );
       strategy.angles.forEach((a) => {
-        console.log(
+        verboseOperatorLog(
           `[sales-angle] lead="${lead.companyName}" rank=${a.rank} ` +
           `issue="${a.label}" service="${a.serviceId ?? "n/a"}"`,
         );
       });
-      console.log(
+      verboseOperatorLog(
         `[sales-objection] lead="${lead.companyName}" count=${strategy.objections.length}`,
       );
     }
@@ -752,8 +756,8 @@ async function renderOperatorPage({
         impact: f.impact,
         confidence: f.confidence,
       })) ?? [];
-      // Per-lead diagnostic log line.
-      console.log(
+      // Verbose per-lead diagnostic log line.
+      verboseOperatorLog(
         `[diagnostics] lead=${lead.companyName ?? lead.id} ` +
         `findings=${diag?.findings.length ?? 0} ` +
         `top=${diag?.topFinding?.type ?? "none"}`,
@@ -837,12 +841,12 @@ async function renderOperatorPage({
         leadKeys: list.map((e) => e.leadKey),
       };
       cards.push(card);
-      console.log(
+      verboseOperatorLog(
         `[service-bucket] trade=${group.mid} service=${sid} count=${card.count} ` +
         `topLead="${card.topLeadName ?? ""}"`,
       );
     }
-    console.log(
+    verboseOperatorLog(
       `[service-ui] trade=${group.mid} services=${cards.length}`,
     );
 
@@ -929,7 +933,7 @@ async function renderOperatorPage({
       user={{ name: user.name ?? user.id, id: user.id }}
       workspace={workspace}
       {...mergedSlow}
-      relationshipEngineOperatorSurface={relationshipEngineOperatorSurface}
+      relationshipEngineOperatorSurface={null}
       snapshotGeneratedAt={slowGeneratedAt}
       snapshotIsFresh={true}
       snapshotHydrationNow={slowGeneratedAt}

@@ -1,7 +1,15 @@
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import { getSession } from "@/lib/auth";
 import { SessionProvider } from "@/components/SessionProvider";
 import "./globals.css";
+
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-inter",
+});
 
 export const metadata: Metadata = {
   title: "Meridian AI | Operator-grade intelligence systems",
@@ -19,7 +27,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const user = await getSession();
 
   return (
-    <html lang="en">
+    <html lang="en" className={inter.variable}>
       <body>
         <SessionProvider initialUser={user ?? null}>
           {children}

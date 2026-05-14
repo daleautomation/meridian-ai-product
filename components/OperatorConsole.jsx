@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { palette } from "../lib/theme";
 import SourceReadiness from "./SourceReadiness";
 import LaborTechServicesPanel from "./LaborTechServicesPanel";
@@ -24,7 +25,6 @@ import LeadEmailAction from "./LeadEmailAction";
 import ContactStrategyPanel from "./ContactStrategyPanel";
 import { WORKFLOW, SHELL_GRID } from "./workflowLayout";
 import LeadWorkflowDrawer from "./LeadWorkflowDrawer";
-import RelationshipEngineOperatorPanel from "./operator/RelationshipEngineOperatorPanel";
 import { buildTasksFromLeads, taskAnchorIso } from "../lib/calendar/tasks";
 import {
   deriveOutcomeEventsFromPipelineMap,
@@ -102,6 +102,19 @@ const DEBUG_UI =
 // through the real console; only verbose dev info is silenced.
 const dlog = DEBUG_UI ? console.log.bind(console) : () => {};
 const ddebug = DEBUG_UI ? (console.debug ? console.debug.bind(console) : console.log.bind(console)) : () => {};
+
+const RelationshipEngineOperatorPanel = dynamic(
+  () => import("./operator/RelationshipEngineOperatorPanel"),
+  {
+    ssr: false,
+    loading: () => (
+      <DeferredPanelSkeleton
+        title="Loading relationship intelligence"
+        body="Queues, health, and workflow visibility load when this tab opens."
+      />
+    ),
+  },
+);
 
 // Internal-only diagnostics flag. Off in production by default; never
 // renders UI. When on, the dev console log gains classification
@@ -8418,6 +8431,36 @@ function AngleAttackLanesGrid({ angles, leadsByAngle, selectedServiceAngleId, on
   );
 }
 
+function DeferredPanelSkeleton({ title, body }) {
+  return (
+    <section
+      aria-busy="true"
+      style={{
+        border: `1px solid ${palette.borderLight}`,
+        borderRadius: "18px",
+        background: palette.surface,
+        padding: "22px",
+        boxShadow: "0 18px 45px rgba(15,23,42,0.06)",
+      }}
+    >
+      <div style={{ fontSize: "11px", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: palette.textTertiary }}>
+        Deferred surface
+      </div>
+      <h2 style={{ margin: "8px 0 6px", fontSize: "22px", lineHeight: 1.15, color: palette.textPrimary }}>
+        {title}
+      </h2>
+      <p style={{ margin: 0, maxWidth: "520px", color: palette.textSecondary, fontSize: "14px", lineHeight: 1.6 }}>
+        {body}
+      </p>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "12px", marginTop: "18px" }}>
+        {[0, 1, 2, 3].map((idx) => (
+          <div key={idx} style={{ height: "74px", borderRadius: "14px", background: "linear-gradient(90deg, #F1F5F9 0%, #F8FAFC 50%, #F1F5F9 100%)" }} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 // ── Root ──────────────────────────────────────────────────────────────
 
 export default function OperatorConsole({
@@ -8480,6 +8523,12 @@ export default function OperatorConsole({
   // is what the user lands on.
   // Default lands on the operator surface — that's the product.
   const [activeTab, setActiveTab] = useState("calendar");
+  const [relationshipSurface, setRelationshipSurface] = useState(relationshipEngineOperatorSurface ?? null);
+  const [relationshipSurfaceStatus, setRelationshipSurfaceStatus] = useState(
+    relationshipEngineOperatorSurface ? "ready" : "idle",
+  );
+  const [relationshipSurfaceError, setRelationshipSurfaceError] = useState(null);
+  const relationshipSurfaceRequestRef = useRef(false);
   const [findTask, setFindTask] = useState(null); // { leadKey, steps[], cursor, status: "running"|"done", result }
   const [filterHighPriority, setFilterHighPriority] = useState(false);
   // Overlay map: leadKey -> { contacts, resolvedListingUrl, source, confidence, lastCheckedAt, summary }
@@ -8490,6 +8539,58 @@ export default function OperatorConsole({
 
   const handleSelect = (lead) => setSelectedKey(selectedKey === lead.key ? null : lead.key);
   const handleUpdate = () => setRefreshKey((k) => k + 1);
+
+  useEffect(() => {
+    if (!relationshipEngineOperatorSurface) return;
+    setRelationshipSurface(relationshipEngineOperatorSurface);
+    setRelationshipSurfaceStatus("ready");
+    setRelationshipSurfaceError(null);
+  }, [relationshipEngineOperatorSurface]);
+
+  useEffect(() => {
+    if (activeTab !== "relationships") return undefined;
+    if (relationshipSurface || relationshipSurfaceRequestRef.current) {
+      return undefined;
+    }
+    const workspaceSlug = workspace?.slug;
+    if (!workspaceSlug) {
+      setRelationshipSurfaceStatus("error");
+      setRelationshipSurfaceError("Workspace context is unavailable.");
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    relationshipSurfaceRequestRef.current = true;
+    setRelationshipSurfaceStatus("loading");
+    setRelationshipSurfaceError(null);
+
+    fetch(`/api/relationship-engine/operator-surface?workspace=${encodeURIComponent(workspaceSlug)}`, {
+      credentials: "include",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const payload = await response.json().catch(() => ({}));
+        if (controller.signal.aborted) return;
+        if (!response.ok || payload?.ok === false) {
+          throw new Error(payload?.error || `Relationship Engine HTTP ${response.status}`);
+        }
+        setRelationshipSurface(payload.surface ?? null);
+        setRelationshipSurfaceStatus("ready");
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) {
+          setRelationshipSurfaceStatus((status) => status === "loading" ? "idle" : status);
+          return;
+        }
+        setRelationshipSurfaceStatus("error");
+        setRelationshipSurfaceError(error instanceof Error ? error.message : "Relationship Engine failed to load.");
+      })
+      .finally(() => {
+        relationshipSurfaceRequestRef.current = false;
+      });
+
+    return () => controller.abort();
+  }, [activeTab, relationshipSurface, workspace?.slug]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -9964,7 +10065,19 @@ export default function OperatorConsole({
       <div id="meridian-body" style={S.body}>
         {activeTab === "relationships" ? (
           <main id="meridian-main" style={{ ...S.main, padding: "20px 24px 40px" }}>
-            <RelationshipEngineOperatorPanel surface={relationshipEngineOperatorSurface} />
+            {relationshipSurfaceStatus === "error" ? (
+              <DeferredPanelSkeleton
+                title="Relationship intelligence unavailable"
+                body={relationshipSurfaceError ?? "The Relationship Engine surface could not load."}
+              />
+            ) : relationshipSurfaceStatus !== "ready" ? (
+              <DeferredPanelSkeleton
+                title="Loading relationship intelligence"
+                body="Queues, health, and workflow visibility load when this tab opens."
+              />
+            ) : (
+              <RelationshipEngineOperatorPanel surface={relationshipSurface} />
+            )}
           </main>
         ) : activeTab === "deals" ? (
           <main id="meridian-main" style={{ ...S.main, padding: "20px 24px 40px" }}>
