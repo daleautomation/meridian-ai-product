@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { IntakeFlowConfig } from "@/content/public/intake";
 import type { IntakeFieldName } from "@/lib/intake/types";
 
@@ -14,15 +14,6 @@ export function MeridianIntakeForm({
   flow: IntakeFlowConfig;
   leadSource: string;
 }) {
-  const initialValues = useMemo(
-    () =>
-      Object.fromEntries(flow.fields.map((field) => [field.name, ""])) as Record<
-        IntakeFieldName,
-        string
-      >,
-    [flow.fields],
-  );
-  const [values, setValues] = useState(initialValues);
   const [state, setState] = useState<FormState>("idle");
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<IntakeFieldName, string>>>({});
   const [queueId, setQueueId] = useState<string | null>(null);
@@ -31,6 +22,9 @@ export function MeridianIntakeForm({
     event.preventDefault();
     setState("submitting");
     setFieldErrors({});
+    const fields = Object.fromEntries(
+      new FormData(event.currentTarget).entries(),
+    );
 
     const response = await fetch("/api/intake", {
       method: "POST",
@@ -38,7 +32,7 @@ export function MeridianIntakeForm({
       body: JSON.stringify({
         type: flow.type,
         leadSource,
-        fields: values,
+        fields,
       }),
     });
 
@@ -84,12 +78,8 @@ export function MeridianIntakeForm({
           const sharedProps = {
             id,
             name: field.name,
-            value: values[field.name] ?? "",
             required: field.required,
             placeholder: field.placeholder,
-            onChange: (
-              event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-            ) => setValues((current) => ({ ...current, [field.name]: event.target.value })),
           };
           return (
             <label
