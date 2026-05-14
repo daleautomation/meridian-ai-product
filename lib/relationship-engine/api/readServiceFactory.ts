@@ -6,11 +6,13 @@
 import type { WorkspaceConfig } from "@/config/workspaces";
 import {
   createRelationshipEngineReadService,
-  type RelationshipEngineRepositoryDiagnostics,
-  type RelationshipEngineRepositoryModeLabel,
-  type RelationshipEngineReadRepositories,
   type RelationshipEngineReadService,
-} from "@/lib/relationship-engine";
+} from "@/lib/relationship-engine/services/readService";
+import type {
+  RelationshipEngineRepositoryDiagnostics,
+  RelationshipEngineRepositoryModeLabel,
+} from "@/lib/relationship-engine/services/diagnostics";
+import type { RelationshipEngineReadRepositories } from "@/lib/relationship-engine/services/types";
 import { createReadOnlyFileRelationshipAdapterBundle } from "@/lib/relationship-engine/repositories/readOnlyAdapters";
 import {
   relationshipReadOnlyDataSourceState,
