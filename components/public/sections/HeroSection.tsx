@@ -1,61 +1,67 @@
 import {
+  BOOK_STRATEGY_CALL_HREF,
+  EXPLORE_SYSTEMS_HREF,
   heroMetrics,
   heroQueue,
-  REQUEST_DEMO_HREF,
-  START_AUDIT_HREF,
+  productLadder,
+  REQUEST_WORKSPACE_HREF,
+  ROOFING_INTELLIGENCE_HREF,
 } from "@/content/public/home";
 
 export function HeroSection() {
   return (
     <section className="public-hero">
       <div className="public-hero-copy">
-        <span className="public-eyebrow">From scattered work to operator clarity</span>
-        <h1>Turn operational chaos into a workspace that knows what should happen next.</h1>
+        <span className="public-eyebrow">Operator-grade growth and intelligence systems</span>
+        <h1>Growth systems for service businesses that need revenue execution, not more noise.</h1>
         <p>
-          Meridian AI audits the places where follow-up gets missed, ownership
-          gets unclear, and teams lose momentum, then builds operator-grade
-          workspaces that turn signal into owned, trackable execution.
+          Meridian builds fast monetizable tools, vertical operator workspaces,
+          and roofing intelligence infrastructure for teams that sell from lead
+          quality, local visibility, follow-up, and operational clarity.
         </p>
         <div className="public-hero-actions">
-          <a className="public-primary-button" href={START_AUDIT_HREF}>
-            Start with an Audit
+          <a className="public-primary-button" href={EXPLORE_SYSTEMS_HREF}>
+            Explore Systems
           </a>
-          <a className="public-secondary-button" href={REQUEST_DEMO_HREF}>
-            Request a Workspace Demo
+          <a className="public-secondary-button" href={REQUEST_WORKSPACE_HREF}>
+            Request Workspace
+          </a>
+          <a className="public-secondary-button" href={BOOK_STRATEGY_CALL_HREF}>
+            Book Strategy Call
           </a>
         </div>
         <div className="public-hero-proof" aria-label="Meridian operating loop">
-          <span>Scattered systems become one operating rhythm</span>
-          <span>Every workspace is custom-built</span>
-          <span>Designed around execution, not noise</span>
+          {productLadder.map((item) => (
+            <span key={item}>{item}</span>
+          ))}
         </div>
       </div>
       <div className="public-hero-panel" aria-label="Meridian platform preview">
         <div className="public-panel-orb public-panel-orb-one" />
         <div className="public-panel-orb public-panel-orb-two" />
         <div className="public-panel-topline">
-          <span>Meridian command workspace</span>
-          <strong>Live operating view</strong>
+          <span>Meridian product ladder</span>
+          <strong>Operator growth view</strong>
         </div>
         <div className="public-workspace-chrome">
           <span />
           <span />
           <span />
-          <strong>Operator desk</strong>
+          <strong>Growth desk</strong>
         </div>
         <div className="public-command-grid">
           <div className="public-signal-card public-signal-card-primary">
-            <span>Lead quality</span>
-            <strong>High-intent accounts first</strong>
-            <p>Score, route, and prepare outreach from one execution queue.</p>
+            <span>Lead intelligence</span>
+            <strong>Visibility becomes owned revenue work</strong>
+            <p>Scan demand, rank opportunities, prepare follow-up, and keep action attached to an operator.</p>
             <div className="public-score-bar" aria-hidden="true">
               <span />
             </div>
           </div>
           <div className="public-command-rail">
             <span>System status</span>
-            <strong>Ready</strong>
-            <p>3 briefs prepared</p>
+            <strong>Field-ready</strong>
+            <p>Tools, workspaces, and proof</p>
           </div>
         </div>
         <div className="public-hero-metrics">
@@ -78,7 +84,7 @@ export function HeroSection() {
         </div>
         <div className="public-panel-footer">
           <span className="public-live-dot" />
-          Audit insight converted to operator workflow
+          <a href={ROOFING_INTELLIGENCE_HREF}>Roofing intelligence path mapped without claiming future integrations are live</a>
         </div>
       </div>
     </section>

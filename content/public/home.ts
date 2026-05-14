@@ -1,8 +1,185 @@
 export const REQUEST_DEMO_HREF =
-  "mailto:hello@meridian.ai?subject=Meridian%20workspace%20demo";
+  "mailto:hello@meridian.ai?subject=Meridian%20workspace%20request";
 export const START_AUDIT_HREF =
-  "mailto:hello@meridian.ai?subject=Meridian%20AI%20business%20audit";
+  "mailto:hello@meridian.ai?subject=Meridian%20visibility%20scan";
+export const EXPLORE_SYSTEMS_HREF = "#utility-products";
+export const REQUEST_WORKSPACE_HREF = REQUEST_DEMO_HREF;
+export const VISIBILITY_SCAN_HREF = START_AUDIT_HREF;
+export const ROOFING_INTELLIGENCE_HREF = "#roofing-intelligence";
+export const BOOK_STRATEGY_CALL_HREF =
+  "mailto:hello@meridian.ai?subject=Meridian%20strategy%20call";
 export const CLIENT_LOGIN_HREF = "/login?next=/operator";
+
+export const productLadder = [
+  "Fast utility products",
+  "Vertical operator workspaces",
+  "Roofing intelligence infrastructure",
+  "Live execution systems",
+] as const;
+
+export const fastUtilityProducts = [
+  {
+    title: "Roofing Lead Finder",
+    pain: "Good roofing opportunities are scattered across local intent, property context, and stale outreach lists.",
+    outcome: "A focused lead set with fit signals, contact paths, and a clear first action.",
+    cta: "Find roofing leads",
+    price: "Lightweight scan pricing",
+  },
+  {
+    title: "Review Recovery System",
+    pain: "Happy customers finish the job, then the review moment disappears into crew schedules and inboxes.",
+    outcome: "A simple recovery workflow that turns completed work into visible trust.",
+    cta: "Recover reviews",
+    price: "Fixed-scope setup",
+  },
+  {
+    title: "Website Conversion Scanner",
+    pain: "Traffic arrives, but the site does not make the next step obvious enough.",
+    outcome: "A practical visibility scan with intake, proof, speed, and CTA fixes ranked.",
+    cta: "Scan my site",
+    price: "Starter scan available",
+  },
+  {
+    title: "Follow-Up Assistant",
+    pain: "Estimate requests, callbacks, and dormant opportunities cool off when nobody owns the next action.",
+    outcome: "Follow-up language, timing, and ownership attached before revenue leaks.",
+    cta: "Tighten follow-up",
+    price: "Workflow add-on",
+  },
+  {
+    title: "Local SEO Scanner",
+    pain: "Local presence is uneven across search, reviews, service pages, and map intent.",
+    outcome: "A prioritized local visibility map for the searches that create real calls.",
+    cta: "Check local visibility",
+    price: "Lightweight scan pricing",
+  },
+  {
+    title: "Missed Revenue Detector",
+    pain: "Revenue leaks hide inside stale quotes, missed callbacks, slow response, and unclear handoffs.",
+    outcome: "A ranked leak list with owner, reason, and next move for recovery.",
+    cta: "Find missed revenue",
+    price: "Diagnostic package",
+  },
+] as const;
+
+export const verticalWorkspaces = [
+  {
+    title: "Roofing Workspace",
+    industry: "Roofing operators",
+    text: "Lead intake, property context, estimate follow-up, crew capacity, and local opportunity signals in one operating view.",
+    capabilities: ["Lead execution", "Estimate follow-up", "Property signal queue"],
+  },
+  {
+    title: "Restoration Workspace",
+    industry: "Restoration teams",
+    text: "Urgent intake, claim context, dispatch readiness, customer updates, and next actions stay attached to ownership.",
+    capabilities: ["Urgency routing", "Scheduling clarity", "Customer status"],
+  },
+  {
+    title: "Contractor Growth Workspace",
+    industry: "Service contractors",
+    text: "A growth command center for lead quality, online presence, callbacks, reviews, and revenue execution.",
+    capabilities: ["Visibility scan", "Review recovery", "Revenue leaks"],
+  },
+  {
+    title: "Lead Execution Workspace",
+    industry: "Sales-driven service teams",
+    text: "A daily queue that ranks opportunities by signal, prepares context, and keeps follow-up moving.",
+    capabilities: ["Closeability", "Call planning", "Owner-aware tasks"],
+  },
+] as const;
+
+export const roofingIntelligenceSignals = [
+  {
+    title: "Property intelligence",
+    text: "Connect property context, local visibility, and contractor opportunity signals before outreach starts.",
+  },
+  {
+    title: "Opportunity mapping",
+    text: "Identify where roofing demand, competitive gaps, and service-area strength should guide action.",
+  },
+  {
+    title: "Operational lead intelligence",
+    text: "Turn promising markets and properties into ranked leads, follow-up queues, and owner-ready execution.",
+  },
+] as const;
+
+export const roofingFutureSignals = [
+  "Satellite imagery",
+  "Storm intelligence",
+  "Property signals",
+  "Local opportunity detection",
+] as const;
+
+export const fieldFounderPoints = [
+  {
+    title: "Started with construction work",
+    text: "Meridian comes from seeing how field work, handoffs, estimates, schedules, and customer promises break under real pressure.",
+  },
+  {
+    title: "Felt the operational frustration",
+    text: "The problem was never a lack of apps. It was work living across memory, texts, spreadsheets, and half-owned next steps.",
+  },
+  {
+    title: "Learned software to build the missing layer",
+    text: "The systems were built from the workflow backwards: what the operator needs to know, who owns it, and what should happen next.",
+  },
+  {
+    title: "Built live operating systems",
+    text: "Meridian now runs real workspace patterns for scheduling, relationship context, execution queues, and operational visibility.",
+  },
+] as const;
+
+export const howMeridianWorks = [
+  {
+    stage: "01",
+    title: "Scan the visible surface",
+    text: "Start with lead flow, online presence, reviews, follow-up, and revenue leaks that can turn into quick action.",
+  },
+  {
+    stage: "02",
+    title: "Map the operating path",
+    text: "Define the signals, owners, timing, and workflow rules that make the work move reliably.",
+  },
+  {
+    stage: "03",
+    title: "Build the workspace",
+    text: "Turn the operating path into queues, briefs, dashboards, and execution systems for the vertical.",
+  },
+  {
+    stage: "04",
+    title: "Run the rhythm",
+    text: "Keep priority work visible with scheduling intelligence, relationship context, and follow-up state.",
+  },
+  {
+    stage: "05",
+    title: "Prove what moved",
+    text: "Report completed actions, remaining leaks, and the workflows that created revenue movement.",
+  },
+] as const;
+
+export const liveSystemsProof = [
+  {
+    title: "LaborTech workspace",
+    text: "Operator workspace patterns are already used around scheduling visibility, lead context, and daily execution queues.",
+    proof: "Live workspace pattern",
+  },
+  {
+    title: "Operational workflows",
+    text: "Command queues convert business events into assigned tasks, due windows, status, and owner-aware next actions.",
+    proof: "Execution system",
+  },
+  {
+    title: "Scheduling intelligence",
+    text: "Calendar visibility, pull-forward logic, and work preparation help operators act before bottlenecks harden.",
+    proof: "Active workflow layer",
+  },
+  {
+    title: "Relationship engine concepts",
+    text: "Relationship context, memory, and workflow continuity are being shaped into practical operator intelligence.",
+    proof: "In production foundation",
+  },
+] as const;
 
 export const trustProofPoints = [
   "Missed follow-up becomes owned execution",
@@ -324,37 +501,37 @@ export const platformModules = [
 
 export const heroMetrics = [
   {
-    label: "Closeability",
+    label: "Lead signal",
     value: "87",
-    detail: "High-fit request",
+    detail: "High-intent opportunity",
   },
   {
-    label: "Revenue leak",
+    label: "Missed revenue",
     value: "$18k",
-    detail: "Follow-up gap",
+    detail: "Dormant estimate risk",
   },
   {
     label: "Next action",
-    value: "Call plan",
-    detail: "Ready for owner",
+    value: "Owner",
+    detail: "Follow-up ready",
   },
 ] as const;
 
 export const heroQueue = [
   {
-    label: "Lead queue",
-    title: "Priority account moved to today",
-    meta: "Score + owner + reason",
+    label: "Utility product",
+    title: "Visibility scan found weak conversion paths",
+    meta: "Website + reviews + local search",
   },
   {
-    label: "Deep Report",
-    title: "Buying signals summarized",
-    meta: "Intent, objections, fit",
+    label: "Workspace",
+    title: "Roofing lead queue ranked for action",
+    meta: "Signal + owner + follow-up timing",
   },
   {
-    label: "Call plan",
-    title: "Operator brief generated",
-    meta: "Questions + next best action",
+    label: "Live system",
+    title: "Execution workflow prepared",
+    meta: "Scheduling + relationship context",
   },
 ] as const;
 
