@@ -234,6 +234,95 @@ interface MultiOperatorWorkflowProjection {
   explanation?: { notes?: string[] };
 }
 
+interface WorkflowContinuityItem {
+  relationshipId: string;
+  displayName: string;
+  reviewState?: {
+    state?: string;
+    label?: string;
+    reason?: string;
+    confidence?: Confidence;
+  };
+  handoff?: {
+    previousReviewer?: { state?: string; operatorId?: string; reason?: string; confidence?: Confidence };
+    latestReviewer?: { state?: string; operatorId?: string; reason?: string; confidence?: Confidence };
+    latestReviewTimestamp?: string;
+    handoffConfidence?: Confidence;
+    workflowContinuitySummary?: { summary?: string; progressionState?: string; reviewContinuityReason?: string };
+    assignmentContinuityContext?: {
+      assignmentState?: string;
+      assignedOperatorId?: string;
+      visibleOperatorCount?: number;
+      shared?: boolean;
+      whyVisible?: string;
+    };
+  };
+  explainability?: {
+    whyVisible?: string;
+    latestEvidence?: unknown[];
+    reviewContinuityReason?: string;
+    missingDataEffects?: MissingDataEffect[];
+    deterministicOrdering?: { sortKey?: string; primaryGroupKind?: string; itemRank?: number };
+  };
+  confidence: Confidence;
+  deterministicOrder?: {
+    primaryGroupKind?: string;
+    reviewState?: string;
+    sourceMultiOperatorGroupKind?: string;
+    sourceWorkflowGroupKind?: string;
+    itemRank?: number;
+    sortKey?: string;
+    displayedInGroupKinds?: string[];
+  };
+  missingDataEffects?: MissingDataEffect[];
+}
+
+interface WorkflowContinuityGroup {
+  groupKind: string;
+  label: string;
+  description: string;
+  visibilityReason?: string;
+  roleAudience?: string[];
+  items: WorkflowContinuityItem[];
+  confidence: Confidence;
+  reviewOnly?: boolean;
+  ordering?: { strategy?: string; productionScoring?: boolean; itemSortKeys?: string[]; tieBreakers?: string[] };
+}
+
+interface WorkflowContinuityProjection {
+  boundary?: {
+    reviewOnly?: boolean;
+    hiddenWorkflowStateAllowed?: boolean;
+    autoAssignmentAllowed?: boolean;
+    assignmentMutationAllowed?: boolean;
+    queueExecutionAllowed?: boolean;
+    workflowExecutionAllowed?: boolean;
+    automationAllowed?: boolean;
+    remindersAllowed?: boolean;
+    notificationsAllowed?: boolean;
+    persistenceAllowed?: boolean;
+    neonWritesAllowed?: boolean;
+    productionScoringAllowed?: boolean;
+    uiDerivedContinuityAllowed?: boolean;
+  };
+  groups?: WorkflowContinuityGroup[];
+  visibility?: {
+    inReview?: WorkflowContinuityItem[];
+    sharedReview?: WorkflowContinuityItem[];
+    escalatedReview?: WorkflowContinuityItem[];
+    managerReview?: WorkflowContinuityItem[];
+    waitingForReview?: WorkflowContinuityItem[];
+    dormantRelationshipReview?: WorkflowContinuityItem[];
+    followUpContinuityReview?: WorkflowContinuityItem[];
+  };
+  metadata?: {
+    confidence?: Confidence;
+    groupCounts?: Record<string, number>;
+    reviewStateCounts?: Record<string, number>;
+  };
+  explanation?: { notes?: string[] };
+}
+
 interface DiagnosticSurface {
   status: "ok" | "warning" | "error" | "not_configured" | string;
   summary: string;
@@ -271,6 +360,7 @@ interface OperatorSurface {
   feeds?: FeedProjection[];
   workflows?: WorkflowProjection;
   multiOperatorWorkflows?: MultiOperatorWorkflowProjection;
+  workflowContinuity?: WorkflowContinuityProjection;
   diagnostics?: Record<string, DiagnosticSurface>;
   adminDiagnostics?: {
     metadata?: {
@@ -310,6 +400,7 @@ export default function RelationshipEngineOperatorPanel({
   const feeds = Array.isArray(surface.feeds) ? surface.feeds : [];
   const workflows = surface.workflows;
   const multiOperatorWorkflows = surface.multiOperatorWorkflows;
+  const workflowContinuity = surface.workflowContinuity;
   const health = surface.health ?? {};
   const metadata = surface.metadata ?? {};
   const queueItemCount = metadata.summaryDisplay?.queueItemCount ?? queues.reduce((sum, queue) => sum + queue.items.length, 0);
@@ -350,6 +441,7 @@ export default function RelationshipEngineOperatorPanel({
           <SummaryTimelinePanel surface={surface} />
         </div>
         <MultiOperatorWorkflowPanel orchestration={multiOperatorWorkflows} />
+        <WorkflowContinuityPanel continuity={workflowContinuity} />
         <WorkflowVisibilityPanel workflows={workflows} />
         <QueueReviewPanel queues={queues} />
         <FeedPanel feeds={feeds} />
@@ -450,6 +542,100 @@ function MultiOperatorWorkflowItemCard({ item }: { item: MultiOperatorWorkflowIt
         {(item.escalationReviewState?.reasonCodes ?? []).length > 0 ? ` · reasons ${(item.escalationReviewState?.reasonCodes ?? []).join(", ")}` : ""}
       </p>
       <MissingEffects effects={item.missingDataEffects} />
+    </div>
+  );
+}
+
+function WorkflowContinuityPanel({ continuity }: { continuity?: WorkflowContinuityProjection }) {
+  const groups = Array.isArray(continuity?.groups) ? continuity.groups : [];
+  const visibility = continuity?.visibility ?? {};
+  return (
+    <section style={styles.card}>
+      <SectionHeader title="Workflow continuity and handoffs" detail="Review-state visibility only" />
+      <div style={styles.metricGrid}>
+        <MetricCard label="In review" value={visibility.inReview?.length ?? 0} detail="Workflow progression visible" />
+        <MetricCard label="Shared review" value={visibility.sharedReview?.length ?? 0} detail="Handoff clarity" />
+        <MetricCard label="Escalated" value={visibility.escalatedReview?.length ?? 0} detail="Human review only" />
+        <MetricCard label="Manager review" value={visibility.managerReview?.length ?? 0} detail="Account-manager readable" />
+        <MetricCard label="Waiting" value={visibility.waitingForReview?.length ?? 0} detail="No hidden review state" />
+        <MetricCard label="Dormant" value={visibility.dormantRelationshipReview?.length ?? 0} detail="No reactivation automation" />
+        <MetricCard label="Follow-up" value={visibility.followUpContinuityReview?.length ?? 0} detail="No reminders sent" />
+        <MetricCard label="Confidence" value={continuity?.metadata?.confidence ?? "unknown"} detail="Continuity DTOs" />
+      </div>
+      <div style={styles.workflowBoundary}>
+        {[
+          ["Hidden state", continuity?.boundary?.hiddenWorkflowStateAllowed === false],
+          ["Auto-assignment", continuity?.boundary?.autoAssignmentAllowed === false],
+          ["Assignment mutation", continuity?.boundary?.assignmentMutationAllowed === false],
+          ["Queue execution", continuity?.boundary?.queueExecutionAllowed === false],
+          ["Workflow execution", continuity?.boundary?.workflowExecutionAllowed === false],
+          ["Automation", continuity?.boundary?.automationAllowed === false],
+          ["Reminders", continuity?.boundary?.remindersAllowed === false],
+          ["Notifications", continuity?.boundary?.notificationsAllowed === false],
+          ["Persistence", continuity?.boundary?.persistenceAllowed === false],
+          ["Neon writes", continuity?.boundary?.neonWritesAllowed === false],
+        ].map(([name, blocked]) => (
+          <span key={String(name)} style={blocked ? styles.blocked : styles.unknown}>{name}: {blocked ? "blocked" : "unknown"}</span>
+        ))}
+      </div>
+      {groups.length === 0 ? (
+        <EmptyPanel title="No continuity groups returned" body="Continuity remains empty until workflow projections provide review items." />
+      ) : (
+        <div style={styles.workflowGrid}>
+          {groups.map((group) => (
+            <article key={group.groupKind} style={styles.workflowCard}>
+              <div style={styles.queueHead}>
+                <div>
+                  <div style={styles.queueTitle}>{group.label || formatKind(group.groupKind)}</div>
+                  <p style={styles.smallCopy}>{group.description}</p>
+                </div>
+                <StatusPill label={`${group.items.length} visible`} status={group.confidence} />
+              </div>
+              <div style={styles.ordering}>
+                <span>Audience: {(group.roleAudience ?? []).map(formatKind).join(", ") || "operators"}</span>
+                <span>Reason: {group.visibilityReason ?? "workflow continuity visibility"}</span>
+                <span>Production scoring: {group.ordering?.productionScoring === false ? "off" : "unknown"}</span>
+              </div>
+              {group.items.length === 0 ? (
+                <div style={styles.emptyInline}>No relationships are visible in this continuity group.</div>
+              ) : (
+                group.items.slice(0, 3).map((item) => (
+                  <WorkflowContinuityItemCard key={`${group.groupKind}:${item.relationshipId}`} item={item} />
+                ))
+              )}
+            </article>
+          ))}
+        </div>
+      )}
+      <p style={styles.smallCopy}>
+        {continuity?.explanation?.notes?.[0] ?? "Workflow continuity exposes handoff context only; it never progresses work automatically."}
+      </p>
+    </section>
+  );
+}
+
+function WorkflowContinuityItemCard({ item }: { item: WorkflowContinuityItem }) {
+  const handoff = item.handoff;
+  return (
+    <div style={styles.queueItem}>
+      <div style={styles.queueItemHead}>
+        <div>
+          <div style={styles.itemTitle}>{item.displayName}</div>
+          <div style={styles.smallCopy}>
+            {item.reviewState?.label ?? formatKind(item.reviewState?.state ?? "review")} · primary {formatKind(item.deterministicOrder?.primaryGroupKind ?? "continuity")}
+          </div>
+        </div>
+        <StatusPill label={`handoff ${handoff?.handoffConfidence ?? item.confidence}`} status={handoff?.handoffConfidence ?? item.confidence} />
+      </div>
+      <p style={styles.copy}>{handoff?.workflowContinuitySummary?.summary ?? item.explainability?.whyVisible ?? "Relationship continuity is visible for review."}</p>
+      <p style={styles.smallCopy}>
+        Previous reviewer {handoff?.previousReviewer?.operatorId ?? formatKind(handoff?.previousReviewer?.state ?? "not_observed")} · latest reviewer {handoff?.latestReviewer?.operatorId ?? formatKind(handoff?.latestReviewer?.state ?? "not_observed")}
+      </p>
+      <p style={styles.smallCopy}>
+        Assignment {handoff?.assignmentContinuityContext?.assignedOperatorId ?? handoff?.assignmentContinuityContext?.assignmentState ?? "unknown"} · evidence refs {(item.explainability?.latestEvidence ?? []).length} · order {item.deterministicOrder?.itemRank ?? "n/a"}
+      </p>
+      <p style={styles.smallCopy}>{item.explainability?.reviewContinuityReason ?? item.reviewState?.reason}</p>
+      <MissingEffects effects={item.missingDataEffects ?? item.explainability?.missingDataEffects} />
     </div>
   );
 }

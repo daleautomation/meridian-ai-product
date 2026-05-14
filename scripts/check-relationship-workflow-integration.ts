@@ -11,6 +11,7 @@ import {
   projectAllRelationshipFeeds,
   projectAllRelationshipQueues,
   projectMultiOperatorWorkflowOrchestration,
+  projectOperatorWorkflowContinuity,
   projectRelationshipSummary,
   projectRelationshipWorkflowIntegration,
   type EvidenceRef,
@@ -89,9 +90,20 @@ const multiReplay = projectMultiOperatorWorkflowOrchestration({
   workflow: replay,
   viewer: multiOperatorViewer,
 });
+const continuity = projectOperatorWorkflowContinuity({
+  generatedAt: now,
+  workflow,
+  multiOperatorWorkflow: multiOperator,
+});
+const continuityReplay = projectOperatorWorkflowContinuity({
+  generatedAt: now,
+  workflow: replay,
+  multiOperatorWorkflow: multiReplay,
+});
 
 assert.deepEqual(replay, workflow, "Workflow grouping must replay deterministically under input reordering.");
 assert.deepEqual(multiReplay, multiOperator, "Multi-operator segmentation must replay deterministically under input reordering.");
+assert.deepEqual(continuityReplay, continuity, "Operator workflow continuity must replay deterministically under input reordering.");
 assert.equal(workflow.boundary.reviewOnly, true);
 assert.equal(workflow.boundary.workflowExecutionAllowed, false);
 assert.equal(workflow.boundary.automationAllowed, false);
@@ -151,17 +163,73 @@ assert.ok(multiGroup("follow_up_review").items.some((item) => item.relationshipI
 assert.ok(multiOperator.items.every((item) => item.assignedOperator.whyAssigned));
 assert.ok(multiOperator.items.every((item) => item.assignmentVisibility.visibilityReason));
 assert.ok(multiOperator.items.every((item) => item.deterministicOrder.sortKey));
+assert.equal(continuity.kind, "operator_workflow_continuity_projection");
+assert.equal(continuity.boundary.reviewOnly, true);
+assert.equal(continuity.boundary.hiddenWorkflowStateAllowed, false);
+assert.equal(continuity.boundary.autoAssignmentAllowed, false);
+assert.equal(continuity.boundary.assignmentMutationAllowed, false);
+assert.equal(continuity.boundary.queueExecutionAllowed, false);
+assert.equal(continuity.boundary.workflowExecutionAllowed, false);
+assert.equal(continuity.boundary.automationAllowed, false);
+assert.equal(continuity.boundary.remindersAllowed, false);
+assert.equal(continuity.boundary.notificationsAllowed, false);
+assert.equal(continuity.boundary.persistenceAllowed, false);
+assert.equal(continuity.boundary.neonWritesAllowed, false);
+assert.equal(continuity.boundary.productionScoringAllowed, false);
+assert.deepEqual(continuity.ordering.groupOrder, [
+  "in_review",
+  "shared_review",
+  "escalated_review",
+  "manager_review",
+  "waiting_for_review",
+  "dormant_relationship_review",
+  "follow_up_continuity_review",
+]);
+assert.deepEqual(continuity.ordering.reviewStateOrder, [
+  "not_reviewed",
+  "in_review",
+  "reviewed",
+  "shared_review",
+  "escalated_review",
+  "manager_review",
+  "waiting_for_followup_review",
+  "dormant_review",
+]);
+assert.ok(continuity.reviewStateCatalog.some((state) => state.state === "reviewed" && state.visible === false));
+assert.ok(continuityGroup("in_review").items.some((item) => item.relationshipId === active.id));
+assert.ok(continuityGroup("shared_review").items.some((item) => item.relationshipId === shared.id));
+assert.ok(continuityGroup("escalated_review").items.some((item) => item.relationshipId === dormant.id));
+assert.ok(continuityGroup("manager_review").items.some((item) => item.relationshipId === retention.id));
+assert.ok(continuityGroup("waiting_for_review").items.some((item) => item.relationshipId === dormant.id));
+assert.ok(continuityGroup("dormant_relationship_review").items.some((item) => item.relationshipId === dormant.id));
+assert.ok(continuityGroup("follow_up_continuity_review").items.some((item) => item.relationshipId === active.id));
+assert.ok(continuity.items.every((item) => item.reviewOnly));
+assert.ok(continuity.items.every((item) => item.handoff.workflowContinuitySummary.workflowProgressionVisible));
+assert.ok(continuity.items.every((item) => item.handoff.previousReviewer.state));
+assert.ok(continuity.items.every((item) => item.handoff.latestReviewer.state));
+assert.ok(continuity.items.every((item) => item.explainability.whyVisible));
+assert.ok(continuity.items.every((item) => item.explainability.reviewContinuityReason));
+assert.ok(continuity.items.every((item) => item.explainability.lifecycleContext));
+assert.ok(continuity.items.every((item) => item.explainability.assignmentContext));
+assert.ok(continuity.items.every((item) => item.explainability.deterministicOrdering.sortKey));
+assert.ok(continuity.items.every((item) => item.explainability.latestEvidence.length > 0));
+assert.equal(continuity.metadata.reviewStateCounts.reviewed, 0);
 
 const source = readFileSync("lib/relationship-engine/workflowIntegration.ts", "utf8");
 const multiOperatorSource = readFileSync("lib/relationship-engine/multiOperatorWorkflowOrchestration.ts", "utf8");
+const continuitySource = readFileSync("lib/relationship-engine/workflowContinuity.ts", "utf8");
 assert.equal(/relationship-engine\/repositories|from "\.\/repositories|from "\.\.\/repositories/.test(source), false);
 assert.equal(/executeQueue|sendNotification|createReminder|writeOperatorSnapshot|neonWrite\s*\(|method:\s*["']POST["']/i.test(source), false);
 assert.equal(/relationship-engine\/repositories|from "\.\/repositories|from "\.\.\/repositories/.test(multiOperatorSource), false);
 assert.equal(/executeQueue|sendNotification|createReminder|writeOperatorSnapshot|neonWrite\s*\(|method:\s*["']POST["']|method:\s*["']PATCH["']/i.test(multiOperatorSource), false);
+assert.equal(/relationship-engine\/repositories|from "\.\/repositories|from "\.\.\/repositories/.test(continuitySource), false);
+assert.equal(/executeQueue|sendNotification|createReminder|writeOperatorSnapshot|neonWrite\s*\(|method:\s*["']POST["']|method:\s*["']PATCH["']|method:\s*["']PUT["']|method:\s*["']DELETE["']/i.test(continuitySource), false);
 
 console.log("relationship workflow integration check passed", {
   groupCounts: workflow.metadata.groupCounts,
   multiOperatorGroupCounts: multiOperator.metadata.groupCounts,
+  continuityGroupCounts: continuity.metadata.groupCounts,
+  continuityReviewStateCounts: continuity.metadata.reviewStateCounts,
   overdueVisible: workflow.visibility.overdueRelationships.length,
   dormantVisible: workflow.visibility.dormantRelationships.length,
   warmVisible: workflow.visibility.warmOpportunities.length,
@@ -177,6 +245,12 @@ function group(kind: (typeof workflow.groups)[number]["groupKind"]) {
 function multiGroup(kind: (typeof multiOperator.groups)[number]["groupKind"]) {
   const found = multiOperator.groups.find((candidate) => candidate.groupKind === kind);
   assert.ok(found, `Missing multi-operator workflow group ${kind}`);
+  return found;
+}
+
+function continuityGroup(kind: (typeof continuity.groups)[number]["groupKind"]) {
+  const found = continuity.groups.find((candidate) => candidate.groupKind === kind);
+  assert.ok(found, `Missing workflow continuity group ${kind}`);
   return found;
 }
 
