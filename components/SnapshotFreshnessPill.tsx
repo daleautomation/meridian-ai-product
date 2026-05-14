@@ -20,6 +20,8 @@ interface Props {
   workspaceSlug: string;
   generatedAt: string | null;
   initialNowIso: string;
+  readOnly?: boolean;
+  readOnlyReason?: string;
 }
 
 const palette = {
@@ -61,7 +63,13 @@ function nextFreshnessTickMs(generatedAtIso: string | null, nowMs: number): numb
   return Math.min(Math.max(untilBoundary, 1_000), 60_000);
 }
 
-export default function SnapshotFreshnessPill({ workspaceSlug, generatedAt, initialNowIso }: Props) {
+export default function SnapshotFreshnessPill({
+  workspaceSlug,
+  generatedAt,
+  initialNowIso,
+  readOnly = false,
+  readOnlyReason = "This workspace is read-only.",
+}: Props) {
   const router = useRouter();
   const initialNow = useMemo(
     () => parseHydrationTime(initialNowIso) ?? parseHydrationTime(generatedAt) ?? 0,
@@ -97,6 +105,7 @@ export default function SnapshotFreshnessPill({ workspaceSlug, generatedAt, init
   const generatedAtTitle = formatStableUtcTimestamp(generatedAt);
 
   async function handleRefresh() {
+    if (readOnly) return;
     if (refreshing) return;
     setRefreshing(true);
     setError(null);
@@ -153,22 +162,24 @@ export default function SnapshotFreshnessPill({ workspaceSlug, generatedAt, init
       <button
         type="button"
         onClick={handleRefresh}
-        disabled={refreshing}
+        disabled={refreshing || readOnly}
         aria-label="Refresh intelligence"
+        title={readOnly ? readOnlyReason : "Refresh intelligence"}
         style={{
           marginLeft: "4px",
           padding: "2px 8px",
           fontSize: "11px",
           fontWeight: 600,
-          background: refreshing ? palette.pillBorder : "#FFFFFF",
+          background: refreshing || readOnly ? palette.pillBorder : "#FFFFFF",
           color: stale ? palette.warningText : palette.pillText,
           border: `1px solid ${stale ? "#FCD34D" : palette.pillBorder}`,
           borderRadius: "999px",
-          cursor: refreshing ? "wait" : "pointer",
+          cursor: readOnly ? "not-allowed" : refreshing ? "wait" : "pointer",
+          opacity: readOnly ? 0.7 : 1,
           transition: "background 120ms ease",
         }}
       >
-        {refreshing ? <Spinner /> : "Refresh"}
+        {refreshing ? <Spinner /> : readOnly ? "Locked" : "Refresh"}
       </button>
       {error ? (
         <span

@@ -7,6 +7,10 @@ interface WorkspaceProp {
   defaultModule: string;
   enabledModules: string[];
   comingSoonModules: string[];
+  access?: {
+    dataMode?: "client" | "demo";
+    readOnlyByDefault?: boolean;
+  };
   branding?: { displayName?: string; accentLabel?: string };
 }
 
