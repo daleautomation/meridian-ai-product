@@ -6,6 +6,9 @@ type Brand<T, B extends string> = T & { readonly __brand: B };
 
 export type RelationshipId = Brand<string, "RelationshipId">;
 export type TimelineEventId = Brand<string, "TimelineEventId">;
+export type OperationalEventId = Brand<string, "OperationalEventId">;
+export type OperationalEventDedupeKey = Brand<string, "OperationalEventDedupeKey">;
+export type OperationalEventIdempotencyKey = Brand<string, "OperationalEventIdempotencyKey">;
 export type TouchpointId = Brand<string, "TouchpointId">;
 export type PromiseId = Brand<string, "PromiseId">;
 export type FollowUpPolicyId = Brand<string, "FollowUpPolicyId">;
