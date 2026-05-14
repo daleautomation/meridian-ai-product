@@ -12,9 +12,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Meridian AI | Operator-grade intelligence systems",
+  title: "Meridian AI | Relationship Priority Queue",
   description:
-    "Meridian AI audits operations and builds custom intelligence workspaces for cleaner execution, better lead quality, and stronger revenue.",
+    "Meridian AI prioritizes existing relationships, stale opportunities, and follow-up work so operators know who matters, why, and what to do next.",
 };
 
 export const viewport: Viewport = {

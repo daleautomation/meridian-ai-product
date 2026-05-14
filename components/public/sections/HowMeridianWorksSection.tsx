@@ -5,9 +5,9 @@ export function HowMeridianWorksSection() {
   return (
     <section id="how-meridian-works" className="public-section public-process-section">
       <SectionIntro
-        eyebrow="How Meridian works"
-        title="A practical path from visible growth leaks to operator-grade execution."
-        text="The ladder stays simple: find the useful signal, map the workflow, build the workspace, run the rhythm, and prove what moved."
+        eyebrow="Relationship recovery workflow"
+        title="From messy contact lists to a daily priority queue."
+        text="Meridian does not replace the CRM. It sits above relationship systems, compresses the intelligence, and guides the operator to the next action."
       />
       <ol className="public-process-list">
         {howMeridianWorks.map((step) => (

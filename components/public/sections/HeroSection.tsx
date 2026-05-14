@@ -12,16 +12,16 @@ export function HeroSection() {
   return (
     <section className="public-hero">
       <div className="public-hero-copy">
-        <span className="public-eyebrow">Operator-grade growth and intelligence systems</span>
-        <h1>Growth systems for service businesses that need revenue execution, not more noise.</h1>
+        <span className="public-eyebrow">Relationship prioritization and execution</span>
+        <h1>Know who to contact today, why they matter, and what to do next.</h1>
         <p>
-          Meridian builds fast monetizable tools, vertical operator workspaces,
-          and roofing intelligence infrastructure for teams that sell from lead
-          quality, local visibility, follow-up, and operational clarity.
+          Meridian turns existing contacts, stale opportunities, and scattered
+          CRM notes into a clean operator queue for relationship recovery,
+          follow-up execution, and faster decisions.
         </p>
         <div className="public-hero-actions">
           <a className="public-primary-button" href={EXPLORE_SYSTEMS_HREF}>
-            Explore Systems
+            See Priority Workflow
           </a>
           <a className="public-secondary-button" href={REQUEST_WORKSPACE_HREF}>
             Request Workspace
@@ -40,28 +40,28 @@ export function HeroSection() {
         <div className="public-panel-orb public-panel-orb-one" />
         <div className="public-panel-orb public-panel-orb-two" />
         <div className="public-panel-topline">
-          <span>Meridian product ladder</span>
-          <strong>Operator growth view</strong>
+          <span>Relationship Priority Queue</span>
+          <strong>Today&apos;s operator view</strong>
         </div>
         <div className="public-workspace-chrome">
           <span />
           <span />
           <span />
-          <strong>Growth desk</strong>
+          <strong>Recovery desk</strong>
         </div>
         <div className="public-command-grid">
           <div className="public-signal-card public-signal-card-primary">
-            <span>Lead intelligence</span>
-            <strong>Visibility becomes owned revenue work</strong>
-            <p>Scan demand, rank opportunities, prepare follow-up, and keep action attached to an operator.</p>
+            <span>Who matters today</span>
+            <strong>High-fit relationship, stale opportunity</strong>
+            <p>Market fit, urgency, contact path, recommended angle, and next step compressed into one action card.</p>
             <div className="public-score-bar" aria-hidden="true">
               <span />
             </div>
           </div>
           <div className="public-command-rail">
-            <span>System status</span>
-            <strong>Field-ready</strong>
-            <p>Tools, workspaces, and proof</p>
+            <span>Next move</span>
+            <strong>Call first</strong>
+            <p>Recovery angle ready</p>
           </div>
         </div>
         <div className="public-hero-metrics">
@@ -84,7 +84,7 @@ export function HeroSection() {
         </div>
         <div className="public-panel-footer">
           <span className="public-live-dot" />
-          <a href={ROOFING_INTELLIGENCE_HREF}>Roofing intelligence path mapped without claiming future integrations are live</a>
+          <a href={ROOFING_INTELLIGENCE_HREF}>Roofing recovery workflow mapped from priority to execution</a>
         </div>
       </div>
     </section>

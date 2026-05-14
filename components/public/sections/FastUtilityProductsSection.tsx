@@ -10,9 +10,9 @@ export function FastUtilityProductsSection() {
   return (
     <section id="utility-products" className="public-section">
       <SectionIntro
-        eyebrow="Fast utility products"
-        title="Start with a focused tool that can turn into revenue movement quickly."
-        text="Meridian utility products solve visible growth problems first: lead quality, online presence, follow-up, local search, reviews, and missed revenue."
+        eyebrow="Relationship execution products"
+        title="Start by recovering value from the relationships you already have."
+        text="Meridian utility products focus the operator on priority contacts, stale opportunities, follow-up timing, local trust, reviews, and missed revenue."
       />
       <div className="public-product-grid">
         {fastUtilityProducts.map((product, index) => (
@@ -35,10 +35,10 @@ export function FastUtilityProductsSection() {
         ))}
       </div>
       <SectionCta
-        eyebrow="Visibility scan"
-        text="Use a lightweight scan to find the fastest conversion, local visibility, follow-up, or revenue leak opportunity."
+        eyebrow="Priority scan"
+        text="Use a lightweight scan to rank contacts, expose stale opportunities, and identify the fastest relationship recovery move."
         primaryHref={VISIBILITY_SCAN_HREF}
-        primaryLabel="Get a Visibility Scan"
+        primaryLabel="Get a Priority Scan"
         secondaryHref={REQUEST_WORKSPACE_HREF}
         secondaryLabel="Request Workspace"
       />
