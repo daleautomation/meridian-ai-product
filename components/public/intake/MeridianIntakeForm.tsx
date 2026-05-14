@@ -71,13 +71,14 @@ export function MeridianIntakeForm({
   }
 
   return (
-    <form className="public-intake-form" onSubmit={onSubmit}>
+    <form className="public-intake-form" autoComplete="off" onSubmit={onSubmit}>
       <div className="public-intake-form-grid">
         {flow.fields.map((field) => {
           const id = `intake-${flow.type}-${field.name}`;
           const sharedProps = {
             id,
             name: field.name,
+            autoComplete: "off",
             required: field.required,
             placeholder: field.placeholder,
           };
