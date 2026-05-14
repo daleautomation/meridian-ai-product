@@ -8568,6 +8568,7 @@ export default function OperatorConsole({
     })
       .then(async (response) => {
         const payload = await response.json().catch(() => ({}));
+        if (controller.signal.aborted) return;
         if (!response.ok || payload?.ok === false) {
           throw new Error(payload?.error || `Relationship Engine HTTP ${response.status}`);
         }
@@ -8575,7 +8576,10 @@ export default function OperatorConsole({
         setRelationshipSurfaceStatus("ready");
       })
       .catch((error) => {
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted) {
+          setRelationshipSurfaceStatus((status) => status === "loading" ? "idle" : status);
+          return;
+        }
         setRelationshipSurfaceStatus("error");
         setRelationshipSurfaceError(error instanceof Error ? error.message : "Relationship Engine failed to load.");
       });
