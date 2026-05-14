@@ -1574,6 +1574,337 @@ html, body {
   line-height: 1.55;
 }
 
+.roofing-product-page {
+  --roofing-ink: #0c1422;
+  --roofing-steel: #334155;
+  --roofing-line: rgba(37, 99, 235, 0.16);
+}
+
+.roofing-hero,
+.roofing-section,
+.roofing-final-cta {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+}
+
+.roofing-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 0.98fr) minmax(420px, 0.82fr);
+  gap: clamp(34px, 6vw, 72px);
+  align-items: center;
+  padding: 88px 0 78px;
+}
+
+.roofing-hero-copy h1,
+.roofing-section-intro h2,
+.roofing-execution-section h2,
+.roofing-final-cta h2 {
+  margin: 14px 0 0;
+  color: var(--roofing-ink);
+  letter-spacing: -0.055em;
+  line-height: 0.98;
+  text-wrap: balance;
+}
+
+.roofing-hero-copy h1 {
+  max-width: 760px;
+  font-size: clamp(50px, 7.5vw, 92px);
+}
+
+.roofing-hero-copy p,
+.roofing-section-intro p,
+.roofing-execution-section p,
+.roofing-final-cta p {
+  margin: 22px 0 0;
+  color: var(--public-muted);
+  font-size: 17px;
+  line-height: 1.7;
+}
+
+.roofing-hero-copy p {
+  max-width: 650px;
+  font-size: clamp(17px, 2vw, 21px);
+}
+
+.roofing-proof-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 24px;
+}
+
+.roofing-proof-row span,
+.roofing-map-zone,
+.roofing-signal-column li,
+.roofing-execution-list li {
+  border: 1px solid var(--roofing-line);
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.roofing-proof-row span {
+  padding: 8px 12px;
+  color: var(--roofing-steel);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.roofing-hero-map {
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+  border: 1px solid rgba(219, 231, 243, 0.9);
+  border-radius: 34px;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(37, 99, 235, 0.18), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(239, 246, 255, 0.78));
+  box-shadow: var(--public-shadow);
+}
+
+.roofing-hero-map::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(37, 99, 235, 0.11) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37, 99, 235, 0.11) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.46), transparent 70%);
+  pointer-events: none;
+}
+
+.roofing-map-header,
+.roofing-map-grid,
+.roofing-map-action {
+  position: relative;
+  z-index: 1;
+}
+
+.roofing-map-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--public-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.roofing-map-header strong {
+  color: var(--public-blue);
+}
+
+.roofing-map-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.roofing-map-zone {
+  min-height: 108px;
+  padding: 16px;
+  border-radius: 22px;
+  color: var(--roofing-steel);
+  font-size: 13px;
+  font-weight: 850;
+  box-shadow: var(--public-shadow-soft);
+}
+
+.roofing-map-zone-hot {
+  background:
+    radial-gradient(circle at 78% 16%, rgba(245, 158, 11, 0.24), transparent 40%),
+    rgba(255, 255, 255, 0.84);
+}
+
+.roofing-map-zone-priority {
+  grid-row: span 2;
+  background:
+    radial-gradient(circle at 78% 12%, rgba(37, 99, 235, 0.24), transparent 40%),
+    rgba(255, 255, 255, 0.9);
+}
+
+.roofing-map-zone-ready {
+  background:
+    radial-gradient(circle at 76% 18%, rgba(22, 163, 74, 0.22), transparent 40%),
+    rgba(255, 255, 255, 0.84);
+}
+
+.roofing-map-action {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 16px;
+  color: var(--public-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.roofing-section {
+  padding: 78px 0;
+}
+
+.roofing-section-intro {
+  max-width: 790px;
+  margin-bottom: 34px;
+}
+
+.roofing-section-intro h2,
+.roofing-execution-section h2,
+.roofing-final-cta h2 {
+  max-width: 850px;
+  font-size: clamp(34px, 5vw, 58px);
+}
+
+.roofing-card-grid,
+.roofing-use-grid,
+.roofing-signal-columns,
+.roofing-visual-flow {
+  display: grid;
+  gap: 16px;
+}
+
+.roofing-card-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.roofing-use-grid,
+.roofing-signal-columns {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.roofing-card,
+.roofing-use-card,
+.roofing-signal-column,
+.roofing-flow-card,
+.roofing-workflow-step {
+  min-width: 0;
+  border: 1px solid rgba(219, 231, 243, 0.88);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 86% 0%, rgba(37, 99, 235, 0.12), transparent 34%),
+    rgba(255, 255, 255, 0.76);
+  box-shadow: var(--public-shadow-soft);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+  backdrop-filter: blur(16px);
+}
+
+.roofing-card,
+.roofing-use-card,
+.roofing-signal-column {
+  padding: 25px;
+}
+
+.roofing-card:hover,
+.roofing-use-card:hover,
+.roofing-signal-column:hover,
+.roofing-flow-card:hover,
+.roofing-workflow-step:hover {
+  border-color: rgba(37, 99, 235, 0.26);
+  box-shadow: 0 22px 54px rgba(15, 23, 42, 0.10);
+  transform: translateY(-2px);
+}
+
+.roofing-card h3,
+.roofing-use-card h3,
+.roofing-signal-column h3,
+.roofing-flow-card h3,
+.roofing-workflow-step h3 {
+  margin: 0;
+  color: var(--roofing-ink);
+  font-size: 22px;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+}
+
+.roofing-card p,
+.roofing-use-card p,
+.roofing-flow-card p,
+.roofing-workflow-step p {
+  margin: 12px 0 0;
+  color: var(--public-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.roofing-workflow-line {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.roofing-workflow-step {
+  padding: 22px;
+}
+
+.roofing-workflow-step span,
+.roofing-signal-column > span,
+.roofing-flow-card span {
+  display: inline-flex;
+  margin-bottom: 18px;
+  color: var(--public-blue);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.roofing-signal-column ul,
+.roofing-execution-list {
+  display: grid;
+  gap: 10px;
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roofing-signal-column li,
+.roofing-execution-list li {
+  padding: 12px 13px;
+  border-radius: 16px;
+  color: var(--roofing-steel);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.roofing-signal-column-roadmap {
+  border-color: rgba(245, 158, 11, 0.24);
+  background:
+    radial-gradient(circle at 84% 0%, rgba(245, 158, 11, 0.16), transparent 34%),
+    rgba(255, 255, 255, 0.76);
+}
+
+.roofing-visual-flow {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.roofing-flow-card {
+  padding: 20px;
+}
+
+.roofing-execution-section {
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(360px, 0.7fr);
+  gap: 42px;
+  align-items: center;
+}
+
+.roofing-final-cta {
+  position: relative;
+  overflow: hidden;
+  margin-top: 40px;
+  margin-bottom: 72px;
+  padding: clamp(32px, 5vw, 58px);
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  border-radius: 36px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(37, 99, 235, 0.20), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(239, 246, 255, 0.74));
+  box-shadow: var(--public-shadow);
+}
+
 .public-card::after {
   content: "";
   position: absolute;
@@ -2664,7 +2995,12 @@ html, body {
   .public-module-grid div,
   .public-preview-card-grid article,
   .public-process-list li,
-  .public-card::after {
+  .public-card::after,
+  .roofing-card,
+  .roofing-use-card,
+  .roofing-signal-column,
+  .roofing-flow-card,
+  .roofing-workflow-step {
     transition: none;
   }
 }
@@ -2688,7 +3024,9 @@ html, body {
 
   .public-hero,
   .public-split-section,
-  .public-about-section {
+  .public-about-section,
+  .roofing-hero,
+  .roofing-execution-section {
     grid-template-columns: 1fr;
   }
 
@@ -2746,6 +3084,12 @@ html, body {
   .public-process-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .roofing-card-grid,
+  .roofing-workflow-line,
+  .roofing-visual-flow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 640px) {
@@ -2753,7 +3097,10 @@ html, body {
   .public-hero,
   .public-section,
   .public-final-cta,
-  .public-footer {
+  .public-footer,
+  .roofing-hero,
+  .roofing-section,
+  .roofing-final-cta {
     width: min(100% - 28px, 1180px);
   }
 
@@ -2812,6 +3159,15 @@ html, body {
   .public-command-grid,
   .public-hero-metrics,
   .public-preview-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .roofing-card-grid,
+  .roofing-use-grid,
+  .roofing-signal-columns,
+  .roofing-workflow-line,
+  .roofing-visual-flow,
+  .roofing-map-grid {
     grid-template-columns: 1fr;
   }
 
@@ -2877,8 +3233,24 @@ html, body {
     padding: 52px 0;
   }
 
+  .roofing-hero {
+    padding: 54px 0 48px;
+  }
+
+  .roofing-hero-copy h1 {
+    font-size: clamp(42px, 15vw, 62px);
+  }
+
+  .roofing-section {
+    padding: 52px 0;
+  }
+
   .public-final-cta {
     padding: 34px 24px 96px;
+  }
+
+  .roofing-final-cta {
+    padding: 34px 24px;
   }
 
   .public-final-cta::after {
