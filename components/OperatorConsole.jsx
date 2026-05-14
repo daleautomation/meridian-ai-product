@@ -8528,6 +8528,7 @@ export default function OperatorConsole({
     relationshipEngineOperatorSurface ? "ready" : "idle",
   );
   const [relationshipSurfaceError, setRelationshipSurfaceError] = useState(null);
+  const relationshipSurfaceRequestRef = useRef(false);
   const [findTask, setFindTask] = useState(null); // { leadKey, steps[], cursor, status: "running"|"done", result }
   const [filterHighPriority, setFilterHighPriority] = useState(false);
   // Overlay map: leadKey -> { contacts, resolvedListingUrl, source, confidence, lastCheckedAt, summary }
@@ -8548,7 +8549,7 @@ export default function OperatorConsole({
 
   useEffect(() => {
     if (activeTab !== "relationships") return undefined;
-    if (relationshipSurface || relationshipSurfaceStatus === "loading" || relationshipSurfaceStatus === "ready") {
+    if (relationshipSurface || relationshipSurfaceRequestRef.current) {
       return undefined;
     }
     const workspaceSlug = workspace?.slug;
@@ -8559,6 +8560,7 @@ export default function OperatorConsole({
     }
 
     const controller = new AbortController();
+    relationshipSurfaceRequestRef.current = true;
     setRelationshipSurfaceStatus("loading");
     setRelationshipSurfaceError(null);
 
@@ -8582,10 +8584,13 @@ export default function OperatorConsole({
         }
         setRelationshipSurfaceStatus("error");
         setRelationshipSurfaceError(error instanceof Error ? error.message : "Relationship Engine failed to load.");
+      })
+      .finally(() => {
+        relationshipSurfaceRequestRef.current = false;
       });
 
     return () => controller.abort();
-  }, [activeTab, relationshipSurface, relationshipSurfaceStatus, workspace?.slug]);
+  }, [activeTab, relationshipSurface, workspace?.slug]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
