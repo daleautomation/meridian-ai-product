@@ -411,9 +411,9 @@ export default function RelationshipEngineOperatorPanel({
       <div style={styles.hero}>
         <div>
           <div style={styles.eyebrow}>Relationship Engine</div>
-          <h1 style={styles.title}>Operator review surfaces</h1>
+          <h1 style={styles.title}>Relationship priority memory</h1>
           <p style={styles.copy}>
-            Multi-operator workload visibility, workflow explainability, queue separation, and timeline readiness in one review flow.
+            The engine keeps queue logic, memory, handoffs, and explainability available while the operator surface stays focused on who matters and what to do next.
           </p>
         </div>
         <div style={styles.heroMeta}>
@@ -428,10 +428,10 @@ export default function RelationshipEngineOperatorPanel({
       ) : null}
 
       <div style={styles.metricGrid}>
-        <MetricCard label="Relationships visible" value={metadata.summaryDisplay?.relationshipCount ?? 0} detail="From relationship-engine queues only" />
-        <MetricCard label="Review queue items" value={queueItemCount} detail="Review-only; no execution path" />
-        <MetricCard label="Feed items" value={feedItemCount} detail="Projection DTOs, not UI-derived" />
-        <MetricCard label="Confidence" value={metadata.confidence?.overall ?? "low"} detail="Service envelope metadata" />
+        <MetricCard label="Relationships prioritized" value={metadata.summaryDisplay?.relationshipCount ?? 0} detail="Projected from relationship queues" />
+        <MetricCard label="Recovery candidates" value={queueItemCount} detail="Review-only until an operator acts" />
+        <MetricCard label="Context updates" value={feedItemCount} detail="Memory signals compressed for review" />
+        <MetricCard label="Engine confidence" value={metadata.confidence?.overall ?? "low"} detail="Kept available behind the workflow" />
       </div>
 
       <div style={styles.operatorFlow}>
@@ -445,8 +445,13 @@ export default function RelationshipEngineOperatorPanel({
         <WorkflowVisibilityPanel workflows={workflows} />
         <QueueReviewPanel queues={queues} />
         <FeedPanel feeds={feeds} />
-        <DiagnosticsPanel diagnostics={surface.diagnostics ?? {}} metadata={metadata} />
-        <AdminDiagnosticsPanel surface={surface} />
+        <details style={styles.detailsShell}>
+          <summary style={styles.detailsSummary}>Engine diagnostics and admin detail</summary>
+          <div style={styles.detailsBody}>
+            <DiagnosticsPanel diagnostics={surface.diagnostics ?? {}} metadata={metadata} />
+            <AdminDiagnosticsPanel surface={surface} />
+          </div>
+        </details>
       </div>
     </section>
   );
@@ -1125,6 +1130,27 @@ const styles: Record<string, CSSProperties> = {
     border: `1px solid ${palette.borderLight}`,
     background: palette.surface,
     boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
+  },
+  detailsShell: {
+    padding: "12px 14px",
+    borderRadius: "16px",
+    border: `1px solid ${palette.borderLight}`,
+    background: palette.surface,
+    boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
+  },
+  detailsSummary: {
+    cursor: "pointer",
+    fontSize: "12px",
+    fontWeight: 800,
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+    color: palette.textSecondary,
+  },
+  detailsBody: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+    marginTop: "12px",
   },
   grid4: {
     display: "grid",

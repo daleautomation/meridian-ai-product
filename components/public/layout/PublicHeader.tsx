@@ -14,15 +14,15 @@ export function PublicHeader() {
         <span>Meridian AI</span>
       </Link>
       <nav className="public-nav" aria-label="Meridian website navigation">
-        <a href="/#utility-products">Products</a>
+        <a href="/#utility-products">Priority Queue</a>
         <a href="/#vertical-workspaces">Workspaces</a>
         <a href={ROOFING_INTELLIGENCE_HREF}>Roofing</a>
         <a href="/#built-from-field">Field-built</a>
-        <a href="/#live-systems">Proof</a>
+        <a href="/#how-meridian-works">Workflow</a>
       </nav>
       <div className="public-header-actions">
         <a className="public-link-button" href={VISIBILITY_SCAN_HREF}>
-          Visibility Scan
+          Priority Scan
         </a>
         <a className="public-link-button" href={REQUEST_WORKSPACE_HREF}>
           Request Workspace

@@ -689,6 +689,62 @@ function nextStepLine(lead, searchingFor) {
   return "Next step: Send intro email and request a call";
 }
 
+function compactActionLabel(lead) {
+  const raw =
+    lead.nextAction?.action
+    ?? lead.recommendedAction
+    ?? opportunityMeta(opportunityLabel(lead)).headline
+    ?? "Follow up";
+  return String(raw)
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function compactBestContact(lead) {
+  const c = lead.contacts || {};
+  if (c.contactName) return c.contactName;
+  if (lead.verifiedEmail) return "Verified email";
+  if (getDialablePhone(lead)) return "Primary phone";
+  if (c.primaryEmail) return "Primary email";
+  return "Find contact";
+}
+
+function compactContactMethods(lead) {
+  const methods = [];
+  if (getDialablePhone(lead)) methods.push("Call");
+  if (lead.verifiedEmail || lead.contacts?.primaryEmail || lead.email) methods.push("Email");
+  if (siteHref(lead)) methods.push("Website");
+  return methods.length > 0 ? methods.slice(0, 3).join(" / ") : "Enrich first";
+}
+
+function compactTopReasons(lead) {
+  const reasons = [];
+  if (lead.decision?.reason) reasons.push(lead.decision.reason);
+  reasons.push(dominantReason(lead));
+  issueBullets(lead).slice(0, 2).forEach((reason) => reasons.push(reason));
+  const seen = new Set();
+  return reasons
+    .map((reason) => stripTrailingPeriod(reason))
+    .filter(Boolean)
+    .filter((reason) => {
+      const key = reason.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 2);
+}
+
+function compactRiskLabel(lead, tier) {
+  if (lead.forceAction) return "Overdue follow-up risk";
+  if (lead.closeReadiness === "READY TO CLOSE") return "Warm opportunity at risk";
+  if (lead.callAttempts > 0) return "Prior outreach cooling";
+  if (tier === "CALL NOW") return "High-leverage action";
+  if (tier === "TODAY") return "Follow-up window open";
+  return "Monitor until stronger signal";
+}
+
 function impactLine(lead) {
   // Prefer the impact statement attached to the top engine-level issue.
   const issues = lead.websiteProof?.issues;
@@ -1277,7 +1333,6 @@ const ROW_TIER_STYLE = {
 };
 
 function LeadRow({ lead, index, isSelected, onSelect, sectionBucket }) {
-  const reason = dominantReason(lead);
   // Single source of truth: section bucket (passed in from ListSection).
   // Rows never render a bucket that conflicts with the section header.
   const tier = (sectionBucket && ROW_TIER_STYLE[sectionBucket])
@@ -1289,7 +1344,14 @@ function LeadRow({ lead, index, isSelected, onSelect, sectionBucket }) {
   const decision = lead.decision || null;
   const phone = getDialablePhone(lead);
   const fitScore = marketFitScore(lead);
-  const fitLabel = fitScore === null ? null : `Fit ${fitScore}%`;
+  const fitLabel = fitScore === null ? "Market fit pending" : `Market fit ${fitScore}%`;
+  const email = lead.verifiedEmail || lead.contacts?.primaryEmail || lead.email || null;
+  const topReasons = compactTopReasons(lead);
+  const recommendedAction = compactActionLabel(lead);
+  const nextStep = nextStepLine(lead).replace(/^Next step:\s*/i, "");
+  const bestContact = compactBestContact(lead);
+  const methods = compactContactMethods(lead);
+  const riskLabel = compactRiskLabel(lead, tier);
   const serviceId = lead?.decision?.primaryOpportunity?.services?.[0]?.id ?? null;
   const serviceCfg = serviceId ? getServiceCatalogEntry(serviceId) : null;
   const serviceLabel =
@@ -1324,6 +1386,16 @@ function LeadRow({ lead, index, isSelected, onSelect, sectionBucket }) {
       <div style={S.rowLeft}>
         <div style={S.rowNameLine}>
           <span style={S.rowName}>{lead.name}</span>
+          <span
+            style={{
+              ...S.oppMiniPill,
+              color: fitScore === null ? palette.textTertiary : scoreLabelColor(fitScore),
+              background: fitScore === null ? palette.surfaceHover : palette.bluePale,
+              borderColor: fitScore === null ? palette.border : palette.blueBorder,
+            }}
+          >
+            {fitLabel}
+          </span>
           {serviceLabel ? (
             <span
               title={`Service bucket: ${serviceLabel}`}
@@ -1339,22 +1411,29 @@ function LeadRow({ lead, index, isSelected, onSelect, sectionBucket }) {
           ) : null}
           {lead.location && <span style={S.rowLoc}>{lead.location}</span>}
         </div>
-        {decision ? (
-          <>
-            <div style={S.rowReason}>{decision.reason}</div>
-            <div style={{
-              fontSize: "12px",
-              color: "#475569",
-              fontStyle: "italic",
-              lineHeight: 1.45,
-              marginTop: "4px",
-            }}>
-              “{decision.suggestedOpening}”
-            </div>
-          </>
-        ) : (
-          <div style={S.rowReason}>{reason}</div>
-        )}
+        <div style={S.rowReasonList}>
+          {topReasons.map((reason) => (
+            <span key={reason} style={S.rowReason}>{reason}</span>
+          ))}
+        </div>
+        <div style={S.rowExecutionGrid}>
+          <span style={S.rowExecutionItem}>
+            <span style={S.rowExecutionLabel}>Best contact</span>
+            <span style={S.rowExecutionValue}>{bestContact}</span>
+          </span>
+          <span style={S.rowExecutionItem}>
+            <span style={S.rowExecutionLabel}>Methods</span>
+            <span style={S.rowExecutionValue}>{methods}</span>
+          </span>
+          <span style={S.rowExecutionItem}>
+            <span style={S.rowExecutionLabel}>Recommended</span>
+            <span style={S.rowExecutionValue}>{recommendedAction}</span>
+          </span>
+          <span style={S.rowExecutionItem}>
+            <span style={S.rowExecutionLabel}>Next step</span>
+            <span style={S.rowExecutionValue}>{nextStep}</span>
+          </span>
+        </div>
       </div>
 
       <div style={S.rowRight}>
@@ -1365,7 +1444,7 @@ function LeadRow({ lead, index, isSelected, onSelect, sectionBucket }) {
             background: opp.bg,
             border: `1px solid ${opp.border}`,
           }}>
-            {decision.bucket} · {fitLabel ?? decision.score}
+            {decision.bucket} · {fitScore === null ? `Decision ${decision.score}` : `${fitScore}% fit`}
           </span>
         ) : (
           <span style={{
@@ -1378,26 +1457,26 @@ function LeadRow({ lead, index, isSelected, onSelect, sectionBucket }) {
             {opp.headline ?? tier}
           </span>
         )}
+        <span style={S.rowRisk}>{riskLabel}</span>
         {phone ? (
           <a
             href={telHref(phone)}
             onClick={stop}
-            style={{
-              fontSize: "11px",
-              fontWeight: 700,
-              color: palette.blue,
-              background: palette.bluePale,
-              border: `1px solid ${palette.blueBorder}`,
-              padding: "5px 10px",
-              borderRadius: "999px",
-              textDecoration: "none",
-              marginTop: "6px",
-              alignSelf: "flex-end",
-            }}
+            style={S.rowActionLink}
           >
             Call
           </a>
-        ) : null}
+        ) : email ? (
+          <a
+            href={buildQuickMailto(email) ?? `mailto:${email}`}
+            onClick={stop}
+            style={S.rowActionLink}
+          >
+            Email
+          </a>
+        ) : (
+          <span style={S.rowActionLinkMuted}>Enrich</span>
+        )}
       </div>
     </div>
   );
@@ -4797,8 +4876,8 @@ function CommandCenter({ calendarEvents = [], allLeads = [], onStartCalls, onTog
   if (totalUrgent === 0 && !filterHighPriority) return null;
 
   const headline = totalUrgent > 0
-    ? `${totalUrgent} lead${totalUrgent !== 1 ? "s" : ""} need action today`
-    : "All urgent work cleared";
+    ? `${totalUrgent} relationship${totalUrgent !== 1 ? "s" : ""} need action today`
+    : "Priority queue cleared";
 
   return (
     <div style={S.commandCenter}>
@@ -4809,19 +4888,19 @@ function CommandCenter({ calendarEvents = [], allLeads = [], onStartCalls, onTog
           {overdueCount > 0 && todayCount > 0 && <span style={S.commandDot}>·</span>}
           {todayCount > 0 && <span>{todayCount} due today</span>}
           {(overdueCount > 0 || todayCount > 0) && forceLeads.length > 0 && <span style={S.commandDot}>·</span>}
-          {forceLeads.length > 0 && <span>{forceLeads.length} priority</span>}
+          {forceLeads.length > 0 && <span>{forceLeads.length} relationship priority</span>}
         </div>
       </div>
       <div style={S.commandActions}>
         {totalUrgent > 0 && (
-          <button type="button" onClick={onStartCalls} style={S.btnPrimaryLg}>Start Calls</button>
+          <button type="button" onClick={onStartCalls} style={S.btnPrimaryLg}>Start Priority Queue</button>
         )}
         <button
           type="button"
           onClick={onToggleFilter}
           style={filterHighPriority ? S.btnSecondaryActive : S.btnSecondaryLg}
         >
-          {filterHighPriority ? "High Priority ✓" : "Filter: High Priority"}
+          {filterHighPriority ? "Priority only ✓" : "Show priority only"}
         </button>
       </div>
     </div>
@@ -5174,35 +5253,35 @@ function TodayDashboard({ summary, onStartQueue, onStartFollowUps, onStartEmails
   return (
     <div style={S.todayStrip}>
       <div style={{ ...S.todayCard, ...S.todayCardAccent }}>
-        <span style={S.todayLabel}>Suggested Calls Today</span>
+        <span style={S.todayLabel}>Contact Today</span>
         <span style={S.todayCount}>{summary.callNow}</span>
-        <span style={S.todayHint}>Top-ranked leads, not yet started</span>
+        <span style={S.todayHint}>Highest-leverage relationships first</span>
         <button
           type="button"
           onClick={onStartQueue}
           style={summary.callNow > 0 ? S.todayBtn : S.todayBtnDisabled}
           disabled={summary.callNow === 0}
         >
-          🎧 Start Call Queue
+          Start Priority Queue
         </button>
       </div>
       <div style={S.todayCard}>
-        <span style={S.todayLabel}>Recommended Follow Ups</span>
+        <span style={S.todayLabel}>Recovery Follow-Ups</span>
         <span style={S.todayCount}>{summary.followUp}</span>
-        <span style={S.todayHint}>Leads the system flags for a second pass</span>
+        <span style={S.todayHint}>Stale opportunities worth another touch</span>
         <button
           type="button"
           onClick={onStartFollowUps}
           style={summary.followUp > 0 ? S.todayBtnMuted : S.todayBtnDisabled}
           disabled={summary.followUp === 0}
         >
-          Review Follow Ups
+          Work Follow-Ups
         </button>
       </div>
       <div style={S.todayCard}>
-        <span style={S.todayLabel}>Suggested Emails</span>
+        <span style={S.todayLabel}>Email First</span>
         <span style={S.todayCount}>{summary.emailFirst}</span>
-        <span style={S.todayHint}>Lower-friction first touch</span>
+        <span style={S.todayHint}>Use when the call path is weaker</span>
         <button
           type="button"
           onClick={onStartEmails}
@@ -9888,9 +9967,9 @@ export default function OperatorConsole({
     if (leads.length === 0) return;
     setQueueState({ leads, filterLabel: label, filter });
   };
-  const handleStartCallQueue  = () => startQueue("call_now",    "Leads to Call Today");
-  const handleStartFollowUps  = () => startQueue("follow_up",   "Follow Ups");
-  const handleStartEmails     = () => startQueue("email_first", "Emails to Send");
+  const handleStartCallQueue  = () => startQueue("call_now",    "Priority Relationships");
+  const handleStartFollowUps  = () => startQueue("follow_up",   "Recovery Follow-Ups");
+  const handleStartEmails     = () => startQueue("email_first", "Email-First Relationships");
   const handleExitQueue       = () => setQueueState(null);
   const toggleFilter = () => setFilterHighPriority((v) => !v);
   const highPriFilter = (leads) => filterHighPriority
@@ -9911,7 +9990,7 @@ export default function OperatorConsole({
           <div>
             <div style={S.hTitle}>Meridian</div>
             <div style={S.hSub}>
-              {workspaceAccent ? workspaceAccent : "Who to call first"}
+              {workspaceAccent ? workspaceAccent : "Who matters, why now, next step"}
             </div>
             {workspaceModeLabel ? (
               <div style={S.workspaceModeBadge}>
@@ -9924,67 +10003,73 @@ export default function OperatorConsole({
               </div>
             )}
             {teamWorkload ? (
-              <div
-                role="group"
-                aria-label="Team workload"
+              <details
+                aria-label="Queue planning details"
                 style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: "10px",
-                  alignItems: "center",
                   marginTop: "6px",
-                  padding: "4px 10px",
                   fontSize: "11px",
                   color: palette.textSecondary,
                   background: palette.surface,
                   border: `1px solid ${palette.borderLight}`,
-                  borderRadius: "999px",
+                  borderRadius: "12px",
                   width: "fit-content",
+                  maxWidth: "100%",
                 }}
               >
-                <span style={{ fontWeight: 700, color: palette.textPrimary }}>
-                  {selectedTradeId === "all" ? "All Trades · " : ""}Scheduled {teamWorkload.scheduled} · {teamWorkload.horizonWeeks}w
-                </span>
-                {typeof teamWorkload.thisWeek === "number" ? (
+                <summary style={{
+                  cursor: "pointer",
+                  listStyle: "none",
+                  padding: "5px 10px",
+                  fontWeight: 700,
+                  color: palette.textPrimary,
+                }}>
+                  Priority queue: {businessTodayTaskCount} today
+                  <span style={{ color: palette.textTertiary, fontWeight: 600 }}>
+                    {" "}· planning details
+                  </span>
+                </summary>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", alignItems: "center", padding: "0 10px 8px" }}>
                   <span>
-                    This week: <strong style={{ color: palette.textPrimary }}>{teamWorkload.thisWeek}</strong>
+                    Scheduled <strong style={{ color: palette.textPrimary }}>{teamWorkload.scheduled}</strong> over {teamWorkload.horizonWeeks}w
                   </span>
-                ) : null}
-                <span>
-                  Today: <strong style={{ color: palette.textPrimary }}>{businessTodayTaskCount}</strong>
-                </span>
-                {teamWorkload.perRep.map((r) => (
-                  <span key={r.id}>
-                    {r.name} today: <strong style={{ color: palette.textPrimary }}>{r.today ?? 0}</strong>
-                    <span style={{ color: palette.textTertiary }}> / {r.total} total</span>
-                  </span>
-                ))}
-                <span style={{ color: palette.textTertiary }}>
-                  Overflow {teamWorkload.overflow} · weekends skipped {teamWorkload.weekendSkips}
-                </span>
-                <span style={{ display: "inline-flex", gap: "4px", alignItems: "center" }}>
-                  {[{ id: "all", name: "All" }, ...teamWorkload.perRep].map((r) => (
-                    <button
-                      key={r.id}
-                      type="button"
-                      onClick={() => setSelectedRepId(r.id)}
-                      aria-pressed={selectedRepId === r.id}
-                      style={{
-                        fontSize: "10px",
-                        fontWeight: 700,
-                        padding: "2px 8px",
-                        borderRadius: "999px",
-                        border: `1px solid ${selectedRepId === r.id ? palette.blueBorder : palette.border}`,
-                        background: selectedRepId === r.id ? palette.bluePale : palette.surfaceHover,
-                        color: selectedRepId === r.id ? palette.blue : palette.textSecondary,
-                        cursor: "pointer",
-                      }}
-                    >
-                      {r.name}
-                    </button>
+                  {typeof teamWorkload.thisWeek === "number" ? (
+                    <span>
+                      This week <strong style={{ color: palette.textPrimary }}>{teamWorkload.thisWeek}</strong>
+                    </span>
+                  ) : null}
+                  {teamWorkload.perRep.map((r) => (
+                    <span key={r.id}>
+                      {r.name} today <strong style={{ color: palette.textPrimary }}>{r.today ?? 0}</strong>
+                      <span style={{ color: palette.textTertiary }}> / {r.total} total</span>
+                    </span>
                   ))}
-                </span>
-              </div>
+                  <span style={{ color: palette.textTertiary }}>
+                    Overflow {teamWorkload.overflow} · weekends skipped {teamWorkload.weekendSkips}
+                  </span>
+                  <span style={{ display: "inline-flex", gap: "4px", alignItems: "center" }}>
+                    {[{ id: "all", name: "All" }, ...teamWorkload.perRep].map((r) => (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={() => setSelectedRepId(r.id)}
+                        aria-pressed={selectedRepId === r.id}
+                        style={{
+                          fontSize: "10px",
+                          fontWeight: 700,
+                          padding: "2px 8px",
+                          borderRadius: "999px",
+                          border: `1px solid ${selectedRepId === r.id ? palette.blueBorder : palette.border}`,
+                          background: selectedRepId === r.id ? palette.bluePale : palette.surfaceHover,
+                          color: selectedRepId === r.id ? palette.blue : palette.textSecondary,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {r.name}
+                      </button>
+                    ))}
+                  </span>
+                </div>
+              </details>
             ) : null}
             {overflowQueueCount > 0 && (
               <div
@@ -10001,7 +10086,7 @@ export default function OperatorConsole({
                   padding: "3px 10px",
                 }}
               >
-                Overflow: {overflowQueueCount} lead{overflowQueueCount === 1 ? "" : "s"} waiting
+                Holding area: {overflowQueueCount} relationship{overflowQueueCount === 1 ? "" : "s"} waiting
               </div>
             )}
           </div>
@@ -10012,28 +10097,28 @@ export default function OperatorConsole({
             onClick={() => setActiveTab("calendar")}
             style={activeTab === "calendar" ? S.tabBtnActive : S.tabBtn}
           >
-            Calendar
+            Priority Queue
           </button>
           <button
             type="button"
             onClick={() => setActiveTab("cards")}
             style={activeTab === "cards" ? S.tabBtnActive : S.tabBtn}
           >
-            Scheduling
+            Relationship Cards
           </button>
           <button
             type="button"
             onClick={() => setActiveTab("deals")}
             style={activeTab === "deals" ? S.tabBtnActive : S.tabBtn}
           >
-            History
+            Outcomes
           </button>
           <button
             type="button"
             onClick={() => setActiveTab("relationships")}
             style={activeTab === "relationships" ? S.tabBtnActive : S.tabBtn}
           >
-            Relationships
+            Engine
           </button>
         </nav>
         <div className="meridian-stats" style={S.headerRight}>
@@ -10631,14 +10716,22 @@ const S = {
 
   // Row — compact default radius for list rhythm. When isSelected the
   // row morphs into the card's header strip (see rowSelected below).
-  row: { display: "flex", alignItems: "center", gap: "10px", padding: "11px 14px", borderRadius: "8px", cursor: "pointer", transition: "background 0.12s", borderLeft: "3px solid transparent" },
+  row: { display: "flex", alignItems: "flex-start", gap: "12px", padding: "13px 14px", borderRadius: "10px", cursor: "pointer", transition: "background 0.12s", borderLeft: "3px solid transparent" },
   rowRank: { fontSize: "12px", color: palette.textTertiary, width: "20px", textAlign: "right", flexShrink: 0 },
   rowLeft: { flex: 1, minWidth: 0 },
-  rowNameLine: { display: "flex", alignItems: "baseline", gap: "6px" },
-  rowName: { fontSize: "14px", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  rowNameLine: { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" },
+  rowName: { fontSize: "15px", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   rowLoc: { fontSize: "12px", color: palette.textTertiary, whiteSpace: "nowrap", flexShrink: 0 },
   rowReason: { fontSize: "12px", color: palette.textSecondary, marginTop: "2px", lineHeight: 1.3 },
-  rowRight: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px", flexShrink: 0, minWidth: "80px" },
+  rowReasonList: { display: "flex", flexDirection: "column", gap: "2px", marginTop: "5px" },
+  rowExecutionGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(118px, 1fr))", gap: "7px", marginTop: "10px" },
+  rowExecutionItem: { minWidth: 0, padding: "7px 8px", borderRadius: "8px", background: "rgba(255,255,255,0.72)", border: `1px solid ${palette.borderLight}`, display: "flex", flexDirection: "column", gap: "2px" },
+  rowExecutionLabel: { fontSize: "9px", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: palette.textTertiary },
+  rowExecutionValue: { fontSize: "11px", fontWeight: 650, color: palette.textPrimary, lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  rowRight: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px", flexShrink: 0, minWidth: "118px", maxWidth: "150px" },
+  rowRisk: { fontSize: "10.5px", color: palette.textSecondary, textAlign: "right", lineHeight: 1.25 },
+  rowActionLink: { fontSize: "11px", fontWeight: 800, color: palette.blue, background: palette.bluePale, border: `1px solid ${palette.blueBorder}`, padding: "6px 11px", borderRadius: "999px", textDecoration: "none", alignSelf: "flex-end" },
+  rowActionLinkMuted: { fontSize: "11px", fontWeight: 800, color: palette.textTertiary, background: palette.surfaceHover, border: `1px solid ${palette.border}`, padding: "6px 11px", borderRadius: "999px", alignSelf: "flex-end" },
   rowScore: { fontSize: "13px", fontWeight: 600 },
   // Selected row reads as the "header strip" of the card below. Shares
   // `palette.surface` with the detail card (also enforced per-tier by
