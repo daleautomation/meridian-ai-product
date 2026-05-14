@@ -1582,6 +1582,7 @@ html, body {
 
 .roofing-hero,
 .roofing-section,
+.roofing-cta-band,
 .roofing-final-cta {
   width: min(1180px, calc(100% - 40px));
   margin: 0 auto;
@@ -1739,6 +1740,47 @@ html, body {
   font-weight: 700;
 }
 
+.roofing-cta-band {
+  padding: 0 0 46px;
+}
+
+.roofing-inline-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px;
+  border: 1px solid rgba(37, 99, 235, 0.16);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow: var(--public-shadow-soft);
+  backdrop-filter: blur(16px);
+}
+
+.roofing-inline-cta span {
+  display: block;
+  color: var(--public-blue);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.roofing-inline-cta p {
+  max-width: 650px;
+  margin: 6px 0 0;
+  color: var(--public-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.roofing-inline-cta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .roofing-section {
   padding: 78px 0;
 }
@@ -1758,17 +1800,22 @@ html, body {
 .roofing-card-grid,
 .roofing-use-grid,
 .roofing-signal-columns,
-.roofing-visual-flow {
+.roofing-visual-flow,
+.roofing-loss-grid,
+.roofing-opportunity-grid,
+.roofing-execution-layer-grid {
   display: grid;
   gap: 16px;
 }
 
-.roofing-card-grid {
+.roofing-card-grid,
+.roofing-loss-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .roofing-use-grid,
-.roofing-signal-columns {
+.roofing-signal-columns,
+.roofing-opportunity-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -1776,7 +1823,10 @@ html, body {
 .roofing-use-card,
 .roofing-signal-column,
 .roofing-flow-card,
-.roofing-workflow-step {
+.roofing-workflow-step,
+.roofing-loss-card,
+.roofing-opportunity-card,
+.roofing-execution-layer-card {
   min-width: 0;
   border: 1px solid rgba(219, 231, 243, 0.88);
   border-radius: 26px;
@@ -1793,7 +1843,10 @@ html, body {
 
 .roofing-card,
 .roofing-use-card,
-.roofing-signal-column {
+.roofing-signal-column,
+.roofing-loss-card,
+.roofing-opportunity-card,
+.roofing-execution-layer-card {
   padding: 25px;
 }
 
@@ -1801,7 +1854,10 @@ html, body {
 .roofing-use-card:hover,
 .roofing-signal-column:hover,
 .roofing-flow-card:hover,
-.roofing-workflow-step:hover {
+.roofing-workflow-step:hover,
+.roofing-loss-card:hover,
+.roofing-opportunity-card:hover,
+.roofing-execution-layer-card:hover {
   border-color: rgba(37, 99, 235, 0.26);
   box-shadow: 0 22px 54px rgba(15, 23, 42, 0.10);
   transform: translateY(-2px);
@@ -1811,7 +1867,9 @@ html, body {
 .roofing-use-card h3,
 .roofing-signal-column h3,
 .roofing-flow-card h3,
-.roofing-workflow-step h3 {
+.roofing-workflow-step h3,
+.roofing-loss-card h3,
+.roofing-opportunity-card h3 {
   margin: 0;
   color: var(--roofing-ink);
   font-size: 22px;
@@ -1822,11 +1880,20 @@ html, body {
 .roofing-card p,
 .roofing-use-card p,
 .roofing-flow-card p,
-.roofing-workflow-step p {
+.roofing-workflow-step p,
+.roofing-loss-card p,
+.roofing-opportunity-card p,
+.roofing-execution-layer-card p {
   margin: 12px 0 0;
   color: var(--public-muted);
   font-size: 14px;
   line-height: 1.6;
+}
+
+.roofing-loss-card {
+  background:
+    radial-gradient(circle at 86% 0%, rgba(245, 158, 11, 0.13), transparent 34%),
+    rgba(255, 255, 255, 0.76);
 }
 
 .roofing-workflow-line {
@@ -1876,6 +1943,189 @@ html, body {
     rgba(255, 255, 255, 0.76);
 }
 
+.roofing-preview-section .roofing-inline-cta {
+  margin-top: 18px;
+}
+
+.roofing-software-preview {
+  overflow: hidden;
+  padding: 18px;
+  border: 1px solid rgba(219, 231, 243, 0.9);
+  border-radius: 34px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(37, 99, 235, 0.16), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(239, 246, 255, 0.76));
+  box-shadow: var(--public-shadow);
+}
+
+.roofing-preview-toolbar,
+.roofing-preview-panel-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--public-muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.roofing-preview-toolbar {
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid rgba(219, 231, 243, 0.86);
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.92);
+  color: #dbeafe;
+}
+
+.roofing-preview-toolbar strong,
+.roofing-preview-panel-header strong {
+  color: var(--public-blue);
+}
+
+.roofing-preview-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(240px, 0.7fr);
+  grid-template-areas:
+    "queue territory"
+    "queue routing";
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.roofing-preview-panel {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(219, 231, 243, 0.86);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.roofing-preview-queue {
+  grid-area: queue;
+}
+
+.roofing-preview-territory {
+  grid-area: territory;
+}
+
+.roofing-preview-routing {
+  grid-area: routing;
+}
+
+.roofing-queue-list,
+.roofing-owner-list,
+.roofing-territory-list {
+  display: grid;
+  gap: 9px;
+  margin-top: 12px;
+}
+
+.roofing-queue-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid rgba(219, 231, 243, 0.86);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.roofing-queue-row span,
+.roofing-owner-list span,
+.roofing-opportunity-card span,
+.roofing-execution-layer-card span {
+  color: var(--public-faint);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.roofing-queue-row strong,
+.roofing-owner-list strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--roofing-ink);
+  font-size: 13px;
+  line-height: 1.28;
+}
+
+.roofing-queue-row em {
+  padding: 6px 9px;
+  color: var(--public-blue-dark);
+  border: 1px solid rgba(37, 99, 235, 0.15);
+  border-radius: 999px;
+  background: rgba(239, 246, 255, 0.82);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.roofing-territory-list span,
+.roofing-routing-strip span {
+  padding: 10px 11px;
+  border: 1px solid rgba(37, 99, 235, 0.13);
+  border-radius: 15px;
+  background: rgba(239, 246, 255, 0.76);
+  color: var(--roofing-steel);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.roofing-owner-list article {
+  padding: 11px;
+  border: 1px solid rgba(219, 231, 243, 0.86);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.roofing-owner-list p {
+  margin: 5px 0 0;
+  color: var(--public-muted);
+  font-size: 12px;
+}
+
+.roofing-routing-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.roofing-routing-strip span {
+  text-align: center;
+}
+
+.roofing-opportunity-card {
+  display: grid;
+  gap: 16px;
+}
+
+.roofing-opportunity-card div {
+  padding-top: 14px;
+  border-top: 1px solid rgba(219, 231, 243, 0.9);
+}
+
+.roofing-execution-layer-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.roofing-execution-layer-card {
+  min-height: 190px;
+}
+
+.roofing-execution-layer-card span {
+  display: inline-flex;
+  padding: 7px 10px;
+  color: var(--public-blue-dark);
+  border: 1px solid rgba(37, 99, 235, 0.15);
+  border-radius: 999px;
+  background: rgba(239, 246, 255, 0.82);
+}
+
 .roofing-visual-flow {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
@@ -1903,6 +2153,40 @@ html, body {
     radial-gradient(circle at 12% 0%, rgba(37, 99, 235, 0.20), transparent 34%),
     linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(239, 246, 255, 0.74));
   box-shadow: var(--public-shadow);
+}
+
+.roofing-built-public {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 20px;
+  border: 1px solid rgba(37, 99, 235, 0.16);
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow: var(--public-shadow-soft);
+}
+
+.roofing-built-public > span {
+  color: var(--public-blue);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.roofing-built-public div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.roofing-built-public strong {
+  padding: 8px 11px;
+  color: var(--roofing-steel);
+  border: 1px solid rgba(37, 99, 235, 0.13);
+  border-radius: 999px;
+  background: rgba(239, 246, 255, 0.72);
+  font-size: 12px;
 }
 
 .public-card::after {
@@ -3000,7 +3284,10 @@ html, body {
   .roofing-use-card,
   .roofing-signal-column,
   .roofing-flow-card,
-  .roofing-workflow-step {
+  .roofing-workflow-step,
+  .roofing-loss-card,
+  .roofing-opportunity-card,
+  .roofing-execution-layer-card {
     transition: none;
   }
 }
@@ -3087,8 +3374,30 @@ html, body {
 
   .roofing-card-grid,
   .roofing-workflow-line,
-  .roofing-visual-flow {
+  .roofing-visual-flow,
+  .roofing-loss-grid,
+  .roofing-opportunity-grid,
+  .roofing-routing-strip,
+  .roofing-execution-layer-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .roofing-preview-layout {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "queue"
+      "territory"
+      "routing";
+  }
+
+  .roofing-inline-cta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .roofing-inline-cta-actions {
+    justify-content: flex-start;
+    width: 100%;
   }
 }
 
@@ -3100,6 +3409,7 @@ html, body {
   .public-footer,
   .roofing-hero,
   .roofing-section,
+  .roofing-cta-band,
   .roofing-final-cta {
     width: min(100% - 28px, 1180px);
   }
@@ -3167,7 +3477,23 @@ html, body {
   .roofing-signal-columns,
   .roofing-workflow-line,
   .roofing-visual-flow,
-  .roofing-map-grid {
+  .roofing-map-grid,
+  .roofing-loss-grid,
+  .roofing-opportunity-grid,
+  .roofing-routing-strip,
+  .roofing-execution-layer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .roofing-preview-layout {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "queue"
+      "territory"
+      "routing";
+  }
+
+  .roofing-queue-row {
     grid-template-columns: 1fr;
   }
 
@@ -3243,6 +3569,15 @@ html, body {
 
   .roofing-section {
     padding: 52px 0;
+  }
+
+  .roofing-cta-band {
+    padding-bottom: 20px;
+  }
+
+  .roofing-software-preview {
+    padding: 14px;
+    border-radius: 26px;
   }
 
   .public-final-cta {

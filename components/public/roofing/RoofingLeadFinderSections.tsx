@@ -3,15 +3,22 @@ import {
   ROOFING_STRATEGY_CALL_HREF,
   ROOFING_VISIBILITY_SCAN_HREF,
   roofingAvailableSignals,
+  roofingBuiltInPublicPoints,
   roofingContractorUses,
+  roofingDealLossReasons,
   roofingExecutionWorkflow,
+  roofingExampleOpportunities,
   roofingFutureSignals,
   roofingHero,
+  roofingLiveWorkflowQueue,
   roofingOperatorPoints,
   roofingOpportunityWorkflow,
   roofingPainPoints,
   roofingRoadmapConcepts,
+  roofingRoutingSteps,
+  roofingTerritoryGroups,
   roofingVisualWorkflow,
+  roofingExecutionLayer,
 } from "@/content/public/roofing";
 
 function RoofingSectionIntro({
@@ -28,6 +35,34 @@ function RoofingSectionIntro({
       <span className="public-eyebrow">{eyebrow}</span>
       <h2>{title}</h2>
       <p>{text}</p>
+    </div>
+  );
+}
+
+function RoofingConversionCta({
+  eyebrow,
+  text,
+}: {
+  eyebrow: string;
+  text: string;
+}) {
+  return (
+    <div className="roofing-inline-cta">
+      <div>
+        <span>{eyebrow}</span>
+        <p>{text}</p>
+      </div>
+      <div className="roofing-inline-cta-actions">
+        <a className="public-primary-button" href={REQUEST_ROOFING_DEMO_HREF}>
+          Request Roofing Demo
+        </a>
+        <a className="public-secondary-button" href={ROOFING_VISIBILITY_SCAN_HREF}>
+          Get Visibility Scan
+        </a>
+        <a className="public-secondary-button" href={ROOFING_STRATEGY_CALL_HREF}>
+          Book Strategy Call
+        </a>
+      </div>
     </div>
   );
 }
@@ -95,6 +130,37 @@ export function RoofingPainPointsSection() {
   );
 }
 
+export function RoofingHeroCtaSection() {
+  return (
+    <section className="roofing-cta-band" aria-label="Roofing demo conversion actions">
+      <RoofingConversionCta
+        eyebrow="See the operating view"
+        text="Request a roofing demo or start with a visibility scan that shows where local opportunity and follow-up work are getting missed."
+      />
+    </section>
+  );
+}
+
+export function RoofingDealLossSection() {
+  return (
+    <section id="roofing-deal-loss" className="roofing-section">
+      <RoofingSectionIntro
+        eyebrow="Why roofing teams lose deals"
+        title="Deals are often lost in the handoff, not the pitch."
+        text="The common leak is operational: scattered territory focus, unclear follow-up, weak visibility, and no daily priority system."
+      />
+      <div className="roofing-loss-grid">
+        {roofingDealLossReasons.map((reason) => (
+          <article className="roofing-loss-card" key={reason.title}>
+            <h3>{reason.title}</h3>
+            <p>{reason.text}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function RoofingOpportunityWorkflowSection() {
   return (
     <section id="roofing-workflow" className="roofing-section roofing-workflow-section">
@@ -148,6 +214,109 @@ export function RoofingSignalsSection() {
   );
 }
 
+export function RoofingLiveWorkflowPreviewSection() {
+  return (
+    <section id="live-workflow-preview" className="roofing-section roofing-preview-section">
+      <RoofingSectionIntro
+        eyebrow="Live workflow preview"
+        title="A demoable operating view, built around work that can be assigned."
+        text="This static preview shows how opportunity queues, territory grouping, owner routing, and follow-up state can sit in one contractor-ready workflow."
+      />
+      <div className="roofing-software-preview" aria-label="Roofing workflow preview">
+        <div className="roofing-preview-toolbar">
+          <span>Roofing opportunity queue</span>
+          <strong>Execution mode</strong>
+        </div>
+        <div className="roofing-preview-layout">
+          <div className="roofing-preview-panel roofing-preview-queue">
+            <div className="roofing-preview-panel-header">
+              <span>Opportunity queue</span>
+              <strong>Prioritized</strong>
+            </div>
+            <div className="roofing-queue-list">
+              {roofingLiveWorkflowQueue.map((item) => (
+                <article className="roofing-queue-row" key={item.territory}>
+                  <div>
+                    <span>{item.territory}</span>
+                    <strong>{item.signal}</strong>
+                  </div>
+                  <em>{item.priority}</em>
+                </article>
+              ))}
+            </div>
+          </div>
+          <div className="roofing-preview-panel roofing-preview-territory">
+            <div className="roofing-preview-panel-header">
+              <span>Territory intelligence</span>
+              <strong>Grouped</strong>
+            </div>
+            <div className="roofing-territory-list">
+              {roofingTerritoryGroups.map((group) => (
+                <span key={group}>{group}</span>
+              ))}
+            </div>
+          </div>
+          <div className="roofing-preview-panel roofing-preview-routing">
+            <div className="roofing-preview-panel-header">
+              <span>Lead routing</span>
+              <strong>Owner ready</strong>
+            </div>
+            <div className="roofing-owner-list">
+              {roofingLiveWorkflowQueue.map((item) => (
+                <article key={item.owner + item.territory}>
+                  <span>{item.owner}</span>
+                  <strong>{item.state}</strong>
+                  <p>{item.territory}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="roofing-routing-strip" aria-label="Roofing execution flow">
+          {roofingRoutingSteps.map((step) => (
+            <span key={step}>{step}</span>
+          ))}
+        </div>
+      </div>
+      <RoofingConversionCta
+        eyebrow="Preview the workflow"
+        text="Use the demo to pressure-test how Meridian would prioritize territories, assign owners, and protect follow-up for your roofing team."
+      />
+    </section>
+  );
+}
+
+export function RoofingExampleOpportunitiesSection() {
+  return (
+    <section id="example-roofing-opportunities" className="roofing-section">
+      <RoofingSectionIntro
+        eyebrow="Example roofing opportunities"
+        title="The useful output is a recommended move, not a prettier chart."
+        text="Each example connects the detected signal to the operational impact and the next contractor action."
+      />
+      <div className="roofing-opportunity-grid">
+        {roofingExampleOpportunities.map((opportunity) => (
+          <article className="roofing-opportunity-card" key={opportunity.title}>
+            <h3>{opportunity.title}</h3>
+            <div>
+              <span>Signal detected</span>
+              <p>{opportunity.signal}</p>
+            </div>
+            <div>
+              <span>Operational impact</span>
+              <p>{opportunity.impact}</p>
+            </div>
+            <div>
+              <span>Recommended action</span>
+              <p>{opportunity.action}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function RoofingContractorUseSection() {
   return (
     <section id="contractor-use" className="roofing-section">
@@ -181,6 +350,26 @@ export function RoofingVisualWorkflowSection() {
           <article className="roofing-flow-card" key={item.label}>
             <span>{String(index + 1).padStart(2, "0")} / {item.label}</span>
             <h3>{item.title}</h3>
+            <p>{item.text}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export function RoofingExecutionLayerSection() {
+  return (
+    <section id="execution-layer" className="roofing-section">
+      <RoofingSectionIntro
+        eyebrow="Execution layer"
+        title="Meridian gives the operator a work system, not another place to stare."
+        text="The execution layer keeps the roofing funnel practical: prioritize the right work, assign ownership, follow up, organize the territory, and execute."
+      />
+      <div className="roofing-execution-layer-grid">
+        {roofingExecutionLayer.map((item) => (
+          <article className="roofing-execution-layer-card" key={item.title}>
+            <span>{item.title}</span>
             <p>{item.text}</p>
           </article>
         ))}
@@ -224,6 +413,14 @@ export function RoofingBuiltForOperatorsSection() {
             <p>{point.text}</p>
           </article>
         ))}
+      </div>
+      <div className="roofing-built-public">
+        <span>Built in public, operator-first</span>
+        <div>
+          {roofingBuiltInPublicPoints.map((point) => (
+            <strong key={point}>{point}</strong>
+          ))}
+        </div>
       </div>
     </section>
   );

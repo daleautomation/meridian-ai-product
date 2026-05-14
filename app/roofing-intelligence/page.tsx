@@ -5,8 +5,13 @@ import {
   RoofingBuiltForOperatorsSection,
   RoofingContractorUseSection,
   RoofingCtaSection,
+  RoofingDealLossSection,
+  RoofingExampleOpportunitiesSection,
+  RoofingExecutionLayerSection,
   RoofingHeroSection,
+  RoofingHeroCtaSection,
   RoofingLeadExecutionSection,
+  RoofingLiveWorkflowPreviewSection,
   RoofingOpportunityWorkflowSection,
   RoofingPainPointsSection,
   RoofingRoadmapSection,
@@ -25,10 +30,15 @@ export default function RoofingIntelligencePage() {
     <main className="public-site roofing-product-page">
       <PublicHeader />
       <RoofingHeroSection />
+      <RoofingHeroCtaSection />
       <RoofingPainPointsSection />
+      <RoofingDealLossSection />
       <RoofingOpportunityWorkflowSection />
+      <RoofingLiveWorkflowPreviewSection />
+      <RoofingExampleOpportunitiesSection />
       <RoofingSignalsSection />
       <RoofingContractorUseSection />
+      <RoofingExecutionLayerSection />
       <RoofingVisualWorkflowSection />
       <RoofingLeadExecutionSection />
       <RoofingBuiltForOperatorsSection />
