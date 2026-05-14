@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   CLIENT_LOGIN_HREF,
   REQUEST_WORKSPACE_HREF,
+  ROOFING_INTELLIGENCE_HREF,
   VISIBILITY_SCAN_HREF,
 } from "@/content/public/home";
 
@@ -13,15 +14,15 @@ export function PublicHeader() {
         <span>Meridian AI</span>
       </Link>
       <nav className="public-nav" aria-label="Meridian website navigation">
-        <a href="#utility-products">Products</a>
-        <a href="#vertical-workspaces">Workspaces</a>
-        <a href="#roofing-intelligence">Roofing</a>
-        <a href="#built-from-field">Field-built</a>
-        <a href="#live-systems">Proof</a>
+        <Link href="/#utility-products">Priority Queue</Link>
+        <Link href="/#vertical-workspaces">Workspaces</Link>
+        <Link href={ROOFING_INTELLIGENCE_HREF}>Roofing</Link>
+        <Link href="/#built-from-field">Field-built</Link>
+        <Link href="/#how-meridian-works">Workflow</Link>
       </nav>
       <div className="public-header-actions">
         <a className="public-link-button" href={VISIBILITY_SCAN_HREF}>
-          Visibility Scan
+          Priority Scan
         </a>
         <a className="public-link-button" href={REQUEST_WORKSPACE_HREF}>
           Request Workspace

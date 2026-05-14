@@ -11,12 +11,12 @@ export function LiveSystemsSection() {
   return (
     <section id="live-systems" className="public-section public-split-section">
       <div>
-        <span className="public-eyebrow">Live systems / proof</span>
-        <h2>Meridian is already being shaped by real operational workflows.</h2>
+        <span className="public-eyebrow">Execution layer proof</span>
+        <h2>Meridian keeps the engine underneath and compresses the operator surface.</h2>
         <p>
-          The public site now points at the proof base: LaborTech workspace
-          patterns, execution queues, scheduling intelligence, and relationship
-          engine concepts that make operator work visible.
+          Relationship memory, scheduling context, queue ordering, and workflow
+          continuity remain intact. Operators only see the priority, reason,
+          contact path, and next action they need to move.
         </p>
         <div className="public-live-system-grid">
           {liveSystemsProof.map((system) => (
@@ -30,7 +30,7 @@ export function LiveSystemsSection() {
       </div>
       <div className="public-operator-preview" aria-label="Live system proof preview">
         <div className="public-preview-header public-preview-header-live">
-          <span>LaborTech / operational patterns</span>
+          <span>Relationship execution patterns</span>
           <strong>
             <span className="public-live-dot" />
             In production
@@ -47,8 +47,8 @@ export function LiveSystemsSection() {
         </div>
         <div className="public-execution-panel">
           <div className="public-console-header">
-            <span>Execution queue</span>
-            <strong>Scheduling + follow-up state</strong>
+            <span>Priority queue</span>
+            <strong>Who, why, action</strong>
           </div>
           <div className="public-execution-list">
             {executionQueuePreview.map((item) => (
@@ -66,12 +66,12 @@ export function LiveSystemsSection() {
         </div>
       </div>
       <SectionCta
-        eyebrow="Operational proof"
-        text="See how a live operator system can map your scheduling, relationship, follow-up, and execution workflow."
+        eyebrow="Relationship execution"
+        text="See how Meridian can sit above your CRM, prioritize relationships, and simplify follow-up without hiding workflow continuity."
         primaryHref={REQUEST_WORKSPACE_HREF}
         primaryLabel="Request Workspace"
         secondaryHref={VISIBILITY_SCAN_HREF}
-        secondaryLabel="Get a Visibility Scan"
+        secondaryLabel="Get a Priority Scan"
       />
     </section>
   );

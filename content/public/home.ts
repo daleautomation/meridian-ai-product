@@ -1,29 +1,28 @@
-export const REQUEST_DEMO_HREF =
-  "/intake/roofing-demo?source=roofing-intelligence";
+export const REQUEST_DEMO_HREF = "/intake/workspace-request?source=homepage";
 export const START_AUDIT_HREF = "/intake/visibility-scan?source=visibility-scan";
 export const EXPLORE_SYSTEMS_HREF = "#utility-products";
-export const ROOFING_DEMO_HREF = REQUEST_DEMO_HREF;
-export const REQUEST_WORKSPACE_HREF = "/intake/workspace-request?source=homepage";
+export const REQUEST_WORKSPACE_HREF = REQUEST_DEMO_HREF;
 export const VISIBILITY_SCAN_HREF = START_AUDIT_HREF;
-export const ROOFING_INTELLIGENCE_HREF = "#roofing-intelligence";
+export const ROOFING_INTELLIGENCE_HREF = "/roofing-intelligence";
+export const ROOFING_DEMO_HREF = "/intake/roofing-demo?source=roofing-intelligence";
 export const BOOK_STRATEGY_CALL_HREF = "/intake/strategy-call?source=homepage";
 export const CLIENT_LOGIN_HREF = "/login?next=/operator";
 
 export const productLadder = [
-  "Fast utility products",
-  "Vertical operator workspaces",
-  "Roofing intelligence infrastructure",
-  "Live execution systems",
+  "Upload contacts / CRM",
+  "Rank relationships",
+  "Execute follow-up",
+  "Learn from outcomes",
 ] as const;
 
 export const fastUtilityProducts = [
   {
-    title: "Roofing Lead Finder",
-    pain: "Good roofing opportunities are scattered across local intent, property context, and stale outreach lists.",
-    outcome: "A focused lead set with fit signals, contact paths, and a clear first action.",
-    cta: "Find roofing leads",
-    price: "Lightweight scan pricing",
-    href: ROOFING_DEMO_HREF,
+    title: "Relationship Priority Queue",
+    pain: "Useful contacts already exist, but nobody knows which relationship deserves action today.",
+    outcome: "A daily queue that shows who matters, why now, the best contact path, and the next step.",
+    cta: "Prioritize contacts",
+    price: "Priority scan",
+    href: ROOFING_INTELLIGENCE_HREF,
   },
   {
     title: "Review Recovery System",
@@ -31,7 +30,6 @@ export const fastUtilityProducts = [
     outcome: "A simple recovery workflow that turns completed work into visible trust.",
     cta: "Recover reviews",
     price: "Fixed-scope setup",
-    href: VISIBILITY_SCAN_HREF,
   },
   {
     title: "Website Conversion Scanner",
@@ -39,15 +37,13 @@ export const fastUtilityProducts = [
     outcome: "A practical visibility scan with intake, proof, speed, and CTA fixes ranked.",
     cta: "Scan my site",
     price: "Starter scan available",
-    href: VISIBILITY_SCAN_HREF,
   },
   {
     title: "Follow-Up Assistant",
     pain: "Estimate requests, callbacks, and dormant opportunities cool off when nobody owns the next action.",
-    outcome: "Follow-up language, timing, and ownership attached before revenue leaks.",
+    outcome: "Follow-up angle, timing, owner, and message path attached before the relationship goes cold.",
     cta: "Tighten follow-up",
     price: "Workflow add-on",
-    href: BOOK_STRATEGY_CALL_HREF,
   },
   {
     title: "Local SEO Scanner",
@@ -55,15 +51,13 @@ export const fastUtilityProducts = [
     outcome: "A prioritized local visibility map for the searches that create real calls.",
     cta: "Check local visibility",
     price: "Lightweight scan pricing",
-    href: VISIBILITY_SCAN_HREF,
   },
   {
     title: "Missed Revenue Detector",
     pain: "Revenue leaks hide inside stale quotes, missed callbacks, slow response, and unclear handoffs.",
-    outcome: "A ranked leak list with owner, reason, and next move for recovery.",
+    outcome: "A ranked recovery list with relationship, risk, reason, and next move.",
     cta: "Find missed revenue",
     price: "Diagnostic package",
-    href: VISIBILITY_SCAN_HREF,
   },
 ] as const;
 
@@ -89,8 +83,8 @@ export const verticalWorkspaces = [
   {
     title: "Lead Execution Workspace",
     industry: "Sales-driven service teams",
-    text: "A daily queue that ranks opportunities by signal, prepares context, and keeps follow-up moving.",
-    capabilities: ["Closeability", "Call planning", "Owner-aware tasks"],
+    text: "A daily relationship priority queue that ranks existing opportunities and prepares the next action.",
+    capabilities: ["Who to contact", "Why now", "Next step"],
   },
 ] as const;
 
@@ -138,28 +132,28 @@ export const fieldFounderPoints = [
 export const howMeridianWorks = [
   {
     stage: "01",
-    title: "Scan the visible surface",
-    text: "Start with lead flow, online presence, reviews, follow-up, and revenue leaks that can turn into quick action.",
+    title: "Upload contacts / CRM",
+    text: "Start from the relationships the business already owns: contacts, estimates, callbacks, notes, and CRM records.",
   },
   {
     stage: "02",
-    title: "Map the operating path",
-    text: "Define the signals, owners, timing, and workflow rules that make the work move reliably.",
+    title: "Enrich and prioritize",
+    text: "Meridian adds context, scores fit, detects staleness, and separates high-leverage relationships from noise.",
   },
   {
     stage: "03",
-    title: "Build the workspace",
-    text: "Turn the operating path into queues, briefs, dashboards, and execution systems for the vertical.",
+    title: "Surface who matters",
+    text: "Operators see the relationship, why it matters, what is at risk, and the best contact path.",
   },
   {
     stage: "04",
-    title: "Run the rhythm",
-    text: "Keep priority work visible with scheduling intelligence, relationship context, and follow-up state.",
+    title: "Execute the next step",
+    text: "Calls, emails, follow-ups, and recovery actions move from one clean queue instead of scattered dashboards.",
   },
   {
     stage: "05",
-    title: "Prove what moved",
-    text: "Report completed actions, remaining leaks, and the workflows that created revenue movement.",
+    title: "Learn from outcomes",
+    text: "Completed actions, replies, misses, and wins feed the relationship memory so the queue gets sharper.",
   },
 ] as const;
 
@@ -506,37 +500,37 @@ export const platformModules = [
 
 export const heroMetrics = [
   {
-    label: "Lead signal",
-    value: "87",
-    detail: "High-intent opportunity",
+    label: "Market fit",
+    value: "87%",
+    detail: "Strong relationship priority",
   },
   {
-    label: "Missed revenue",
-    value: "$18k",
-    detail: "Dormant estimate risk",
+    label: "Risk",
+    value: "Stale",
+    detail: "Opportunity cooling off",
   },
   {
     label: "Next action",
-    value: "Owner",
-    detail: "Follow-up ready",
+    value: "Call",
+    detail: "Contact path ready",
   },
 ] as const;
 
 export const heroQueue = [
   {
-    label: "Utility product",
-    title: "Visibility scan found weak conversion paths",
-    meta: "Website + reviews + local search",
+    label: "Who matters",
+    title: "Harbor View Remodels",
+    meta: "Strong fit, stale estimate, phone ready",
   },
   {
-    label: "Workspace",
-    title: "Roofing lead queue ranked for action",
-    meta: "Signal + owner + follow-up timing",
+    label: "Why now",
+    title: "Prior quote has gone quiet",
+    meta: "Recovery window still open",
   },
   {
-    label: "Live system",
-    title: "Execution workflow prepared",
-    meta: "Scheduling + relationship context",
+    label: "What next",
+    title: "Call with estimate recovery angle",
+    meta: "Log outcome so Meridian learns",
   },
 ] as const;
 
