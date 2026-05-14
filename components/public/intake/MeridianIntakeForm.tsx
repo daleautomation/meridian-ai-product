@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { IntakeFlowConfig } from "@/content/public/intake";
 import type { IntakeFieldName } from "@/lib/intake/types";
@@ -68,9 +69,9 @@ export function MeridianIntakeForm({
             </p>
           </div>
         </div>
-        <a className="public-secondary-button" href="/">
+        <Link className="public-secondary-button" href="/">
           Back to Meridian
-        </a>
+        </Link>
       </div>
     );
   }
