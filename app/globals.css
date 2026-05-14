@@ -1746,7 +1746,8 @@ html, body {
 
 .roofing-inline-cta {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  flex-direction: column;
   justify-content: space-between;
   gap: 20px;
   padding: 18px;
@@ -1777,8 +1778,9 @@ html, body {
 .roofing-inline-cta-actions {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 10px;
+  width: 100%;
 }
 
 .roofing-section {
