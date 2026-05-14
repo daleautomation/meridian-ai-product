@@ -52,8 +52,8 @@ console.log("canonical operational event envelope check passed", {
   families: [...new Set(replayOrdered.map((event) => event.family))],
   replayOrder: replayOrdered.map((event) => event.id),
   dedupedEvents: deduped.size,
-  persistenceAllowed: replayOrdered.every((event) => event.boundary.persistenceAllowed === false),
-  automationAllowed: replayOrdered.every((event) => event.boundary.automationAllowed === false),
+  persistenceAllowed: replayOrdered.some((event) => event.boundary.persistenceAllowed),
+  automationAllowed: replayOrdered.some((event) => event.boundary.automationAllowed),
 });
 
 function compareOperationalEvents(a: CanonicalOperationalEventEnvelope, b: CanonicalOperationalEventEnvelope): number {
