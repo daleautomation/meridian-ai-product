@@ -6,6 +6,7 @@ export * from "./consumers/internalConsumers";
 export * from "./dto/boundaries";
 export * from "./followups/policies";
 export * from "./lifecycle/validation";
+export * from "./operational/commands";
 export * from "./operational/events";
 export * from "./policies/validation";
 export * from "./projections";
