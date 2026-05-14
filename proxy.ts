@@ -8,9 +8,11 @@ const PUBLIC_PATHS = new Set(["/", "/login", "/about"]);
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Allow public pages, auth API, AI API, demo entry, and static assets.
+  // Allow public pages, intake funnels, auth API, AI API, demo entry, and static assets.
   if (
     PUBLIC_PATHS.has(pathname) ||
+    pathname.startsWith("/intake") ||
+    pathname.startsWith("/api/intake") ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/ai") ||
     pathname.startsWith("/api/mcp") ||

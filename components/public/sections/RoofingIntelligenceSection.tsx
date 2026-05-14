@@ -1,6 +1,6 @@
 import { SectionCta } from "@/components/public/ui/SectionCta";
 import {
-  REQUEST_WORKSPACE_HREF,
+  ROOFING_DEMO_HREF,
   roofingFutureSignals,
   roofingIntelligenceSignals,
   VISIBILITY_SCAN_HREF,
@@ -54,8 +54,8 @@ export function RoofingIntelligenceSection() {
         text="Start with a visibility scan or request a roofing workspace that turns lead signal into execution."
         primaryHref={VISIBILITY_SCAN_HREF}
         primaryLabel="Get a Visibility Scan"
-        secondaryHref={REQUEST_WORKSPACE_HREF}
-        secondaryLabel="Request Roofing Workspace"
+        secondaryHref={ROOFING_DEMO_HREF}
+        secondaryLabel="Request Roofing Demo"
       />
     </section>
   );
