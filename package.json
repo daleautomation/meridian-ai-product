@@ -10,7 +10,8 @@
     "smoke:demo": "node scripts/smoke-demo.mjs",
     "smoke:field-test": "node scripts/smoke-field-test.mjs",
     "truth:check": "tsx scripts/check-truth-readiness.ts",
-    "truth:backfill:dry": "tsx scripts/backfill-phase1-neon.ts --dry-run"
+    "truth:backfill:dry": "tsx scripts/backfill-phase1-neon.ts --dry-run",
+    "operational-events:replay-fixtures": "tsx scripts/check-operational-event-replay-fixtures.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
