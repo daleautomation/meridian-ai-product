@@ -8960,14 +8960,24 @@ export default function OperatorConsole({
   const withOverlays = (leads) => leads.map(applyOverlay);
 
   const allLeads = [...callTheseFirst, ...todayList, ...remaining, ...rest];
-  const todaySuppressionKeySet = useMemo(
+  const serverTodaySuppressionKeySet = useMemo(
     () => new Set([
       ...((todaySuppression?.leadKeys && Array.isArray(todaySuppression.leadKeys)) ? todaySuppression.leadKeys : []),
       ...((todaySuppression?.companyKeys && Array.isArray(todaySuppression.companyKeys)) ? todaySuppression.companyKeys : []),
+    ].filter(Boolean)),
+    [todaySuppression],
+  );
+  const todaySuppressionKeySet = useMemo(
+    () => new Set([
+      ...Array.from(serverTodaySuppressionKeySet),
       ...Array.from(localTodaySuppressionKeys),
     ].filter(Boolean)),
-    [todaySuppression, localTodaySuppressionKeys],
+    [serverTodaySuppressionKeySet, localTodaySuppressionKeys],
   );
+  const isServerSuppressedFromToday = useCallback((lead) => {
+    if (!lead || serverTodaySuppressionKeySet.size === 0) return false;
+    return leadIdentityCandidates(lead).some((key) => serverTodaySuppressionKeySet.has(key));
+  }, [serverTodaySuppressionKeySet]);
   const isSuppressedFromToday = useCallback((lead) => {
     if (!lead || todaySuppressionKeySet.size === 0) return false;
     return leadIdentityCandidates(lead).some((key) => todaySuppressionKeySet.has(key));
@@ -9454,7 +9464,7 @@ export default function OperatorConsole({
     // distributed across Roofing, HVAC, Carpentry, Painting,
     // Plumbing, and Electrical, with each per-trade tab showing
     // only its own slice of the same plan.
-    const masterPool = (combinedLeadPool ?? []).filter((lead) => !isSuppressedFromToday(lead));
+    const masterPool = (combinedLeadPool ?? []).filter((lead) => !isServerSuppressedFromToday(lead));
     if (masterPool.length === 0) {
       return { tasks: undefined, insights: [] };
     }
@@ -9779,7 +9789,7 @@ export default function OperatorConsole({
     // and angle filters are applied downstream (calendarTasks memo)
     // so changing a tab doesn't rebuild the schedule.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [combinedLeadPool, pipelineMap, intelligenceScope, feedbackEvents, executionOutcomeVersion, serverExecutionOutcomeMap, isSuppressedFromToday]);
+  }, [combinedLeadPool, pipelineMap, intelligenceScope, feedbackEvents, executionOutcomeVersion, serverExecutionOutcomeMap, isServerSuppressedFromToday]);
   const rawCalendarTasks = calendarBundle.tasks;
   const operatorInsights = calendarBundle.insights;
 

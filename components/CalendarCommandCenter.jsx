@@ -3203,7 +3203,6 @@ function ExecutionOutcomePanel({
         const body = await res.json().catch(() => null);
         if (res.ok && body?.persisted === true) {
           setPersistState("persisted");
-          router.refresh();
           return;
         }
         setPersistState("local_only");
@@ -4004,7 +4003,7 @@ export function SelectedLeadPanel({
                   })
                     .then(async (res) => {
                       const body = await res.json().catch(() => null);
-                      if (res.ok && body?.persisted === true) router.refresh();
+                      if (!res.ok || body?.persisted !== true) return;
                     })
                     .catch(() => { /* local optimistic outcome remains available */ });
                 }
