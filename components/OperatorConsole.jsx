@@ -10848,7 +10848,7 @@ export default function OperatorConsole({
                   onOpenDeepReport={allowAiAssist ? () => setDeepReportOpen(true) : undefined}
                   workspaceSlug={workspace?.slug ?? ""}
                   readOnly={isReadOnlyWorkspace}
-                  aiAssistEnabled={allowAiAssist}
+                  aiAssistEnabled={workspace?.slug === "labortech" || allowAiAssist}
                 />
               ) : null}
             />
