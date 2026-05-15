@@ -6121,7 +6121,7 @@ export default function CalendarCommandCenter({
                 workspaceSlug={workspaceSlug}
                 serverExecutionOutcomeMap={serverExecutionOutcomeMap}
                 readOnly={readOnly}
-                aiAssistEnabled={workspaceSlug === "labortech" || enableAiAssist}
+                aiAssistEnabled={enableAiAssist}
               />
             )}
           />
