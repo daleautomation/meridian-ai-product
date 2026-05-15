@@ -15,7 +15,10 @@ interface RelationshipPriorityWorkspaceProps {
 export default function RelationshipPriorityWorkspace({
   model,
 }: RelationshipPriorityWorkspaceProps) {
-  const [activeNav, setActiveNav] = useState<RelationshipPriorityNavId>("priority");
+  const showcase = model.showcase;
+  const [activeNav, setActiveNav] = useState<RelationshipPriorityNavId>(
+    showcase?.preset.initialNav ?? "priority",
+  );
   const [selectedId, setSelectedId] = useState(model.priorityQueue[0]?.id ?? "");
   const selected = useMemo(
     () => model.priorityQueue.find((card) => card.id === selectedId) ?? model.priorityQueue[0] ?? null,
@@ -24,22 +27,41 @@ export default function RelationshipPriorityWorkspace({
   const visibleQueue = queueForNav(model, activeNav);
 
   return (
-    <main style={styles.shell}>
-      <section style={styles.chrome}>
+    <main
+      className={showcase ? "relationship-priority-showcase-shell" : undefined}
+      style={{
+        ...styles.shell,
+        ...(showcase ? showcaseShellStyle(showcase) : null),
+      }}
+    >
+      <section style={{ ...styles.chrome, ...(showcase ? styles.showcaseChrome : null) }}>
         <div style={styles.header}>
           <div>
-            <div style={styles.eyebrow}>MERIDIAN RELATIONSHIP DESK</div>
-            <h1 style={styles.title}>Today&apos;s Priority Queue</h1>
-            <p style={styles.subtitle}>{model.hero.question}</p>
+            <div style={{ ...styles.eyebrow, ...(showcase ? styles.showcaseEyebrow : null) }}>
+              {showcase ? "MERIDIAN SHOWCASE MODE" : "MERIDIAN RELATIONSHIP DESK"}
+            </div>
+            <h1 style={{ ...styles.title, ...(showcase ? styles.showcaseTitle : null) }}>
+              {showcase ? `${showcase.vertical.label} Priority Queue` : "Today's Priority Queue"}
+            </h1>
+            <p style={{ ...styles.subtitle, ...(showcase ? styles.showcaseSubtitle : null) }}>
+              {model.hero.question}
+            </p>
           </div>
-          <div style={styles.workspaceBadge}>
+          <div style={{ ...styles.workspaceBadge, ...(showcase ? styles.showcaseWorkspaceBadge : null) }}>
             <span style={styles.statusDot} />
             {model.workspace.name}
-            {model.demoMode ? <span style={styles.demoPill}>Demo ready</span> : null}
+            {model.demoMode ? (
+              <span style={{ ...styles.demoPill, ...(showcase ? styles.showcaseDemoPill : null) }}>
+                {showcase ? showcase.preset.label : "Demo ready"}
+              </span>
+            ) : null}
           </div>
         </div>
 
-        <nav aria-label="Relationship workspace navigation" style={styles.nav}>
+        <nav
+          aria-label="Relationship workspace navigation"
+          style={{ ...styles.nav, ...(showcase ? styles.showcaseNav : null) }}
+        >
           {model.nav.map((item) => {
             const selectedNav = item.id === activeNav;
             return (
@@ -47,9 +69,11 @@ export default function RelationshipPriorityWorkspace({
                 key={item.id}
                 type="button"
                 onClick={() => setActiveNav(item.id)}
+                className="relationship-priority-nav-button"
                 style={{
                   ...styles.navButton,
                   ...(selectedNav ? styles.navButtonActive : null),
+                  ...(showcase && selectedNav ? styles.showcaseNavButtonActive : null),
                 }}
               >
                 <span>{item.label}</span>
@@ -61,8 +85,10 @@ export default function RelationshipPriorityWorkspace({
           })}
         </nav>
 
-        <section style={styles.heroGrid}>
-          <div style={styles.heroCard}>
+        {showcase ? <ShowcaseStoryStrip showcase={showcase} /> : null}
+
+        <section style={{ ...styles.heroGrid, ...(showcase ? styles.showcaseHeroGrid : null) }}>
+          <div style={{ ...styles.heroCard, ...(showcase ? styles.showcaseHeroCard : null) }}>
             <div style={styles.heroLabel}>{model.hero.focus}</div>
             <div style={styles.heroAnswer}>{model.hero.answer}</div>
             <div style={styles.heroActions}>
@@ -73,17 +99,20 @@ export default function RelationshipPriorityWorkspace({
               <ActionButton label="Open Context" />
             </div>
           </div>
-          <Metric label="Ready now" value={String(model.summary.readyNowCount)} />
-          <Metric label="Avg. fit" value={`${model.summary.averageMarketFit}%`} />
-          <Metric label="Compressed signals" value={String(model.summary.compressedSignals)} />
+          <Metric label={showcase ? "Ready now" : "Ready now"} value={String(model.summary.readyNowCount)} />
+          <Metric label={showcase ? "Avg. confidence" : "Avg. fit"} value={`${model.summary.averageMarketFit}%`} />
+          <Metric
+            label={showcase ? showcase.screenSafe.label : "Compressed signals"}
+            value={showcase ? "9:16" : String(model.summary.compressedSignals)}
+          />
         </section>
 
-        <section style={styles.bodyGrid}>
+        <section style={{ ...styles.bodyGrid, ...(showcase ? styles.showcaseBodyGrid : null) }}>
           <div style={styles.queueColumn}>
             <div style={styles.sectionHeader}>
               <div>
                 <div style={styles.sectionKicker}>{activeNavLabel(activeNav)}</div>
-              <h2 style={styles.sectionTitle}>{laneTitle(activeNav)}</h2>
+                <h2 style={styles.sectionTitle}>{laneTitle(activeNav, model)}</h2>
               </div>
               <div style={styles.mutedText}>
                 {visibleQueue.length} relationships
@@ -92,7 +121,7 @@ export default function RelationshipPriorityWorkspace({
 
             <div style={styles.queueList}>
               {activeNav === "outcomes" ? (
-                <OutcomesLane model={model} />
+                showcase ? <BeforeAfterLane showcase={showcase} /> : <OutcomesLane model={model} />
               ) : activeNav === "assistant" ? (
                 <AssistantLane model={model} selected={selected} />
               ) : (
@@ -103,6 +132,7 @@ export default function RelationshipPriorityWorkspace({
                       card={card}
                       selected={selected?.id === card.id}
                       dominant={index === 0}
+                      showcase={showcase}
                       onSelect={() => setSelectedId(card.id)}
                     />
                   ))}
@@ -142,7 +172,13 @@ function activeNavLabel(nav: RelationshipPriorityNavId): string {
   return "Priority queue";
 }
 
-function laneTitle(nav: RelationshipPriorityNavId): string {
+function laneTitle(nav: RelationshipPriorityNavId, model: RelationshipPriorityWorkspaceModel): string {
+  if (model.showcase) {
+    if (nav === "outcomes") return "Cluttered CRM becomes a Meridian priority queue";
+    if (nav === "recovery") return `${model.showcase.vertical.label} relationships that can still be recovered`;
+    if (nav === "follow-up") return "Promised follow-ups before momentum fades";
+    return model.showcase.preset.heroFocus;
+  }
   if (nav === "recovery") return "Relationships that need recovery";
   if (nav === "follow-up") return "Follow-ups due before momentum fades";
   if (nav === "outcomes") return "Execution outcomes ready to capture";
@@ -210,29 +246,102 @@ function AssistantLane({
   );
 }
 
+function ShowcaseStoryStrip({
+  showcase,
+}: {
+  showcase: NonNullable<RelationshipPriorityWorkspaceModel["showcase"]>;
+}) {
+  return (
+    <section style={styles.showcaseStoryStrip} aria-label="Showcase narrative">
+      <div style={styles.showcaseStoryPrimary}>
+        <span style={styles.showcaseAccentDot} />
+        <div>
+          <div style={styles.sectionKicker}>{showcase.vertical.eyebrow}</div>
+          <strong>{showcase.narratives[0]}</strong>
+        </div>
+      </div>
+      <div style={styles.showcaseStoryPills}>
+        <span style={styles.showcaseStoryPill}>{showcase.vertical.queueLabel}</span>
+        <span style={styles.showcaseStoryPill}>{showcase.preset.label}</span>
+        <span style={styles.showcaseStoryPill}>{showcase.screenSafe.detail}</span>
+      </div>
+    </section>
+  );
+}
+
+function BeforeAfterLane({
+  showcase,
+}: {
+  showcase: NonNullable<RelationshipPriorityWorkspaceModel["showcase"]>;
+}) {
+  return (
+    <div style={styles.beforeAfterGrid}>
+      <BeforeAfterPanel title={showcase.beforeAfter.beforeTitle} items={showcase.beforeAfter.beforeItems} muted />
+      <div style={styles.beforeAfterArrow}>-&gt;</div>
+      <BeforeAfterPanel title={showcase.beforeAfter.afterTitle} items={showcase.beforeAfter.afterItems} />
+    </div>
+  );
+}
+
+function BeforeAfterPanel({
+  title,
+  items,
+  muted,
+}: {
+  title: string;
+  items: string[];
+  muted?: boolean;
+}) {
+  return (
+    <article style={{ ...styles.beforeAfterPanel, ...(muted ? styles.beforeAfterPanelMuted : null) }}>
+      <div style={styles.sectionKicker}>{muted ? "Before" : "After"}</div>
+      <h3 style={styles.beforeAfterTitle}>{title}</h3>
+      <div style={styles.beforeAfterList}>
+        {items.map((item) => (
+          <div key={item} style={styles.reasonItem}>
+            <span style={muted ? styles.beforeDot : styles.reasonDot} />
+            {item}
+          </div>
+        ))}
+      </div>
+    </article>
+  );
+}
+
 function PriorityCard({
   card,
   selected,
   dominant,
+  showcase,
   onSelect,
 }: {
   card: RelationshipPriorityCard;
   selected: boolean;
   dominant: boolean;
+  showcase?: RelationshipPriorityWorkspaceModel["showcase"];
   onSelect: () => void;
 }) {
+  const visibleReasons = card.topReasons.slice(dominant && showcase ? 1 : 0, dominant ? 3 : 2);
   return (
     <button
       type="button"
       onClick={onSelect}
+      className="relationship-priority-card"
       style={{
         ...styles.priorityCard,
         ...(dominant ? styles.priorityCardDominant : null),
         ...(selected ? styles.priorityCardSelected : null),
+        ...(dominant && showcase ? styles.showcasePriorityCardDominant : null),
+        ...(selected && showcase ? styles.showcasePriorityCardSelected : null),
       }}
     >
       <div style={styles.cardTopline}>
-        <span style={dominant ? styles.rankBadgeDominant : styles.rankBadge}>
+        <span
+          style={{
+            ...(dominant ? styles.rankBadgeDominant : styles.rankBadge),
+            ...(dominant && showcase ? styles.showcaseRankBadgeDominant : null),
+          }}
+        >
           #{card.rank}
         </span>
         <span style={fitStyle(card.marketFit)}>{card.marketFit}% fit</span>
@@ -246,20 +355,36 @@ function PriorityCard({
         <div style={styles.actionChip}>{card.recommendedAction}</div>
       </div>
       <div style={styles.reasonList}>
-        {card.topReasons.slice(0, dominant ? 3 : 2).map((reason) => (
+        {visibleReasons.map((reason) => (
           <div key={reason} style={styles.reasonItem}>
             <span style={styles.reasonDot} />
             {reason}
           </div>
         ))}
       </div>
-      <div style={styles.nextStep}>{card.nextStep}</div>
+      {dominant && showcase ? null : <div style={styles.nextStep}>{card.nextStep}</div>}
+      {dominant && showcase ? (
+        <div style={styles.showcaseFocusGrid}>
+          <FocusItem label="Who matters" value={`${card.bestContact.name}, ${card.bestContact.title}`} />
+          <FocusItem label="Why now" value={card.topReasons[0]} />
+          <FocusItem label="Next action" value={card.nextStep} />
+        </div>
+      ) : null}
       <div style={styles.contactRow}>
         <span>{card.bestContact.name}</span>
         <span style={styles.contactDivider}>/</span>
         <span>{card.contactMethods[0]?.value ?? "Contact pending"}</span>
       </div>
     </button>
+  );
+}
+
+function FocusItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={styles.focusItem}>
+      <span style={styles.focusLabel}>{label}</span>
+      <strong style={styles.focusValue}>{value}</strong>
+    </div>
   );
 }
 
@@ -270,6 +395,7 @@ function RelationshipContextPanel({
   card: RelationshipPriorityCard | null;
   model: RelationshipPriorityWorkspaceModel;
 }) {
+  const showcase = model.showcase;
   if (!card) {
     return (
       <aside style={styles.contextPanel}>
@@ -318,26 +444,36 @@ function RelationshipContextPanel({
         ))}
       </ContextBlock>
 
-      <ContextBlock title="Relationship history">
-        {card.relationshipHistory.map((item) => (
-          <div key={item} style={styles.timelineItem}>{item}</div>
-        ))}
-      </ContextBlock>
+      {showcase ? (
+        <ContextBlock title="Demo narrative">
+          {showcase.narratives.map((item) => (
+            <div key={item} style={styles.timelineItem}>{item}</div>
+          ))}
+        </ContextBlock>
+      ) : (
+        <>
+          <ContextBlock title="Relationship history">
+            {card.relationshipHistory.map((item) => (
+              <div key={item} style={styles.timelineItem}>{item}</div>
+            ))}
+          </ContextBlock>
 
-      <ContextBlock title="Follow-up history">
-        {card.followUpHistory.length > 0
-          ? card.followUpHistory.map((item) => <div key={item} style={styles.timelineItem}>{item}</div>)
-          : <div style={styles.mutedText}>No noisy task wall. Follow-ups appear only when they change the next action.</div>}
-      </ContextBlock>
+          <ContextBlock title="Follow-up history">
+            {card.followUpHistory.length > 0
+              ? card.followUpHistory.map((item) => <div key={item} style={styles.timelineItem}>{item}</div>)
+              : <div style={styles.mutedText}>No noisy task wall. Follow-ups appear only when they change the next action.</div>}
+          </ContextBlock>
 
-      <ContextBlock title="Assistant">
-        {model.assistantPrompts.map((prompt) => (
-          <button key={prompt} type="button" style={styles.promptButton}>{prompt}</button>
-        ))}
-      </ContextBlock>
+          <ContextBlock title="Assistant">
+            {model.assistantPrompts.map((prompt) => (
+              <button key={prompt} type="button" style={styles.promptButton}>{prompt}</button>
+            ))}
+          </ContextBlock>
+        </>
+      )}
 
       <div style={styles.compressionBox}>
-        <div style={styles.sectionKicker}>Execution compression</div>
+        <div style={styles.sectionKicker}>{showcase ? "Showcase compression" : "Execution compression"}</div>
         {model.simplificationNotes.map((note) => (
           <div key={note} style={styles.compressionNote}>{note}</div>
         ))}
@@ -365,6 +501,7 @@ function ActionButton({
   return (
     <button
       type="button"
+      className="relationship-priority-action"
       style={{
         ...styles.actionButton,
         ...(primary ? styles.actionButtonPrimary : null),
@@ -387,8 +524,20 @@ function fitStyle(value: number): CSSProperties {
 function urgencyStyle(value: RelationshipPriorityCard["urgency"]): CSSProperties {
   return {
     ...styles.urgencyPill,
-    color: value === "Now" ? palette.danger : value === "Today" ? palette.warning : palette.textSecondary,
-    background: value === "Now" ? palette.dangerBg : value === "Today" ? palette.warningBg : palette.surfaceHover,
+    color: value === "Now" ? palette.orange : value === "Today" ? palette.warning : palette.textSecondary,
+    background: value === "Now" ? palette.orangePale : value === "Today" ? palette.warningBg : palette.surfaceHover,
+    boxShadow: value === "Now" ? `0 0 0 4px ${palette.orangeGlow}` : undefined,
+  };
+}
+
+function showcaseShellStyle(
+  showcase: NonNullable<RelationshipPriorityWorkspaceModel["showcase"]>,
+): CSSProperties {
+  return {
+    background:
+      `radial-gradient(circle at 50% -8%, ${showcase.vertical.glow}, transparent 28%), ` +
+      "radial-gradient(circle at 18% 0%, rgba(37,99,235,0.16), transparent 30%), " +
+      "linear-gradient(180deg, #FBFDFF 0%, #F4F7FC 100%)",
   };
 }
 
@@ -405,6 +554,10 @@ const styles: Record<string, CSSProperties> = {
     margin: "0 auto",
     padding: "24px",
   },
+  showcaseChrome: {
+    width: "min(1180px, 100%)",
+    padding: "22px clamp(14px, 3vw, 28px) 34px",
+  },
   header: {
     display: "flex",
     alignItems: "flex-start",
@@ -418,6 +571,9 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 800,
     letterSpacing: "0.14em",
   },
+  showcaseEyebrow: {
+    color: palette.orange,
+  },
   title: {
     margin: "8px 0 4px",
     fontSize: "clamp(34px, 5vw, 64px)",
@@ -425,10 +581,19 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: "-0.055em",
     fontWeight: 760,
   },
+  showcaseTitle: {
+    maxWidth: "820px",
+    fontSize: "clamp(38px, 5.4vw, 68px)",
+  },
   subtitle: {
     margin: 0,
     color: palette.textSecondary,
     fontSize: "16px",
+  },
+  showcaseSubtitle: {
+    maxWidth: "760px",
+    fontSize: "17px",
+    lineHeight: 1.5,
   },
   workspaceBadge: {
     display: "flex",
@@ -444,6 +609,11 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 700,
     whiteSpace: "nowrap",
   },
+  showcaseWorkspaceBadge: {
+    borderColor: palette.orangeBorder,
+    background: "rgba(255,255,255,0.88)",
+    boxShadow: "0 18px 46px rgba(15,23,42,0.08)",
+  },
   statusDot: {
     width: "8px",
     height: "8px",
@@ -458,6 +628,10 @@ const styles: Record<string, CSSProperties> = {
     padding: "5px 8px",
     fontSize: "11px",
   },
+  showcaseDemoPill: {
+    color: palette.orange,
+    background: palette.orangePale,
+  },
   nav: {
     display: "flex",
     gap: "8px",
@@ -468,6 +642,12 @@ const styles: Record<string, CSSProperties> = {
     background: "rgba(255,255,255,0.68)",
     boxShadow: "inset 0 1px 0 rgba(255,255,255,0.88)",
     overflowX: "auto",
+  },
+  showcaseNav: {
+    width: "fit-content",
+    maxWidth: "100%",
+    marginBottom: "12px",
+    borderColor: "rgba(234,122,33,0.12)",
   },
   navButton: {
     display: "flex",
@@ -489,6 +669,10 @@ const styles: Record<string, CSSProperties> = {
     borderColor: palette.border,
     boxShadow: palette.shadow,
   },
+  showcaseNavButtonActive: {
+    borderColor: palette.orangeBorder,
+    boxShadow: `0 0 0 4px ${palette.orangeGlow}, ${palette.shadow}`,
+  },
   navCount: {
     color: palette.textTertiary,
   },
@@ -501,6 +685,10 @@ const styles: Record<string, CSSProperties> = {
     gap: "14px",
     marginBottom: "18px",
   },
+  showcaseHeroGrid: {
+    gridTemplateColumns: "minmax(0, 1fr) repeat(3, minmax(118px, 150px))",
+    gap: "12px",
+  },
   heroCard: {
     padding: "24px",
     border: `1px solid ${palette.blueBorder}`,
@@ -508,6 +696,12 @@ const styles: Record<string, CSSProperties> = {
     background:
       "linear-gradient(135deg, rgba(255,255,255,0.94), rgba(239,246,255,0.88))",
     boxShadow: "0 28px 70px rgba(37,99,235,0.12)",
+  },
+  showcaseHeroCard: {
+    borderColor: palette.orangeBorder,
+    background:
+      "linear-gradient(135deg, rgba(255,255,255,0.96), rgba(255,247,237,0.70) 44%, rgba(239,246,255,0.82))",
+    boxShadow: "0 26px 70px rgba(234,122,33,0.10), 0 18px 56px rgba(37,99,235,0.10)",
   },
   heroLabel: {
     color: palette.blue,
@@ -556,6 +750,10 @@ const styles: Record<string, CSSProperties> = {
     gridTemplateColumns: "minmax(0, 1fr) minmax(340px, 420px)",
     gap: "18px",
     alignItems: "start",
+  },
+  showcaseBodyGrid: {
+    gridTemplateColumns: "minmax(0, 1fr) minmax(300px, 360px)",
+    gap: "16px",
   },
   queueColumn: {
     minWidth: 0,
@@ -608,6 +806,17 @@ const styles: Record<string, CSSProperties> = {
     borderColor: "rgba(37,99,235,0.36)",
     boxShadow: "0 0 0 4px rgba(37,99,235,0.08), 0 18px 44px rgba(15,23,42,0.08)",
   },
+  showcasePriorityCardDominant: {
+    padding: "28px",
+    borderColor: palette.orangeBorder,
+    background:
+      "linear-gradient(145deg, rgba(255,255,255,0.98), rgba(255,247,237,0.72) 46%, rgba(239,246,255,0.86))",
+    boxShadow: "0 34px 90px rgba(15,23,42,0.13), 0 0 0 1px rgba(234,122,33,0.10)",
+  },
+  showcasePriorityCardSelected: {
+    borderColor: "rgba(234,122,33,0.35)",
+    boxShadow: "0 0 0 4px rgba(234,122,33,0.12), 0 22px 56px rgba(15,23,42,0.10)",
+  },
   cardTopline: {
     display: "flex",
     gap: "8px",
@@ -629,6 +838,10 @@ const styles: Record<string, CSSProperties> = {
     padding: "6px 10px",
     fontSize: "12px",
     fontWeight: 820,
+  },
+  showcaseRankBadgeDominant: {
+    background: `linear-gradient(135deg, ${palette.orange}, ${palette.blue})`,
+    boxShadow: `0 10px 24px ${palette.orangeGlow}`,
   },
   fitPill: {
     border: "1px solid transparent",
@@ -698,6 +911,14 @@ const styles: Record<string, CSSProperties> = {
     background: palette.blue,
     flexShrink: 0,
   },
+  beforeDot: {
+    width: "6px",
+    height: "6px",
+    marginTop: "7px",
+    borderRadius: "999px",
+    background: palette.textDim,
+    flexShrink: 0,
+  },
   nextStep: {
     marginTop: "15px",
     padding: "12px 13px",
@@ -718,6 +939,112 @@ const styles: Record<string, CSSProperties> = {
   },
   contactDivider: {
     color: palette.textDim,
+  },
+  showcaseStoryStrip: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "14px",
+    alignItems: "center",
+    marginBottom: "14px",
+    padding: "14px 16px",
+    border: `1px solid ${palette.orangeBorder}`,
+    borderRadius: "24px",
+    background: "rgba(255,255,255,0.72)",
+    boxShadow: "0 18px 54px rgba(15,23,42,0.07)",
+    backdropFilter: "blur(16px)",
+  },
+  showcaseStoryPrimary: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    minWidth: 0,
+  },
+  showcaseAccentDot: {
+    width: "12px",
+    height: "12px",
+    borderRadius: "999px",
+    background: `linear-gradient(135deg, ${palette.orange}, ${palette.blue})`,
+    boxShadow: `0 0 0 7px ${palette.orangeGlow}`,
+    flexShrink: 0,
+  },
+  showcaseStoryPills: {
+    display: "flex",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+    gap: "7px",
+  },
+  showcaseStoryPill: {
+    border: `1px solid ${palette.borderLight}`,
+    borderRadius: "999px",
+    background: "rgba(255,255,255,0.78)",
+    color: palette.textSecondary,
+    padding: "7px 9px",
+    fontSize: "11px",
+    fontWeight: 800,
+    whiteSpace: "nowrap",
+  },
+  showcaseFocusGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: "10px",
+    marginTop: "16px",
+  },
+  focusItem: {
+    display: "grid",
+    gap: "6px",
+    minHeight: "96px",
+    alignContent: "start",
+    padding: "13px",
+    border: `1px solid ${palette.orangeBorder}`,
+    borderRadius: "18px",
+    background: "rgba(255,255,255,0.72)",
+  },
+  focusLabel: {
+    color: palette.orange,
+    fontSize: "10px",
+    fontWeight: 900,
+    letterSpacing: "0.1em",
+    textTransform: "uppercase",
+  },
+  focusValue: {
+    color: palette.textPrimary,
+    fontSize: "13px",
+    lineHeight: 1.35,
+  },
+  beforeAfterGrid: {
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr) auto minmax(0, 1fr)",
+    gap: "12px",
+    alignItems: "stretch",
+  },
+  beforeAfterPanel: {
+    padding: "22px",
+    border: `1px solid ${palette.orangeBorder}`,
+    borderRadius: "28px",
+    background:
+      "linear-gradient(145deg, rgba(255,255,255,0.96), rgba(255,247,237,0.72))",
+    boxShadow: "0 22px 58px rgba(15,23,42,0.08)",
+  },
+  beforeAfterPanelMuted: {
+    borderColor: palette.border,
+    background: "linear-gradient(145deg, rgba(255,255,255,0.78), rgba(248,250,252,0.82))",
+  },
+  beforeAfterArrow: {
+    display: "grid",
+    placeItems: "center",
+    color: palette.orange,
+    fontSize: "24px",
+    fontWeight: 900,
+  },
+  beforeAfterTitle: {
+    margin: "8px 0 14px",
+    fontSize: "28px",
+    lineHeight: 1,
+    letterSpacing: "-0.045em",
+  },
+  beforeAfterList: {
+    display: "grid",
+    gap: "10px",
   },
   contextPanel: {
     position: "sticky",

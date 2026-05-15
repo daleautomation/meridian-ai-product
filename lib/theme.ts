@@ -17,6 +17,13 @@ export const palette = {
   bluePale:     "#EFF6FF",       // very pale blue tint
   blueBorder:   "rgba(37,99,235,0.15)",
 
+  // ── Warm priority accent ──
+  orange:       "#EA7A21",       // restrained sunset accent
+  orangeLight:  "#F59E42",
+  orangePale:   "#FFF7ED",
+  orangeBorder: "rgba(234,122,33,0.18)",
+  orangeGlow:   "rgba(234,122,33,0.16)",
+
   // ── Text ──
   textPrimary:  "#1F2A44",       // near-black, slightly warm for body
   textSecondary:"#64748B",       // slate gray

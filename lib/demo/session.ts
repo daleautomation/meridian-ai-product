@@ -80,6 +80,10 @@ export async function createDemoSessionResponse(input: DemoSessionInput) {
     `${operatorPath}?workspace=${encodeURIComponent(access.workspace.slug)}`,
     `${proto}://${fwdHost}`,
   );
+  for (const key of ["mode", "showcase", "vertical", "preset"]) {
+    const value = url.searchParams.get(key);
+    if (value) redirectUrl.searchParams.set(key, value);
+  }
   const res = NextResponse.redirect(redirectUrl, { status: 302 });
   res.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,
