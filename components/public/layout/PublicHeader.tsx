@@ -14,11 +14,11 @@ export function PublicHeader() {
         <span>Meridian AI</span>
       </Link>
       <nav className="public-nav" aria-label="Meridian website navigation">
-        <a href="/#utility-products">Priority Queue</a>
-        <a href="/#vertical-workspaces">Workspaces</a>
-        <a href={ROOFING_INTELLIGENCE_HREF}>Roofing</a>
-        <a href="/#built-from-field">Field-built</a>
-        <a href="/#how-meridian-works">Workflow</a>
+        <Link href="/#utility-products">Priority Queue</Link>
+        <Link href="/#vertical-workspaces">Workspaces</Link>
+        <Link href={ROOFING_INTELLIGENCE_HREF}>Roofing</Link>
+        <Link href="/#built-from-field">Field-built</Link>
+        <Link href="/#how-meridian-works">Workflow</Link>
       </nav>
       <div className="public-header-actions">
         <a className="public-link-button" href={VISIBILITY_SCAN_HREF}>

@@ -1,9 +1,9 @@
 export const REQUEST_ROOFING_DEMO_HREF =
-  "mailto:hello@meridian.ai?subject=Roofing%20Lead%20Finder%20demo";
+  "/intake/roofing-demo?source=roofing-intelligence";
 export const ROOFING_VISIBILITY_SCAN_HREF =
-  "mailto:hello@meridian.ai?subject=Roofing%20visibility%20scan";
+  "/intake/visibility-scan?source=roofing-intelligence";
 export const ROOFING_STRATEGY_CALL_HREF =
-  "mailto:hello@meridian.ai?subject=Roofing%20strategy%20call";
+  "/intake/strategy-call?source=roofing-intelligence";
 
 export const roofingHero = {
   eyebrow: "Roofing Lead Finder",
