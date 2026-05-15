@@ -264,6 +264,45 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.relationship-priority-card,
+.relationship-priority-action,
+.relationship-priority-nav-button {
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
+}
+
+.relationship-priority-card:hover {
+  transform: translateY(-2px);
+}
+
+.relationship-priority-action:hover,
+.relationship-priority-nav-button:hover {
+  transform: translateY(-1px);
+}
+
+.relationship-priority-card:focus-visible,
+.relationship-priority-action:focus-visible,
+.relationship-priority-nav-button:focus-visible {
+  outline: 3px solid rgba(234, 122, 33, 0.22);
+  outline-offset: 3px;
+}
+
+@media (max-width: 860px) {
+  .relationship-priority-showcase-shell [style*="grid-template-columns: minmax(0, 1fr) minmax(300px, 360px)"],
+  .relationship-priority-showcase-shell [style*="grid-template-columns: minmax(0, 1fr) repeat(3"],
+  .relationship-priority-showcase-shell [style*="grid-template-columns: repeat(3"],
+  .relationship-priority-showcase-shell [style*="grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr)"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .relationship-priority-showcase-shell aside {
+    position: static !important;
+  }
+}
+
 * {
   box-sizing: border-box;
 }

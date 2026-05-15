@@ -1,6 +1,11 @@
 import type { PublicUser } from "@/config/tenants";
 import type { WorkspaceConfig } from "@/config/workspaces";
 import type { RelationshipEngineOperatorSurface } from "@/lib/relationship-engine/operatorIntegration";
+import {
+  applyShowcaseDemoPreset,
+  type RelationshipPriorityShowcaseConfig,
+  type RelationshipPriorityShowcaseModel,
+} from "@/lib/relationship-priority/showcase";
 
 type EngineSummary = RelationshipEngineOperatorSurface["workflows"]["relationshipSummaries"][number];
 type EngineQueueItem = RelationshipEngineOperatorSurface["queues"][number]["items"][number];
@@ -52,6 +57,7 @@ export interface RelationshipPriorityWorkspaceModel {
   assistantPrompts: string[];
   simplificationNotes: string[];
   deferred: string[];
+  showcase?: RelationshipPriorityShowcaseModel;
 }
 
 export interface RelationshipPriorityCard {
@@ -103,8 +109,9 @@ export function buildRelationshipPriorityWorkspaceModel(args: {
   surface: RelationshipEngineOperatorSurface;
   workspace: WorkspaceConfig;
   user: PublicUser;
+  showcaseConfig?: RelationshipPriorityShowcaseConfig | null;
 }): RelationshipPriorityWorkspaceModel {
-  const { surface, workspace, user } = args;
+  const { surface, workspace, user, showcaseConfig } = args;
   const queueIndex = indexQueueItems(surface);
   const feedIndex = indexFeedItems(surface);
   const engineCards = surface.workflows.relationshipSummaries
@@ -133,7 +140,7 @@ export function buildRelationshipPriorityWorkspaceModel(args: {
   const outcomeNotes = buildOutcomeNotes(priorityQueue);
   const followUpsDue = followUpQueue.length;
 
-  return {
+  const model: RelationshipPriorityWorkspaceModel = {
     generatedAt: surface.generatedAt,
     workspace: {
       slug: workspace.slug,
@@ -191,6 +198,7 @@ export function buildRelationshipPriorityWorkspaceModel(args: {
       "Assistant actions are staged as prompts until execution endpoints are wired.",
     ],
   };
+  return applyShowcaseDemoPreset(model, showcaseConfig);
 }
 
 function engineSummaryToCard(args: {

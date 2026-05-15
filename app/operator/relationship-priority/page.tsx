@@ -5,12 +5,19 @@ import { RelationshipPriorityWorkspace } from "@/components/operator";
 import { getSession } from "@/lib/auth";
 import { buildRelationshipEngineOperatorSurface } from "@/lib/relationship-engine/operatorIntegration";
 import { buildRelationshipPriorityWorkspaceModel } from "@/lib/relationship-priority/workspace";
+import { parseShowcaseConfig } from "@/lib/relationship-priority/showcase";
 import { getWorkspaceAccess } from "@/lib/workspaceAccess";
 import { palette } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
 
-type SearchParams = { workspace?: string | string[] };
+type SearchParams = {
+  workspace?: string | string[];
+  mode?: string | string[];
+  showcase?: string | string[];
+  vertical?: string | string[];
+  preset?: string | string[];
+};
 
 export default async function RelationshipPriorityPage(props: {
   searchParams?: Promise<SearchParams>;
@@ -65,7 +72,13 @@ async function renderRelationshipPriorityPage({
   }
 
   const surface = await buildRelationshipEngineOperatorSurface({ workspace, user });
-  const model = buildRelationshipPriorityWorkspaceModel({ surface, workspace, user });
+  const showcaseConfig = parseShowcaseConfig(params);
+  const model = buildRelationshipPriorityWorkspaceModel({
+    surface,
+    workspace,
+    user,
+    showcaseConfig,
+  });
   return <RelationshipPriorityWorkspace model={model} />;
 }
 
