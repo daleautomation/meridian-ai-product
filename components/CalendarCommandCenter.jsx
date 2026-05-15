@@ -57,6 +57,7 @@ import {
   panelBlueGlow,
 } from "./workflowLayout";
 import LeadWorkflowDrawer from "./LeadWorkflowDrawer";
+import MeridianAssistantPanel from "./MeridianAssistantPanel";
 
 // Debug-log gate. Per-render console.log calls flood the main thread
 // when the calendar renders ~200 cards × N re-renders. Enable via
@@ -657,7 +658,7 @@ const CLOSEABILITY_CHIP_STYLE = {
   border: "1px solid rgba(59,130,246,0.25)",
 };
 
-// Operator tier tone (CLOSE_NOW / STRONG / TEST). Drives both the
+// Operator tier tone (CLOSE_NOW / STRONG). Drives both the
 // per-card chip and the day-column summary.
 function tierTone(tier) {
   if (tier === "CLOSE_NOW") {
@@ -665,9 +666,6 @@ function tierTone(tier) {
   }
   if (tier === "STRONG") {
     return { label: "Strong", fg: "#1E40AF", bg: "#EFF6FF", border: "#BFDBFE" };
-  }
-  if (tier === "TEST") {
-    return { label: "Test", fg: "#475569", bg: "#F8FAFC", border: "#E2E8F0" };
   }
   return { label: "—", fg: "#94A3B8", bg: "#F8FAFC", border: "#E2E8F0" };
 }
@@ -3479,6 +3477,7 @@ export function SelectedLeadPanel({
   workspaceSlug = "",
   serverExecutionOutcomeMap = {},
   readOnly = false,
+  aiAssistEnabled = false,
 }) {
   // Popover state removed — Call Now now fires tel: directly. No
   // intermediate confirmation step on a desktop operator workflow.
@@ -3520,6 +3519,10 @@ export function SelectedLeadPanel({
   const tradeBadge = task.tradeLabel ?? tradeLabel ?? null;
   const address = task?.linkedLocation ?? null;
   const pri = priorityTone(task.priority);
+  const [aiSupportOpen, setAiSupportOpen] = useState(false);
+  useEffect(() => {
+    setAiSupportOpen(false);
+  }, [task?.id]);
 
   // Mirror the calendar card's middle pill copy resolution.
   const serviceLabel =
@@ -4240,6 +4243,91 @@ export function SelectedLeadPanel({
         onLeadUpdate={onLeadUpdate}
       />
 
+      {aiAssistEnabled ? (
+        <>
+          <Divider />
+          <section style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+          }}>
+            <button
+              type="button"
+              onClick={() => setAiSupportOpen((open) => !open)}
+              aria-expanded={aiSupportOpen}
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "12px",
+                padding: "10px 12px",
+                borderRadius: "12px",
+                background: palette.surface,
+                border: `1px solid ${palette.borderLight}`,
+                cursor: "pointer",
+                textAlign: "left",
+              }}
+              onFocus={applyFocusRing}
+              onBlur={clearFocusRing}
+            >
+              <span style={{ minWidth: 0 }}>
+                <span style={{
+                  display: "block",
+                  fontSize: "9px",
+                  fontWeight: 800,
+                  letterSpacing: "0.12em",
+                  color: palette.textTertiary,
+                  textTransform: "uppercase",
+                  marginBottom: "3px",
+                }}>
+                  AI support
+                </span>
+                <span style={{
+                  display: "block",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  color: palette.textPrimary,
+                  lineHeight: 1.35,
+                }}>
+                  Ask for opener, objection, or follow-up help
+                </span>
+              </span>
+              <span style={{
+                fontSize: "11px",
+                fontWeight: 800,
+                color: palette.blue,
+                background: palette.bluePale,
+                border: `1px solid ${palette.blueBorder}`,
+                borderRadius: "999px",
+                padding: "4px 9px",
+                whiteSpace: "nowrap",
+              }}>
+                {aiSupportOpen ? "Hide" : "Open chat"}
+              </span>
+            </button>
+            {aiSupportOpen ? (
+              <div style={{
+                height: "360px",
+                minHeight: 0,
+                overflow: "hidden",
+                border: `1px solid ${palette.borderLight}`,
+                borderRadius: "14px",
+                background: palette.surface,
+              }}>
+                <MeridianAssistantPanel
+                  task={task}
+                  workspace={{ slug: workspaceSlug }}
+                  tradeLabel={tradeBadge}
+                  collapsed={false}
+                  onToggleCollapsed={() => setAiSupportOpen(false)}
+                />
+              </div>
+            ) : null}
+          </section>
+        </>
+      ) : null}
+
     </aside>
     </>
   );
@@ -4573,7 +4661,8 @@ function DayColumn({ date, tasks, isToday, now, onTaskFeedback, selectedTaskId, 
     [tasks],
   );
 
-  // Tier breakdown for the day-summary line.
+  // Tier breakdown for the day-summary line. TEST remains in the data
+  // model but is not customer-facing LaborTech UI copy.
   const tierCounts = useMemo(() => {
     const out = { CLOSE_NOW: 0, STRONG: 0, TEST: 0 };
     for (const t of callTasks) {
@@ -4585,7 +4674,7 @@ function DayColumn({ date, tasks, isToday, now, onTaskFeedback, selectedTaskId, 
     return out;
   }, [callTasks]);
   const hasTierData =
-    tierCounts.CLOSE_NOW + tierCounts.STRONG + tierCounts.TEST > 0;
+    tierCounts.CLOSE_NOW + tierCounts.STRONG > 0;
 
   // Execution-lane styling — compact, queue-first lanes instead of
   // roomy calendar columns. Day-1 keeps a blue rail so launch order
@@ -4718,10 +4807,6 @@ function DayColumn({ date, tasks, isToday, now, onTaskFeedback, selectedTaskId, 
           <span style={{ color: palette.textTertiary }}>·</span>
           <span style={{ color: "#1E40AF", fontWeight: 700 }}>
             {tierCounts.STRONG} Strong
-          </span>
-          <span style={{ color: palette.textTertiary }}>·</span>
-          <span style={{ color: palette.textSecondary, fontWeight: 700 }}>
-            {tierCounts.TEST} Test
           </span>
         </div>
       ) : null}
@@ -5204,6 +5289,13 @@ export default function CalendarCommandCenter({
       metadata: { source: "calendar" },
     });
     handleOpenAssist(task);
+  };
+  const handleOpenLeadFromToday = (task) => {
+    if (!task) return;
+    if (callMode === "active") return;
+    assistIntentRef.current = null;
+    setDeepReportOpen(false);
+    setSelectedTaskId(task);
   };
   const handleClearSelectedTask = () => {
     if (callMode === "active") return;
@@ -5899,13 +5991,20 @@ export default function CalendarCommandCenter({
         gap: "14px",
         padding: "4px 22px 24px",
       }}>
-        {/* TOP: trust strip + execution plan (full width). */}
+        {/* TOP: trust strip + execution plan + selected workflow.
+            Opening a Today lead keeps the queue and operator panel in
+            the same viewport context; the calendar remains secondary
+            below instead of becoming the routing target. */}
         <div style={{
           flex: "0 0 auto",
           minWidth: 0,
-          display: "flex",
-          flexDirection: "column",
-          gap: "10px",
+          display: "grid",
+          gridTemplateColumns: !selectedTask
+            ? "1fr"
+            : (deepReportOpen ? SHELL_GRID.deep : SHELL_GRID.closed),
+          gap: WORKFLOW.shellGap,
+          alignItems: "start",
+          transition: WORKFLOW.shellTransition,
         }}>
           {/* Top-of-Today Execution Plan — leads ordered by market-fit display score,
               with one-tap Call / Email and the contact strategy chip
@@ -5939,7 +6038,12 @@ export default function CalendarCommandCenter({
             })();
             if (executionPlan.length === 0) return null;
             return (
-              <>
+              <div style={{
+                minWidth: 0,
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px",
+              }}>
                 {/* Trust strip — answers "why is this better than other
                     tools?" in one line, plus a quiet expectation-setter
                     so email hit-rate is never the metric the user
@@ -5972,15 +6076,55 @@ export default function CalendarCommandCenter({
                 <TodayExecutionPlan
                   tasks={executionPlan}
                   onSelectTask={handleSelectTask}
-                  onOpenAssist={enableAiAssist ? handleOpenAssist : undefined}
+                  onOpenLead={handleOpenLeadFromToday}
                   leadByKey={null}
                   serverExecutionOutcomeMap={serverExecutionOutcomeMap}
                   readOnly={readOnly}
                 />
                 <FieldTestDiagnosticsPanel tasksByDay={tasksByDay} dataTotal={data.length} />
-              </>
+              </div>
             );
           })() : null}
+          <LeadWorkflowDrawer
+            selectedTask={selectedTask}
+            deepReportOpen={enableAiAssist && deepReportOpen}
+            onDeepReportClose={() => setDeepReportOpen(false)}
+            assistantCollapsed={assistantCollapsed}
+            onToggleAssistant={handleToggleAssistant}
+            tradeLabel={tradeLabel}
+            operatorPanel={(
+              <SelectedLeadPanel
+                task={selectedTask}
+                now={now}
+                tradeLabel={tradeLabel}
+                onClose={handleClearSelectedTask}
+                onMutate={handleTaskMutation}
+                onOpen={(t) => {
+                  if (typeof onTaskFeedback === "function") {
+                    onTaskFeedback(t, "promote_task", "Operator opened lead from calendar");
+                  }
+                }}
+                callMode={callMode}
+                onEnterCallMode={enterCallMode}
+                onExitCallMode={exitCallMode}
+                onRecordOutcome={recordOutcomeAndAdvance}
+                callsCompletedToday={callsCompletedToday}
+                queueRemaining={callQueue.length}
+                currentNote={notesByTaskId[selectedTask?.id] ?? ""}
+                onChangeNote={(text) => selectedTask?.id && setNoteForTask(selectedTask.id, text)}
+                onSwitchTab={onSwitchTab}
+                selectedLead={selectedLead}
+                onLeadUpdate={onLeadUpdate}
+                hunterAvailable={hunterAvailable}
+                onOpenDeepReport={enableAiAssist ? () => setDeepReportOpen(true) : undefined}
+                overflowEntries={overflowEntries}
+                workspaceSlug={workspaceSlug}
+                serverExecutionOutcomeMap={serverExecutionOutcomeMap}
+                readOnly={readOnly}
+                aiAssistEnabled={enableAiAssist}
+              />
+            )}
+          />
         </div>
 
         {/* MAIN WORKSPACE — flex ROW. Calendar lives on the left and
@@ -6003,9 +6147,7 @@ export default function CalendarCommandCenter({
         <div style={{
           minWidth: 0,
           display: "grid",
-          gridTemplateColumns: !selectedTask
-            ? SHELL_GRID.noLead
-            : (deepReportOpen ? SHELL_GRID.deep : SHELL_GRID.closed),
+          gridTemplateColumns: "1fr",
           gap: WORKFLOW.shellGap,
           alignItems: "start",
           transition: WORKFLOW.shellTransition,
@@ -6174,51 +6316,6 @@ export default function CalendarCommandCenter({
             </div>
           )}
         </div>
-        {/* WORKFLOW DRAWER — single shared component used by both
-            Today and All Leads. The drawer hosts Operator + Deep
-            Report + Assistant internally; opening Deep Report
-            reorganizes the drawer's INTERNAL layout but the drawer's
-            outer width stays stable, so the calendar workspace is
-            never pushed further off-screen when the user dives deeper. */}
-        <LeadWorkflowDrawer
-          selectedTask={selectedTask}
-          deepReportOpen={enableAiAssist && deepReportOpen}
-          onDeepReportClose={() => setDeepReportOpen(false)}
-          assistantCollapsed={assistantCollapsed}
-          onToggleAssistant={handleToggleAssistant}
-          tradeLabel={tradeLabel}
-          operatorPanel={(
-            <SelectedLeadPanel
-              task={selectedTask}
-              now={now}
-              tradeLabel={tradeLabel}
-              onClose={handleClearSelectedTask}
-              onMutate={handleTaskMutation}
-              onOpen={(t) => {
-                if (typeof onTaskFeedback === "function") {
-                  onTaskFeedback(t, "promote_task", "Operator opened lead from calendar");
-                }
-              }}
-              callMode={callMode}
-              onEnterCallMode={enterCallMode}
-              onExitCallMode={exitCallMode}
-              onRecordOutcome={recordOutcomeAndAdvance}
-              callsCompletedToday={callsCompletedToday}
-              queueRemaining={callQueue.length}
-              currentNote={notesByTaskId[selectedTask?.id] ?? ""}
-              onChangeNote={(text) => selectedTask?.id && setNoteForTask(selectedTask.id, text)}
-              onSwitchTab={onSwitchTab}
-              selectedLead={selectedLead}
-              onLeadUpdate={onLeadUpdate}
-              hunterAvailable={hunterAvailable}
-              onOpenDeepReport={enableAiAssist ? () => setDeepReportOpen(true) : undefined}
-              overflowEntries={overflowEntries}
-              workspaceSlug={workspaceSlug}
-              serverExecutionOutcomeMap={serverExecutionOutcomeMap}
-              readOnly={readOnly}
-            />
-          )}
-        />
         </div>
       </div>
 

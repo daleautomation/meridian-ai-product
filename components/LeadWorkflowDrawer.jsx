@@ -72,7 +72,7 @@ export default function LeadWorkflowDrawer({
         minHeight: 0,
         maxWidth: WORKFLOW.drawerMaxWidth,
         overflowX: "visible",
-        overflowY: "auto",
+        overflowY: "visible",
         overscrollBehavior: "contain",
         paddingRight: "2px",
       }}
@@ -82,8 +82,9 @@ export default function LeadWorkflowDrawer({
       <div
         style={{
           ...CELL_BASE,
+          height: WORKFLOW.panelMaxHeight,
           maxHeight: WORKFLOW.panelMaxHeight,
-          overflow: "visible",
+          overflow: "hidden",
           animation: "meridian-operator-enter 180ms cubic-bezier(0.22, 1, 0.36, 1) both",
         }}
       >
