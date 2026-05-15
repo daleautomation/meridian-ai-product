@@ -1,99 +1,78 @@
 {
   "customer": "B2B Services Recovery",
   "week": "2026-W20",
-  "generatedAt": "2026-05-15T19:26:49.156Z",
-  "sourceCsv": "fixtures/recovery-b2b-services.csv",
+  "generatedAt": "2026-05-15T20:43:04.521Z",
+  "sourceCsv": "fixtures/recovery-b2b-raw.csv",
   "summary": {
-    "inputRows": 4,
-    "opportunities": 4,
+    "inputRows": 5,
+    "opportunities": 5,
     "recoveryCandidates": 3
   },
   "opportunities": [
     {
       "rank": 1,
-      "companyName": "Veridian Logistics Group",
-      "contactName": "Marcus Bell",
-      "location": "Indianapolis, IN",
-      "relationshipFreshness": "Recovery candidate",
-      "staleness": {
-        "staleScore": 90,
-        "staleCategory": "Recovery candidate",
-        "daysSinceTouch": 105,
-        "lastTouchAt": "2026-01-30T00:00:00.000Z"
-      },
-      "whyNow": "They published a dedicated healthcare logistics page after the March sales-planning call. Last touch was 105 days ago, so the follow-up has a real business reason.",
-      "verifiedContactPath": "Phone on homepage (medium): (317) 204-8716",
-      "suggestedOpener": "Hi Marcus, I saw the healthcare logistics page went live. You had asked about a partner-referral campaign for that vertical - should we revisit the outline while the page is fresh?",
-      "priorityContext": "Call now. 80/100 fit with 90/100 relationship staleness. Lead with: Healthcare logistics referral campaign. Reopen around the new vertical page; ask whether partner referrals are part of the Q2 pipeline plan.",
-      "recoveryScore": 82,
-      "decision": {
-        "bucket": "Call now",
-        "score": 80,
-        "primaryOpportunity": {
-          "id": "healthcare-logistics-referral-campaign",
-          "label": "Healthcare logistics referral campaign",
-          "reason": "Reopen around the new vertical page; ask whether partner referrals are part of the Q2 pipeline plan.",
-          "revenueImpact": "medium",
-          "services": []
-        }
-      }
-    },
-    {
-      "rank": 2,
       "companyName": "Atlas Facilities Partners",
       "contactName": "Rebecca Holt",
       "location": "Denver, CO",
       "relationshipFreshness": "Recovery candidate",
       "staleness": {
-        "staleScore": 100,
+        "staleScore": 86,
         "staleCategory": "Recovery candidate",
         "daysSinceTouch": 147,
         "lastTouchAt": "2025-12-19T00:00:00.000Z"
       },
-      "whyNow": "Last note: Asked to revisit after the regional maintenance RFP. No touch for 147 days, which gives the operator a specific thread to reopen.",
-      "verifiedContactPath": "Phone on homepage (medium): (720) 389-6124",
-      "suggestedOpener": "Hi Rebecca, I had a note to reconnect after the regional maintenance RFP. If that account is moving forward, we can turn the proof into a simple follow-up motion for similar operators.",
-      "priorityContext": "Call this week. 65/100 fit with 100/100 relationship staleness. Lead with: RFP follow-up motion. Ask whether the regional maintenance RFP created a reference account worth turning into outbound proof.",
-      "recoveryScore": 81,
+      "whyNow": "The last note reads \"Asked to revisit after the regional maintenance RFP\" — that thread is still the cleanest reason to come back. The relationship has been quiet for 147 days; the prior thread is the most credible way back in.",
+      "verifiedContactPath": "(720) 389-6124 — Phone on homepage",
+      "suggestedOpener": "Hi Rebecca, Picking up where we left off: you asked to revisit after the regional maintenance RFP. If the door is still open on that, I'd come in narrow rather than start from the top.",
+      "priorityContext": "Schedule the call for later this week because the prior note carried a concrete reason rather than a vague interest signal. Lead with the prior note (\"Asked to revisit after the regional maintenance RFP\") and treat this as a continuation, not a restart.",
+      "recoveryScore": 66,
       "decision": {
         "bucket": "Call this week",
-        "score": 65,
-        "primaryOpportunity": {
-          "id": "rfp-follow-up-motion",
-          "label": "RFP follow-up motion",
-          "reason": "Ask whether the regional maintenance RFP created a reference account worth turning into outbound proof.",
-          "revenueImpact": "medium",
-          "services": []
-        }
+        "score": 60
+      }
+    },
+    {
+      "rank": 2,
+      "companyName": "Hollis Legal Group",
+      "contactName": "Sasha Bennett",
+      "location": "Atlanta, GA",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 192,
+        "lastTouchAt": "2025-11-04T00:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Paused conversation around intake automation pending Q1 partner review\" — that thread is still the cleanest reason to come back. The relationship has been quiet for 192 days; the prior thread is the most credible way back in.",
+      "verifiedContactPath": "(404) 218-7531 — Phone on homepage",
+      "suggestedOpener": "Hi Sasha, Last we spoke, you paused conversation around intake automation pending Q1 partner review. If that thread is still active, I'd pick it back up exactly where we left it.",
+      "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the prior note (\"Paused conversation around intake automation pending Q1 partner review\") and treat this as a continuation, not a restart.",
+      "recoveryScore": 66,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
       }
     },
     {
       "rank": 3,
-      "companyName": "Crestline Medical Billing",
-      "contactName": "Anika Rao",
-      "location": "St. Louis, MO",
+      "companyName": "Veridian Logistics Group",
+      "contactName": "Marcus Bell",
+      "location": "Indianapolis, IN",
       "relationshipFreshness": "Recovery candidate",
       "staleness": {
-        "staleScore": 80,
+        "staleScore": 78,
         "staleCategory": "Recovery candidate",
-        "daysSinceTouch": 84,
-        "lastTouchAt": "2026-02-20T00:00:00.000Z"
+        "daysSinceTouch": 105,
+        "lastTouchAt": "2026-01-30T00:00:00.000Z"
       },
-      "whyNow": "They added denial-management language to the services page after asking for case-study ideas. Last touch was 84 days ago, so the follow-up has a real business reason.",
-      "verifiedContactPath": "Phone on homepage (medium): (314) 256-4409",
-      "suggestedOpener": "Hi Anika, noticed the denial-management language is now on the services page. You wanted case-study examples before the next provider webinar - still useful if we keep it short and sales-ready?",
-      "priorityContext": "Call now. 80/100 fit with 80/100 relationship staleness. Lead with: Denial-management proof point. Lead with the webinar deadline; ask whether a short case-study asset would still help sales follow-up.",
-      "recoveryScore": 78,
+      "whyNow": "They left it at \"Asked for a partner-referral campaign outline tied to their healthcare logistics push\" and the account has been quiet since. The original line is the recovery line. After 105 days, the relationship is past polite and into recovery range.",
+      "verifiedContactPath": "(317) 204-8716 — Phone on homepage",
+      "suggestedOpener": "Hi Marcus, Picking up where we left off: you asked for a partner-referral campaign outline tied to their healthcare logistics push. If the door is still open on that, I'd come in narrow rather than start from the top.",
+      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the action you'd outlined — to send referral campaign outline — and ask whether it should still happen.",
+      "recoveryScore": 62,
       "decision": {
-        "bucket": "Call now",
-        "score": 80,
-        "primaryOpportunity": {
-          "id": "denial-management-proof-point",
-          "label": "Denial-management proof point",
-          "reason": "Lead with the webinar deadline; ask whether a short case-study asset would still help sales follow-up.",
-          "revenueImpact": "medium",
-          "services": []
-        }
+        "bucket": "Call this week",
+        "score": 60
       }
     },
     {
@@ -108,21 +87,36 @@
         "daysSinceTouch": 69,
         "lastTouchAt": "2026-03-07T00:00:00.000Z"
       },
-      "whyNow": "Last note: Asked for a cleaner handoff between webinar leads and partner follow-up. No touch for 69 days, which gives the operator a specific thread to reopen.",
-      "verifiedContactPath": "Phone on homepage (medium): (512) 441-9028",
-      "suggestedOpener": "Hi Theo, you asked about cleaning up the handoff from webinar leads to partner follow-up. If that is still slowing the team down, I can show the simplest version this week.",
-      "priorityContext": "Call now. 82/100 fit with 70/100 relationship staleness. Lead with: Webinar-to-partner handoff. Keep the ask narrow: confirm whether partner follow-up is still delayed after webinars.",
-      "recoveryScore": 74,
+      "whyNow": "The last note reads \"Asked for a cleaner handoff between webinar leads and partner follow-up\" — that thread is still the cleanest reason to come back. 69 days of silence is exactly the window where these threads quietly die.",
+      "verifiedContactPath": "(512) 441-9028 — Phone on homepage",
+      "suggestedOpener": "Hi Theo, I had a note from our last conversation — you asked for a cleaner handoff between webinar leads and partner follow-up. If that's still live on your end, the cleanest next step is a short call to close the loop rather than restart.",
+      "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the action you'd outlined — to outline a simple webinar-to-partner handoff motion — and ask whether it should still happen.",
+      "recoveryScore": 59,
       "decision": {
-        "bucket": "Call now",
-        "score": 82,
-        "primaryOpportunity": {
-          "id": "webinar-to-partner-handoff",
-          "label": "Webinar-to-partner handoff",
-          "reason": "Keep the ask narrow: confirm whether partner follow-up is still delayed after webinars.",
-          "revenueImpact": "medium",
-          "services": []
-        }
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 5,
+      "companyName": "Crestline Medical Billing",
+      "contactName": "Anika Rao",
+      "location": "St. Louis, MO",
+      "relationshipFreshness": "Dormant",
+      "staleness": {
+        "staleScore": 62,
+        "staleCategory": "Dormant",
+        "daysSinceTouch": 84,
+        "lastTouchAt": "2026-02-20T00:00:00.000Z"
+      },
+      "whyNow": "They left it at \"Wanted case-study examples before the next provider webinar\" and the account has been quiet since. The original line is the recovery line. 84 days of silence is exactly the window where these threads quietly die.",
+      "verifiedContactPath": "(314) 256-4409 — Phone on homepage",
+      "suggestedOpener": "Hi Anika, Last we spoke, you wanted case-study examples before the next provider webinar. If that thread is still active, I'd pick it back up exactly where we left it.",
+      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the action you'd outlined — to send denial-management case study ahead of webinar — and ask whether it should still happen.",
+      "recoveryScore": 55,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
       }
     }
   ]
