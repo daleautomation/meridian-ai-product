@@ -10079,6 +10079,7 @@ export default function OperatorConsole({
       return null;
     }
     const isFollowupOutcome = outcome?.status && outcome.status !== "Not Contacted";
+    const dialablePhone = getDialablePhone(lead);
     return {
       id: `lead-${selectedKey}-${isFollowupOutcome ? "followup" : "call"}`,
       title: `${isFollowupOutcome ? "Follow up with" : "Call"} ${lead.name ?? "lead"}`,
