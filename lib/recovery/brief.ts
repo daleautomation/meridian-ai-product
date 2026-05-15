@@ -38,8 +38,10 @@ export function formatContactPath(path: ContactPath | undefined): string {
 }
 
 export function buildSuggestedOpener(companyName: string, contactName: string | null, whyNow: string): string {
-  const greeting = contactName ? `Hi ${contactName},` : "Hi,";
-  return `${greeting} I had ${companyName} on my follow-up list and wanted to reconnect. ${whyNow}`;
+  const firstName = contactName?.trim().split(/\s+/)[0];
+  const greeting = firstName ? `Hi ${firstName},` : "Hi,";
+  const context = whyNow.replace(/^Last note:\s*/i, "I still have this note: ");
+  return `${greeting} I was reviewing open follow-ups for ${companyName} and this one looked worth closing the loop on. ${context} Worth a quick revisit this week?`;
 }
 
 function escapeHtml(value: string | number | null | undefined): string {
@@ -51,16 +53,39 @@ function escapeHtml(value: string | number | null | undefined): string {
     .replace(/'/g, "&#39;");
 }
 
+function daysLabel(days: number | null): string {
+  if (days === null) return "No prior touch";
+  if (days === 1) return "1 day since touch";
+  return `${days} days since touch`;
+}
+
 export function renderRecoveryBriefHtml(brief: RecoveryBrief): string {
-  const rows = brief.opportunities.map((item) => `    <tr>
-      <td><strong>${escapeHtml(item.companyName)}</strong><br><span>${escapeHtml(item.contactName ?? item.location ?? "")}</span></td>
-      <td>${escapeHtml(item.relationshipFreshness)}<br><span>${escapeHtml(item.staleness.daysSinceTouch ?? "No touch")} days since touch</span></td>
-      <td>${escapeHtml(item.whyNow)}</td>
-      <td>${escapeHtml(item.verifiedContactPath)}</td>
-      <td>${escapeHtml(item.suggestedOpener)}</td>
-      <td>${escapeHtml(item.priorityContext)}</td>
-    </tr>
-`).join("\n");
+  const cards = brief.opportunities.map((item) => `        <article class="opportunity">
+          <div class="opportunity__topline">
+            <span class="rank">No. ${escapeHtml(item.rank)}</span>
+            <span class="score">${escapeHtml(item.recoveryScore)} recovery score</span>
+          </div>
+          <h2>${escapeHtml(item.companyName)}</h2>
+          <p class="meta">${escapeHtml(item.contactName ?? "Contact not named")} · ${escapeHtml(item.location ?? "Location not provided")} · ${escapeHtml(item.relationshipFreshness)} · ${escapeHtml(daysLabel(item.staleness.daysSinceTouch))}</p>
+          <div class="brief-grid">
+            <section>
+              <h3>Why now</h3>
+              <p>${escapeHtml(item.whyNow)}</p>
+            </section>
+            <section>
+              <h3>Suggested opener</h3>
+              <p>${escapeHtml(item.suggestedOpener)}</p>
+            </section>
+            <section>
+              <h3>Priority read</h3>
+              <p>${escapeHtml(item.priorityContext)}</p>
+            </section>
+            <section>
+              <h3>Contact path</h3>
+              <p>${escapeHtml(item.verifiedContactPath)}</p>
+            </section>
+          </div>
+        </article>`).join("\n");
 
   return `<!doctype html>
 <html lang="en">
@@ -76,10 +101,15 @@ export function renderRecoveryBriefHtml(brief: RecoveryBrief): string {
     .eyebrow { color: #7c6f61; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
     h1 { margin: 12px 0 10px; font-size: clamp(34px, 5vw, 56px); line-height: .98; letter-spacing: -.055em; }
     p { margin: 0; color: #5b6673; line-height: 1.6; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 18px; border-bottom: 1px solid #ece5dc; text-align: left; vertical-align: top; font-size: 14px; line-height: 1.45; }
-    th { color: #7c6f61; background: #faf6ee; font-size: 11px; letter-spacing: .09em; text-transform: uppercase; }
-    span { color: #7b8490; font-size: 12px; }
+    .deck { display: grid; gap: 16px; padding: 24px; }
+    .opportunity { border: 1px solid #ece5dc; border-radius: 22px; background: #fffaf1; padding: 24px; }
+    .opportunity__topline { display: flex; justify-content: space-between; gap: 12px; color: #7c6f61; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    h2 { margin: 12px 0 6px; color: #141b24; font-size: 26px; letter-spacing: -.03em; }
+    .meta { color: #687381; font-size: 13px; }
+    .brief-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
+    .brief-grid section { border-top: 1px solid #ece5dc; padding-top: 14px; }
+    h3 { margin: 0 0 7px; color: #7c6f61; font-size: 11px; letter-spacing: .09em; text-transform: uppercase; }
+    @media (max-width: 760px) { .brief-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -90,19 +120,9 @@ export function renderRecoveryBriefHtml(brief: RecoveryBrief): string {
         <h1>${escapeHtml(brief.customer)} relationship recovery memo</h1>
         <p>${brief.summary.opportunities} prioritized opportunities from ${brief.summary.inputRows} input rows. ${brief.summary.recoveryCandidates} recovery candidates.</p>
       </header>
-      <table>
-        <thead>
-          <tr>
-            <th>Company / contact</th>
-            <th>Freshness</th>
-            <th>Why now</th>
-            <th>Contact path</th>
-            <th>Suggested opener</th>
-            <th>Priority context</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
+      <div class="deck">
+${cards}
+      </div>
     </section>
   </main>
 </body>

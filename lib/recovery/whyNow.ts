@@ -18,6 +18,11 @@ function cleanSentence(value: string | null | undefined): string | null {
   return trimmed.endsWith(".") ? trimmed : `${trimmed}.`;
 }
 
+function cleanFragment(value: string | null | undefined): string | null {
+  const sentence = cleanSentence(value);
+  return sentence ? sentence.slice(0, -1) : null;
+}
+
 function isQualifiedStatus(value: string | null | undefined): boolean {
   const normalized = (value ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
   return ["qualified", "open", "proposal", "demo", "interested", "warm"].includes(normalized);
@@ -26,21 +31,35 @@ function isQualifiedStatus(value: string | null | undefined): boolean {
 export function generateWhyNow(input: WhyNowInput): string {
   const days = input.daysSinceTouch;
   const stale = input.staleCategory === "Dormant" || input.staleCategory === "Recovery candidate";
+  const activity = cleanSentence(input.activityLabel);
+  const lastAction = cleanFragment(input.lastAction);
 
   if (typeof days === "number" && days >= 21) {
-    return `No follow-up in ${days} days after prior contact.`;
+    if (activity) {
+      return `${activity} Last touch was ${days} days ago, so the follow-up has a real business reason.`;
+    }
+    if (lastAction) {
+      return `Last note: ${lastAction}. No touch for ${days} days, which gives the operator a specific thread to reopen.`;
+    }
+    if (input.priorInterest === true || isQualifiedStatus(input.crmStatus)) {
+      return `Prior interest is on file and the relationship has been quiet for ${days} days. Reopen around the unresolved next step.`;
+    }
+    if (input.hasVerifiedContactPath && stale) {
+      return `Reachable account with ${days} days of silence. Worth a direct, low-pressure re-entry before it goes fully cold.`;
+    }
+    return `No touch for ${days} days. Enough time has passed for a useful follow-up without forcing urgency.`;
   }
 
   if (input.recentActivity === true) {
-    return cleanSentence(input.activityLabel) ?? "Recent website update suggests active growth.";
+    return activity ?? "Recent account activity gives the operator a timely reason to reconnect.";
   }
 
   if (input.priorInterest === true && stale) {
-    return "Past interest logged but no recent outreach.";
+    return "Past interest is logged, but no recent outreach has closed the loop.";
   }
 
   if (isQualifiedStatus(input.crmStatus) && stale) {
-    return "Previously qualified lead with no recent touch.";
+    return "Previously qualified account with no recent touch.";
   }
 
   if (input.hasVerifiedContactPath && stale) {

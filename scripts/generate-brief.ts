@@ -54,6 +54,12 @@ function slugify(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "brief";
 }
 
+function opportunityImpact(value: string | undefined): "high" | "medium" | "low" {
+  const normalized = value?.trim().toLowerCase();
+  if (normalized === "high" || normalized === "medium" || normalized === "low") return normalized;
+  return "medium";
+}
+
 function isoWeek(date: Date): string {
   const utc = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
   const day = utc.getUTCDay() || 7;
@@ -76,9 +82,15 @@ function priorityContext(item: {
   decisionScore: number;
   decisionBucket: string;
   opportunityLabel?: string;
+  priorityNote?: string;
 }): string {
-  const angle = item.opportunityLabel ? ` Lead angle: ${item.opportunityLabel}.` : "";
-  return `Priority: ${item.decisionBucket} (${item.decisionScore}/100). Recovery stale score ${item.staleScore}/100.${angle}`;
+  const action = item.decisionBucket === "Call now" ? "Call now" :
+    item.decisionBucket === "Call this week" ? "Call this week" :
+    item.decisionBucket === "Watch" ? "Soft touch only" :
+    "Hold";
+  const angle = item.opportunityLabel ? ` Lead with: ${item.opportunityLabel}.` : "";
+  const note = item.priorityNote ? ` ${item.priorityNote}` : "";
+  return `${action}. ${item.decisionScore}/100 fit with ${item.staleScore}/100 relationship staleness.${angle}${note}`;
 }
 
 async function buildItem(row: CsvRow, index: number, now: Date): Promise<RecoveryBriefItem> {
@@ -162,6 +174,18 @@ async function buildItem(row: CsvRow, index: number, now: Date): Promise<Recover
     (decision.score * 0.40) +
     (contactScore(verifiedContactPath) * 0.15),
   );
+  const opportunityLabel = get(row, "opportunityLabel", "opportunity label") ??
+    decision.primaryOpportunity?.label;
+  const priorityNote = get(row, "priorityNote", "priority note");
+  const primaryOpportunity = opportunityLabel
+    ? {
+        id: slugify(opportunityLabel),
+        label: opportunityLabel,
+        reason: get(row, "opportunityReason", "opportunity reason") ?? priorityNote ?? "Specific commercial reason to reopen the relationship.",
+        revenueImpact: opportunityImpact(get(row, "opportunityImpact", "opportunity impact")),
+        services: [],
+      }
+    : decision.primaryOpportunity;
 
   return {
     rank: 0,
@@ -172,18 +196,20 @@ async function buildItem(row: CsvRow, index: number, now: Date): Promise<Recover
     staleness,
     whyNow,
     verifiedContactPath,
-    suggestedOpener: buildSuggestedOpener(companyName, contactName, whyNow),
+    suggestedOpener: get(row, "suggestedOpener", "suggested opener", "opener") ??
+      buildSuggestedOpener(companyName, contactName, whyNow),
     priorityContext: priorityContext({
       staleScore: staleness.staleScore,
       decisionScore: decision.score,
       decisionBucket: decision.bucket,
-      opportunityLabel: decision.primaryOpportunity?.label,
+      opportunityLabel,
+      priorityNote,
     }),
     recoveryScore,
     decision: {
       bucket: decision.bucket,
       score: decision.score,
-      primaryOpportunity: decision.primaryOpportunity,
+      primaryOpportunity,
     },
   };
 }

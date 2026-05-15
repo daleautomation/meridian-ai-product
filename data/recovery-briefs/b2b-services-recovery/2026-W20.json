@@ -1,0 +1,129 @@
+{
+  "customer": "B2B Services Recovery",
+  "week": "2026-W20",
+  "generatedAt": "2026-05-15T19:26:49.156Z",
+  "sourceCsv": "fixtures/recovery-b2b-services.csv",
+  "summary": {
+    "inputRows": 4,
+    "opportunities": 4,
+    "recoveryCandidates": 3
+  },
+  "opportunities": [
+    {
+      "rank": 1,
+      "companyName": "Veridian Logistics Group",
+      "contactName": "Marcus Bell",
+      "location": "Indianapolis, IN",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 90,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 105,
+        "lastTouchAt": "2026-01-30T00:00:00.000Z"
+      },
+      "whyNow": "They published a dedicated healthcare logistics page after the March sales-planning call. Last touch was 105 days ago, so the follow-up has a real business reason.",
+      "verifiedContactPath": "Phone on homepage (medium): (317) 204-8716",
+      "suggestedOpener": "Hi Marcus, I saw the healthcare logistics page went live. You had asked about a partner-referral campaign for that vertical - should we revisit the outline while the page is fresh?",
+      "priorityContext": "Call now. 80/100 fit with 90/100 relationship staleness. Lead with: Healthcare logistics referral campaign. Reopen around the new vertical page; ask whether partner referrals are part of the Q2 pipeline plan.",
+      "recoveryScore": 82,
+      "decision": {
+        "bucket": "Call now",
+        "score": 80,
+        "primaryOpportunity": {
+          "id": "healthcare-logistics-referral-campaign",
+          "label": "Healthcare logistics referral campaign",
+          "reason": "Reopen around the new vertical page; ask whether partner referrals are part of the Q2 pipeline plan.",
+          "revenueImpact": "medium",
+          "services": []
+        }
+      }
+    },
+    {
+      "rank": 2,
+      "companyName": "Atlas Facilities Partners",
+      "contactName": "Rebecca Holt",
+      "location": "Denver, CO",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 100,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 147,
+        "lastTouchAt": "2025-12-19T00:00:00.000Z"
+      },
+      "whyNow": "Last note: Asked to revisit after the regional maintenance RFP. No touch for 147 days, which gives the operator a specific thread to reopen.",
+      "verifiedContactPath": "Phone on homepage (medium): (720) 389-6124",
+      "suggestedOpener": "Hi Rebecca, I had a note to reconnect after the regional maintenance RFP. If that account is moving forward, we can turn the proof into a simple follow-up motion for similar operators.",
+      "priorityContext": "Call this week. 65/100 fit with 100/100 relationship staleness. Lead with: RFP follow-up motion. Ask whether the regional maintenance RFP created a reference account worth turning into outbound proof.",
+      "recoveryScore": 81,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 65,
+        "primaryOpportunity": {
+          "id": "rfp-follow-up-motion",
+          "label": "RFP follow-up motion",
+          "reason": "Ask whether the regional maintenance RFP created a reference account worth turning into outbound proof.",
+          "revenueImpact": "medium",
+          "services": []
+        }
+      }
+    },
+    {
+      "rank": 3,
+      "companyName": "Crestline Medical Billing",
+      "contactName": "Anika Rao",
+      "location": "St. Louis, MO",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 80,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 84,
+        "lastTouchAt": "2026-02-20T00:00:00.000Z"
+      },
+      "whyNow": "They added denial-management language to the services page after asking for case-study ideas. Last touch was 84 days ago, so the follow-up has a real business reason.",
+      "verifiedContactPath": "Phone on homepage (medium): (314) 256-4409",
+      "suggestedOpener": "Hi Anika, noticed the denial-management language is now on the services page. You wanted case-study examples before the next provider webinar - still useful if we keep it short and sales-ready?",
+      "priorityContext": "Call now. 80/100 fit with 80/100 relationship staleness. Lead with: Denial-management proof point. Lead with the webinar deadline; ask whether a short case-study asset would still help sales follow-up.",
+      "recoveryScore": 78,
+      "decision": {
+        "bucket": "Call now",
+        "score": 80,
+        "primaryOpportunity": {
+          "id": "denial-management-proof-point",
+          "label": "Denial-management proof point",
+          "reason": "Lead with the webinar deadline; ask whether a short case-study asset would still help sales follow-up.",
+          "revenueImpact": "medium",
+          "services": []
+        }
+      }
+    },
+    {
+      "rank": 4,
+      "companyName": "Lumen Advisory Works",
+      "contactName": "Theo Grant",
+      "location": "Austin, TX",
+      "relationshipFreshness": "Dormant",
+      "staleness": {
+        "staleScore": 70,
+        "staleCategory": "Dormant",
+        "daysSinceTouch": 69,
+        "lastTouchAt": "2026-03-07T00:00:00.000Z"
+      },
+      "whyNow": "Last note: Asked for a cleaner handoff between webinar leads and partner follow-up. No touch for 69 days, which gives the operator a specific thread to reopen.",
+      "verifiedContactPath": "Phone on homepage (medium): (512) 441-9028",
+      "suggestedOpener": "Hi Theo, you asked about cleaning up the handoff from webinar leads to partner follow-up. If that is still slowing the team down, I can show the simplest version this week.",
+      "priorityContext": "Call now. 82/100 fit with 70/100 relationship staleness. Lead with: Webinar-to-partner handoff. Keep the ask narrow: confirm whether partner follow-up is still delayed after webinars.",
+      "recoveryScore": 74,
+      "decision": {
+        "bucket": "Call now",
+        "score": 82,
+        "primaryOpportunity": {
+          "id": "webinar-to-partner-handoff",
+          "label": "Webinar-to-partner handoff",
+          "reason": "Keep the ask narrow: confirm whether partner follow-up is still delayed after webinars.",
+          "revenueImpact": "medium",
+          "services": []
+        }
+      }
+    }
+  ]
+}
