@@ -53,6 +53,20 @@ function phoneValue(value: string | null | undefined): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+function nanpNationalDigits(value: string): string | null {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length < 10) return null;
+  if (digits.length >= 11 && digits[0] === "1") return digits.slice(1, 11);
+  return digits.slice(0, 10);
+}
+
+function isReservedFictional55501Phone(value: string | null | undefined): boolean {
+  const raw = phoneValue(value);
+  if (!raw) return false;
+  const national = nanpNationalDigits(raw);
+  return !!national && national.slice(3, 6) === "555" && national.slice(6, 8) === "01";
+}
+
 function pathRank(path: PhonePathLike): number {
   if (typeof path.rank === "number" && Number.isFinite(path.rank)) return path.rank;
   const source = String(path.source ?? "").toLowerCase();
@@ -85,6 +99,7 @@ export function getCanonicalPhone(
 function isDialableShape(value: string | null | undefined): boolean {
   const raw = phoneValue(value);
   if (!raw) return false;
+  if (isReservedFictional55501Phone(raw)) return false;
   const digits = raw.replace(/\D/g, "");
   return digits.length >= 10 && digits.length <= 15;
 }

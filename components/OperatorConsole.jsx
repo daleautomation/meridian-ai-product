@@ -98,6 +98,14 @@ const DEBUG_UI =
   && typeof process.env !== "undefined"
   && process.env.NEXT_PUBLIC_DEBUG_MERIDIAN === "1";
 
+const MERIDIAN_AI_PREVIEW =
+  typeof process !== "undefined"
+  && typeof process.env !== "undefined"
+  && (
+    process.env.NEXT_PUBLIC_MERIDIAN_AI_PREVIEW === "1"
+    || process.env.MERIDIAN_AI_PREVIEW === "1"
+  );
+
 // No-op logger used in heavy memo paths. Errors + warnings still go
 // through the real console; only verbose dev info is silenced.
 const dlog = DEBUG_UI ? console.log.bind(console) : () => {};
@@ -5190,7 +5198,7 @@ function AssistantChat({ lead, workspace }) {
   );
 }
 
-function AiPanel({ selectedLead, findTask, onStartFindContact, workspace }) {
+function AiPanel({ selectedLead, findTask, onStartFindContact, workspace, allowAiAssist = false }) {
   const [logFlash, setLogFlash] = useState(null);
   const logTimerRef = useRef(null);
   // (id attached in render below for responsive CSS hook)
@@ -5238,7 +5246,9 @@ function AiPanel({ selectedLead, findTask, onStartFindContact, workspace }) {
             />
             {logFlash && <div style={S.statusCalm}>{logFlash}</div>}
             <CallPlanSection lead={selectedLead} />
-            <AssistantChat lead={selectedLead} workspace={workspace} />
+            {allowAiAssist ? (
+              <AssistantChat lead={selectedLead} workspace={workspace} />
+            ) : null}
           </>
         )}
       </div>
@@ -5569,6 +5579,8 @@ function TradeLeadsPortfolio({
   // panel header counts (Ready to call / In progress / Follow-up)
   // reflect actual lead state, not bucket coverage.
   pipelineMap,
+  showOpportunitySurfaces = true,
+  allowAiAssist = false,
 }) {
   // Outcome capture (Booked / Follow Up / Dead / No Answer) lives here
   // — local-state-first, persisted to localStorage, ready to swap for
@@ -5918,7 +5930,7 @@ function TradeLeadsPortfolio({
       )}
 
       {/* ─────────── TIER 3 · MORE OPPORTUNITIES (collapsed) ─────────── */}
-      {prioritizedAngles.length > 0 && (
+      {showOpportunitySurfaces && prioritizedAngles.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <button
             type="button"
@@ -5970,6 +5982,7 @@ function TradeLeadsPortfolio({
                   selectedTradeId={selectedTradeId}
                   selectedLeadKey={selectedLeadKey}
                   onSelectLead={onSelectLead}
+                  allowAiAssist={allowAiAssist}
                 />
               )}
             </>
@@ -7607,7 +7620,7 @@ function AskAIPanel({ open, onClose, topOpportunity, angle, tradeId }) {
   );
 }
 
-function FeaturedAngleWorkspace({ angle, isActive, leads, onSelect, onOpenOperator, selectedTradeId, selectedLeadKey, onSelectLead }) {
+function FeaturedAngleWorkspace({ angle, isActive, leads, onSelect, onOpenOperator, selectedTradeId, selectedLeadKey, onSelectLead, allowAiAssist = false }) {
   const ready = angle.count > 0;
   const topOpportunity = useMemo(
     () => (ready && selectedTradeId ? buildTopOpportunity(angle.bucketId, leads, selectedTradeId) : null),
@@ -7631,6 +7644,9 @@ function FeaturedAngleWorkspace({ angle, isActive, leads, onSelect, onOpenOperat
     setFilter("all");
     setVisibleCount(10);
   }, [angle?.bucketId]);
+  useEffect(() => {
+    if (!allowAiAssist) setAiOpen(false);
+  }, [allowAiAssist]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -7826,36 +7842,40 @@ function FeaturedAngleWorkspace({ angle, isActive, leads, onSelect, onOpenOperat
             >
               {topOpportunity.actionLabel} →
             </button>
-            <button
-              type="button"
-              onClick={() => setAiOpen(true)}
-              style={{
-                fontSize: "13px",
-                fontWeight: 600,
-                color: palette.blue,
-                background: palette.bluePale,
-                border: `1px solid ${palette.blueBorder}`,
-                borderRadius: "10px",
-                padding: "11px 18px",
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-                transition: "all 180ms cubic-bezier(0.4, 0, 0.2, 1)",
-              }}
-            >
-              Get help with this call
-            </button>
+            {allowAiAssist ? (
+              <button
+                type="button"
+                onClick={() => setAiOpen(true)}
+                style={{
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: palette.blue,
+                  background: palette.bluePale,
+                  border: `1px solid ${palette.blueBorder}`,
+                  borderRadius: "10px",
+                  padding: "11px 18px",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  transition: "all 180ms cubic-bezier(0.4, 0, 0.2, 1)",
+                }}
+              >
+                Get help with this call
+              </button>
+            ) : null}
           </div>
         </div>
       )}
 
       {/* AI Deal Coach slide-over — additive layer, never replaces UI. */}
-      <AskAIPanel
-        open={aiOpen}
-        onClose={() => setAiOpen(false)}
-        topOpportunity={topOpportunity}
-        angle={angle}
-        tradeId={selectedTradeId}
-      />
+      {allowAiAssist ? (
+        <AskAIPanel
+          open={aiOpen}
+          onClose={() => setAiOpen(false)}
+          topOpportunity={topOpportunity}
+          angle={angle}
+          tradeId={selectedTradeId}
+        />
+      ) : null}
 
       {/* Why + Sell */}
       <div style={{
@@ -8574,6 +8594,9 @@ export default function OperatorConsole({
     : isReadOnlyWorkspace
       ? "Read-only"
       : null;
+  const showRelationshipsTab = workspace?.features?.showRelationshipsTab === true;
+  const allowAiAssist = workspace?.features?.showAskAI === true || MERIDIAN_AI_PREVIEW;
+  const showOpportunitySurfaces = workspace?.features?.showOpportunitySurfaces === true;
   const hydrationNowIso = snapshotHydrationNow ?? snapshotGeneratedAt ?? "1970-01-01T00:00:00.000Z";
   // Server-supplied set of connected env-var names. Used by
   // getTradeSourceReadiness so the UI does not need to read process.env.
@@ -8620,13 +8643,21 @@ export default function OperatorConsole({
   const handleUpdate = () => setRefreshKey((k) => k + 1);
 
   useEffect(() => {
+    if (!showRelationshipsTab) return;
     if (!relationshipEngineOperatorSurface) return;
     setRelationshipSurface(relationshipEngineOperatorSurface);
     setRelationshipSurfaceStatus("ready");
     setRelationshipSurfaceError(null);
-  }, [relationshipEngineOperatorSurface]);
+  }, [relationshipEngineOperatorSurface, showRelationshipsTab]);
 
   useEffect(() => {
+    if (!showRelationshipsTab && activeTab === "relationships") {
+      setActiveTab("calendar");
+    }
+  }, [activeTab, showRelationshipsTab]);
+
+  useEffect(() => {
+    if (!showRelationshipsTab) return undefined;
     if (activeTab !== "relationships") return undefined;
     if (relationshipSurface || relationshipSurfaceRequestRef.current) {
       return undefined;
@@ -8669,7 +8700,7 @@ export default function OperatorConsole({
       });
 
     return () => controller.abort();
-  }, [activeTab, relationshipSurface, workspace?.slug]);
+  }, [activeTab, relationshipSurface, showRelationshipsTab, workspace?.slug]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -8967,13 +8998,14 @@ export default function OperatorConsole({
   // parent setDeepReportOpen(false)).
   const assistIntentRef = useRef(null);
   useEffect(() => {
-    if (assistIntentRef.current && assistIntentRef.current === selectedTaskId) {
+    if (allowAiAssist && assistIntentRef.current && assistIntentRef.current === selectedTaskId) {
       assistIntentRef.current = null;
       setDeepReportOpen(true);
     } else {
+      assistIntentRef.current = null;
       setDeepReportOpen(false);
     }
-  }, [selectedTaskId]);
+  }, [allowAiAssist, selectedTaskId]);
   // Single entry point used by Today's Command Queue. Selects the
   // lead AND opens Assist Mode in the same commit. CCC's
   // handleOpenAssist forwards to this so the intent ref lives on the
@@ -8983,6 +9015,12 @@ export default function OperatorConsole({
     if (!task) return;
     const id = task.id ?? null;
     if (!id) return;
+    if (!allowAiAssist) {
+      assistIntentRef.current = null;
+      setDeepReportOpen(false);
+      if (selectedTaskId !== id) setSelectedTaskId(id);
+      return;
+    }
     assistIntentRef.current = id;
     if (selectedTaskId === id) {
       // Already selected — selectedTaskId effect won't fire, so open
@@ -8994,7 +9032,7 @@ export default function OperatorConsole({
       // selectedTaskId effect will see the matching ref and open
       // Assist Mode in the same render commit.
     }
-  }, [selectedTaskId]);
+  }, [allowAiAssist, selectedTaskId]);
   useEffect(() => {
     if (!selectedTaskId) {
       setAssistantCollapsed(true);
@@ -10113,13 +10151,15 @@ export default function OperatorConsole({
           >
             Outcomes
           </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("relationships")}
-            style={activeTab === "relationships" ? S.tabBtnActive : S.tabBtn}
-          >
-            Engine
-          </button>
+          {showRelationshipsTab ? (
+            <button
+              type="button"
+              onClick={() => setActiveTab("relationships")}
+              style={activeTab === "relationships" ? S.tabBtnActive : S.tabBtn}
+            >
+              Engine
+            </button>
+          ) : null}
         </nav>
         <div className="meridian-stats" style={S.headerRight}>
           {activeTab !== "calendar" && (
@@ -10148,7 +10188,7 @@ export default function OperatorConsole({
           future effects can depend on it; React reconciliation re-renders
           children on prop change without the remount sledgehammer. */}
       <div id="meridian-body" style={S.body}>
-        {activeTab === "relationships" ? (
+        {showRelationshipsTab && activeTab === "relationships" ? (
           <main id="meridian-main" style={{ ...S.main, padding: "20px 24px 40px" }}>
             {relationshipSurfaceStatus === "error" ? (
               <DeferredPanelSkeleton
@@ -10458,10 +10498,11 @@ export default function OperatorConsole({
               hunterAvailable={hunterAvailable}
               assistantCollapsed={assistantCollapsed}
               onToggleAssistant={handleToggleAssistant}
-              deepReportOpen={deepReportOpen}
-              onDeepReportOpen={() => setDeepReportOpen(true)}
+              deepReportOpen={allowAiAssist && deepReportOpen}
+              onDeepReportOpen={() => { if (allowAiAssist) setDeepReportOpen(true); }}
               onDeepReportClose={() => setDeepReportOpen(false)}
               onEnterAssistMode={handleEnterAssistMode}
+              enableAiAssist={allowAiAssist}
               tradeSlot={(
                 <TradeModuleSelector
                   selectedTradeId={selectedTradeId}
@@ -10604,6 +10645,8 @@ export default function OperatorConsole({
                 }
               }}
               pipelineMap={pipelineMap}
+              showOpportunitySurfaces={showOpportunitySurfaces}
+              allowAiAssist={allowAiAssist}
             />
             )}
             </div>
@@ -10618,8 +10661,8 @@ export default function OperatorConsole({
                 render and the list takes the full row. */}
             <LeadWorkflowDrawer
               selectedTask={selectedTaskFromLead}
-              deepReportOpen={deepReportOpen}
-              onDeepReportOpen={() => setDeepReportOpen(true)}
+              deepReportOpen={allowAiAssist && deepReportOpen}
+              onDeepReportOpen={() => { if (allowAiAssist) setDeepReportOpen(true); }}
               onDeepReportClose={() => setDeepReportOpen(false)}
               assistantCollapsed={assistantCollapsed}
               onToggleAssistant={handleToggleAssistant}
@@ -10645,7 +10688,7 @@ export default function OperatorConsole({
                   selectedLead={selectedLead}
                   onLeadUpdate={handleUpdate}
                   hunterAvailable={!isReadOnlyWorkspace && hunterAvailable}
-                  onOpenDeepReport={() => setDeepReportOpen(true)}
+                  onOpenDeepReport={allowAiAssist ? () => setDeepReportOpen(true) : undefined}
                   readOnly={isReadOnlyWorkspace}
                 />
               ) : null}

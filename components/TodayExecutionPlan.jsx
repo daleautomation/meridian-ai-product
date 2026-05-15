@@ -83,6 +83,7 @@ export default function TodayExecutionPlan({
   // user expands to see the rest of the day.
   const [expanded, setExpanded] = useState(false);
   const TOP_LIMIT = 6;
+  const assistModeEnabled = typeof onOpenAssist === "function";
 
   if (!Array.isArray(tasks) || tasks.length === 0) return null;
 
@@ -107,7 +108,7 @@ export default function TodayExecutionPlan({
       }, 900);
     }
     trackEvent({
-      eventType: "today_open_assist_mode",
+      eventType: assistModeEnabled ? "today_open_assist_mode" : "today_open_lead",
       taskId: task.id ?? null,
       leadId: task.linkedLeadId ?? null,
       companyName: task.linkedCompany ?? null,
@@ -115,7 +116,7 @@ export default function TodayExecutionPlan({
       serviceBucketId: task?.laborTechScan?.primaryService ?? null,
       metadata: { source: "today_queue" },
     });
-    if (typeof onOpenAssist === "function") {
+    if (assistModeEnabled) {
       onOpenAssist(task);
       return;
     }
@@ -377,14 +378,13 @@ export default function TodayExecutionPlan({
                 </div>
               </div>
 
-              {/* Actions: Open Assist Mode (primary) · Call Direct ·
-                  Skip. Order keeps Open Assist Mode as the visual
-                  anchor since it is the canonical execution path. */}
+              {/* Actions: primary open · Call Direct · Skip. Order stays fixed
+                  when Assist Mode is hidden by workspace policy. */}
               <div style={{ display: "inline-flex", gap: "8px", alignItems: "center", flexShrink: 0 }}>
                 <button
                   type="button"
                   onClick={() => handlePrimary(task)}
-                  title={`Open Assist Mode for ${company}`}
+                  title={assistModeEnabled ? `Open Assist Mode for ${company}` : `Open lead for ${company}`}
                   style={{
                     fontSize: "11px", fontWeight: 800,
                     color: "#fff",
@@ -398,7 +398,7 @@ export default function TodayExecutionPlan({
                     boxShadow: "0 1px 2px rgba(37,99,235,0.20), 0 6px 14px -8px rgba(37,99,235,0.45)",
                   }}
                 >
-                  Open Assist Mode →
+                  {assistModeEnabled ? "Open Assist Mode →" : "Open Lead →"}
                 </button>
                 {tel ? (
                   <a

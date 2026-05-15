@@ -2891,37 +2891,39 @@ function ServiceFitOperatorSection({ task, onOpenDeepReport }) {
             {expanded ? "Show top 5 only" : `View all ${breakdown.length} service fits →`}
           </button>
         ) : <span aria-hidden="true" />}
-        <button
-          type="button"
-          onClick={handleBreakDown}
-          // Secondary pill — quiet by design. Call Now is the ONE
-          // saturated execute CTA in the action zone; this is the
-          // analytical companion. Border-only + blue text keeps the
-          // surface uncluttered and lets the eye land on Call Now.
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "#EEF4FF";
-            e.currentTarget.style.borderColor = "rgba(37,99,235,0.55)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "transparent";
-            e.currentTarget.style.borderColor = "rgba(37,99,235,0.30)";
-          }}
-          style={{
-            fontSize: "11px",
-            fontWeight: 700,
-            letterSpacing: "0.02em",
-            color: palette.blue,
-            background: "transparent",
-            border: `1px solid rgba(37,99,235,0.30)`,
-            borderRadius: "999px",
-            padding: "6px 12px",
-            cursor: "pointer",
-            whiteSpace: "nowrap",
-            transition: "background 200ms cubic-bezier(0.22, 1, 0.36, 1), border-color 200ms ease",
-          }}
-        >
-          Break Down Services Needed →
-        </button>
+        {typeof onOpenDeepReport === "function" ? (
+          <button
+            type="button"
+            onClick={handleBreakDown}
+            // Secondary pill — quiet by design. Call Now is the ONE
+            // saturated execute CTA in the action zone; this is the
+            // analytical companion. Border-only + blue text keeps the
+            // surface uncluttered and lets the eye land on Call Now.
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "#EEF4FF";
+              e.currentTarget.style.borderColor = "rgba(37,99,235,0.55)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.borderColor = "rgba(37,99,235,0.30)";
+            }}
+            style={{
+              fontSize: "11px",
+              fontWeight: 700,
+              letterSpacing: "0.02em",
+              color: palette.blue,
+              background: "transparent",
+              border: `1px solid rgba(37,99,235,0.30)`,
+              borderRadius: "999px",
+              padding: "6px 12px",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              transition: "background 200ms cubic-bezier(0.22, 1, 0.36, 1), border-color 200ms ease",
+            }}
+          >
+            Break Down Services Needed →
+          </button>
+        ) : null}
       </div>
     </section>
   );
@@ -4854,6 +4856,7 @@ export default function CalendarCommandCenter({
   // effect runs after our intent-aware effect and resets Assist Mode.
   // Today Open Assist Mode = execution intent, not normal selection.
   onEnterAssistMode: externalOnEnterAssistMode,
+  enableAiAssist = true,
   initialNowIso = null,
   readOnly = false,
 }) {
@@ -5095,6 +5098,10 @@ export default function CalendarCommandCenter({
   const handleOpenAssist = (task) => {
     if (!task) return;
     if (callMode === "active") return;
+    if (!enableAiAssist) {
+      setSelectedTaskId(task);
+      return;
+    }
     trackEvent({
       eventType: "deep_report_open",
       taskId: task.id ?? null,
@@ -5836,7 +5843,7 @@ export default function CalendarCommandCenter({
                 <TodayExecutionPlan
                   tasks={executionPlan}
                   onSelectTask={handleSelectTask}
-                  onOpenAssist={handleOpenAssist}
+                  onOpenAssist={enableAiAssist ? handleOpenAssist : undefined}
                   leadByKey={null}
                   serverExecutionOutcomeMap={serverExecutionOutcomeMap}
                   readOnly={readOnly}
@@ -6046,7 +6053,7 @@ export default function CalendarCommandCenter({
             never pushed further off-screen when the user dives deeper. */}
         <LeadWorkflowDrawer
           selectedTask={selectedTask}
-          deepReportOpen={deepReportOpen}
+          deepReportOpen={enableAiAssist && deepReportOpen}
           onDeepReportClose={() => setDeepReportOpen(false)}
           assistantCollapsed={assistantCollapsed}
           onToggleAssistant={handleToggleAssistant}
@@ -6075,7 +6082,7 @@ export default function CalendarCommandCenter({
               selectedLead={selectedLead}
               onLeadUpdate={onLeadUpdate}
               hunterAvailable={hunterAvailable}
-              onOpenDeepReport={() => setDeepReportOpen(true)}
+              onOpenDeepReport={enableAiAssist ? () => setDeepReportOpen(true) : undefined}
               overflowEntries={overflowEntries}
               workspaceSlug={workspaceSlug}
               serverExecutionOutcomeMap={serverExecutionOutcomeMap}

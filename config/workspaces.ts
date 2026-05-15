@@ -15,6 +15,11 @@ export type WorkspaceConfig = {
   defaultModule: ModuleId;
   enabledModules: ModuleId[];
   comingSoonModules: ModuleId[];
+  features: {
+    showRelationshipsTab: boolean;
+    showAskAI: boolean;
+    showOpportunitySurfaces: boolean;
+  };
   access: {
     allowedRoles: AccessRole[];
     dataMode: "client" | "demo";
@@ -34,6 +39,11 @@ export const WORKSPACES: Record<string, WorkspaceConfig> = {
     defaultModule: "roofing",
     enabledModules: ["roofing"],
     comingSoonModules: ["hvac", "plumbing", "remodeling"],
+    features: {
+      showRelationshipsTab: false,
+      showAskAI: false,
+      showOpportunitySurfaces: false,
+    },
     access: {
       allowedRoles: ["client_user", "admin_operator"],
       dataMode: "client",
@@ -51,6 +61,11 @@ export const WORKSPACES: Record<string, WorkspaceConfig> = {
     defaultModule: "roofing",
     enabledModules: ["roofing"],
     comingSoonModules: ["hvac", "plumbing", "remodeling"],
+    features: {
+      showRelationshipsTab: true,
+      showAskAI: true,
+      showOpportunitySurfaces: true,
+    },
     access: {
       allowedRoles: ["demo_viewer", "advisor_viewer", "admin_operator"],
       dataMode: "demo",
