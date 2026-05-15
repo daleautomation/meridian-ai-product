@@ -321,6 +321,7 @@ function PriorityCard({
   showcase?: RelationshipPriorityWorkspaceModel["showcase"];
   onSelect: () => void;
 }) {
+  const visibleReasons = card.topReasons.slice(dominant && showcase ? 1 : 0, dominant ? 3 : 2);
   return (
     <button
       type="button"
@@ -354,7 +355,7 @@ function PriorityCard({
         <div style={styles.actionChip}>{card.recommendedAction}</div>
       </div>
       <div style={styles.reasonList}>
-        {card.topReasons.slice(0, dominant ? 3 : 2).map((reason) => (
+        {visibleReasons.map((reason) => (
           <div key={reason} style={styles.reasonItem}>
             <span style={styles.reasonDot} />
             {reason}
