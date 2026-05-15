@@ -2,18 +2,33 @@ import { SectionCta } from "@/components/public/ui/SectionCta";
 import { SectionIntro } from "@/components/public/ui/SectionIntro";
 import {
   REQUEST_WORKSPACE_HREF,
-  ROOFING_INTELLIGENCE_HREF,
+  SHOWCASE_HREF,
   verticalWorkspaces,
+  workspacePositioning,
 } from "@/content/public/home";
 
 export function VerticalWorkspacesSection() {
   return (
     <section id="vertical-workspaces" className="public-section">
       <SectionIntro
-        eyebrow="Vertical workspaces"
-        title="Operator systems built for specific industries."
-        text="These are not generic software projects. Each workspace packages the operating logic, queues, visibility, and follow-up rhythm a service business needs to execute."
+        eyebrow="Single-user vs shared workspaces"
+        title="Meridian separates personal execution from team coordination."
+        text="Some businesses need one operator to know who to contact today. Others need a shared workspace where relationship ownership, routing, and recovery work stay visible."
       />
+      <div className="public-workspace-positioning-grid">
+        {workspacePositioning.map((workspace) => (
+          <article className="public-workspace-positioning-card" key={workspace.title}>
+            <span>{workspace.title}</span>
+            <h3>{workspace.subtitle}</h3>
+            <p>{workspace.description}</p>
+            <ul>
+              {workspace.examples.map((example) => (
+                <li key={example}>{example}</li>
+              ))}
+            </ul>
+          </article>
+        ))}
+      </div>
       <div className="public-workspace-ladder-grid">
         {verticalWorkspaces.map((workspace) => (
           <article className="public-workspace-ladder-card" key={workspace.title}>
@@ -30,11 +45,11 @@ export function VerticalWorkspacesSection() {
       </div>
       <SectionCta
         eyebrow="Workspace request"
-        text="Request the operator workspace closest to your current revenue bottleneck, then Meridian maps the workflow around real execution."
+        text="Request the workspace closest to your current relationship bottleneck, then Meridian maps the workflow around real execution."
         primaryHref={REQUEST_WORKSPACE_HREF}
         primaryLabel="Request Workspace"
-        secondaryHref={ROOFING_INTELLIGENCE_HREF}
-        secondaryLabel="See Roofing Intelligence"
+        secondaryHref={SHOWCASE_HREF}
+        secondaryLabel="View Showcase"
       />
     </section>
   );

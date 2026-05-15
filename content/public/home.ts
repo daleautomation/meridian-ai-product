@@ -1,113 +1,239 @@
 export const REQUEST_DEMO_HREF = "/intake/workspace-request?source=homepage";
 export const START_AUDIT_HREF = "/intake/visibility-scan?source=visibility-scan";
-export const EXPLORE_SYSTEMS_HREF = "#utility-products";
+export const EXPLORE_SYSTEMS_HREF = "#solutions";
 export const REQUEST_WORKSPACE_HREF = REQUEST_DEMO_HREF;
 export const VISIBILITY_SCAN_HREF = START_AUDIT_HREF;
 export const ROOFING_INTELLIGENCE_HREF = "/roofing-intelligence";
 export const ROOFING_DEMO_HREF = "/intake/roofing-demo?source=roofing-intelligence";
 export const BOOK_STRATEGY_CALL_HREF = "/intake/strategy-call?source=homepage";
 export const CLIENT_LOGIN_HREF = "/login?next=/operator";
+export const SHOWCASE_HREF = "/showcase";
+export const ABOUT_HREF = "/about";
 
 export const productLadder = [
-  "Upload contacts / CRM",
-  "Rank relationships",
-  "Execute follow-up",
-  "Learn from outcomes",
+  "Relationships",
+  "Revenue risk",
+  "Priority queue",
+  "Next action",
+] as const;
+
+export const coreMeridianCategories = [
+  {
+    title: "Relationship Maintenance for Revenue Growth",
+    description:
+      "Protect revenue already sitting inside contacts, referrals, estimates, old CRM records, and warm conversations.",
+    outcomes: [
+      "Stale CRM recovery",
+      "Relationship prioritization",
+      "Follow-up execution",
+      "Opportunity recovery",
+      "Revenue protection",
+      "Operator clarity",
+    ],
+  },
+  {
+    title: "Workspace / Demo Generation Systems",
+    description:
+      "Turn a messy workflow into a calm execution surface, then package it into demos people can understand quickly.",
+    outcomes: [
+      "Relationship-priority workspaces",
+      "Cinematic vertical demos",
+      "Operator desks",
+      "Showcase systems",
+      "Workflow visualization",
+      "Execution surfaces",
+    ],
+  },
 ] as const;
 
 export const fastUtilityProducts = [
   {
-    title: "Relationship Priority Queue",
-    pain: "Useful contacts already exist, but nobody knows which relationship deserves action today.",
-    outcome: "A daily queue that shows who matters, why now, the best contact path, and the next step.",
-    cta: "Prioritize contacts",
-    price: "Priority scan",
-    href: ROOFING_INTELLIGENCE_HREF,
+    title: "Priority Scan",
+    pain: "The business has relationships, leads, referrals, and old opportunities, but no clear starting point.",
+    outcome: "A ranked view of who matters, why now, what revenue is exposed, and the first recovery move.",
+    cta: "Start priority scan",
+    price: "Entry product",
+    href: VISIBILITY_SCAN_HREF,
   },
   {
-    title: "Review Recovery System",
-    pain: "Happy customers finish the job, then the review moment disappears into crew schedules and inboxes.",
-    outcome: "A simple recovery workflow that turns completed work into visible trust.",
-    cta: "Recover reviews",
-    price: "Fixed-scope setup",
+    title: "CRM Recovery Scan",
+    pain: "Old deals, dormant estimates, and once-warm contacts are buried under stale records.",
+    outcome: "A recovery list that separates real relationship value from dead entries and low-signal noise.",
+    cta: "Recover stale CRM",
+    price: "Entry product",
+    href: VISIBILITY_SCAN_HREF,
   },
   {
-    title: "Website Conversion Scanner",
-    pain: "Traffic arrives, but the site does not make the next step obvious enough.",
-    outcome: "A practical visibility scan with intake, proof, speed, and CTA fixes ranked.",
-    cta: "Scan my site",
-    price: "Starter scan available",
-  },
-  {
-    title: "Follow-Up Assistant",
-    pain: "Estimate requests, callbacks, and dormant opportunities cool off when nobody owns the next action.",
-    outcome: "Follow-up angle, timing, owner, and message path attached before the relationship goes cold.",
+    title: "Follow-Up Recovery",
+    pain: "Promising conversations cool off because ownership, timing, and next steps are unclear.",
+    outcome: "A follow-up queue with the relationship, reason, owner, channel, and message angle attached.",
     cta: "Tighten follow-up",
-    price: "Workflow add-on",
+    price: "Entry product",
+    href: VISIBILITY_SCAN_HREF,
   },
   {
-    title: "Local SEO Scanner",
-    pain: "Local presence is uneven across search, reviews, service pages, and map intent.",
-    outcome: "A prioritized local visibility map for the searches that create real calls.",
-    cta: "Check local visibility",
-    price: "Lightweight scan pricing",
+    title: "Personal Relationship Queue",
+    pain: "Solo operators carry too many relationships in memory and miss the ones most likely to move revenue.",
+    outcome: "A personal daily desk for who to contact today, why now, and what should happen next.",
+    cta: "Build personal queue",
+    price: "Single-user system",
+    href: REQUEST_WORKSPACE_HREF,
   },
   {
-    title: "Missed Revenue Detector",
-    pain: "Revenue leaks hide inside stale quotes, missed callbacks, slow response, and unclear handoffs.",
-    outcome: "A ranked recovery list with relationship, risk, reason, and next move.",
-    cta: "Find missed revenue",
-    price: "Diagnostic package",
+    title: "Team Relationship Workspace",
+    pain: "Teams lose momentum when follow-up, routing, and relationship ownership split across people and tools.",
+    outcome: "A shared queue for assignment, routing, recovery, coordination, and execution continuity.",
+    cta: "Request team workspace",
+    price: "Shared workspace",
+    href: REQUEST_WORKSPACE_HREF,
+  },
+  {
+    title: "Custom Operator System",
+    pain: "The workflow is valuable, but too specific for a generic CRM, dashboard, or automation template.",
+    outcome: "A custom execution surface that compresses workflow, relationship context, and revenue movement.",
+    cta: "Plan custom system",
+    price: "Strategic system",
+    href: REQUEST_WORKSPACE_HREF,
+  },
+] as const;
+
+export const productLadderGroups = [
+  {
+    tier: "Entry products",
+    text: "Small, focused starts that identify immediate relationship and revenue recovery moves.",
+    products: ["Priority Scan", "CRM Recovery Scan", "Follow-Up Recovery"],
+  },
+  {
+    tier: "Single-user systems",
+    text: "Personal execution desks for operators who need clarity without adding team process.",
+    products: [
+      "Personal Relationship Queue",
+      "Independent Sales Workspace",
+      "Solo Operator Workspace",
+      "Freelancer Relationship Desk",
+    ],
+  },
+  {
+    tier: "Shared workspaces",
+    text: "Team surfaces for routing, ownership, continuity, and coordinated follow-up execution.",
+    products: [
+      "Team Relationship Workspace",
+      "Shared Recovery Queue",
+      "Operator Coordination",
+      "Relationship Routing",
+    ],
+  },
+  {
+    tier: "Strategic systems",
+    text: "Custom builds for businesses ready to turn operating logic into a real execution system.",
+    products: ["Custom Operator Systems", "Workspace Builds", "Strategic Infrastructure"],
   },
 ] as const;
 
 export const verticalWorkspaces = [
   {
-    title: "Roofing Workspace",
-    industry: "Roofing operators",
-    text: "Lead intake, property context, estimate follow-up, crew capacity, and local opportunity signals in one operating view.",
-    capabilities: ["Lead execution", "Estimate follow-up", "Property signal queue"],
+    title: "Single-user systems",
+    industry: "Independent operators",
+    text: "Personal relationship workflows for consultants, freelancers, independent salespeople, founders, and solo operators who need one calm daily queue.",
+    capabilities: ["Personal prioritization", "Solo follow-up", "Freelancer relationship desk"],
   },
   {
-    title: "Restoration Workspace",
-    industry: "Restoration teams",
-    text: "Urgent intake, claim context, dispatch readiness, customer updates, and next actions stay attached to ownership.",
-    capabilities: ["Urgency routing", "Scheduling clarity", "Customer status"],
+    title: "Shared workspaces",
+    industry: "Teams and operators",
+    text: "Shared queues that keep relationship ownership, routing, handoffs, and execution continuity visible across the team.",
+    capabilities: ["Team coordination", "Relationship routing", "Shared recovery queue"],
   },
   {
-    title: "Contractor Growth Workspace",
-    industry: "Service contractors",
-    text: "A growth command center for lead quality, online presence, callbacks, reviews, and revenue execution.",
-    capabilities: ["Visibility scan", "Review recovery", "Revenue leaks"],
+    title: "Showcase workspaces",
+    industry: "Sales and demo systems",
+    text: "Screen-recording-safe demos and operator surfaces that show how Meridian applies to a specific workflow.",
+    capabilities: ["Vertical overlays", "Cinematic demos", "Clean branded URLs"],
   },
   {
-    title: "Lead Execution Workspace",
-    industry: "Sales-driven service teams",
-    text: "A daily relationship priority queue that ranks existing opportunities and prepares the next action.",
-    capabilities: ["Who to contact", "Why now", "Next step"],
+    title: "Example vertical: roofing",
+    industry: "One showcase example",
+    text: "Roofing remains a clear recovery demo for stale estimates and local service follow-up, not the center of the Meridian company.",
+    capabilities: ["Estimate recovery", "Local service follow-up", "Priority demo"],
+  },
+] as const;
+
+export const workspacePositioning = [
+  {
+    title: "Single-user systems",
+    subtitle: "For one person who needs a calmer way to execute.",
+    description:
+      "A personal queue for independent operators, consultants, founders, sales reps, and freelancers who need to know which relationship deserves attention today.",
+    examples: [
+      "Personal Relationship Queue",
+      "Independent Sales Workspace",
+      "Solo Operator Workspace",
+      "Freelancer Relationship Desk",
+    ],
+  },
+  {
+    title: "Shared workspaces",
+    subtitle: "For teams that need coordination and continuity.",
+    description:
+      "A shared operating surface for routing, ownership, handoffs, and recovery work when multiple people touch the same relationships.",
+    examples: [
+      "Team Relationship Workspace",
+      "Shared Recovery Queue",
+      "Operator Coordination",
+      "Relationship Routing",
+    ],
+  },
+] as const;
+
+export const showcaseHomepageCards = [
+  {
+    title: "Clean showcase routes",
+    text: "Open a branded URL and show a vertical workflow without exposing internal operators, diagnostics, or setup noise.",
+  },
+  {
+    title: "Cinematic vertical demos",
+    text: "Screen-recording-safe layouts use orange urgency, Meridian blue, before/after panels, and calm hierarchy.",
+  },
+  {
+    title: "Workflow applied to your market",
+    text: "Roofing, restoration, real estate, agencies, recruiting, advisors, and B2B sales become understandable demos.",
+  },
+] as const;
+
+export const showcasePreviewRows = [
+  {
+    label: "Clutter",
+    title: "Stale CRM records, forgotten estimates, scattered notes",
+  },
+  {
+    label: "Meridian",
+    title: "Who matters, why now, what next",
+  },
+  {
+    label: "Output",
+    title: "A calm demo and operator queue anyone can understand",
   },
 ] as const;
 
 export const roofingIntelligenceSignals = [
   {
-    title: "Property intelligence",
-    text: "Connect property context, local visibility, and contractor opportunity signals before outreach starts.",
+    title: "Stale estimates",
+    text: "Old proposals become a ranked recovery queue with the owner, reason, and next contact path visible.",
   },
   {
-    title: "Opportunity mapping",
-    text: "Identify where roofing demand, competitive gaps, and service-area strength should guide action.",
+    title: "Warm relationships",
+    text: "Existing customer and referral relationships are treated as revenue assets, not forgotten records.",
   },
   {
-    title: "Operational lead intelligence",
-    text: "Turn promising markets and properties into ranked leads, follow-up queues, and owner-ready execution.",
+    title: "One example among many",
+    text: "The same relationship-priority story applies across agencies, real estate, recruiting, advisors, and B2B sales.",
   },
 ] as const;
 
 export const roofingFutureSignals = [
-  "Satellite imagery",
-  "Storm intelligence",
-  "Property signals",
-  "Local opportunity detection",
+  "Stale pipeline",
+  "Recovery queue",
+  "Who matters",
+  "What next",
 ] as const;
 
 export const fieldFounderPoints = [
@@ -132,51 +258,51 @@ export const fieldFounderPoints = [
 export const howMeridianWorks = [
   {
     stage: "01",
-    title: "Upload contacts / CRM",
-    text: "Start from the relationships the business already owns: contacts, estimates, callbacks, notes, and CRM records.",
+    title: "Start with owned relationships",
+    text: "Contacts, leads, estimates, referrals, pipeline records, callbacks, and notes become the raw material.",
   },
   {
     stage: "02",
-    title: "Enrich and prioritize",
-    text: "Meridian adds context, scores fit, detects staleness, and separates high-leverage relationships from noise.",
+    title: "Detect revenue risk",
+    text: "Meridian looks for staleness, urgency, fit, missing ownership, and timing signals that deserve attention.",
   },
   {
     stage: "03",
     title: "Surface who matters",
-    text: "Operators see the relationship, why it matters, what is at risk, and the best contact path.",
+    text: "The operator sees the relationship, why now, what revenue is exposed, and the clearest contact path.",
   },
   {
     stage: "04",
     title: "Execute the next step",
-    text: "Calls, emails, follow-ups, and recovery actions move from one clean queue instead of scattered dashboards.",
+    text: "Follow-up moves from scattered memory into one clean action with owner, timing, and recommended angle.",
   },
   {
     stage: "05",
-    title: "Learn from outcomes",
-    text: "Completed actions, replies, misses, and wins feed the relationship memory so the queue gets sharper.",
+    title: "Keep relationship continuity",
+    text: "Outcomes, replies, misses, and wins feed the operating rhythm so the next priority becomes easier to see.",
   },
 ] as const;
 
 export const liveSystemsProof = [
   {
-    title: "LaborTech workspace",
-    text: "Operator workspace patterns are already used around scheduling visibility, lead context, and daily execution queues.",
-    proof: "Live workspace pattern",
+    title: "Relationship-priority workspace",
+    text: "The reusable workspace pattern already shows who matters, why now, and what next in a calm operator view.",
+    proof: "Demoable now",
   },
   {
-    title: "Operational workflows",
-    text: "Command queues convert business events into assigned tasks, due windows, status, and owner-aware next actions.",
-    proof: "Execution system",
+    title: "Showcase mode",
+    text: "Clean routes, overlays, demo presets, and vertical examples turn workflow value into a sales-ready story.",
+    proof: "Sales engine",
   },
   {
-    title: "Scheduling intelligence",
-    text: "Calendar visibility, pull-forward logic, and work preparation help operators act before bottlenecks harden.",
-    proof: "Active workflow layer",
+    title: "Execution guidance",
+    text: "Queues compress relationship context into priority, reason, contact path, owner, and next move.",
+    proof: "Operator clarity",
   },
   {
-    title: "Relationship engine concepts",
-    text: "Relationship context, memory, and workflow continuity are being shaped into practical operator intelligence.",
-    proof: "In production foundation",
+    title: "Workflow visualization",
+    text: "Before/after panels, cinematic demos, and simple surfaces make clutter-to-clarity visible without exposing internals.",
+    proof: "Visual storytelling",
   },
 ] as const;
 
@@ -500,37 +626,37 @@ export const platformModules = [
 
 export const heroMetrics = [
   {
-    label: "Market fit",
-    value: "87%",
-    detail: "Strong relationship priority",
+    label: "Relationship",
+    value: "Warm",
+    detail: "Existing trust already exists",
   },
   {
-    label: "Risk",
-    value: "Stale",
-    detail: "Opportunity cooling off",
+    label: "Revenue",
+    value: "At risk",
+    detail: "Follow-up window is closing",
   },
   {
-    label: "Next action",
-    value: "Call",
-    detail: "Contact path ready",
+    label: "Action",
+    value: "Today",
+    detail: "Operator move is clear",
   },
 ] as const;
 
 export const heroQueue = [
   {
     label: "Who matters",
-    title: "Harbor View Remodels",
-    meta: "Strong fit, stale estimate, phone ready",
+    title: "Warm relationship with revenue potential",
+    meta: "Existing context, recent signal, reachable contact",
   },
   {
     label: "Why now",
-    title: "Prior quote has gone quiet",
-    meta: "Recovery window still open",
+    title: "Momentum is starting to cool",
+    meta: "The follow-up window is still recoverable",
   },
   {
     label: "What next",
-    title: "Call with estimate recovery angle",
-    meta: "Log outcome so Meridian learns",
+    title: "Call with a specific recovery angle",
+    meta: "Move the relationship before it disappears",
   },
 ] as const;
 
@@ -569,19 +695,19 @@ export const workspacePreviewCards = [
 
 export const operatorWorkspaceStats = [
   {
-    label: "Execution tasks generated",
-    value: "22",
-    detail: "Owner, due window, and source reason attached",
+    label: "Who matters",
+    value: "Ranked",
+    detail: "The strongest relationship sits at the top",
   },
   {
-    label: "Revenue leaks detected",
-    value: "3",
-    detail: "Unowned follow-up and stale handoff risk",
+    label: "Why now",
+    value: "Visible",
+    detail: "Risk, timing, and reason travel together",
   },
   {
-    label: "AI briefings ready",
-    value: "8",
-    detail: "Call plan, objections, and next actions prepared",
+    label: "What next",
+    value: "Ready",
+    detail: "The operator sees the next action immediately",
   },
 ] as const;
 

@@ -4,22 +4,26 @@ import {
   CLIENT_LOGIN_HREF,
   EXPLORE_SYSTEMS_HREF,
   REQUEST_WORKSPACE_HREF,
+  SHOWCASE_HREF,
   VISIBILITY_SCAN_HREF,
 } from "@/content/public/home";
 
 export function FinalCta() {
   return (
     <section className="public-final-cta">
-      <span className="public-eyebrow">Ready when the operation is</span>
-      <h2>Start with the fastest growth lever, then build the workspace around execution.</h2>
+      <span className="public-eyebrow">Relationships to revenue</span>
+      <h2>Start by finding the relationships that can move revenue now.</h2>
       <p>
-        Meridian is built for service businesses that need clearer lead
-        intelligence, stronger online presence, better follow-up, and a system
-        operators can actually run.
+        Meridian helps businesses protect revenue already inside their pipeline,
+        recover stale opportunities, and build calm workspaces operators can
+        actually use.
       </p>
       <div className="public-hero-actions">
         <a className="public-primary-button" href={VISIBILITY_SCAN_HREF}>
-          Get a Visibility Scan
+          Get a Priority Scan
+        </a>
+        <a className="public-secondary-button" href={SHOWCASE_HREF}>
+          View Showcase
         </a>
         <a className="public-secondary-button" href={REQUEST_WORKSPACE_HREF}>
           Request Workspace

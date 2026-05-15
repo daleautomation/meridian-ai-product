@@ -12,9 +12,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Meridian AI | Relationship Priority Queue",
+  title: "Meridian | Relationship Priority and Revenue Execution",
   description:
-    "Meridian AI prioritizes existing relationships, stale opportunities, and follow-up work so operators know who matters, why, and what to do next.",
+    "Meridian helps businesses prioritize relationships, recover stale opportunities, and know who matters, why now, and what should happen next.",
 };
 
 export const viewport: Viewport = {
