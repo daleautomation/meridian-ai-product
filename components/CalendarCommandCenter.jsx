@@ -5843,7 +5843,7 @@ export default function CalendarCommandCenter({
                 <TodayExecutionPlan
                   tasks={executionPlan}
                   onSelectTask={handleSelectTask}
-                  onOpenAssist={handleOpenAssist}
+                  onOpenAssist={enableAiAssist ? handleOpenAssist : undefined}
                   leadByKey={null}
                   serverExecutionOutcomeMap={serverExecutionOutcomeMap}
                   readOnly={readOnly}
