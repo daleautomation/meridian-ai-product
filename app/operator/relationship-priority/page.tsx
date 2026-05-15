@@ -66,9 +66,16 @@ async function renderRelationshipPriorityPage({
   if (!workspace) {
     if (userWorkspaces.length === 1) {
       const only = defaultWorkspaceFor(user.workspaces ?? []);
-      if (only) redirect(`/operator/relationship-priority?workspace=${only.slug}`);
+      if (only) {
+        if (!only.features.showRelationshipsTab) redirect(`/operator?workspace=${only.slug}`);
+        redirect(`/operator/relationship-priority?workspace=${only.slug}`);
+      }
     }
     return <WorkspacePicker workspaces={userWorkspaces} userName={user.name ?? user.id} />;
+  }
+
+  if (!workspace.features.showRelationshipsTab) {
+    redirect(`/operator?workspace=${workspace.slug}`);
   }
 
   const surface = await buildRelationshipEngineOperatorSurface({ workspace, user });
@@ -93,7 +100,7 @@ function WorkspacePicker({
     <AuthStateShell eyebrow="Choose workspace" title={`Welcome, ${userName}`}>
       <p style={styles.copy}>Open the relationship-priority desk for the workspace you want to run today.</p>
       <div style={styles.choiceGrid}>
-        {workspaces.map((workspace) => (
+        {workspaces.filter((workspace) => workspace.features.showRelationshipsTab).map((workspace) => (
           <Link
             key={workspace.slug}
             href={`/operator/relationship-priority?workspace=${workspace.slug}`}

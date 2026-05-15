@@ -87,6 +87,13 @@ interface OperatorConsoleProps {
   totalPipeline: number;
   pipelineMap?: Record<string, unknown>;
   roi?: unknown;
+  todaySuppression?: {
+    generatedAt: string;
+    windowHours: number;
+    companyKeys: string[];
+    leadKeys: string[];
+    latestActivityAt: string | null;
+  } | null;
   calendarEvents?: unknown[];
   recentActivities?: unknown[];
   lastPipelineJob?: { completedAt: string; errors: number; enriched: number } | null;
