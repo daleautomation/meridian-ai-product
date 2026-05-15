@@ -1,0 +1,189 @@
+{
+  "customer": "Heartland Contractor Co",
+  "week": "2026-W20",
+  "generatedAt": "2026-05-15T21:33:54.869Z",
+  "sourceCsv": "fixtures/outreach-contractor.csv",
+  "summary": {
+    "inputRows": 8,
+    "opportunities": 8,
+    "recoveryCandidates": 7
+  },
+  "opportunities": [
+    {
+      "rank": 1,
+      "companyName": "NorthShore Exteriors",
+      "contactName": "Eli Stenberg",
+      "location": "Liberty, MO",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 102,
+        "lastTouchAt": "2026-02-02T00:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Spoke about the inspection-ad gap before March crews booked and asked to revisit ahead of late-season hail\" — that thread is still the cleanest reason to come back. After 102 days, the relationship is past polite and into recovery range.",
+      "verifiedContactPath": "(816) 289-7711 — Phone on homepage",
+      "suggestedOpener": "Hi Eli, I had a note from our last conversation — you spoke about the inspection-ad gap before March crews booked and asked to revisit ahead of late-season hail. If that's still live on your end, the cleanest next step is a short call to close the loop rather than restart.",
+      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the action you'd outlined — to pull inspection-ad inventory for late-season hail window — and ask whether it should still happen.",
+      "recoveryScore": 66,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 2,
+      "companyName": "Magnolia Climate Care",
+      "contactName": "Jordan Mehta",
+      "location": "Overland Park, KS",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 123,
+        "lastTouchAt": "2026-01-12T00:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Asked us to wait until April when they would have their intake-data baseline from the Texas franchise rollout\" — that thread is still the cleanest reason to come back. 123 days is long enough that a direct, specific reopen reads better than a soft touch.",
+      "verifiedContactPath": "(913) 444-2820 — Phone on homepage",
+      "suggestedOpener": "Hi Jordan, My notes from earlier reference that asked us to wait until April when they would have their intake-data baseline from the Texas franchise rollout. If it is still the right thread, I'd pick it up where we left it.",
+      "priorityContext": "Schedule the call for later this week because the prior note carried a concrete reason rather than a vague interest signal. Lead with the action you'd outlined — to check in once April intake baseline data is in — and ask whether it should still happen.",
+      "recoveryScore": 66,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 3,
+      "companyName": "Harbor Ridge Roofing",
+      "contactName": "Mara Ellis",
+      "location": "Kansas City, MO",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 78,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 98,
+        "lastTouchAt": "2026-02-06T00:00:00.000Z"
+      },
+      "whyNow": "They left it at \"Asked for a storm-season landing page estimate before the next hail push\" and the account has been quiet since. The original line is the recovery line. After 98 days, the relationship is past polite and into recovery range.",
+      "verifiedContactPath": "(816) 204-4127 — Phone on homepage",
+      "suggestedOpener": "Hi Mara, I had a note from our last conversation — you asked for a storm-season landing page estimate before the next hail push. If that's still live on your end, the cleanest next step is a short call to close the loop rather than restart.",
+      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the action you'd outlined — to send revised landing page scope by end of week — and ask whether it should still happen.",
+      "recoveryScore": 62,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 4,
+      "companyName": "Crossbridge Mechanical",
+      "contactName": "Dana Ahmed",
+      "location": "Olathe, KS",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 78,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 113,
+        "lastTouchAt": "2026-01-22T00:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Wanted the after-hours intake redesign tied to dispatch availability before cooling season starts\" — that thread is still the cleanest reason to come back. 113 days of silence is exactly the window where these threads quietly die.",
+      "verifiedContactPath": "(913) 555-9042 — Phone on homepage",
+      "suggestedOpener": "Hi Dana, Last we spoke, you wanted the after-hours intake redesign tied to dispatch availability before cooling season starts. If that thread is still active, I'd pick it back up exactly where we left it.",
+      "priorityContext": "Schedule the call for later this week because the prior note carried a concrete reason rather than a vague interest signal. Lead with the action you'd outlined — to walkthrough of dispatch-aware intake form — and ask whether it should still happen.",
+      "recoveryScore": 62,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 5,
+      "companyName": "Cedar & Slate Exteriors",
+      "contactName": "Daniel Price",
+      "location": "Overland Park, KS",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 78,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 116,
+        "lastTouchAt": "2026-01-19T00:00:00.000Z"
+      },
+      "whyNow": "Last contact closed on wanted to revisit after Q1 crews were scheduled and the inspection-ad timing slipped past March; the conversation never resolved, and recovery starts there. 116 days of silence is exactly the window where these threads quietly die.",
+      "verifiedContactPath": "(913) 274-6186 — Phone on homepage",
+      "suggestedOpener": "Hi Daniel, I had a note from our last conversation — you wanted to revisit after Q1 crews were scheduled and the inspection-ad timing slipped past March. If that's still live on your end, the cleanest next step is a short call to close the loop rather than restart.",
+      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the action you'd outlined — to confirm crew capacity for May inspection ads — and ask whether it should still happen.",
+      "recoveryScore": 62,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 6,
+      "companyName": "Pendry Drywall & Finish",
+      "contactName": "Carmen Boyle",
+      "location": "Raytown, MO",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 78,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 105,
+        "lastTouchAt": "2026-01-30T00:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Asked for ROI examples on commercial drywall conversion before recommending the program internally\" — that thread is still the cleanest reason to come back. After 105 days, the relationship is past polite and into recovery range.",
+      "verifiedContactPath": "(816) 277-4453 — Phone on homepage",
+      "suggestedOpener": "Hi Carmen, Last we spoke, you asked for ROI examples on commercial drywall conversion before recommending the program internally. If that thread is still active, I'd pick it back up exactly where we left it.",
+      "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the action you'd outlined — to pull together two commercial drywall ROI examples — and ask whether it should still happen.",
+      "recoveryScore": 62,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 7,
+      "companyName": "Heartland Roofing & Restoration",
+      "contactName": "Curtis Hammond",
+      "location": "Kansas City, MO",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 78,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 127,
+        "lastTouchAt": "2026-01-08T00:00:00.000Z"
+      },
+      "whyNow": "Last contact closed on wanted Spanish translation on the storm landing page before referring an HOA contact; the conversation never resolved, and recovery starts there. The relationship has been quiet for 127 days; the prior thread is the most credible way back in.",
+      "verifiedContactPath": "(816) 822-4310 — Phone on homepage",
+      "suggestedOpener": "Hi Curtis, Picking up where we left off: you wanted Spanish translation on the storm landing page before referring an HOA contact. If the door is still open on that, I'd come in narrow rather than start from the top.",
+      "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the action you'd outlined — to send Spanish landing page draft for HOA referral — and ask whether it should still happen.",
+      "recoveryScore": 62,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 8,
+      "companyName": "Oakline Remodel & Repair",
+      "contactName": "Evan Cho",
+      "location": "Lee's Summit, MO",
+      "relationshipFreshness": "Dormant",
+      "staleness": {
+        "staleScore": 70,
+        "staleCategory": "Dormant",
+        "daysSinceTouch": 89,
+        "lastTouchAt": "2026-02-15T00:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Asked for examples of turning project photos into estimate requests after the kitchen-template demo\" — that thread is still the cleanest reason to come back. 89 days of silence is exactly the window where these threads quietly die.",
+      "verifiedContactPath": "(816) 319-7764 — Phone on homepage",
+      "suggestedOpener": "Hi Evan, Picking up where we left off: you asked for examples of turning project photos into estimate requests after the kitchen-template demo. If the door is still open on that, I'd come in narrow rather than start from the top.",
+      "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the action you'd outlined — to share three project-photo conversion examples — and ask whether it should still happen.",
+      "recoveryScore": 59,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    }
+  ]
+}

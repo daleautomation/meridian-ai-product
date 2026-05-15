@@ -1,0 +1,189 @@
+{
+  "customer": "Riverline Search Partners",
+  "week": "2026-W20",
+  "generatedAt": "2026-05-15T21:33:55.616Z",
+  "sourceCsv": "fixtures/outreach-staffing.csv",
+  "summary": {
+    "inputRows": 8,
+    "opportunities": 8,
+    "recoveryCandidates": 7
+  },
+  "opportunities": [
+    {
+      "rank": 1,
+      "companyName": "SummitCare Recruiting",
+      "contactName": "Jordan Lee",
+      "location": "Raleigh, NC",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 100,
+        "lastTouchAt": "2026-02-04T00:00:00.000Z"
+      },
+      "whyNow": "Last contact closed on asked for nurse-practitioner outreach examples before the specialty-clinic intake window opens; the conversation never resolved, and recovery starts there. 100 days of silence is exactly the window where these threads quietly die.",
+      "verifiedContactPath": "(919) 431-5528 — Phone on homepage",
+      "suggestedOpener": "Hi Jordan, Last we spoke, you asked for nurse-practitioner outreach examples before the specialty-clinic intake window opens. If that thread is still active, I'd pick it back up exactly where we left it.",
+      "priorityContext": "Schedule the call for later this week because the prior note carried a concrete reason rather than a vague interest signal. Lead with the action you'd outlined — to send NP outreach examples before specialty-clinic intake — and ask whether it should still happen.",
+      "recoveryScore": 66,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 2,
+      "companyName": "Ashford Talent Network",
+      "contactName": "Renee Sutton",
+      "location": "Boston, MA",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 123,
+        "lastTouchAt": "2026-01-12T00:00:00.000Z"
+      },
+      "whyNow": "They left it at \"Asked for the partner-tier pricing once the buyout transition cleared internal restructuring\" and the account has been quiet since. The original line is the recovery line. The relationship has been quiet for 123 days; the prior thread is the most credible way back in.",
+      "verifiedContactPath": "(617) 384-2270 — Phone on homepage",
+      "suggestedOpener": "Hi Renee, Last we spoke, you asked for the partner-tier pricing once the buyout transition cleared internal restructuring. If that thread is still active, I'd pick it back up exactly where we left it.",
+      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the action you'd outlined — to resend partner-tier sheet once buyout transition clears — and ask whether it should still happen.",
+      "recoveryScore": 66,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 3,
+      "companyName": "Mason Hill Search",
+      "contactName": "Priya Shah",
+      "location": "Columbus, OH",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 149,
+        "lastTouchAt": "2025-12-17T00:00:00.000Z"
+      },
+      "whyNow": "They left it at \"Wanted to wait until the CFO search narrowed to finalists before re-engaging on the partner-tier conversation\" and the account has been quiet since. The original line is the recovery line. The relationship has been quiet for 149 days; the prior thread is the most credible way back in.",
+      "verifiedContactPath": "(614) 268-3307 — Phone on homepage",
+      "suggestedOpener": "Hi Priya, Picking up where we left off: you wanted to wait until the CFO search narrowed to finalists before re-engaging on the partner-tier conversation. If the door is still open on that, I'd come in narrow rather than start from the top.",
+      "priorityContext": "Schedule the call for later this week because the prior note carried a concrete reason rather than a vague interest signal. Lead with the action you'd outlined — to re-engage after CFO finalist slate confirms — and ask whether it should still happen.",
+      "recoveryScore": 66,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 4,
+      "companyName": "Benton Parker Staffing",
+      "contactName": "Lena Morris",
+      "location": "Nashville, TN",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 78,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 109,
+        "lastTouchAt": "2026-01-26T00:00:00.000Z"
+      },
+      "whyNow": "They left it at \"Asked for a short list once the plant schedule was approved and second-shift coverage was the bottleneck\" and the account has been quiet since. The original line is the recovery line. 109 days of silence is exactly the window where these threads quietly die.",
+      "verifiedContactPath": "(615) 238-7041 — Phone on homepage",
+      "suggestedOpener": "Hi Lena, Picking up where we left off: you asked for a short list once the plant schedule was approved and second-shift coverage was the bottleneck. If the door is still open on that, I'd come in narrow rather than start from the top.",
+      "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the action you'd outlined — to resend short-list scope tied to second-shift coverage — and ask whether it should still happen.",
+      "recoveryScore": 62,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 5,
+      "companyName": "Northline Talent Partners",
+      "contactName": "Caleb Ortiz",
+      "location": "Charlotte, NC",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 78,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 91,
+        "lastTouchAt": "2026-02-13T00:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Requested pricing for a 30-day sourcing sprint before the June rollout — they wanted the same scope as last quarter\" — that thread is still the cleanest reason to come back. After 91 days, the relationship is past polite and into recovery range.",
+      "verifiedContactPath": "(704) 412-8893 — Phone on homepage",
+      "suggestedOpener": "Hi Caleb, Coming back to the thread my notes flagged: requested pricing for a 30-day sourcing sprint before the June rollout — they wanted the same scope as last quarter. If that is still live on your end, worth a short conversation this week?",
+      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the action you'd outlined — to confirm pricing for sourcing sprint before June rollout — and ask whether it should still happen.",
+      "recoveryScore": 62,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 6,
+      "companyName": "Plainfield Recruiting",
+      "contactName": "Vince Mariotti",
+      "location": "New York, NY",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 78,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 107,
+        "lastTouchAt": "2026-01-28T00:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Wanted a candidate-pipeline diagnostic before committing to a sourcing sprint — procurement was the blocker\" — that thread is still the cleanest reason to come back. After 107 days, the relationship is past polite and into recovery range.",
+      "verifiedContactPath": "(212) 559-8814 — Phone on homepage",
+      "suggestedOpener": "Hi Vince, Picking up where we left off: you wanted a candidate-pipeline diagnostic before committing to a sourcing sprint — procurement was the blocker. If the door is still open on that, I'd come in narrow rather than start from the top.",
+      "priorityContext": "Schedule the call for later this week because the prior note carried a concrete reason rather than a vague interest signal. Lead with the action you'd outlined — to schedule pipeline diagnostic before procurement review — and ask whether it should still happen.",
+      "recoveryScore": 62,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 7,
+      "companyName": "Cascade Talent Operations",
+      "contactName": "Henry Park",
+      "location": "Portland, OR",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 78,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 94,
+        "lastTouchAt": "2026-02-10T00:00:00.000Z"
+      },
+      "whyNow": "Last contact closed on asked about co-marketing scope once their integration partner went live and a podcast feature opportunity opened; the conversation never resolved, and recovery starts there. 94 days of silence is exactly the window where these threads quietly die.",
+      "verifiedContactPath": "(503) 471-2284 — Phone on homepage",
+      "suggestedOpener": "Hi Henry, My notes from earlier reference that asked about co-marketing scope once their integration partner went live and a podcast feature opportunity opened. If it is still the right thread, I'd pick it up where we left it.",
+      "priorityContext": "Schedule the call for later this week because the prior note carried a concrete reason rather than a vague interest signal. Lead with the action you'd outlined — to confirm co-marketing scope after partner integration ships — and ask whether it should still happen.",
+      "recoveryScore": 62,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 8,
+      "companyName": "Quantum Field Recruiters",
+      "contactName": "Allison Frye",
+      "location": "Denver, CO",
+      "relationshipFreshness": "Dormant",
+      "staleness": {
+        "staleScore": 62,
+        "staleCategory": "Dormant",
+        "daysSinceTouch": 86,
+        "lastTouchAt": "2026-02-18T00:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Wanted a low-volume engagement once the internal SDR cohort wrapped and asked for technical-coordinator placement case studies\" — that thread is still the cleanest reason to come back. 86 days of silence is exactly the window where these threads quietly die.",
+      "verifiedContactPath": "(303) 585-2249 — Phone on homepage",
+      "suggestedOpener": "Hi Allison, Picking up where we left off: you wanted a low-volume engagement once the internal SDR cohort wrapped and asked for technical-coordinator placement case studies. If the door is still open on that, I'd come in narrow rather than start from the top.",
+      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the action you'd outlined — to send 2 technical-coordinator placement case studies — and ask whether it should still happen.",
+      "recoveryScore": 55,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    }
+  ]
+}

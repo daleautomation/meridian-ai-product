@@ -33,16 +33,36 @@ export type RecoveryBrief = {
 export function formatContactPath(path: ContactPath | undefined): string {
   if (!path) return "Manual verification needed";
   const label = path.label ?? `${path.method} path`;
-  const status = path.verified ? "verified" : path.confidence;
-  return `${label} (${status}): ${path.value}`;
+  return `${path.value} — ${label}`;
 }
 
-export function buildSuggestedOpener(companyName: string, contactName: string | null, whyNow: string): string {
-  const firstName = contactName?.trim().split(/\s+/)[0];
-  const greeting = firstName ? `Hi ${firstName},` : "Hi,";
-  const context = whyNow.replace(/^Last note:\s*/i, "I still have this note: ");
-  return `${greeting} I was reviewing open follow-ups for ${companyName} and this one looked worth closing the loop on. ${context} Worth a quick revisit this week?`;
+export function humanWeekLabel(isoWeek: string): string {
+  const m = /^(\d{4})-W(\d{2})$/.exec(isoWeek);
+  if (!m) return isoWeek;
+  const year = Number(m[1]);
+  const week = Number(m[2]);
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const jan4Day = jan4.getUTCDay() || 7;
+  const week1Mon = new Date(jan4);
+  week1Mon.setUTCDate(jan4.getUTCDate() - jan4Day + 1);
+  const target = new Date(week1Mon);
+  target.setUTCDate(week1Mon.getUTCDate() + (week - 1) * 7);
+  return `Week of ${target.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })}`;
 }
+
+export function sourceDisplayLabel(sourceCsv: string): string | null {
+  if (!sourceCsv) return null;
+  if (sourceCsv.startsWith("fixtures/") || sourceCsv.startsWith("./fixtures/")) return "Internal sample";
+  return "Uploaded list";
+}
+
+export const FOUNDER_SIGNATURE =
+  "— Dylan Dale, Meridian · briefs delivered Mondays · reply with questions.";
+
+// One-line "what this is" placed under the founder signature so a first-time
+// reader knows what they're looking at without needing landing-page context.
+export const MEMO_DESCRIPTION =
+  "A weekly relationship-recovery memo. Every recommendation is anchored on the prior thread in your CRM. We never invent context.";
 
 function escapeHtml(value: string | number | null | undefined): string {
   return String(value ?? "")
@@ -54,19 +74,31 @@ function escapeHtml(value: string | number | null | undefined): string {
 }
 
 function daysLabel(days: number | null): string {
-  if (days === null) return "No prior touch";
+  if (days === null) return "First outreach";
   if (days === 1) return "1 day since touch";
   return `${days} days since touch`;
+}
+
+function rankLabel(rank: number): string {
+  return rank < 10 ? `0${rank}` : String(rank);
+}
+
+function summarySentence(brief: RecoveryBrief): string {
+  const n = brief.summary.opportunities;
+  if (n === 0) return "No relationships above the recovery threshold this week.";
+  if (n === 1) return "One relationship worth reopening this week.";
+  const word = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"][n] ?? String(n);
+  return `${word.charAt(0).toUpperCase() + word.slice(1)} relationships worth reopening this week.`;
 }
 
 export function renderRecoveryBriefHtml(brief: RecoveryBrief): string {
   const cards = brief.opportunities.map((item) => `        <article class="opportunity">
           <div class="opportunity__topline">
-            <span class="rank">No. ${escapeHtml(item.rank)}</span>
-            <span class="score">${escapeHtml(item.recoveryScore)} recovery score</span>
+            <span class="rank">${escapeHtml(rankLabel(item.rank))}</span>
+            <span class="score">Recovery ${escapeHtml(item.recoveryScore)} / 100</span>
           </div>
           <h2>${escapeHtml(item.companyName)}</h2>
-          <p class="meta">${escapeHtml(item.contactName ?? "Contact not named")} · ${escapeHtml(item.location ?? "Location not provided")} · ${escapeHtml(item.relationshipFreshness)} · ${escapeHtml(daysLabel(item.staleness.daysSinceTouch))}</p>
+          <p class="meta">${escapeHtml(item.contactName ?? "Contact not named")} · ${escapeHtml(item.location ?? "Location not provided")} · ${escapeHtml(daysLabel(item.staleness.daysSinceTouch))}</p>
           <div class="brief-grid">
             <section>
               <h3>Why now</h3>
@@ -87,12 +119,16 @@ export function renderRecoveryBriefHtml(brief: RecoveryBrief): string {
           </div>
         </article>`).join("\n");
 
+  const weekLabel = humanWeekLabel(brief.week);
+  const sourceLabel = sourceDisplayLabel(brief.sourceCsv);
+
   return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Recovery Brief | ${escapeHtml(brief.customer)} | ${escapeHtml(brief.week)}</title>
+  <title>Recovery Brief | ${escapeHtml(brief.customer)} | ${escapeHtml(weekLabel)}</title>
+  <meta name="description" content="${escapeHtml(MEMO_DESCRIPTION)}">
   <style>
     body { margin: 0; background: #f6f3ee; color: #1f2933; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
     main { max-width: 1180px; margin: 0 auto; padding: 56px 24px 72px; }
@@ -109,6 +145,9 @@ export function renderRecoveryBriefHtml(brief: RecoveryBrief): string {
     .brief-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
     .brief-grid section { border-top: 1px solid #ece5dc; padding-top: 14px; }
     h3 { margin: 0 0 7px; color: #7c6f61; font-size: 11px; letter-spacing: .09em; text-transform: uppercase; }
+    footer { padding: 22px 38px 30px; color: #7c6f61; font-size: 13px; line-height: 1.55; border-top: 1px solid #e7e0d6; }
+    footer .signature { color: #2f3a46; }
+    footer .description { display: block; margin-top: 4px; color: #7c6f61; }
     @media (max-width: 760px) { .brief-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -116,13 +155,17 @@ export function renderRecoveryBriefHtml(brief: RecoveryBrief): string {
   <main>
     <section class="memo">
       <header>
-        <div class="eyebrow">Recovery Brief - ${escapeHtml(brief.week)}</div>
-        <h1>${escapeHtml(brief.customer)} relationship recovery memo</h1>
-        <p>${brief.summary.opportunities} prioritized opportunities from ${brief.summary.inputRows} input rows. ${brief.summary.recoveryCandidates} recovery candidates.</p>
+        <div class="eyebrow">Recovery Brief · ${escapeHtml(weekLabel)}</div>
+        <h1>${escapeHtml(brief.customer)} — ${escapeHtml(weekLabel)}</h1>
+        <p>${escapeHtml(summarySentence(brief))}${sourceLabel ? ` <span style="opacity:.7;"> · ${escapeHtml(sourceLabel)}</span>` : ""}</p>
       </header>
       <div class="deck">
 ${cards}
       </div>
+      <footer>
+        <span class="signature">${escapeHtml(FOUNDER_SIGNATURE)}</span>
+        <span class="description">${escapeHtml(MEMO_DESCRIPTION)}</span>
+      </footer>
     </section>
   </main>
 </body>

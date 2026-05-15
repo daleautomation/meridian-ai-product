@@ -1,0 +1,189 @@
+{
+  "customer": "Northgate Operating Group",
+  "week": "2026-W20",
+  "generatedAt": "2026-05-15T21:33:56.306Z",
+  "sourceCsv": "fixtures/outreach-b2b.csv",
+  "summary": {
+    "inputRows": 8,
+    "opportunities": 8,
+    "recoveryCandidates": 6
+  },
+  "opportunities": [
+    {
+      "rank": 1,
+      "companyName": "Northgate Compliance Solutions",
+      "contactName": "Devon Marsh",
+      "location": "New York, NY",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 131,
+        "lastTouchAt": "2026-01-04T00:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Asked about the renewal-cycle dashboard ahead of their Q2 audit prep — procurement gate was the January blocker\" — that thread is still the cleanest reason to come back. 131 days is long enough that a direct, specific reopen reads better than a soft touch.",
+      "verifiedContactPath": "(212) 388-7115 — Phone on homepage",
+      "suggestedOpener": "Hi Devon, My notes from earlier reference that asked about the renewal-cycle dashboard ahead of their Q2 audit prep — procurement gate was the January blocker. If it is still the right thread, I'd pick it up where we left it.",
+      "priorityContext": "Schedule the call for later this week because the prior note carried a concrete reason rather than a vague interest signal. Lead with the action you'd outlined — to check renewal-cycle dashboard scope before audit prep — and ask whether it should still happen.",
+      "recoveryScore": 66,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 2,
+      "companyName": "Hollow Tree Legal Advisors",
+      "contactName": "Priscilla Quinn",
+      "location": "Atlanta, GA",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 113,
+        "lastTouchAt": "2026-01-22T00:00:00.000Z"
+      },
+      "whyNow": "Last contact closed on wanted the intake-automation demo extended to include matter-stage reporting before partner buy-in; the conversation never resolved, and recovery starts there. After 113 days, the relationship is past polite and into recovery range.",
+      "verifiedContactPath": "(404) 218-9931 — Phone on homepage",
+      "suggestedOpener": "Hi Priscilla, I had a note from our last conversation — you wanted the intake-automation demo extended to include matter-stage reporting before partner buy-in. If that's still live on your end, the cleanest next step is a short call to close the loop rather than restart.",
+      "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the action you'd outlined — to send extended demo covering matter-stage reporting — and ask whether it should still happen.",
+      "recoveryScore": 66,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 3,
+      "companyName": "Lumen Advisory Works",
+      "contactName": "Theo Grant",
+      "location": "Austin, TX",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 97,
+        "lastTouchAt": "2026-02-07T00:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Asked for a cleaner handoff between webinar leads and partner follow-up before the next webinar campaign\" — that thread is still the cleanest reason to come back. After 97 days, the relationship is past polite and into recovery range.",
+      "verifiedContactPath": "(512) 441-9028 — Phone on homepage",
+      "suggestedOpener": "Hi Theo, Picking up where we left off: you asked for a cleaner handoff between webinar leads and partner follow-up before the next webinar campaign. If the door is still open on that, I'd come in narrow rather than start from the top.",
+      "priorityContext": "Schedule the call for later this week because the prior note carried a concrete reason rather than a vague interest signal. Lead with the action you'd outlined — to outline a simple webinar-to-partner handoff motion — and ask whether it should still happen.",
+      "recoveryScore": 66,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 4,
+      "companyName": "Brightline Carrier Solutions",
+      "contactName": "Marcus Stein",
+      "location": "Indianapolis, IN",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 116,
+        "lastTouchAt": "2026-01-19T00:00:00.000Z"
+      },
+      "whyNow": "They left it at \"Mentioned wanting carrier-capacity insights ahead of Q1 contract season then went silent through the holidays\" and the account has been quiet since. The original line is the recovery line. After 116 days, the relationship is past polite and into recovery range.",
+      "verifiedContactPath": "(317) 415-9082 — Phone on homepage",
+      "suggestedOpener": "Hi Marcus, Picking up where we left off: you mentioned wanting carrier-capacity insights ahead of Q1 contract season then went silent through the holidays. If the door is still open on that, I'd come in narrow rather than start from the top.",
+      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the action you'd outlined — to re-share carrier-capacity report for Q2 planning — and ask whether it should still happen.",
+      "recoveryScore": 66,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 5,
+      "companyName": "Atlas Med Coding",
+      "contactName": "Jonas Petersen",
+      "location": "Dallas, TX",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 78,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 100,
+        "lastTouchAt": "2026-02-04T00:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Asked about denial-management proof points before pitching their next-largest hospital client and wanted the case study kept brand-neutral\" — that thread is still the cleanest reason to come back. After 100 days, the relationship is past polite and into recovery range.",
+      "verifiedContactPath": "(214) 488-7723 — Phone on homepage",
+      "suggestedOpener": "Hi Jonas, My notes from earlier reference that asked about denial-management proof points before pitching their next-largest hospital client and wanted the case study kept brand-neutral. If it is still the right thread, I'd pick it up where we left it.",
+      "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the action you'd outlined — to draft brand-neutral denial-management case study — and ask whether it should still happen.",
+      "recoveryScore": 62,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 6,
+      "companyName": "Veridian Logistics Group",
+      "contactName": "Marcus Bell",
+      "location": "Indianapolis, IN",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 78,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 105,
+        "lastTouchAt": "2026-01-30T00:00:00.000Z"
+      },
+      "whyNow": "They left it at \"Asked for a partner-referral campaign outline tied to their healthcare logistics push\" and the account has been quiet since. The original line is the recovery line. After 105 days, the relationship is past polite and into recovery range.",
+      "verifiedContactPath": "(317) 204-8716 — Phone on homepage",
+      "suggestedOpener": "Hi Marcus, My notes from earlier reference that asked for a partner-referral campaign outline tied to their healthcare logistics push. If it is still the right thread, I'd pick it up where we left it.",
+      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the action you'd outlined — to send referral campaign outline — and ask whether it should still happen.",
+      "recoveryScore": 62,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 7,
+      "companyName": "Lighthouse Practice Management",
+      "contactName": "Jordan Nakamura",
+      "location": "Seattle, WA",
+      "relationshipFreshness": "Dormant",
+      "staleness": {
+        "staleScore": 62,
+        "staleCategory": "Dormant",
+        "daysSinceTouch": 89,
+        "lastTouchAt": "2026-02-15T00:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Asked for the patient-recall automation scoring before their next two clinics' onboarding — April was a realistic decision window\" — that thread is still the cleanest reason to come back. 89 days of silence is exactly the window where these threads quietly die.",
+      "verifiedContactPath": "(206) 388-5519 — Phone on homepage",
+      "suggestedOpener": "Hi Jordan, My notes from earlier reference that asked for the patient-recall automation scoring before their next two clinics' onboarding — April was a realistic decision window. If it is still the right thread, I'd pick it up where we left it.",
+      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the action you'd outlined — to pull patient-recall scoring before clinic onboarding — and ask whether it should still happen.",
+      "recoveryScore": 55,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 8,
+      "companyName": "Crestline Medical Billing",
+      "contactName": "Anika Rao",
+      "location": "St. Louis, MO",
+      "relationshipFreshness": "Dormant",
+      "staleness": {
+        "staleScore": 62,
+        "staleCategory": "Dormant",
+        "daysSinceTouch": 84,
+        "lastTouchAt": "2026-02-20T00:00:00.000Z"
+      },
+      "whyNow": "They left it at \"Wanted case-study examples before the next provider webinar — specifically asked about denial-management proof\" and the account has been quiet since. The original line is the recovery line. 84 days of silence is exactly the window where these threads quietly die.",
+      "verifiedContactPath": "(314) 256-4409 — Phone on homepage",
+      "suggestedOpener": "Hi Anika, Picking up where we left off: you wanted case-study examples before the next provider webinar — specifically asked about denial-management proof. If the door is still open on that, I'd come in narrow rather than start from the top.",
+      "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the action you'd outlined — to send denial-management case study ahead of webinar — and ask whether it should still happen.",
+      "recoveryScore": 55,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    }
+  ]
+}
