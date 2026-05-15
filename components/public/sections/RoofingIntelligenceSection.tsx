@@ -3,20 +3,20 @@ import {
   ROOFING_DEMO_HREF,
   roofingFutureSignals,
   roofingIntelligenceSignals,
-  VISIBILITY_SCAN_HREF,
+  SHOWCASE_HREF,
 } from "@/content/public/home";
 
 export function RoofingIntelligenceSection() {
   return (
     <section id="roofing-intelligence" className="public-section public-split-section public-roofing-section">
       <div>
-        <span className="public-eyebrow">Roofing intelligence</span>
-        <h2>Roofing growth will be won through property signals, local visibility, and execution speed.</h2>
+        <span className="public-eyebrow">One showcase example</span>
+        <h2>Roofing is one clear demo of the larger relationship recovery system.</h2>
         <p>
-          Meridian is positioning roofing intelligence as contractor growth
-          infrastructure: a way to connect property context, local opportunity,
-          lead quality, follow-up, and operating workflows without pretending
-          future data integrations are already live.
+          A roofing estimate that goes quiet is easy to understand: the
+          relationship is warm, the revenue is exposed, and the next action
+          matters. Meridian uses the same logic across many relationship-heavy
+          businesses.
         </p>
         <div className="public-pill-row">
           {roofingFutureSignals.map((signal) => (
@@ -26,10 +26,10 @@ export function RoofingIntelligenceSection() {
       </div>
       <div className="public-roofing-intel-panel" aria-label="Roofing intelligence signals">
         <div className="public-preview-header public-preview-header-live">
-          <span>Conceptual roadmap</span>
+          <span>Example workflow</span>
           <strong>
             <span className="public-live-dot" />
-            No fake functionality
+            Showcase-ready
           </strong>
         </div>
         <div className="public-roofing-signal-grid">
@@ -41,19 +41,19 @@ export function RoofingIntelligenceSection() {
           ))}
         </div>
         <div className="public-roofing-roadmap-note">
-          <strong>Future integrations are directional.</strong>
+          <strong>Roofing does not define Meridian.</strong>
           <p>
-            Satellite imagery, storm intelligence, property signals, and local
-            opportunity detection are framed as infrastructure targets, not
-            live claims.
+            It remains a useful vertical example for stale estimate recovery,
+            while the company positioning centers on relationships, revenue,
+            clarity, and execution.
           </p>
         </div>
       </div>
       <SectionCta
-        eyebrow="Roofing path"
-        text="Start with a visibility scan or request a roofing workspace that turns lead signal into execution."
-        primaryHref={VISIBILITY_SCAN_HREF}
-        primaryLabel="Get a Visibility Scan"
+        eyebrow="Example demo"
+        text="Open the broader showcase library or request a focused roofing recovery demo if that is the workflow you need to explain."
+        primaryHref={SHOWCASE_HREF}
+        primaryLabel="View Showcase"
         secondaryHref={ROOFING_DEMO_HREF}
         secondaryLabel="Request Roofing Demo"
       />

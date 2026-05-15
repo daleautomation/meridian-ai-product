@@ -8,9 +8,9 @@ import {
 export function StickyConversionBar() {
   return (
     <aside className="public-sticky-cta" aria-label="Meridian conversion actions">
-      <span>Find the fastest growth system.</span>
+      <span>Find the relationships that can move revenue now.</span>
       <a className="public-primary-button" href={VISIBILITY_SCAN_HREF}>
-        Visibility Scan
+        Priority Scan
       </a>
       <a className="public-secondary-button" href={REQUEST_WORKSPACE_HREF}>
         Request Workspace

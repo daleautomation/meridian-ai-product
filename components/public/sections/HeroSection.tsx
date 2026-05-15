@@ -1,33 +1,32 @@
 import {
-  BOOK_STRATEGY_CALL_HREF,
   EXPLORE_SYSTEMS_HREF,
   heroMetrics,
   heroQueue,
   productLadder,
   REQUEST_WORKSPACE_HREF,
-  ROOFING_INTELLIGENCE_HREF,
+  SHOWCASE_HREF,
 } from "@/content/public/home";
 
 export function HeroSection() {
   return (
     <section className="public-hero">
       <div className="public-hero-copy">
-        <span className="public-eyebrow">Relationship prioritization and execution</span>
-        <h1>Know who to contact today, why they matter, and what to do next.</h1>
+        <span className="public-eyebrow">Relationship priority for revenue growth</span>
+        <h1>Turn relationship chaos into revenue clarity.</h1>
         <p>
-          Meridian turns existing contacts, stale opportunities, and scattered
-          CRM notes into a clean operator queue for relationship recovery,
-          follow-up execution, and faster decisions.
+          Your business already has leads, referrals, estimates, contacts, and
+          warm conversations. Meridian shows which relationships matter most,
+          which revenue is at risk, and what should happen next.
         </p>
         <div className="public-hero-actions">
           <a className="public-primary-button" href={EXPLORE_SYSTEMS_HREF}>
-            See Priority Workflow
+            Explore Solutions
+          </a>
+          <a className="public-secondary-button" href={SHOWCASE_HREF}>
+            View Showcase
           </a>
           <a className="public-secondary-button" href={REQUEST_WORKSPACE_HREF}>
             Request Workspace
-          </a>
-          <a className="public-secondary-button" href={BOOK_STRATEGY_CALL_HREF}>
-            Book Strategy Call
           </a>
         </div>
         <div className="public-hero-proof" aria-label="Meridian operating loop">
@@ -41,26 +40,26 @@ export function HeroSection() {
         <div className="public-panel-orb public-panel-orb-two" />
         <div className="public-panel-topline">
           <span>Relationship Priority Queue</span>
-          <strong>Today&apos;s operator view</strong>
+          <strong>Today&apos;s revenue clarity</strong>
         </div>
         <div className="public-workspace-chrome">
           <span />
           <span />
           <span />
-          <strong>Recovery desk</strong>
+          <strong>Operator desk</strong>
         </div>
         <div className="public-command-grid">
           <div className="public-signal-card public-signal-card-primary">
-            <span>Who matters today</span>
-            <strong>High-fit relationship, stale opportunity</strong>
-            <p>Market fit, urgency, contact path, recommended angle, and next step compressed into one action card.</p>
+            <span>Who deserves attention</span>
+            <strong>Warm relationship with revenue at risk</strong>
+            <p>Context, timing, risk, contact path, and next action compressed into one calm operator card.</p>
             <div className="public-score-bar" aria-hidden="true">
               <span />
             </div>
           </div>
           <div className="public-command-rail">
             <span>Next move</span>
-            <strong>Call first</strong>
+            <strong>Act today</strong>
             <p>Recovery angle ready</p>
           </div>
         </div>
@@ -84,7 +83,7 @@ export function HeroSection() {
         </div>
         <div className="public-panel-footer">
           <span className="public-live-dot" />
-          <a href={ROOFING_INTELLIGENCE_HREF}>Roofing recovery workflow mapped from priority to execution</a>
+          <a href={SHOWCASE_HREF}>See Meridian applied to real workflows in the showcase library</a>
         </div>
       </div>
     </section>

@@ -11,12 +11,12 @@ export function LiveSystemsSection() {
   return (
     <section id="live-systems" className="public-section public-split-section">
       <div>
-        <span className="public-eyebrow">Execution layer proof</span>
-        <h2>Meridian keeps the engine underneath and compresses the operator surface.</h2>
+        <span className="public-eyebrow">Operator clarity</span>
+        <h2>The operator surface stays simple: who, why, what next.</h2>
         <p>
-          Relationship memory, scheduling context, queue ordering, and workflow
-          continuity remain intact. Operators only see the priority, reason,
-          contact path, and next action they need to move.
+          Meridian keeps the workflow calm and commercially useful. The public
+          product does not need to expose internals to show the operator which
+          relationship deserves attention and how to move it.
         </p>
         <div className="public-live-system-grid">
           {liveSystemsProof.map((system) => (
@@ -30,11 +30,8 @@ export function LiveSystemsSection() {
       </div>
       <div className="public-operator-preview" aria-label="Live system proof preview">
         <div className="public-preview-header public-preview-header-live">
-          <span>Relationship execution patterns</span>
-          <strong>
-            <span className="public-live-dot" />
-            In production
-          </strong>
+          <span>Relationship execution surface</span>
+          <strong>Operator-grade clarity</strong>
         </div>
         <div className="public-workspace-stat-grid">
           {operatorWorkspaceStats.map((stat) => (
@@ -67,7 +64,7 @@ export function LiveSystemsSection() {
       </div>
       <SectionCta
         eyebrow="Relationship execution"
-        text="See how Meridian can sit above your CRM, prioritize relationships, and simplify follow-up without hiding workflow continuity."
+        text="See how Meridian can sit above existing relationship systems, prioritize attention, and simplify follow-up without becoming another CRM."
         primaryHref={REQUEST_WORKSPACE_HREF}
         primaryLabel="Request Workspace"
         secondaryHref={VISIBILITY_SCAN_HREF}

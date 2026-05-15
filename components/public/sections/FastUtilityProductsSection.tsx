@@ -8,11 +8,11 @@ import {
 
 export function FastUtilityProductsSection() {
   return (
-    <section id="utility-products" className="public-section">
+    <section id="products" className="public-section">
       <SectionIntro
-        eyebrow="Relationship execution products"
-        title="Start by recovering value from the relationships you already have."
-        text="Meridian utility products focus the operator on priority contacts, stale opportunities, follow-up timing, local trust, reviews, and missed revenue."
+        eyebrow="Products"
+        title="Focused systems for relationship recovery and execution."
+        text="The public product ladder stays simple: scans to find the revenue movement, single-user systems for personal execution, shared workspaces for teams, and strategic systems for deeper workflow builds."
       />
       <div className="public-product-grid">
         {fastUtilityProducts.map((product, index) => (
