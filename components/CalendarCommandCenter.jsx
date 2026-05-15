@@ -3477,7 +3477,7 @@ export function SelectedLeadPanel({
   workspaceSlug = "",
   serverExecutionOutcomeMap = {},
   readOnly = false,
-  aiAssistEnabled = false,
+  aiAssistEnabled = true,
 }) {
   // Popover state removed — Call Now now fires tel: directly. No
   // intermediate confirmation step on a desktop operator workflow.
@@ -4228,21 +4228,6 @@ export function SelectedLeadPanel({
         </div>
       </div>
 
-      <Divider />
-
-      <ExecutionOutcomePanel
-        taskId={task.id}
-        linkedLeadId={task?.linkedLeadId ?? null}
-        linkedCompany={task?.linkedCompany ?? null}
-        companyKey={task?.companyKey ?? null}
-        crmKey={task?.crmKey ?? null}
-        overflowEntries={overflowEntries}
-        workspaceSlug={workspaceSlug}
-        serverExecutionOutcomeMap={serverExecutionOutcomeMap}
-        readOnly={readOnly}
-        onLeadUpdate={onLeadUpdate}
-      />
-
       {aiAssistEnabled ? (
         <>
           <Divider />
@@ -4327,6 +4312,21 @@ export function SelectedLeadPanel({
           </section>
         </>
       ) : null}
+
+      <Divider />
+
+      <ExecutionOutcomePanel
+        taskId={task.id}
+        linkedLeadId={task?.linkedLeadId ?? null}
+        linkedCompany={task?.linkedCompany ?? null}
+        companyKey={task?.companyKey ?? null}
+        crmKey={task?.crmKey ?? null}
+        overflowEntries={overflowEntries}
+        workspaceSlug={workspaceSlug}
+        serverExecutionOutcomeMap={serverExecutionOutcomeMap}
+        readOnly={readOnly}
+        onLeadUpdate={onLeadUpdate}
+      />
 
     </aside>
     </>
