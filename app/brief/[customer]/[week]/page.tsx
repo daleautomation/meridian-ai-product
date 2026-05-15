@@ -61,37 +61,37 @@ export default async function RecoveryBriefPage({ params }: BriefPageProps) {
           </dl>
         </header>
 
-        <div className="recovery-brief-table-wrap">
-          <table className="recovery-brief-table">
-            <thead>
-              <tr>
-                <th>Company / contact</th>
-                <th>Freshness</th>
-                <th>Why now</th>
-                <th>Verified contact path</th>
-                <th>Suggested opener</th>
-                <th>Priority context</th>
-              </tr>
-            </thead>
-            <tbody>
-              {brief.opportunities.map((item) => (
-                <tr key={`${item.rank}-${item.companyName}`}>
-                  <td>
-                    <strong>{item.rank}. {item.companyName}</strong>
-                    <span>{item.contactName ?? item.location ?? "Contact not named"}</span>
-                  </td>
-                  <td>
-                    <strong>{item.relationshipFreshness}</strong>
-                    <span>{daysLabel(item.staleness.daysSinceTouch)}</span>
-                  </td>
-                  <td>{item.whyNow}</td>
-                  <td>{item.verifiedContactPath}</td>
-                  <td>{item.suggestedOpener}</td>
-                  <td>{item.priorityContext}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="recovery-brief-deck">
+          {brief.opportunities.map((item) => (
+            <article className="recovery-brief-card" key={`${item.rank}-${item.companyName}`}>
+              <div className="recovery-brief-card-topline">
+                <span>No. {item.rank}</span>
+                <span>{item.recoveryScore} recovery score</span>
+              </div>
+              <h2>{item.companyName}</h2>
+              <p className="recovery-brief-card-meta">
+                {item.contactName ?? "Contact not named"} · {item.location ?? "Location not provided"} · {item.relationshipFreshness} · {daysLabel(item.staleness.daysSinceTouch)}
+              </p>
+              <div className="recovery-brief-card-grid">
+                <section>
+                  <h3>Why now</h3>
+                  <p>{item.whyNow}</p>
+                </section>
+                <section>
+                  <h3>Suggested opener</h3>
+                  <p>{item.suggestedOpener}</p>
+                </section>
+                <section>
+                  <h3>Priority read</h3>
+                  <p>{item.priorityContext}</p>
+                </section>
+                <section>
+                  <h3>Contact path</h3>
+                  <p>{item.verifiedContactPath}</p>
+                </section>
+              </div>
+            </article>
+          ))}
         </div>
       </section>
 
@@ -125,7 +125,8 @@ export default async function RecoveryBriefPage({ params }: BriefPageProps) {
 
         .recovery-brief-kicker,
         .recovery-brief-stats dt,
-        .recovery-brief-table th {
+        .recovery-brief-card-topline,
+        .recovery-brief-card h3 {
           color: #7c6f61;
           font-size: 11px;
           font-weight: 800;
@@ -144,7 +145,7 @@ export default async function RecoveryBriefPage({ params }: BriefPageProps) {
 
         .recovery-brief-subtitle,
         .recovery-brief-stats dd,
-        .recovery-brief-table span {
+        .recovery-brief-card-meta {
           color: #687381;
         }
 
@@ -177,40 +178,61 @@ export default async function RecoveryBriefPage({ params }: BriefPageProps) {
           overflow-wrap: anywhere;
         }
 
-        .recovery-brief-table-wrap {
-          overflow-x: auto;
+        .recovery-brief-deck {
+          display: grid;
+          gap: 18px;
+          padding: clamp(18px, 3vw, 30px);
         }
 
-        .recovery-brief-table {
-          width: 100%;
-          min-width: 1040px;
-          border-collapse: collapse;
+        .recovery-brief-card {
+          padding: clamp(22px, 3vw, 30px);
+          border: 1px solid #ece5dc;
+          border-radius: 24px;
+          background: #fffaf1;
+          box-shadow: 0 12px 34px rgba(31, 41, 51, 0.05);
         }
 
-        .recovery-brief-table th,
-        .recovery-brief-table td {
-          padding: 18px;
-          border-bottom: 1px solid #ece5dc;
-          text-align: left;
-          vertical-align: top;
-          font-size: 14px;
+        .recovery-brief-card-topline {
+          display: flex;
+          justify-content: space-between;
+          gap: 14px;
+        }
+
+        .recovery-brief-card h2 {
+          margin: 12px 0 6px;
+          color: #141b24;
+          font-size: clamp(25px, 3vw, 34px);
+          line-height: 1.05;
+          letter-spacing: -0.035em;
+        }
+
+        .recovery-brief-card-meta {
+          margin: 0;
+          font-size: 13px;
           line-height: 1.45;
         }
 
-        .recovery-brief-table th {
-          background: #faf6ee;
+        .recovery-brief-card-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 18px 22px;
+          margin-top: 22px;
         }
 
-        .recovery-brief-table strong {
-          display: block;
-          color: #18212c;
-          font-weight: 750;
+        .recovery-brief-card section {
+          padding-top: 15px;
+          border-top: 1px solid #ece5dc;
         }
 
-        .recovery-brief-table span {
-          display: block;
-          margin-top: 6px;
-          font-size: 12px;
+        .recovery-brief-card h3 {
+          margin: 0 0 7px;
+        }
+
+        .recovery-brief-card p {
+          margin: 0;
+          color: #2f3a46;
+          font-size: 14px;
+          line-height: 1.55;
         }
 
         @media (max-width: 760px) {
@@ -220,6 +242,10 @@ export default async function RecoveryBriefPage({ params }: BriefPageProps) {
 
           .recovery-brief-stats {
             min-width: 0;
+          }
+
+          .recovery-brief-card-grid {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>

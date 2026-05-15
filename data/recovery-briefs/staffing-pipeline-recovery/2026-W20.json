@@ -1,0 +1,129 @@
+{
+  "customer": "Staffing Pipeline Recovery",
+  "week": "2026-W20",
+  "generatedAt": "2026-05-15T19:26:48.758Z",
+  "sourceCsv": "fixtures/recovery-staffing.csv",
+  "summary": {
+    "inputRows": 4,
+    "opportunities": 4,
+    "recoveryCandidates": 3
+  },
+  "opportunities": [
+    {
+      "rank": 1,
+      "companyName": "Mason Hill Search",
+      "contactName": "Priya Shah",
+      "location": "Columbus, OH",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 100,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 149,
+        "lastTouchAt": "2025-12-17T00:00:00.000Z"
+      },
+      "whyNow": "Last note: Wanted to wait until the CFO search narrowed to finalists. No touch for 149 days, which gives the operator a specific thread to reopen.",
+      "verifiedContactPath": "Phone on homepage (medium): (614) 268-3307",
+      "suggestedOpener": "Hi Priya, I had a note to reconnect once the CFO search narrowed. If the finalist slate is still moving, we can help keep a backup lane warm without disrupting the process.",
+      "priorityContext": "Call now. 82/100 fit with 100/100 relationship staleness. Lead with: Executive-search nurture sequence. Reopen around finalist-stage timing; ask if the board needs a backup slate before interviews finish.",
+      "recoveryScore": 88,
+      "decision": {
+        "bucket": "Call now",
+        "score": 82,
+        "primaryOpportunity": {
+          "id": "executive-search-nurture-sequence",
+          "label": "Executive-search nurture sequence",
+          "reason": "Reopen around finalist-stage timing; ask if the board needs a backup slate before interviews finish.",
+          "revenueImpact": "medium",
+          "services": []
+        }
+      }
+    },
+    {
+      "rank": 2,
+      "companyName": "Northline Talent Partners",
+      "contactName": "Caleb Ortiz",
+      "location": "Charlotte, NC",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 96,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 91,
+        "lastTouchAt": "2026-02-13T00:00:00.000Z"
+      },
+      "whyNow": "The client added two field-service coordinator postings tied to a June rollout. Last touch was 91 days ago, so the follow-up has a real business reason.",
+      "verifiedContactPath": "Phone on homepage (medium): (704) 412-8893",
+      "suggestedOpener": "Hi Caleb, you asked about a 30-day sourcing sprint before the field-service rollout. I noticed two coordinator roles are still live - worth tightening the candidate flow this week?",
+      "priorityContext": "Call now. 80/100 fit with 96/100 relationship staleness. Lead with: Field-service hiring sprint. Lead with the June rollout; confirm whether coordinator coverage is still the bottleneck.",
+      "recoveryScore": 85,
+      "decision": {
+        "bucket": "Call now",
+        "score": 80,
+        "primaryOpportunity": {
+          "id": "field-service-hiring-sprint",
+          "label": "Field-service hiring sprint",
+          "reason": "Lead with the June rollout; confirm whether coordinator coverage is still the bottleneck.",
+          "revenueImpact": "medium",
+          "services": []
+        }
+      }
+    },
+    {
+      "rank": 3,
+      "companyName": "Benton Parker Staffing",
+      "contactName": "Lena Morris",
+      "location": "Nashville, TN",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 90,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 109,
+        "lastTouchAt": "2026-01-26T00:00:00.000Z"
+      },
+      "whyNow": "They reopened a production supervisor requisition after pausing the search in February. Last touch was 109 days ago, so the follow-up has a real business reason.",
+      "verifiedContactPath": "Phone on homepage (medium): (615) 238-7041",
+      "suggestedOpener": "Hi Lena, I saw the production supervisor search reopened after the February pause. You had asked for a short list once the plant schedule was approved - should we revisit that before the next shift plan locks?",
+      "priorityContext": "Call now. 80/100 fit with 90/100 relationship staleness. Lead with: Paused manufacturing search reopened. Ask whether the Clarksville production role is still blocking second-shift coverage.",
+      "recoveryScore": 82,
+      "decision": {
+        "bucket": "Call now",
+        "score": 80,
+        "primaryOpportunity": {
+          "id": "paused-manufacturing-search-reopened",
+          "label": "Paused manufacturing search reopened",
+          "reason": "Ask whether the Clarksville production role is still blocking second-shift coverage.",
+          "revenueImpact": "medium",
+          "services": []
+        }
+      }
+    },
+    {
+      "rank": 4,
+      "companyName": "SummitCare Recruiting",
+      "contactName": "Jordan Lee",
+      "location": "Raleigh, NC",
+      "relationshipFreshness": "Dormant",
+      "staleness": {
+        "staleScore": 70,
+        "staleCategory": "Dormant",
+        "daysSinceTouch": 65,
+        "lastTouchAt": "2026-03-11T00:00:00.000Z"
+      },
+      "whyNow": "Last note: Asked for nurse-practitioner outreach examples. No touch for 65 days, which gives the operator a specific thread to reopen.",
+      "verifiedContactPath": "Phone on homepage (medium): (919) 431-5528",
+      "suggestedOpener": "Hi Jordan, you asked for nurse-practitioner outreach examples and I never closed the loop. Are the specialty clinic roles still hard to fill, or did that search calm down?",
+      "priorityContext": "Call now. 82/100 fit with 70/100 relationship staleness. Lead with: Nurse-practitioner outreach. Keep it operational: ask whether the specialty clinic roles are still hard to fill and offer the outreach examples.",
+      "recoveryScore": 74,
+      "decision": {
+        "bucket": "Call now",
+        "score": 82,
+        "primaryOpportunity": {
+          "id": "nurse-practitioner-outreach",
+          "label": "Nurse-practitioner outreach",
+          "reason": "Keep it operational: ask whether the specialty clinic roles are still hard to fill and offer the outreach examples.",
+          "revenueImpact": "medium",
+          "services": []
+        }
+      }
+    }
+  ]
+}
