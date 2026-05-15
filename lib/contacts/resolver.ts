@@ -13,6 +13,7 @@ import { searchYelp } from "./sources/yelp";
 import { searchBBB } from "./sources/bbb";
 import { searchFacebook } from "./sources/facebook";
 import { searchHunter } from "./sources/hunter";
+import { readHunterApiKey } from "@/lib/integrations/hunterConfig";
 import type {
   BusinessInput,
   ContactCandidate,
@@ -275,7 +276,9 @@ function providerSkipReasons(): string[] {
   if (!process.env.YELP_API_KEY) skipped.push("yelp_skipped_no_key");
   if (!process.env.BBB_SEARCH_URL) skipped.push("bbb_skipped_no_endpoint");
   if (!process.env.FACEBOOK_SEARCH_URL) skipped.push("facebook_skipped_no_endpoint");
-  if (!process.env.HUNTER_API_KEY) skipped.push("hunter_skipped_no_key");
+  const hunterConfig = readHunterApiKey();
+  if (hunterConfig.status === "missing") skipped.push("hunter_skipped_no_key");
+  if (hunterConfig.status === "malformed") skipped.push("hunter_skipped_malformed_key");
   return skipped;
 }
 

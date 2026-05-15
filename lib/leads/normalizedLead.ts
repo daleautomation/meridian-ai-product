@@ -168,6 +168,26 @@ function pickSourceStatus(v: unknown): SourceStatus {
   return "available";
 }
 
+function pickEmailStatus(v: unknown): EmailEnrichmentStatus | undefined {
+  const s = asString(v)?.toLowerCase();
+  const ok: EmailEnrichmentStatus[] = ["not_searched", "searching", "verified", "not_found", "needs_manual_review"];
+  if (s && (ok as string[]).includes(s)) return s as EmailEnrichmentStatus;
+  return undefined;
+}
+
+function pickEmailSource(v: unknown): EmailEnrichmentSource | undefined {
+  const s = asString(v)?.toLowerCase();
+  const ok: EmailEnrichmentSource[] = ["hunter", "apollo", "clay", "manual_upload", "site_scrape", "google_places", "unknown"];
+  if (s && (ok as string[]).includes(s)) return s as EmailEnrichmentSource;
+  return undefined;
+}
+
+function pickEmailConfidence(v: unknown): NormalizedLead["emailConfidence"] | undefined {
+  const s = asString(v)?.toLowerCase();
+  if (s === "high" || s === "medium" || s === "low") return s;
+  return undefined;
+}
+
 // Adapt an arbitrary in-flight lead-shaped object into NormalizedLead.
 // Missing data stays undefined. Decision is preserved when present.
 export function normalizeLead(
@@ -247,6 +267,11 @@ export function normalizeLead(
     website,
     phone,
     email,
+    emailStatus: pickEmailStatus(src.emailStatus),
+    verifiedEmail: asString(src.verifiedEmail),
+    emailSource: pickEmailSource(src.emailSource),
+    emailVerifiedAt: asString(src.emailVerifiedAt),
+    emailConfidence: pickEmailConfidence(src.emailConfidence),
     source: pickSource(src.source),
     sourceStatus: pickSourceStatus(src.sourceStatus),
     lastChecked,
