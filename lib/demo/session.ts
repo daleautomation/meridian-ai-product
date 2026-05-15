@@ -71,9 +71,12 @@ export async function createDemoSessionResponse(input: DemoSessionInput) {
 
   const destination = input.destination
     ?? (url.searchParams.get("surface") === "relationship-priority" ? "relationship-priority" : "operator");
+  const resolvedDestination = destination === "relationship-priority" && !access.workspace.features.showRelationshipsTab
+    ? "operator"
+    : destination;
   const isHttps = isSecureSessionRequest(req);
   const proto = isHttps ? "https" : "http";
-  const operatorPath = destination === "relationship-priority"
+  const operatorPath = resolvedDestination === "relationship-priority"
     ? "/operator/relationship-priority"
     : "/operator";
   const redirectUrl = new URL(

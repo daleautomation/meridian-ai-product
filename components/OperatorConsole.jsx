@@ -309,6 +309,70 @@ function trustInfo(lead, siteStatus, nowLabel) {
   return { source, confidence, lastChecked };
 }
 
+function cleanTrustToken(value) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed || /^(unknown|none|n\/a)$/i.test(trimmed)) return null;
+  return trimmed;
+}
+
+function sourceLabel(value) {
+  const raw = cleanTrustToken(value);
+  if (!raw) return null;
+  const key = raw.toLowerCase().replace(/[_-]+/g, " ");
+  if (key.includes("google") || key === "gbp") return "Google Business Profile";
+  if (key.includes("yelp")) return "Yelp";
+  if (key.includes("bbb")) return "BBB";
+  if (key.includes("hunter")) return "Hunter";
+  if (key.includes("website") || key.includes("site")) return "Website";
+  if (key.includes("manual")) return "Manual";
+  return raw;
+}
+
+function formatVerifiedDate(iso) {
+  const raw = cleanTrustToken(iso);
+  if (!raw) return null;
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return null;
+  return `Verified ${d.toLocaleDateString([], { month: "short", day: "numeric" })}`;
+}
+
+function contactTrustItems(lead, method) {
+  const paths = Array.isArray(lead?.contactPaths) ? lead.contactPaths : [];
+  const path = paths
+    .filter((p) => p && p.method === method)
+    .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99))[0] ?? null;
+  const contacts = lead?.contacts ?? {};
+  const source = sourceLabel(path?.source ?? path?.label ?? (method === "email" ? lead?.emailSource : contacts.source));
+  const verified = formatVerifiedDate(
+    path?.lastChecked
+    ?? path?.lastCheckedAt
+    ?? path?.checkedAt
+    ?? (method === "email" ? lead?.emailVerifiedAt : contacts.lastVerifiedAt)
+    ?? lead?.lastChecked
+    ?? lead?.websiteProof?.last_checked
+  );
+  return [source, verified].filter(Boolean).slice(0, 2);
+}
+
+function ContactTrustChips({ items }) {
+  if (!Array.isArray(items) || items.length === 0) return null;
+  return (
+    <span style={S.contactTrustChipRow}>
+      {items.map((item) => (
+        <span key={item} style={S.contactTrustChip}>{item}</span>
+      ))}
+    </span>
+  );
+}
+
+function knownConfidenceLabel(value) {
+  const label = cleanTrustToken(value);
+  if (!label) return null;
+  const upper = label.toUpperCase();
+  return upper === "UNKNOWN" ? null : upper;
+}
+
 function confidenceBadgeColor(conf) {
   if (conf === "HIGH") return palette.success;
   if (conf === "MEDIUM") return palette.warning;
@@ -1751,7 +1815,8 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
   const [newFollowUpTitle, setNewFollowUpTitle] = useState("");
   const [newFollowUpDue, setNewFollowUpDue] = useState("");
   const [newFollowUpType, setNewFollowUpType] = useState("follow_up_call");
-  const [savedFlash, setSavedFlash] = useState(null);
+  const [lastLoggedAt, setLastLoggedAt] = useState(null);
+  const [loggedClock, setLoggedClock] = useState(0);
   // Per-action state — each CRM write registers under a unique key and
   // transitions idle → saving → success → idle (or error → idle). Gives
   // every button precise per-click feedback instead of one global flag.
@@ -1788,6 +1853,13 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
   const nowLabel = useMemo(() => new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }), []);
 
   const ref = useMemo(() => ({ name: lead.name, domain: lead.domain }), [lead.name, lead.domain]);
+  const notifyLeadUpdated = useCallback((suppressToday = false) => {
+    onUpdate?.(suppressToday ? {
+      suppressToday: true,
+      leadKey,
+      companyKey: lead.companyKey ?? lead.crmKey ?? null,
+    } : undefined);
+  }, [onUpdate, leadKey, lead.companyKey, lead.crmKey]);
 
   const logOutreach = useCallback((activityType, outcome) => {
     // Remember recent assistant actions for the right rail.
@@ -1811,12 +1883,12 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
           outcome: outcome ?? null,
           performedBy: user.id,
         });
-        onUpdate?.();
+        notifyLeadUpdated(false);
       } catch {
         // swallow; logging should never interrupt the operator
       }
     })();
-  }, [ref, user.id, onUpdate, leadKey]);
+  }, [ref, user.id, notifyLeadUpdated, leadKey]);
 
   // Background AI enhancement for talk track.
   useEffect(() => {
@@ -1855,7 +1927,7 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
         setLogNote("");
         setShowLog(false);
         await loadTimeline();
-        onUpdate?.();
+        notifyLeadUpdated(type === "call" || type === "voicemail" || outcome === "follow_up_needed");
       },
       {
         successMessage: outcome ? `Activity logged: ${type.replace(/_/g, " ")} → ${outcome.replace(/_/g, " ")}` : `Activity logged: ${type.replace(/_/g, " ")}`,
@@ -1876,7 +1948,7 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
         setNoteText("");
         setShowNote(false);
         await loadTimeline();
-        onUpdate?.();
+        notifyLeadUpdated(false);
       },
       {
         successMessage: "Note saved to CRM",
@@ -1981,7 +2053,7 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
           else if (grp === "nextStep") setNextStepStatus(targetStatus);
         }
         await loadTimeline();
-        onUpdate?.();
+        notifyLeadUpdated(!cleared && ["CONTACTED", "VOICEMAIL", "FOLLOW_UP"].includes(targetStatus));
       },
       {
         successMessage: cleared
@@ -2107,11 +2179,19 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
     }
   }
 
-  // Brief "Saved to CRM" confirmation. 1.8s is long enough to read, short
-  // enough not to compete with the next action.
-  function flashSaved(message) {
-    setSavedFlash(message);
-    setTimeout(() => setSavedFlash(null), 1800);
+  useEffect(() => {
+    if (!lastLoggedAt) return undefined;
+    const timer = setInterval(() => setLoggedClock((v) => v + 1), 30_000);
+    return () => clearInterval(timer);
+  }, [lastLoggedAt]);
+
+  function loggedAgoLabel() {
+    if (!lastLoggedAt) return null;
+    void loggedClock;
+    const ms = Date.now() - new Date(lastLoggedAt).getTime();
+    if (!Number.isFinite(ms) || ms < 60_000) return "Logged now";
+    const minutes = Math.max(1, Math.floor(ms / 60_000));
+    return `Logged ${minutes}m ago`;
   }
 
   // runAction — single code path every CRM write goes through so the rep
@@ -2129,7 +2209,8 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
       setActionState((prev) => ({ ...prev, [key]: { phase: "success" } }));
       if (successMessage) {
         setCrmRail({ tone: railTone, message: successMessage, at: Date.now() });
-        flashSaved(successMessage);
+        setLastLoggedAt(new Date().toISOString());
+        setLoggedClock((v) => v + 1);
       }
       if (onSuccess) {
         try { onSuccess(result); } catch { /* onSuccess is UX sugar; never fail the action over it */ }
@@ -2179,6 +2260,7 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
         setNewFollowUpDue("");
         setNewFollowUpType("follow_up_call");
         await Promise.all([loadFollowUps(), loadTimeline()]);
+        notifyLeadUpdated(true);
       },
       {
         successMessage: "Follow-up scheduled in CRM",
@@ -2244,6 +2326,7 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
 
   const externalSite = siteHref(lead);
   const siteStatus = siteUsability(lead);
+  const loggedAgo = loggedAgoLabel();
 
   return (
     <div style={S.detail}>
@@ -2295,6 +2378,9 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
         const bucket = getServiceBucket(tradeKey, lead.serviceBucket);
         const headerPhone = getDialablePhone(lead);
         const hasPhoneAtHeader = !!headerPhone;
+        const phoneTrust = contactTrustItems(lead, "phone");
+        const emailTrust = contactTrustItems(lead, "email");
+        const trustConfidence = knownConfidenceLabel(trust.confidence);
         return (
           <div style={S.companyHeaderCard}>
             <div style={S.companyHeaderTop}>
@@ -2315,13 +2401,17 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
                     <span style={S.trustKey}>Last Checked</span>
                     <span style={S.trustValue}>{trust.lastChecked}</span>
                   </span>
-                  <span style={S.trustSep}>·</span>
-                  <span style={S.trustItemInline}>
-                    <span style={S.trustKey}>Confidence</span>
-                    <span style={{ ...S.trustValue, color: confidenceBadgeColor(trust.confidence), fontWeight: 700 }}>
-                      {trust.confidence}
-                    </span>
-                  </span>
+                  {trustConfidence ? (
+                    <>
+                      <span style={S.trustSep}>·</span>
+                      <span style={S.trustItemInline}>
+                        <span style={S.trustKey}>Confidence</span>
+                        <span style={{ ...S.trustValue, color: confidenceBadgeColor(trustConfidence), fontWeight: 700 }}>
+                          {trustConfidence}
+                        </span>
+                      </span>
+                    </>
+                  ) : null}
                 </div>
               </div>
               <div style={S.companyHeaderRight}>
@@ -2329,6 +2419,7 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
                   <>
                     <div style={S.companyHeaderPhoneLabel} title="Verified phone">Primary Phone</div>
                     <div style={S.companyHeaderPhone}>{headerPhone}</div>
+                    <ContactTrustChips items={phoneTrust} />
                     {/* Paired CTA group — primary Call Now + secondary Call
                         Script, aligned horizontally at the same height so
                         the rep reads them as one action cluster. */}
@@ -2362,11 +2453,13 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
                         size="md"
                       />
                     </div>
+                    <ContactTrustChips items={emailTrust} />
                   </>
                 ) : (
                   <>
                     <div style={S.companyHeaderPhoneLabel}>Primary Phone</div>
                     <div style={{ ...S.companyHeaderPhone, color: palette.textTertiary }}>Not on file</div>
+                    <ContactTrustChips items={phoneTrust} />
                     <div style={S.companyHeaderCtaRow}>
                       <button
                         type="button"
@@ -2394,6 +2487,7 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
                         size="md"
                       />
                     </div>
+                    <ContactTrustChips items={emailTrust} />
                   </>
                 )}
               </div>
@@ -2609,6 +2703,9 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
                 </button>
               </div>
             )}
+            {loggedAgo ? (
+              <div style={S.loggedAgoLine} role="status">{loggedAgo}</div>
+            ) : null}
 
             {/* Scoped reset controls — visually secondary. Only affect
                 THIS lead card. Status clear is a one-click scoped
@@ -3062,13 +3159,6 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
         )}
       </div>
 
-      {/* Toast — short, high-confidence confirmation that a write landed
-          in the CRM. Sits at the LeadDetail level so it covers any
-          persistence action (status, note, follow-up). */}
-      {savedFlash && (
-        <div style={S.crmSavedFlash}>{savedFlash}</div>
-      )}
-
       {/* Expandable content */}
 
       {showScript && (
@@ -3188,6 +3278,8 @@ function CallMode({
   // the tooltip on the email button below.
   const email = lead.verifiedEmail || c.primaryEmail;
   const emailIsHunter = lead.emailSource === "hunter";
+  const phoneTrust = contactTrustItems(lead, "phone");
+  const emailTrust = contactTrustItems(lead, "email");
   const tradeKey = lead.trade || TRADE_DEFAULT;
   const trade = getTradeModule(tradeKey);
   const bucket = getServiceBucket(tradeKey, lead.serviceBucket);
@@ -3260,15 +3352,18 @@ function CallMode({
           </div>
           <div style={S.callModeTopRight}>
             {phone ? (
-              <a
-                href={telHref(phone)}
-                onClick={onCall}
-                style={S.callModePhone}
-                title="Tap to dial"
-              >
-                <div style={S.callModePhoneLabel}>Call</div>
-                <div style={S.callModePhoneNumber}>{phone}</div>
-              </a>
+              <div style={S.callModeContactStack}>
+                <a
+                  href={telHref(phone)}
+                  onClick={onCall}
+                  style={S.callModePhone}
+                  title="Tap to dial"
+                >
+                  <div style={S.callModePhoneLabel}>Call</div>
+                  <div style={S.callModePhoneNumber}>{phone}</div>
+                </a>
+                <ContactTrustChips items={phoneTrust} />
+              </div>
             ) : (
               <div style={{ ...S.callModePhone, opacity: 0.5 }}>
                 <div style={S.callModePhoneLabel}>No phone on file</div>
@@ -3410,6 +3505,7 @@ function CallMode({
                   size="md"
                   labelOverride="Send Email"
                 />
+                <ContactTrustChips items={emailTrust} />
                 {/* Call Mode opts out of Find Email — the moment is for
                     dialing, not enrichment side-quests. The detail panel
                     surfaces Find Email when needed. */}
@@ -3442,7 +3538,7 @@ function CallMode({
 // (note composer, status updates, stats, skipped leads). After a status
 // change or note save the queue auto-advances. Completion screen shows
 // session totals and next-steps.
-function CallQueue({ leads, user, filterLabel, onExit, onRestart, onStartFollowUps, hasFollowUps }) {
+function CallQueue({ leads, user, filterLabel, onExit, onRestart, onStartFollowUps, hasFollowUps, onLeadUpdate }) {
   const [index, setIndex] = useState(0);
   const [noteText, setNoteText] = useState("");
   const [noteBusy, setNoteBusy] = useState(false);
@@ -3516,6 +3612,13 @@ function CallQueue({ leads, user, filterLabel, onExit, onRestart, onStartFollowU
         status: nextStatus,
         changedBy: user.id,
       });
+      if (["CONTACTED", "VOICEMAIL", "FOLLOW_UP"].includes(nextStatus)) {
+        onLeadUpdate?.({
+          suppressToday: true,
+          leadKey: current.key ?? current.id ?? null,
+          companyKey: current.companyKey ?? current.crmKey ?? null,
+        });
+      }
       // Session stats — CONTACTED / VOICEMAIL / INTERESTED each count as a
       // call attempt; EMAILED is a pure email outcome.
       setStats((s) => {
@@ -3706,6 +3809,7 @@ function NextActionBlock({ nextAction, canCall, onEnterCallMode, mailtoHref }) {
   const { action, confidence, reason, supportDetail } = nextAction;
   const meta = NEXT_ACTION_META[action] ?? NEXT_ACTION_META["REVIEW SITE FIRST"];
   const decorated = decorateActionLabel(action, confidence);
+  const confidenceLabel = knownConfidenceLabel(confidence);
 
   // Primary right-side action button. The Next Action bar owns exactly
   // one CTA — Enter Call Mode — regardless of which action variant is
@@ -3753,13 +3857,15 @@ function NextActionBlock({ nextAction, canCall, onEnterCallMode, mailtoHref }) {
 
       {/* RIGHT — confidence badge + primary action */}
       <div style={S.nextActionBarRight}>
-        <span style={{
-          ...S.nextActionConfidenceBadge,
-          color: confidenceBadgeColor(String(confidence || "").toUpperCase()),
-          borderColor: confidenceBadgeColor(String(confidence || "").toUpperCase()),
-        }}>
-          {String(confidence || "").toUpperCase()}
-        </span>
+        {confidenceLabel ? (
+          <span style={{
+            ...S.nextActionConfidenceBadge,
+            color: confidenceBadgeColor(confidenceLabel),
+            borderColor: confidenceBadgeColor(confidenceLabel),
+          }}>
+            {confidenceLabel}
+          </span>
+        ) : null}
         {primaryAction}
       </div>
     </div>
@@ -3786,6 +3892,9 @@ function ScanModal({ lead, trust, site, proof, siteStatus, onClose }) {
   const wp = lead.websiteProof || null;
   const est = lead.opportunityEstimate || null;
   const c = lead.contacts || {};
+  const trustConfidence = knownConfidenceLabel(trust.confidence);
+  const phoneConfidence = knownConfidenceLabel(c.phoneConfidence);
+  const emailConfidence = knownConfidenceLabel(c.emailConfidence);
   const classification = wp?.site_classification;
   const fmtBytes = (n) => (typeof n === "number" ? `${n.toLocaleString()} bytes` : "—");
   const fmtChars = (n) => (typeof n === "number" ? `${n.toLocaleString()} chars` : "—");
@@ -3825,12 +3934,14 @@ function ScanModal({ lead, trust, site, proof, siteStatus, onClose }) {
             <div style={S.scanCellLabel}>Last Checked</div>
             <div style={S.scanCellValue}>{trust.lastChecked}</div>
           </div>
-          <div style={S.scanCell}>
-            <div style={S.scanCellLabel}>Confidence</div>
-            <div style={{ ...S.scanCellValue, color: confidenceBadgeColor(trust.confidence), fontWeight: 700 }}>
-              {trust.confidence}
+          {trustConfidence ? (
+            <div style={S.scanCell}>
+              <div style={S.scanCellLabel}>Confidence</div>
+              <div style={{ ...S.scanCellValue, color: confidenceBadgeColor(trustConfidence), fontWeight: 700 }}>
+                {trustConfidence}
+              </div>
             </div>
-          </div>
+          ) : null}
           <div style={S.scanCell}>
             <div style={S.scanCellLabel}>Classification</div>
             <div style={{ ...S.scanCellValue, color: siteMeta.color, fontWeight: 600 }}>
@@ -3977,14 +4088,14 @@ function ScanModal({ lead, trust, site, proof, siteStatus, onClose }) {
             </div>
             <div style={S.scanCell}>
               <div style={S.scanCellLabel}>Phone confidence</div>
-              <div style={{ ...S.scanCellValue, color: confidenceBadgeColor(String(c.phoneConfidence || "").toUpperCase()) }}>
-                {c.phoneConfidence ? String(c.phoneConfidence).toUpperCase() : "—"}
+              <div style={{ ...S.scanCellValue, color: confidenceBadgeColor(phoneConfidence) }}>
+                {phoneConfidence ?? "—"}
               </div>
             </div>
             <div style={S.scanCell}>
               <div style={S.scanCellLabel}>Email confidence</div>
-              <div style={{ ...S.scanCellValue, color: confidenceBadgeColor(String(c.emailConfidence || "").toUpperCase()) }}>
-                {c.emailConfidence ? String(c.emailConfidence).toUpperCase() : "—"}
+              <div style={{ ...S.scanCellValue, color: confidenceBadgeColor(emailConfidence) }}>
+                {emailConfidence ?? "—"}
               </div>
             </div>
             <div style={S.scanCell}>
@@ -4179,6 +4290,10 @@ function DecisionCore({
 }) {
   const c = lead.contacts || {};
   const hasPhone = !!c.primaryPhone;
+  const phoneConfidence = knownConfidenceLabel(c.phoneConfidence);
+  const emailConfidence = knownConfidenceLabel(c.emailConfidence);
+  const phoneTrust = contactTrustItems(lead, "phone");
+  const emailTrust = contactTrustItems(lead, "email");
   const hasWebsite = !!externalSite;
   const fallbackUrl = lead.resolvedListingUrl;
   const fallbackRoute = lead.fallbackRoute;
@@ -4207,6 +4322,7 @@ function DecisionCore({
     : contactStatus === "SUBMIT FORM" ? palette.warning
     : contactStatus === "MANUAL VERIFY" ? palette.textSecondary
     : palette.warning;
+  const oppConfidence = knownConfidenceLabel(oppView.confidence);
 
   return (
     <div style={S.core}>
@@ -4263,9 +4379,11 @@ function DecisionCore({
                   <span style={{ ...S.oppLevelPill, color: riskLevelColor(oppView.level), borderColor: riskLevelColor(oppView.level) }}>
                     {oppView.level}
                   </span>
-                  <span style={{ ...S.oppConfidencePill, color: confidenceBadgeColor(oppView.confidence) }}>
-                    {oppView.confidence} conf.
-                  </span>
+                  {oppConfidence ? (
+                    <span style={{ ...S.oppConfidencePill, color: confidenceBadgeColor(oppConfidence) }}>
+                      {oppConfidence} conf.
+                    </span>
+                  ) : null}
                 </div>
 
                 {/* Only show the numeric estimate when the engine actually
@@ -4450,9 +4568,10 @@ function DecisionCore({
                   📋
                 </button>
               )}
-              {hasPhone && c.phoneConfidence && (
-                <span style={{ ...S.confBadge, color: confidenceBadgeColor(String(c.phoneConfidence).toUpperCase()) }}>
-                  {String(c.phoneConfidence).toUpperCase()}
+              {hasPhone && phoneTrust.length > 0 && <ContactTrustChips items={phoneTrust} />}
+              {hasPhone && phoneConfidence && (
+                <span style={{ ...S.confBadge, color: confidenceBadgeColor(phoneConfidence) }}>
+                  {phoneConfidence}
                 </span>
               )}
             </div>
@@ -4471,9 +4590,10 @@ function DecisionCore({
                   <span style={S.emailType}> — {formatNoEmailReason(c.noEmailReason)}</span>
                 )}
               </span>
-              {c.primaryEmail && c.emailConfidence && (
-                <span style={{ ...S.confBadge, color: confidenceBadgeColor(String(c.emailConfidence).toUpperCase()) }}>
-                  {String(c.emailConfidence).toUpperCase()}
+              {c.primaryEmail && emailTrust.length > 0 && <ContactTrustChips items={emailTrust} />}
+              {c.primaryEmail && emailConfidence && (
+                <span style={{ ...S.confBadge, color: confidenceBadgeColor(emailConfidence) }}>
+                  {emailConfidence}
                 </span>
               )}
             </div>
@@ -8571,6 +8691,7 @@ export default function OperatorConsole({
   callTheseFirst = [], todayList = [], remaining = [], rest = [],
   totalPipeline = 0, pipelineMap = {}, roi, lastPipelineJob = null,
   serverExecutionOutcomeMap = {},
+  todaySuppression = null,
   pendingReviews, calendarEvents, recentActivities,
   // Snapshot freshness — passed by the operator page so the pill in
   // the header can render a relative time and offer a manual refresh.
@@ -8638,9 +8759,18 @@ export default function OperatorConsole({
   const [contactOverlay, setContactOverlay] = useState({});
   // Call Queue state — when non-null, the queue overlay takes over the UI.
   const [queueState, setQueueState] = useState(null); // { leads: Decision[], filterLabel: string }
+  const [localTodaySuppressionKeys, setLocalTodaySuppressionKeys] = useState(() => new Set());
 
   const handleSelect = (lead) => setSelectedKey(selectedKey === lead.key ? null : lead.key);
-  const handleUpdate = () => setRefreshKey((k) => k + 1);
+  const handleUpdate = useCallback((event) => {
+    setRefreshKey((k) => k + 1);
+    if (!event?.suppressToday) return;
+    setLocalTodaySuppressionKeys((prev) => {
+      const next = new Set(prev);
+      [event.leadKey, event.companyKey].filter(Boolean).forEach((key) => next.add(key));
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (!showRelationshipsTab) return;
@@ -8830,6 +8960,28 @@ export default function OperatorConsole({
   const withOverlays = (leads) => leads.map(applyOverlay);
 
   const allLeads = [...callTheseFirst, ...todayList, ...remaining, ...rest];
+  const serverTodaySuppressionKeySet = useMemo(
+    () => new Set([
+      ...((todaySuppression?.leadKeys && Array.isArray(todaySuppression.leadKeys)) ? todaySuppression.leadKeys : []),
+      ...((todaySuppression?.companyKeys && Array.isArray(todaySuppression.companyKeys)) ? todaySuppression.companyKeys : []),
+    ].filter(Boolean)),
+    [todaySuppression],
+  );
+  const todaySuppressionKeySet = useMemo(
+    () => new Set([
+      ...Array.from(serverTodaySuppressionKeySet),
+      ...Array.from(localTodaySuppressionKeys),
+    ].filter(Boolean)),
+    [serverTodaySuppressionKeySet, localTodaySuppressionKeys],
+  );
+  const isServerSuppressedFromToday = useCallback((lead) => {
+    if (!lead || serverTodaySuppressionKeySet.size === 0) return false;
+    return leadIdentityCandidates(lead).some((key) => serverTodaySuppressionKeySet.has(key));
+  }, [serverTodaySuppressionKeySet]);
+  const isSuppressedFromToday = useCallback((lead) => {
+    if (!lead || todaySuppressionKeySet.size === 0) return false;
+    return leadIdentityCandidates(lead).some((key) => todaySuppressionKeySet.has(key));
+  }, [todaySuppressionKeySet]);
   const rawSelected = allLeads.find((l) => l.key === selectedKey) ?? null;
   const selectedLead = rawSelected ? applyOverlay(rawSelected) : null;
   const hasData = callTheseFirst.length > 0 || todayList.length > 0;
@@ -8846,7 +8998,11 @@ export default function OperatorConsole({
   // Decisions already carry nextAction / labortechFit / websiteProof;
   // buildCallQueue + summarizeQueue read those directly.
   const overlaidAllLeads = allLeads.map(applyOverlay);
-  const todaySummary = useMemo(() => summarizeQueue(overlaidAllLeads), [overlaidAllLeads]);
+  const todayExecutionLeads = useMemo(
+    () => overlaidAllLeads.filter((lead) => !isSuppressedFromToday(lead)),
+    [overlaidAllLeads, isSuppressedFromToday],
+  );
+  const todaySummary = useMemo(() => summarizeQueue(todayExecutionLeads), [todayExecutionLeads]);
 
   // tradeScopedLeads / tradeReadiness are the single lead pipeline
   // shared by Operator and Leads. Declared below, after selectedTradeId.
@@ -9308,7 +9464,7 @@ export default function OperatorConsole({
     // distributed across Roofing, HVAC, Carpentry, Painting,
     // Plumbing, and Electrical, with each per-trade tab showing
     // only its own slice of the same plan.
-    const masterPool = combinedLeadPool ?? [];
+    const masterPool = (combinedLeadPool ?? []).filter((lead) => !isServerSuppressedFromToday(lead));
     if (masterPool.length === 0) {
       return { tasks: undefined, insights: [] };
     }
@@ -9633,7 +9789,7 @@ export default function OperatorConsole({
     // and angle filters are applied downstream (calendarTasks memo)
     // so changing a tab doesn't rebuild the schedule.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [combinedLeadPool, pipelineMap, intelligenceScope, feedbackEvents, executionOutcomeVersion, serverExecutionOutcomeMap]);
+  }, [combinedLeadPool, pipelineMap, intelligenceScope, feedbackEvents, executionOutcomeVersion, serverExecutionOutcomeMap, isServerSuppressedFromToday]);
   const rawCalendarTasks = calendarBundle.tasks;
   const operatorInsights = calendarBundle.insights;
 
@@ -9933,6 +10089,7 @@ export default function OperatorConsole({
       return null;
     }
     const isFollowupOutcome = outcome?.status && outcome.status !== "Not Contacted";
+    const dialablePhone = getDialablePhone(lead);
     return {
       id: `lead-${selectedKey}-${isFollowupOutcome ? "followup" : "call"}`,
       title: `${isFollowupOutcome ? "Follow up with" : "Call"} ${lead.name ?? "lead"}`,
@@ -10001,7 +10158,7 @@ export default function OperatorConsole({
   );
 
   const startQueue = (filter, label) => {
-    const leads = buildCallQueue(overlaidAllLeads, filter);
+    const leads = buildCallQueue(todayExecutionLeads, filter);
     if (leads.length === 0) return;
     setQueueState({ leads, filterLabel: label, filter });
   };
@@ -10706,6 +10863,7 @@ export default function OperatorConsole({
           onRestart={() => startQueue(queueState.filter, queueState.filterLabel)}
           onStartFollowUps={handleStartFollowUps}
           hasFollowUps={todaySummary.followUp > 0}
+          onLeadUpdate={handleUpdate}
         />
       )}
     </div>
@@ -10832,6 +10990,28 @@ const S = {
   companyHeaderLocation: { fontSize: "13px", color: palette.textSecondary, fontWeight: 500 },
   companyHeaderTrust: { display: "flex", gap: "8px", alignItems: "baseline", flexWrap: "wrap", fontSize: "11px" },
   trustItemInline: { display: "inline-flex", gap: "5px", alignItems: "baseline" },
+  contactTrustChipRow: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: "4px",
+    flexWrap: "wrap",
+    maxWidth: "260px",
+  },
+  contactTrustChip: {
+    display: "inline-flex",
+    alignItems: "center",
+    minHeight: "18px",
+    padding: "1px 7px",
+    borderRadius: "999px",
+    border: `1px solid ${palette.borderLight}`,
+    background: palette.surfaceHover,
+    color: palette.textSecondary,
+    fontSize: "10px",
+    fontWeight: 650,
+    letterSpacing: "0.01em",
+    whiteSpace: "nowrap",
+  },
   oppMiniPill: {
     display: "inline-flex", alignItems: "center", gap: "5px",
     fontSize: "10px", fontWeight: 700, letterSpacing: "0.06em",
@@ -10977,6 +11157,7 @@ const S = {
   callModeMeta: { display: "flex", gap: "6px", alignItems: "baseline", flexWrap: "wrap", fontSize: "12px", color: palette.textSecondary },
   callModeDot: { color: palette.textDim },
   callModeTopRight: { display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 },
+  callModeContactStack: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" },
   callModePhone: {
     background: palette.success, color: "#fff", padding: "10px 18px",
     borderRadius: "10px", textDecoration: "none",
@@ -11525,14 +11706,11 @@ const S = {
   timelineNote: {
     fontSize: "12px", color: palette.textSecondary, lineHeight: 1.45,
   },
-  // Saved-to-CRM toast — bottom-right, non-modal.
-  crmSavedFlash: {
-    position: "fixed", bottom: "20px", right: "20px", zIndex: 1000,
-    padding: "10px 16px",
-    background: palette.textPrimary, color: "#fff",
-    borderRadius: "8px", fontSize: "12px", fontWeight: 600,
-    letterSpacing: "0.02em",
-    boxShadow: "0 4px 12px rgba(15,23,42,0.25)",
+  loggedAgoLine: {
+    fontSize: "11px",
+    fontWeight: 600,
+    color: palette.textTertiary,
+    marginTop: "-2px",
   },
   // Spinner glyph for saving states — a single character rotating via
   // inline CSS animation (keyframes injected below via a <style> tag

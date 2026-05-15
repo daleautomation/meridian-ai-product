@@ -9,7 +9,6 @@
 // Calendar / Gmail / Airtable / CRM without touching the UI.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { palette } from "../lib/theme";
 import { dateFromHydrationTime } from "../lib/hydrationTime";
 import {
@@ -75,6 +74,61 @@ const MONTH_LONG = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+function cleanTrustToken(value) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed || /^(unknown|none|n\/a)$/i.test(trimmed)) return null;
+  return trimmed;
+}
+
+function sourceLabel(value) {
+  const raw = cleanTrustToken(value);
+  if (!raw) return null;
+  const key = raw.toLowerCase().replace(/[_-]+/g, " ");
+  if (key.includes("google") || key === "gbp") return "Google Business Profile";
+  if (key.includes("yelp")) return "Yelp";
+  if (key.includes("bbb")) return "BBB";
+  if (key.includes("hunter")) return "Hunter";
+  if (key.includes("website") || key.includes("site")) return "Website";
+  if (key.includes("manual")) return "Manual";
+  return raw;
+}
+
+function formatVerifiedDate(iso) {
+  const raw = cleanTrustToken(iso);
+  if (!raw) return null;
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return null;
+  return `Verified ${d.toLocaleDateString([], { month: "short", day: "numeric" })}`;
+}
+
+function contactTrustItems(lead, task, method) {
+  const paths = Array.isArray(lead?.contactPaths) ? lead.contactPaths : [];
+  const path = paths
+    .filter((p) => p && p.method === method)
+    .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99))[0] ?? null;
+  const contacts = lead?.contacts ?? {};
+  const source = sourceLabel(path?.source ?? path?.label ?? (method === "email" ? lead?.emailSource ?? task?.emailSource : contacts.source ?? lead?.source));
+  const verified = formatVerifiedDate(
+    path?.lastChecked
+    ?? path?.lastCheckedAt
+    ?? path?.checkedAt
+    ?? (method === "email" ? lead?.emailVerifiedAt ?? task?.emailVerifiedAt : contacts.lastVerifiedAt)
+    ?? lead?.lastChecked
+    ?? lead?.websiteProof?.last_checked
+  );
+  return [source, verified].filter(Boolean).slice(0, 2);
+}
+
+function ContactTrustChips({ items }) {
+  if (!Array.isArray(items) || items.length === 0) return null;
+  return (
+    <span style={CONTACT_TRUST_CHIP_ROW}>
+      {items.map((item) => <span key={item} style={CONTACT_TRUST_CHIP}>{item}</span>)}
+    </span>
+  );
+}
+
 // ── Design tokens ──────────────────────────────────────────────────────
 // 4-step radius scale + 3-tier shadow ladder. Every surface in this
 // file routes through these. Premium products feel premium because
@@ -87,6 +141,27 @@ const SH = {
   sm: "0 1px 2px rgba(15,23,42,0.03)",
   md: "0 1px 2px rgba(15,23,42,0.04), 0 6px 18px -6px rgba(15,23,42,0.06)",
   lg: "0 1px 2px rgba(15,23,42,0.04), 0 14px 40px -10px rgba(15,23,42,0.10)",
+};
+const CONTACT_TRUST_CHIP_ROW = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "4px",
+  flexWrap: "wrap",
+};
+const CONTACT_TRUST_CHIP = {
+  display: "inline-flex",
+  alignItems: "center",
+  minHeight: "18px",
+  padding: "1px 7px",
+  borderRadius: "999px",
+  border: `1px solid ${palette.borderLight}`,
+  background: palette.surfaceHover,
+  color: palette.textSecondary,
+  fontSize: "10px",
+  fontWeight: 650,
+  letterSpacing: "0.01em",
+  whiteSpace: "nowrap",
 };
 // Standard ease for state transitions across the rail. Subtle, calm.
 const EASE = "all 180ms cubic-bezier(0.4, 0, 0.2, 1)";
@@ -3031,10 +3106,11 @@ function ExecutionOutcomePanel({
   workspaceSlug = "",
   serverExecutionOutcomeMap = {},
   readOnly = false,
+  onLeadUpdate,
 }) {
-  const router = useRouter();
   const [outcome, setOutcome] = useState(() => getDefaultExecutionOutcome());
   const [persistState, setPersistState] = useState("idle");
+  const [loggedClock, setLoggedClock] = useState(0);
   const identityKeys = useMemo(
     () => [companyKey, crmKey, linkedLeadId],
     [companyKey, crmKey, linkedLeadId],
@@ -3064,6 +3140,12 @@ function ExecutionOutcomePanel({
     prevStatusRef.current = next.status;
   }, [taskId, identityKeys, serverExecutionOutcomeMap]);
 
+  useEffect(() => {
+    if (!outcome.lastActionAt) return undefined;
+    const timer = setInterval(() => setLoggedClock((v) => v + 1), 30_000);
+    return () => clearInterval(timer);
+  }, [outcome.lastActionAt]);
+
   if (!taskId) return null;
 
   // Best-effort pull-forward POST. Fires only when (1) the new status
@@ -3078,7 +3160,6 @@ function ExecutionOutcomePanel({
       overflowEntries,
       workspaceSlug,
       pulledKeys: pulledRef.current,
-      onPulled: () => router.refresh(),
     });
   };
 
@@ -3119,7 +3200,6 @@ function ExecutionOutcomePanel({
         const body = await res.json().catch(() => null);
         if (res.ok && body?.persisted === true) {
           setPersistState("persisted");
-          router.refresh();
           return;
         }
         setPersistState("local_only");
@@ -3156,6 +3236,13 @@ function ExecutionOutcomePanel({
     // notes/value/date blurs (which keep status unchanged) never fire.
     if (next.status !== prevStatus) {
       firePullForward(next.status);
+      if (next.status === "Called" || next.status === "Follow Up") {
+        onLeadUpdate?.({
+          suppressToday: true,
+          leadKey: linkedLeadId,
+          companyKey: companyKey ?? crmKey ?? null,
+        });
+      }
     }
     prevStatusRef.current = next.status;
   };
@@ -3169,11 +3256,14 @@ function ExecutionOutcomePanel({
     { label: "Lost",          status: "Closed Lost",   tone: { fg: palette.danger,  bg: palette.dangerBg,    border: "#FECACA" } },
   ];
 
-  const lastActionRel = (() => {
+  const loggedAgo = (() => {
     if (!outcome.lastActionAt) return null;
+    void loggedClock;
     const d = new Date(outcome.lastActionAt);
     if (Number.isNaN(d.getTime())) return null;
-    return formatCivilDateTime(d);
+    const ms = Date.now() - d.getTime();
+    if (!Number.isFinite(ms) || ms < 60_000) return "Logged now";
+    return `Logged ${Math.max(1, Math.floor(ms / 60_000))}m ago`;
   })();
 
   return (
@@ -3341,13 +3431,13 @@ function ExecutionOutcomePanel({
       </div>
 
       {/* Saved timestamp */}
-      {lastActionRel ? (
+      {loggedAgo ? (
         <div style={{
           fontSize: "10px",
           color: palette.textTertiary,
           letterSpacing: "0.02em",
         }}>
-          Saved {lastActionRel} · {outcome.attributionSource}
+          {loggedAgo} · {outcome.attributionSource}
         </div>
       ) : null}
     </section>
@@ -3390,7 +3480,6 @@ export function SelectedLeadPanel({
   serverExecutionOutcomeMap = {},
   readOnly = false,
 }) {
-  const router = useRouter();
   // Popover state removed — Call Now now fires tel: directly. No
   // intermediate confirmation step on a desktop operator workflow.
   const status = executionStatusFor(task);
@@ -3464,6 +3553,8 @@ export function SelectedLeadPanel({
     : phoneDigits.length === 11 && phoneDigits.startsWith("1")
       ? `+1 (${phoneDigits.slice(1,4)}) ${phoneDigits.slice(4,7)}-${phoneDigits.slice(7)}`
       : (phone || null);
+  const phoneTrust = contactTrustItems(selectedLead, task, "phone");
+  const emailTrust = contactTrustItems(selectedLead, task, "email");
   const callable = !!telHref && !blocked;
   const handlePrimaryCall = (e) => {
     if (readOnly) { if (e?.preventDefault) e.preventDefault(); return; }
@@ -3653,6 +3744,7 @@ export function SelectedLeadPanel({
             onUpdate={onLeadUpdate}
             size="md"
           />
+          <ContactTrustChips items={emailTrust} />
           <ContactStrategyPanel lead={selectedLead} compact />
         </>
       ) : null}
@@ -3879,6 +3971,11 @@ export function SelectedLeadPanel({
                 const identityKeys = [task.companyKey, task.crmKey, task.linkedLeadId];
                 const next = updateExecutionOutcome(loadExecutionOutcomeByIdentity(task.id, identityKeys), { status: "Called" });
                 saveExecutionOutcome(task.id, next, identityKeys);
+                onLeadUpdate?.({
+                  suppressToday: true,
+                  leadKey: task.linkedLeadId ?? null,
+                  companyKey: task.companyKey ?? task.crmKey ?? null,
+                });
                 if (workspaceSlug) {
                   fetch("/api/execution/outcomes", {
                     method: "POST",
@@ -3902,7 +3999,7 @@ export function SelectedLeadPanel({
                   })
                     .then(async (res) => {
                       const body = await res.json().catch(() => null);
-                      if (res.ok && body?.persisted === true) router.refresh();
+                      if (!res.ok || body?.persisted !== true) return;
                     })
                     .catch(() => { /* local optimistic outcome remains available */ });
                 }
@@ -3959,6 +4056,7 @@ export function SelectedLeadPanel({
             </span>
           ) : null}
         </a>
+        <ContactTrustChips items={phoneTrust} />
         {/* Call Mode outcome capture. Only renders while a call is
             in progress. Outcome buttons mutate the task + auto-load
             the next lead via onRecordOutcome. */}
@@ -4139,6 +4237,7 @@ export function SelectedLeadPanel({
         workspaceSlug={workspaceSlug}
         serverExecutionOutcomeMap={serverExecutionOutcomeMap}
         readOnly={readOnly}
+        onLeadUpdate={onLeadUpdate}
       />
 
     </aside>
@@ -5058,8 +5157,39 @@ export default function CalendarCommandCenter({
 
   const selectedTask = useMemo(() => {
     if (!selectedTaskId) return null;
-    return data.find((t) => t.id === selectedTaskId) ?? null;
-  }, [selectedTaskId, data]);
+    const found = data.find((t) => t.id === selectedTaskId);
+    if (found) return found;
+    if (!selectedLead) return null;
+    const isFollowup = String(selectedTaskId).endsWith("-followup");
+    const phone = selectedLead.contacts?.primaryPhone ?? selectedLead.phone ?? null;
+    const email = selectedLead.verifiedEmail ?? selectedLead.contacts?.primaryEmail ?? selectedLead.email ?? null;
+    return {
+      id: selectedTaskId,
+      title: `${isFollowup ? "Follow up with" : "Call"} ${selectedLead.name ?? selectedLead.companyName ?? "lead"}`,
+      category: isFollowup ? "followup" : "priority",
+      priority: "medium",
+      status: "todo",
+      linkedLeadId: selectedLead.key ?? selectedLead.id ?? null,
+      linkedCompany: selectedLead.name ?? selectedLead.companyName ?? null,
+      companyKey: selectedLead.companyKey ?? selectedLead.crmKey ?? null,
+      crmKey: selectedLead.crmKey ?? selectedLead.companyKey ?? null,
+      linkedLocation: selectedLead.location ?? null,
+      ...(phone ? { phone, phoneAuthority: "dialable" } : {}),
+      ...(email ? { email } : {}),
+      verifiedEmail: selectedLead.verifiedEmail ?? null,
+      emailSource: selectedLead.emailSource ?? null,
+      emailConfidence: selectedLead.emailConfidence ?? null,
+      emailVerifiedAt: selectedLead.emailVerifiedAt ?? null,
+      tradeId: selectedLead.trade ?? selectedLead.tradeId ?? null,
+      tradeLabel: selectedLead.tradeLabel ?? null,
+      laborTechScan: selectedLead.laborTechScan ?? null,
+      serviceNeed: selectedLead.serviceNeed ?? null,
+      salesStrategy: selectedLead.salesStrategy ?? null,
+      closeProbability100: typeof selectedLead.salesStrategy?.closeProbability === "number"
+        ? selectedLead.salesStrategy.closeProbability
+        : null,
+    };
+  }, [selectedTaskId, data, selectedLead]);
 
   const handleSelectTask = (task) => {
     if (!task) return;
@@ -5278,7 +5408,7 @@ export default function CalendarCommandCenter({
         })
           .then(async (res) => {
             const body = await res.json().catch(() => null);
-            if (res.ok && body?.persisted === true) router.refresh();
+            if (!res.ok || body?.persisted !== true) return;
           })
           .catch(() => { /* local optimistic outcome remains available */ });
       }
@@ -5287,7 +5417,6 @@ export default function CalendarCommandCenter({
         overflowEntries,
         workspaceSlug,
         pulledKeys: pulledForwardRef.current,
-        onPulled: () => router.refresh(),
       });
     } catch { /* fail silent */ }
 
