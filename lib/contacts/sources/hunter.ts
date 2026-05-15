@@ -13,9 +13,15 @@
 // usable domain the adapter returns [] (logged with "hunter_skipped_no_domain").
 
 import type { ContactCandidate, Identity } from "../types";
-import { getHunterApiKey, isHunterConfigured as hasValidHunterKey } from "@/lib/integrations/hunterConfig";
+import { getHunterApiKey, isHunterConfigured as hasValidHunterKey, readHunterApiKey } from "@/lib/integrations/hunterConfig";
 
 const ENDPOINT = "https://api.hunter.io/v2/domain-search";
+
+// Final-line defense against a malformed key reaching the wire even if the
+// config parser is bypassed. Keys are alphanumeric/dash/underscore only.
+const SAFE_KEY_PATTERN = /^[A-Za-z0-9_-]+$/;
+
+let warnedMissingKey = false;
 
 type HunterEmail = {
   value: string;
@@ -81,8 +87,23 @@ function pickBestEmail(emails: HunterEmail[]): HunterEmail | null {
 }
 
 export async function searchHunter(identity: Identity): Promise<ContactCandidate[]> {
-  const key = hunterKey();
-  if (!key) return [];
+  const keyRead = readHunterApiKey();
+  const key = keyRead.key;
+  if (!key) {
+    if (!warnedMissingKey) {
+      warnedMissingKey = true;
+      console.info(
+        `[hunter] skip key_unavailable status=${keyRead.status}${keyRead.reason ? ` reason=${keyRead.reason}` : ""}`,
+      );
+    }
+    return [];
+  }
+  // Defense in depth: reject any key that does not match the safe pattern
+  // before it can be concatenated into a URL.
+  if (!SAFE_KEY_PATTERN.test(key)) {
+    console.warn("[hunter] skip key_pattern_invalid");
+    return [];
+  }
   const domain = normalizeDomainForHunter(identity.domain);
   if (!domain) {
     console.info(`[hunter] skip domain_missing name=${JSON.stringify(identity.rawName)}`);

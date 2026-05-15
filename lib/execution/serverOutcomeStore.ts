@@ -9,6 +9,7 @@ import {
   dualWriteStrict,
   getTruthStoreMode,
 } from "@/lib/truth/types";
+import { logDualWrite, timed } from "@/lib/truth/dualWriteLogger";
 import {
   findTerminalDurableOutcomeInFile,
   listDurableOutcomesFromFile,
@@ -124,15 +125,57 @@ export async function recordDurableOutcome(input: DurableOutcomeInput): Promise<
 
   if (mode === "neon") return recordDurableOutcomeToNeon(input);
 
+  // dual mode — Neon authoritative, file best-effort shadow.
+  // Behavior is unchanged from prior dual mode; logging added so the soak
+  // is observable with `grep '[truth-store] dual_write'`.
+  const identityKey = input.companyKey ?? input.crmKey ?? input.leadId ?? input.taskId ?? null;
+  let neonOutcome: "ok" | "fail" = "fail";
+  let fileOutcome: "ok" | "fail" | "skip" = "skip";
+  let neonMs: number | null = null;
+  let fileMs: number | null = null;
+  let neonError: string | null = null;
+  let fileError: string | null = null;
   try {
-    const neonResult = await recordDurableOutcomeToNeon(input);
-    await recordDurableOutcomeToFile(input, { syncCrm: false }).catch((err) => {
-      console.error("[serverOutcomeStore] dual file write failed", err);
+    const { result: neonResult, ms } = await timed(() => recordDurableOutcomeToNeon(input));
+    neonOutcome = "ok";
+    neonMs = ms;
+    try {
+      const filePromise = timed(() => recordDurableOutcomeToFile(input, { syncCrm: false }));
+      const { ms: fms } = await filePromise;
+      fileOutcome = "ok";
+      fileMs = fms;
+    } catch (fileErr) {
+      fileOutcome = "fail";
+      fileError = fileErr instanceof Error ? fileErr.message : "unknown";
+      console.error("[serverOutcomeStore] dual file write failed", fileErr);
+    }
+    logDualWrite({
+      surface: "execution_outcome",
+      neon: neonOutcome,
+      file: fileOutcome,
+      neonMs,
+      fileMs,
+      workspace: input.workspace,
+      identityKey,
+      fileError,
     });
     return neonResult;
   } catch (err) {
+    neonError = err instanceof Error ? err.message : "unknown";
     console.error("[serverOutcomeStore] dual Neon write failed", err);
-    const fileResult = await recordDurableOutcomeToFile(input);
+    const { result: fileResult, ms } = await timed(() => recordDurableOutcomeToFile(input));
+    fileOutcome = "ok";
+    fileMs = ms;
+    logDualWrite({
+      surface: "execution_outcome",
+      neon: "fail",
+      file: fileOutcome,
+      neonMs,
+      fileMs,
+      workspace: input.workspace,
+      identityKey,
+      neonError,
+    });
     if (dualWriteStrict()) return { ...fileResult, persisted: false, crmUpdated: false };
     return fileResult;
   }

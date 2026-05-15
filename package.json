@@ -11,6 +11,7 @@
     "smoke:field-test": "node scripts/smoke-field-test.mjs",
     "truth:check": "tsx scripts/check-truth-readiness.ts",
     "truth:backfill:dry": "tsx scripts/backfill-phase1-neon.ts --dry-run",
+    "truth:dry-run": "tsx scripts/truth-store-dry-run.ts",
     "operational-events:replay-fixtures": "tsx scripts/check-operational-event-replay-fixtures.ts",
     "operational-events:command-contracts": "tsx scripts/check-operational-event-command-contracts.ts",
     "operational-events:command-translation": "tsx scripts/check-operational-command-to-event-translation.ts"
