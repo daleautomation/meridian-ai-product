@@ -10846,7 +10846,9 @@ export default function OperatorConsole({
                   onLeadUpdate={handleUpdate}
                   hunterAvailable={!isReadOnlyWorkspace && hunterAvailable}
                   onOpenDeepReport={allowAiAssist ? () => setDeepReportOpen(true) : undefined}
+                  workspaceSlug={workspace?.slug ?? ""}
                   readOnly={isReadOnlyWorkspace}
+                  aiAssistEnabled={workspace?.slug === "labortech" || allowAiAssist}
                 />
               ) : null}
             />

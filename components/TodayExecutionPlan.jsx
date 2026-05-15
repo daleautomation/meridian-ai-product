@@ -4,8 +4,8 @@
 //
 // Routing layer for the calendar workflow. Lists every lead scheduled
 // for today; each row is a tight summary (pain tag · confidence ·
-// one-line insight) with a primary "Open Assist Mode" button that
-// hands the user off into the calendar + Intelligence Panel surface.
+// one-line insight) with a primary "Open Lead" button that opens the
+// standard operator panel in the current queue context.
 // Display only — never touches scoring, scheduling, or AI.
 
 import { useEffect, useState } from "react";
@@ -32,7 +32,7 @@ function priorityBadge(quality) {
   if (typeof score !== "number") return { label: "QUEUED",    icon: "·",  fg: "#475569", bg: "#F1F5F9", border: "#E2E8F0" };
   if (score >= 80)               return { label: "CALL FIRST", icon: "🔥", fg: "#1D4ED8", bg: "#EEF4FF", border: "rgba(37,99,235,0.45)" };
   if (score >= 60)               return { label: "STRONG",    icon: "▲",  fg: "#15803D", bg: "#F0FDF4", border: "#BBF7D0" };
-  return                                { label: "TEST",      icon: "·",  fg: "#475569", bg: "#F1F5F9", border: "#E2E8F0" };
+  return null;
 }
 
 function qualitySourceLabel(source) {
@@ -48,10 +48,9 @@ function qualitySourceLabel(source) {
 export default function TodayExecutionPlan({
   tasks,
   onSelectTask,
-  // New routing handler — selects the lead AND opens Assist Mode AND
-  // scrolls the calendar to the matching card. When omitted, the row
-  // primary button falls back to onSelectTask (no Assist auto-open).
-  onOpenAssist,
+  // Primary routing handler — selects the lead and opens the standard
+  // operator panel without forcing the lower calendar queue into view.
+  onOpenLead,
   // Optional skip handler — advances to the next lead in the queue.
   onSkipTask,
   leadByKey,
@@ -83,7 +82,7 @@ export default function TodayExecutionPlan({
   // user expands to see the rest of the day.
   const [expanded, setExpanded] = useState(false);
   const TOP_LIMIT = 6;
-  const assistModeEnabled = typeof onOpenAssist === "function";
+  const openLeadEnabled = typeof onOpenLead === "function";
 
   if (!Array.isArray(tasks) || tasks.length === 0) return null;
 
@@ -108,7 +107,7 @@ export default function TodayExecutionPlan({
       }, 900);
     }
     trackEvent({
-      eventType: assistModeEnabled ? "today_open_assist_mode" : "today_open_lead",
+      eventType: "today_open_lead",
       taskId: task.id ?? null,
       leadId: task.linkedLeadId ?? null,
       companyName: task.linkedCompany ?? null,
@@ -116,8 +115,8 @@ export default function TodayExecutionPlan({
       serviceBucketId: task?.laborTechScan?.primaryService ?? null,
       metadata: { source: "today_queue" },
     });
-    if (assistModeEnabled) {
-      onOpenAssist(task);
+    if (openLeadEnabled) {
+      onOpenLead(task);
       return;
     }
     if (typeof onSelectTask === "function") onSelectTask(task);
@@ -290,23 +289,25 @@ export default function TodayExecutionPlan({
                   {company}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                  <span style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "5px",
-                    fontSize: "10px",
-                    fontWeight: 900,
-                    letterSpacing: "0.10em",
-                    padding: "2px 9px",
-                    borderRadius: "999px",
-                    color: badge.fg,
-                    background: badge.bg,
-                    border: `1px solid ${badge.border}`,
-                    whiteSpace: "nowrap",
-                  }}>
-                    <span aria-hidden="true">{badge.icon}</span>
-                    <span>{badge.label}</span>
-                  </span>
+                  {badge ? (
+                    <span style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      fontSize: "10px",
+                      fontWeight: 900,
+                      letterSpacing: "0.10em",
+                      padding: "2px 9px",
+                      borderRadius: "999px",
+                      color: badge.fg,
+                      background: badge.bg,
+                      border: `1px solid ${badge.border}`,
+                      whiteSpace: "nowrap",
+                    }}>
+                      <span aria-hidden="true">{badge.icon}</span>
+                      <span>{badge.label}</span>
+                    </span>
+                  ) : null}
                   {confidencePct ? (
                     <span
                       title={`Fit source: ${qualitySourceLabel(quality.source)}`}
@@ -379,12 +380,12 @@ export default function TodayExecutionPlan({
               </div>
 
               {/* Actions: primary open · Call Direct · Skip. Order stays fixed
-                  when Assist Mode is hidden by workspace policy. */}
+                  across workspace AI policy. */}
               <div style={{ display: "inline-flex", gap: "8px", alignItems: "center", flexShrink: 0 }}>
                 <button
                   type="button"
                   onClick={() => handlePrimary(task)}
-                  title={assistModeEnabled ? `Open Assist Mode for ${company}` : `Open lead for ${company}`}
+                  title={`Open lead for ${company}`}
                   style={{
                     fontSize: "11px", fontWeight: 800,
                     color: "#fff",
@@ -398,7 +399,7 @@ export default function TodayExecutionPlan({
                     boxShadow: "0 1px 2px rgba(37,99,235,0.20), 0 6px 14px -8px rgba(37,99,235,0.45)",
                   }}
                 >
-                  {assistModeEnabled ? "Open Assist Mode →" : "Open Lead →"}
+                  Open Lead →
                 </button>
                 {tel ? (
                   <a
