@@ -5157,8 +5157,39 @@ export default function CalendarCommandCenter({
 
   const selectedTask = useMemo(() => {
     if (!selectedTaskId) return null;
-    return data.find((t) => t.id === selectedTaskId) ?? null;
-  }, [selectedTaskId, data]);
+    const found = data.find((t) => t.id === selectedTaskId);
+    if (found) return found;
+    if (!selectedLead) return null;
+    const isFollowup = String(selectedTaskId).endsWith("-followup");
+    const phone = selectedLead.contacts?.primaryPhone ?? selectedLead.phone ?? null;
+    const email = selectedLead.verifiedEmail ?? selectedLead.contacts?.primaryEmail ?? selectedLead.email ?? null;
+    return {
+      id: selectedTaskId,
+      title: `${isFollowup ? "Follow up with" : "Call"} ${selectedLead.name ?? selectedLead.companyName ?? "lead"}`,
+      category: isFollowup ? "followup" : "priority",
+      priority: "medium",
+      status: "todo",
+      linkedLeadId: selectedLead.key ?? selectedLead.id ?? null,
+      linkedCompany: selectedLead.name ?? selectedLead.companyName ?? null,
+      companyKey: selectedLead.companyKey ?? selectedLead.crmKey ?? null,
+      crmKey: selectedLead.crmKey ?? selectedLead.companyKey ?? null,
+      linkedLocation: selectedLead.location ?? null,
+      ...(phone ? { phone, phoneAuthority: "dialable" } : {}),
+      ...(email ? { email } : {}),
+      verifiedEmail: selectedLead.verifiedEmail ?? null,
+      emailSource: selectedLead.emailSource ?? null,
+      emailConfidence: selectedLead.emailConfidence ?? null,
+      emailVerifiedAt: selectedLead.emailVerifiedAt ?? null,
+      tradeId: selectedLead.trade ?? selectedLead.tradeId ?? null,
+      tradeLabel: selectedLead.tradeLabel ?? null,
+      laborTechScan: selectedLead.laborTechScan ?? null,
+      serviceNeed: selectedLead.serviceNeed ?? null,
+      salesStrategy: selectedLead.salesStrategy ?? null,
+      closeProbability100: typeof selectedLead.salesStrategy?.closeProbability === "number"
+        ? selectedLead.salesStrategy.closeProbability
+        : null,
+    };
+  }, [selectedTaskId, data, selectedLead]);
 
   const handleSelectTask = (task) => {
     if (!task) return;
