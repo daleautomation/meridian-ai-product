@@ -1,0 +1,6 @@
+companyName,contactName,city,state,category,website,phone,email,lastContactedAt,lastActivityAt,relationshipFreshness,recentActivity,activityLabel,priorInterest,crmStatus,crmLastAction,reviewCount,rating,websiteWeak,hasWebsite,hasContactForm,activityWindowDays
+Riverbend Roofing,Mara Ellis,Kansas City,MO,roofing,https://riverbendroofing.example,(816) 555-0148,hello@riverbendroofing.example,2026-03-29,2026-05-10,cooling,true,Recent website update suggests active growth,yes,qualified,Discovery call completed,41,4.4,true,true,true,30
+Northline HVAC,Tom Reeve,Overland Park,KS,hvac,https://northlinehvac.example,(913) 555-0192,service@northlinehvac.example,2026-02-03,2026-04-26,dormant,false,,yes,open,Asked for pricing follow-up,88,4.6,false,true,true,30
+Summit Remodel Co.,,Lenexa,KS,remodeling,https://summitremodel.example,(913) 555-0126,,2026-04-28,2026-04-29,warm,false,,no,watch,Left voicemail,152,4.8,false,true,false,30
+Blue Valley Plumbing,Nina Brooks,Blue Springs,MO,plumbing,https://bluevalleyplumbing.example,(816) 555-0177,office@bluevalleyplumbing.example,2026-01-18,2026-05-02,cold,true,New service page published,yes,proposal,Proposal sent,19,4.3,true,true,true,30
+Prairie Paintworks,Joel Kim,Olathe,KS,painting,,(913) 555-0155,,2025-12-12,,dormant,false,,yes,interested,Requested spring follow-up,12,4.9,false,false,false,30
