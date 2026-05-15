@@ -141,7 +141,7 @@ export function applyShowcaseDemoPreset(
       question: preset.storyline,
       focus: preset.heroFocus,
       answer: priorityQueue[0]
-        ? `${priorityQueue[0].company} is first because ${priorityQueue[0].topReasons[0].toLowerCase()}`
+        ? `${priorityQueue[0].company} is first because ${lowercaseFirst(priorityQueue[0].topReasons[0])}`
         : "Meridian turns stale relationship data into the next best action.",
     },
     nav: [
@@ -314,6 +314,12 @@ function normalizePreset(value: string | undefined): DemoPresetId | null {
 function average(values: number[]): number {
   if (values.length === 0) return 0;
   return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+}
+
+function lowercaseFirst(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  return `${trimmed.charAt(0).toLowerCase()}${trimmed.slice(1)}`;
 }
 
 const SHOWCASE_VERTICALS: Record<ShowcaseVerticalId, ShowcaseVertical> = {

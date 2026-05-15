@@ -159,7 +159,7 @@ export function buildRelationshipPriorityWorkspaceModel(args: {
       question: "Who matters, why now, and what should happen next?",
       focus: "Today's Priority Queue",
       answer: priorityQueue[0]
-        ? `${priorityQueue[0].company} is first because ${priorityQueue[0].topReasons[0].toLowerCase()}`
+        ? `${priorityQueue[0].company} is first because ${lowercaseFirst(priorityQueue[0].topReasons[0])}`
         : "Relationship signals are compressed into the next best operator action.",
     },
     nav: [
@@ -485,6 +485,12 @@ function sentence(value: string): string {
   const trimmed = value.trim();
   if (!trimmed) return trimmed;
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+}
+
+function lowercaseFirst(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  return `${trimmed.charAt(0).toLowerCase()}${trimmed.slice(1)}`;
 }
 
 function compact(values: Array<string | null | undefined>): string[] {
