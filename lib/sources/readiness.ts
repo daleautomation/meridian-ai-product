@@ -3,6 +3,7 @@
 // Read-only, server-side detection of which lead-data sources are
 // currently wired. Used to surface an honest readiness strip in the
 // workspace so the operator knows why a bucket is empty.
+import { readHunterApiKey } from "@/lib/integrations/hunterConfig";
 
 export type SourceStatus = "Connected" | "Available" | "Not connected" | "Error";
 
@@ -18,17 +19,8 @@ export function getSourceReadiness(): SourceReadinessItem[] {
 
   const googlePlacesKey = !!(env.GOOGLE_API_KEY || env.GOOGLE_PLACES_API_KEY);
   const yelpKey = !!env.YELP_API_KEY;
-  // Defensive parse: trim and reject empty / placeholder values. Catches
-  // the "HUNTER_API_KEY=" empty-line case AND the leading-space typo
-  // ("HUNTER_API_KEY = abc") that Next.js loads as a key with literal
-  // leading-space content.
-  const rawHunter = typeof env.HUNTER_API_KEY === "string" ? env.HUNTER_API_KEY.trim() : "";
-  const hunterKey = rawHunter.length > 0 && rawHunter.toLowerCase() !== "your_real_hunter_key_here";
-  // Safe diagnostic — boolean only, never the key value. Logs once per
-  // call to getSourceReadiness (i.e. once per page render). Lets you
-  // verify .env.local actually loaded after a dev-server restart.
-  // eslint-disable-next-line no-console
-  console.log(`[hunter-env-audit] HUNTER_API_KEY present: ${hunterKey}`);
+  const hunterConfig = readHunterApiKey(env);
+  const hunterKey = hunterConfig.status === "configured";
   const serpKey = !!(env.SERPAPI_KEY || env.SERP_API_KEY);
   const stormKey = !!(env.STORM_API_KEY || env.NOAA_API_TOKEN);
 
@@ -55,7 +47,7 @@ export function getSourceReadiness(): SourceReadinessItem[] {
       id: "hunter",
       label: "Hunter (email)",
       status: hunterKey ? "Connected" : "Not connected",
-      detail: hunterKey ? "Domain → email" : "Set HUNTER_API_KEY to enable",
+      detail: hunterKey ? "Domain → email" : "Set raw HUNTER_API_KEY to enable",
     },
     {
       id: "serp",

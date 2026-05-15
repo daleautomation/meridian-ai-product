@@ -16,6 +16,7 @@
 // enrichment lookup. Callers decide if/when to mutate the lead.
 
 import type { NormalizedLead } from "@/lib/leads/normalizedLead";
+import { getHunterApiKey } from "@/lib/integrations/hunterConfig";
 
 const DOMAIN_SEARCH = "https://api.hunter.io/v2/domain-search";
 const EMAIL_FINDER  = "https://api.hunter.io/v2/email-finder";
@@ -48,10 +49,6 @@ export function _clearHunterCache(): void {
 }
 
 // ── Internal helpers ─────────────────────────────────────────────────
-
-function hunterKey(): string | null {
-  return process.env.HUNTER_API_KEY ?? null;
-}
 
 function normalizeDomain(raw: string | undefined | null): string | null {
   if (!raw) return null;
@@ -137,7 +134,7 @@ async function domainSearch(domain: string, key: string): Promise<HunterEmailRes
       contactPosition: best.position ?? undefined,
     };
   } catch (err) {
-    console.warn(`[hunter-enrich] domain_search error domain=${domain} err=${err instanceof Error ? err.message : "unknown"}`);
+    console.warn(`[hunter-enrich] domain_search error domain=${domain} err_type=${err instanceof Error ? err.name : "unknown"}`);
     return null;
   }
 }
@@ -173,7 +170,7 @@ async function emailFinder(domain: string, name: { first?: string; last?: string
       contactPosition: json.data?.position ?? undefined,
     };
   } catch (err) {
-    console.warn(`[hunter-enrich] email_finder error domain=${domain} err=${err instanceof Error ? err.message : "unknown"}`);
+    console.warn(`[hunter-enrich] email_finder error domain=${domain} err_type=${err instanceof Error ? err.name : "unknown"}`);
     return null;
   }
 }
@@ -226,7 +223,7 @@ export async function findEmailForLead(
       return domainCache.get(domain) ?? null;
     }
 
-    const key = hunterKey();
+    const key = getHunterApiKey();
     if (!key) {
       // No key configured. Cache the null so we don't keep retrying.
       domainCache.set(domain, null);
@@ -254,7 +251,7 @@ export async function findEmailForLead(
     return null;
   } catch (err) {
     // Hard fail-silent. Anything thrown here becomes a clean null.
-    console.warn(`[hunter-enrich] unexpected error: ${err instanceof Error ? err.message : "unknown"}`);
+    console.warn(`[hunter-enrich] unexpected error type=${err instanceof Error ? err.name : "unknown"}`);
     return null;
   }
 }

@@ -33,6 +33,7 @@ import {
 } from "../../config/workspaces";
 import { getWorkspaceAccess } from "../../lib/workspaceAccess";
 import { getSourceReadiness } from "../../lib/sources/readiness";
+import { isHunterConfigured } from "../../lib/integrations/hunterConfig";
 import { ALL_TRADE_ENV_VARS } from "../../lib/modules/tradeSources";
 import { readOperatorSnapshot, writeOperatorSnapshot } from "../../lib/operatorPayload/snapshot";
 import {
@@ -887,9 +888,7 @@ async function renderOperatorPage({
   // never crosses the network boundary; only the presence flag is
   // forwarded to the client so LeadEmailAction can decide whether to
   // render the "Find Email" mode.
-  const hunterAvailable =
-    typeof process.env.HUNTER_API_KEY === "string"
-    && process.env.HUNTER_API_KEY.trim().length > 0;
+  const hunterAvailable = isHunterConfigured();
 
   // Build the prop bag once so we can both render and persist it.
   const operatorProps = withRecentTodaySuppression(mergeDurableOutcomesIntoOperatorProps(mergeCurrentCrmIntoOperatorProps(normalizeOperatorPhoneProps({

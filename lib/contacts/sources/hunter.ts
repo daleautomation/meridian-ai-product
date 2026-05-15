@@ -6,13 +6,14 @@
 // metadata (first_name, last_name, position). Never guesses or generates
 // pattern-based emails.
 //
-// Env var: HUNTER_API_KEY. When missing the adapter returns [] and the
-// resolver records "hunter_skipped_no_key" as a skip reason.
+// Env var: HUNTER_API_KEY. When missing or malformed the adapter returns []
+// and the resolver records a Hunter skip reason.
 //
 // Identity requirement: Hunter queries by domain. If the input has no
 // usable domain the adapter returns [] (logged with "hunter_skipped_no_domain").
 
 import type { ContactCandidate, Identity } from "../types";
+import { getHunterApiKey, isHunterConfigured as hasValidHunterKey } from "@/lib/integrations/hunterConfig";
 
 const ENDPOINT = "https://api.hunter.io/v2/domain-search";
 
@@ -39,11 +40,11 @@ type HunterResponse = {
 };
 
 export function hunterKey(): string | null {
-  return process.env.HUNTER_API_KEY ?? null;
+  return getHunterApiKey();
 }
 
 export function isHunterConfigured(): boolean {
-  return !!hunterKey();
+  return hasValidHunterKey();
 }
 
 // Normalizes a raw domain string (http://, www., trailing slash, path).
@@ -119,7 +120,7 @@ export async function searchHunter(identity: Identity): Promise<ContactCandidate
       providerConfidence: picked.confidence ?? undefined,
     }];
   } catch (e) {
-    console.warn(`[hunter] error domain=${domain} err=${e instanceof Error ? e.message : "unknown"}`);
+    console.warn(`[hunter] error domain=${domain} err_type=${e instanceof Error ? e.name : "unknown"}`);
     return [];
   }
 }
