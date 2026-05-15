@@ -1,12 +1,12 @@
 {
   "customer": "Staffing Pipeline Recovery",
   "week": "2026-W20",
-  "generatedAt": "2026-05-15T19:26:48.758Z",
-  "sourceCsv": "fixtures/recovery-staffing.csv",
+  "generatedAt": "2026-05-15T21:02:15.955Z",
+  "sourceCsv": "fixtures/recovery-staffing-raw.csv",
   "summary": {
-    "inputRows": 4,
-    "opportunities": 4,
-    "recoveryCandidates": 3
+    "inputRows": 5,
+    "opportunities": 5,
+    "recoveryCandidates": 4
   },
   "opportunities": [
     {
@@ -16,55 +16,41 @@
       "location": "Columbus, OH",
       "relationshipFreshness": "Recovery candidate",
       "staleness": {
-        "staleScore": 100,
+        "staleScore": 86,
         "staleCategory": "Recovery candidate",
         "daysSinceTouch": 149,
         "lastTouchAt": "2025-12-17T00:00:00.000Z"
       },
-      "whyNow": "Last note: Wanted to wait until the CFO search narrowed to finalists. No touch for 149 days, which gives the operator a specific thread to reopen.",
-      "verifiedContactPath": "Phone on homepage (medium): (614) 268-3307",
-      "suggestedOpener": "Hi Priya, I had a note to reconnect once the CFO search narrowed. If the finalist slate is still moving, we can help keep a backup lane warm without disrupting the process.",
-      "priorityContext": "Call now. 82/100 fit with 100/100 relationship staleness. Lead with: Executive-search nurture sequence. Reopen around finalist-stage timing; ask if the board needs a backup slate before interviews finish.",
-      "recoveryScore": 88,
+      "whyNow": "Last contact closed on wanted to wait until the CFO search narrowed to finalists; the conversation never resolved, and recovery starts there. The relationship has been quiet for 149 days; the prior thread is the most credible way back in.",
+      "verifiedContactPath": "(614) 268-3307 — Phone on homepage",
+      "suggestedOpener": "Hi Priya, Last we spoke, you wanted to wait until the CFO search narrowed to finalists. If that thread is still active, I'd pick it back up exactly where we left it.",
+      "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the prior note (\"Wanted to wait until the CFO search narrowed to finalists\") and treat this as a continuation, not a restart.",
+      "recoveryScore": 66,
       "decision": {
-        "bucket": "Call now",
-        "score": 82,
-        "primaryOpportunity": {
-          "id": "executive-search-nurture-sequence",
-          "label": "Executive-search nurture sequence",
-          "reason": "Reopen around finalist-stage timing; ask if the board needs a backup slate before interviews finish.",
-          "revenueImpact": "medium",
-          "services": []
-        }
+        "bucket": "Call this week",
+        "score": 60
       }
     },
     {
       "rank": 2,
-      "companyName": "Northline Talent Partners",
-      "contactName": "Caleb Ortiz",
-      "location": "Charlotte, NC",
+      "companyName": "Beacon Talent Group",
+      "contactName": "Marcus Whelan",
+      "location": "Portland, OR",
       "relationshipFreshness": "Recovery candidate",
       "staleness": {
-        "staleScore": 96,
+        "staleScore": 86,
         "staleCategory": "Recovery candidate",
-        "daysSinceTouch": 91,
-        "lastTouchAt": "2026-02-13T00:00:00.000Z"
+        "daysSinceTouch": 198,
+        "lastTouchAt": "2025-10-29T00:00:00.000Z"
       },
-      "whyNow": "The client added two field-service coordinator postings tied to a June rollout. Last touch was 91 days ago, so the follow-up has a real business reason.",
-      "verifiedContactPath": "Phone on homepage (medium): (704) 412-8893",
-      "suggestedOpener": "Hi Caleb, you asked about a 30-day sourcing sprint before the field-service rollout. I noticed two coordinator roles are still live - worth tightening the candidate flow this week?",
-      "priorityContext": "Call now. 80/100 fit with 96/100 relationship staleness. Lead with: Field-service hiring sprint. Lead with the June rollout; confirm whether coordinator coverage is still the bottleneck.",
-      "recoveryScore": 85,
+      "whyNow": "The last note reads \"Paused after the second SDR cohort was filled internally\" — that thread is still the cleanest reason to come back. The relationship has been quiet for 198 days; the prior thread is the most credible way back in.",
+      "verifiedContactPath": "(503) 414-6217 — Phone on homepage",
+      "suggestedOpener": "Hi Marcus, Last we spoke, you paused after the second SDR cohort was filled internally. If that thread is still active, I'd pick it back up exactly where we left it.",
+      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the prior note (\"Paused after the second SDR cohort was filled internally\") and treat this as a continuation, not a restart.",
+      "recoveryScore": 66,
       "decision": {
-        "bucket": "Call now",
-        "score": 80,
-        "primaryOpportunity": {
-          "id": "field-service-hiring-sprint",
-          "label": "Field-service hiring sprint",
-          "reason": "Lead with the June rollout; confirm whether coordinator coverage is still the bottleneck.",
-          "revenueImpact": "medium",
-          "services": []
-        }
+        "bucket": "Call this week",
+        "score": 60
       }
     },
     {
@@ -74,30 +60,45 @@
       "location": "Nashville, TN",
       "relationshipFreshness": "Recovery candidate",
       "staleness": {
-        "staleScore": 90,
+        "staleScore": 78,
         "staleCategory": "Recovery candidate",
         "daysSinceTouch": 109,
         "lastTouchAt": "2026-01-26T00:00:00.000Z"
       },
-      "whyNow": "They reopened a production supervisor requisition after pausing the search in February. Last touch was 109 days ago, so the follow-up has a real business reason.",
-      "verifiedContactPath": "Phone on homepage (medium): (615) 238-7041",
-      "suggestedOpener": "Hi Lena, I saw the production supervisor search reopened after the February pause. You had asked for a short list once the plant schedule was approved - should we revisit that before the next shift plan locks?",
-      "priorityContext": "Call now. 80/100 fit with 90/100 relationship staleness. Lead with: Paused manufacturing search reopened. Ask whether the Clarksville production role is still blocking second-shift coverage.",
-      "recoveryScore": 82,
+      "whyNow": "The last note reads \"Asked for a short list once the plant schedule was approved\" — that thread is still the cleanest reason to come back. 109 days of silence is exactly the window where these threads quietly die.",
+      "verifiedContactPath": "(615) 238-7041 — Phone on homepage",
+      "suggestedOpener": "Hi Lena, Picking up where we left off: you asked for a short list once the plant schedule was approved. If the door is still open on that, I'd come in narrow rather than start from the top.",
+      "priorityContext": "Schedule the call for later this week because the prior note carried a concrete reason rather than a vague interest signal. Lead with the action you'd outlined — to resend short-list scope tied to second-shift coverage — and ask whether it should still happen.",
+      "recoveryScore": 62,
       "decision": {
-        "bucket": "Call now",
-        "score": 80,
-        "primaryOpportunity": {
-          "id": "paused-manufacturing-search-reopened",
-          "label": "Paused manufacturing search reopened",
-          "reason": "Ask whether the Clarksville production role is still blocking second-shift coverage.",
-          "revenueImpact": "medium",
-          "services": []
-        }
+        "bucket": "Call this week",
+        "score": 60
       }
     },
     {
       "rank": 4,
+      "companyName": "Northline Talent Partners",
+      "contactName": "Caleb Ortiz",
+      "location": "Charlotte, NC",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 78,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 91,
+        "lastTouchAt": "2026-02-13T00:00:00.000Z"
+      },
+      "whyNow": "Last contact closed on requested pricing for a 30-day sourcing sprint before the June rollout; the conversation never resolved, and recovery starts there. After 91 days, the relationship is past polite and into recovery range.",
+      "verifiedContactPath": "(704) 412-8893 — Phone on homepage",
+      "suggestedOpener": "Hi Caleb, I had a note from our last conversation — you requested pricing for a 30-day sourcing sprint before the June rollout. If that's still live on your end, the cleanest next step is a short call to close the loop rather than restart.",
+      "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the action you'd outlined — to confirm pricing for sourcing sprint before June rollout — and ask whether it should still happen.",
+      "recoveryScore": 62,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 5,
       "companyName": "SummitCare Recruiting",
       "contactName": "Jordan Lee",
       "location": "Raleigh, NC",
@@ -108,21 +109,14 @@
         "daysSinceTouch": 65,
         "lastTouchAt": "2026-03-11T00:00:00.000Z"
       },
-      "whyNow": "Last note: Asked for nurse-practitioner outreach examples. No touch for 65 days, which gives the operator a specific thread to reopen.",
-      "verifiedContactPath": "Phone on homepage (medium): (919) 431-5528",
-      "suggestedOpener": "Hi Jordan, you asked for nurse-practitioner outreach examples and I never closed the loop. Are the specialty clinic roles still hard to fill, or did that search calm down?",
-      "priorityContext": "Call now. 82/100 fit with 70/100 relationship staleness. Lead with: Nurse-practitioner outreach. Keep it operational: ask whether the specialty clinic roles are still hard to fill and offer the outreach examples.",
-      "recoveryScore": 74,
+      "whyNow": "They left it at \"Asked for nurse-practitioner outreach examples\" and the account has been quiet since. The original line is the recovery line. 65 days of silence is exactly the window where these threads quietly die.",
+      "verifiedContactPath": "(919) 431-5528 — Phone on homepage",
+      "suggestedOpener": "Hi Jordan, I had a note from our last conversation — you asked for nurse-practitioner outreach examples. If that's still live on your end, the cleanest next step is a short call to close the loop rather than restart.",
+      "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the action you'd outlined — to send NP outreach examples before specialty-clinic intake — and ask whether it should still happen.",
+      "recoveryScore": 59,
       "decision": {
-        "bucket": "Call now",
-        "score": 82,
-        "primaryOpportunity": {
-          "id": "nurse-practitioner-outreach",
-          "label": "Nurse-practitioner outreach",
-          "reason": "Keep it operational: ask whether the specialty clinic roles are still hard to fill and offer the outreach examples.",
-          "revenueImpact": "medium",
-          "services": []
-        }
+        "bucket": "Call this week",
+        "score": 60
       }
     }
   ]

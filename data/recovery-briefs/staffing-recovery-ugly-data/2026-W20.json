@@ -1,0 +1,189 @@
+{
+  "customer": "Staffing Recovery (Ugly Data)",
+  "week": "2026-W20",
+  "generatedAt": "2026-05-15T21:05:44.270Z",
+  "sourceCsv": "fixtures/recovery-staffing-ugly.csv",
+  "summary": {
+    "inputRows": 8,
+    "opportunities": 8,
+    "recoveryCandidates": 5
+  },
+  "opportunities": [
+    {
+      "rank": 1,
+      "companyName": "Mason Hill Search",
+      "contactName": "Priya Shah",
+      "location": "Columbus OH",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 149,
+        "lastTouchAt": "2025-12-17T00:00:00.000Z"
+      },
+      "whyNow": "Last contact closed on wanted to wait until the CFO search narrowed to finalists; the conversation never resolved, and recovery starts there. The relationship has been quiet for 149 days; the prior thread is the most credible way back in.",
+      "verifiedContactPath": "6142683307 — Phone on homepage",
+      "suggestedOpener": "Hi Priya, Last we spoke, you wanted to wait until the CFO search narrowed to finalists. If that thread is still active, I'd pick it back up exactly where we left it.",
+      "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the prior note (\"Wanted to wait until the CFO search narrowed to finalists\") and treat this as a continuation, not a restart.",
+      "recoveryScore": 66,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 2,
+      "companyName": "Beacon Talent Group",
+      "contactName": "Marcus Whelan",
+      "location": "Portland, OR",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 198,
+        "lastTouchAt": "2025-10-29T00:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Paused after the second SDR cohort was filled internally\" — that thread is still the cleanest reason to come back. The relationship has been quiet for 198 days; the prior thread is the most credible way back in.",
+      "verifiedContactPath": "(503) 414-6217 — Phone on homepage",
+      "suggestedOpener": "Hi Marcus, Last we spoke, you paused after the second SDR cohort was filled internally. If that thread is still active, I'd pick it back up exactly where we left it.",
+      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the prior note (\"Paused after the second SDR cohort was filled internally\") and treat this as a continuation, not a restart.",
+      "recoveryScore": 66,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 3,
+      "companyName": "Benton Parker Staffing",
+      "contactName": "Lena Morris",
+      "location": "Nashville, TN",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 78,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 109,
+        "lastTouchAt": "2026-01-26T00:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Asked for a short list once the plant schedule was approved\" — that thread is still the cleanest reason to come back. 109 days of silence is exactly the window where these threads quietly die.",
+      "verifiedContactPath": "615.238.7041 — Phone on homepage",
+      "suggestedOpener": "Hi Lena, Last we spoke, you asked for a short list once the plant schedule was approved. If that thread is still active, I'd pick it back up exactly where we left it.",
+      "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the action you'd outlined — to resend short-list scope tied to second-shift coverage — and ask whether it should still happen.",
+      "recoveryScore": 62,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 4,
+      "companyName": "Northline Talent Partners",
+      "contactName": "Caleb Ortiz",
+      "location": "Charlotte, NC",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 78,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 91,
+        "lastTouchAt": "2026-02-13T06:00:00.000Z"
+      },
+      "whyNow": "Last contact closed on requested pricing for a 30-day sourcing sprint before the June rollout - they want the same scope as last quarter; the conversation never resolved, and recovery starts there. After 91 days, the relationship is past polite and into recovery range.",
+      "verifiedContactPath": "(704) 412-8893 — Phone on homepage",
+      "suggestedOpener": "Hi Caleb, Last we spoke, you requested pricing for a 30-day sourcing sprint before the June rollout - they want the same scope as last quarter. If that thread is still active, I'd pick it back up exactly where we left it.",
+      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the action you'd outlined — to confirm pricing for sourcing sprint before June rollout — and ask whether it should still happen.",
+      "recoveryScore": 62,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 5,
+      "companyName": "SummitCare Recruiting",
+      "contactName": "Jordan Lee",
+      "location": "Raleigh",
+      "relationshipFreshness": "Dormant",
+      "staleness": {
+        "staleScore": 70,
+        "staleCategory": "Dormant",
+        "daysSinceTouch": 65,
+        "lastTouchAt": "2026-03-11T00:00:00.000Z"
+      },
+      "whyNow": "Last contact closed on asked for NP outreach examples; the conversation never resolved, and recovery starts there. 65 days of silence is exactly the window where these threads quietly die.",
+      "verifiedContactPath": "919-431-5528 — Phone on homepage",
+      "suggestedOpener": "Hi Jordan, I had a note from our last conversation — you asked for NP outreach examples. If that's still live on your end, the cleanest next step is a short call to close the loop rather than restart.",
+      "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the action you'd outlined — to send NP outreach examples — and ask whether it should still happen.",
+      "recoveryScore": 59,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 6,
+      "companyName": "Riverline Staffing",
+      "contactName": "Dana O'Brien",
+      "location": "Portland OR",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 699,
+        "lastTouchAt": "2024-06-15T00:00:00.000Z"
+      },
+      "whyNow": "The natural opening here is active requisition windows — a specific cycle that lets the call sound timely instead of cold.",
+      "verifiedContactPath": "dana@riverline.com — Email on homepage",
+      "suggestedOpener": "Hi Dana, Reaching out ahead of active requisition windows, which is usually when these threads either restart or get displaced for the season. Worth a 15-minute conversation before that window closes?",
+      "priorityContext": "Soft touch only — keep the thread warm without forcing a meeting because the relationship is at the inflection point between dormant and lost.",
+      "recoveryScore": 56,
+      "decision": {
+        "bucket": "Watch",
+        "score": 35
+      }
+    },
+    {
+      "rank": 7,
+      "companyName": "Cardinal Search Group",
+      "contactName": null,
+      "location": null,
+      "relationshipFreshness": "Dormant",
+      "staleness": {
+        "staleScore": 72,
+        "staleCategory": "Dormant",
+        "daysSinceTouch": null,
+        "lastTouchAt": null
+      },
+      "whyNow": "Limited prior context on file. Keep this exploratory — no specific thread to lean on yet.",
+      "verifiedContactPath": "Manual verification needed",
+      "suggestedOpener": "Hi, Quick note since this account has gone quiet. No agenda — just want to confirm whether there is still a thread worth picking up.",
+      "priorityContext": "Limited signal on file. A brief check-in is appropriate; do not lead with a specific opportunity.",
+      "recoveryScore": 49,
+      "decision": {
+        "bucket": "Watch",
+        "score": 35
+      }
+    },
+    {
+      "rank": 8,
+      "companyName": "Echo Talent Partners",
+      "contactName": "J. Kim",
+      "location": "New York, NY",
+      "relationshipFreshness": "Dormant",
+      "staleness": {
+        "staleScore": 72,
+        "staleCategory": "Dormant",
+        "daysSinceTouch": null,
+        "lastTouchAt": null
+      },
+      "whyNow": "The natural opening here is active requisition windows — a specific cycle that lets the call sound timely instead of cold.",
+      "verifiedContactPath": "jkim@echotalent.com — Email on homepage",
+      "suggestedOpener": "Hi J., Reaching out ahead of active requisition windows, which is usually when these threads either restart or get displaced for the season. Worth a 15-minute conversation before that window closes?",
+      "priorityContext": "Soft touch only — keep the thread warm without forcing a meeting because it is dormant, not dead — the original context still applies.",
+      "recoveryScore": 49,
+      "decision": {
+        "bucket": "Watch",
+        "score": 35
+      }
+    }
+  ]
+}

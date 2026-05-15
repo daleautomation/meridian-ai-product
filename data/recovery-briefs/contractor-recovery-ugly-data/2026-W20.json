@@ -1,0 +1,189 @@
+{
+  "customer": "Contractor Recovery (Ugly Data)",
+  "week": "2026-W20",
+  "generatedAt": "2026-05-15T21:04:05.043Z",
+  "sourceCsv": "fixtures/recovery-contractor-ugly.csv",
+  "summary": {
+    "inputRows": 8,
+    "opportunities": 8,
+    "recoveryCandidates": 5
+  },
+  "opportunities": [
+    {
+      "rank": 1,
+      "companyName": "Harbor Ridge Roofing",
+      "contactName": "Mara Ellis",
+      "location": null,
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 98,
+        "lastTouchAt": "2026-02-06T00:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Asked for a storm-season landing page estimate before the next hail push - they want financing language and inspection follow-ups\" — that thread is still the cleanest reason to come back. After 98 days, the relationship is past polite and into recovery range.",
+      "verifiedContactPath": "816.204.4127 — Phone on homepage",
+      "suggestedOpener": "Hi Mara, Last we spoke, you asked for a storm-season landing page estimate before the next hail push - they want financing language and inspection follow-ups. If that thread is still active, I'd pick it back up exactly where we left it.",
+      "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the action you'd outlined — to send revised landing page scope by end of week — and ask whether it should still happen.",
+      "recoveryScore": 66,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 2,
+      "companyName": "Cedar & Slate Exteriors",
+      "contactName": "Daniel Price",
+      "location": null,
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 116,
+        "lastTouchAt": "2026-01-19T00:00:00.000Z"
+      },
+      "whyNow": "They left it at \"Wanted to revisit after Q1 crews were scheduled\" and the account has been quiet since. The original line is the recovery line. 116 days of silence is exactly the window where these threads quietly die.",
+      "verifiedContactPath": "913-274-6186 — Phone on homepage",
+      "suggestedOpener": "Hi Daniel, Last we spoke, you wanted to revisit after Q1 crews were scheduled. If that thread is still active, I'd pick it back up exactly where we left it.",
+      "priorityContext": "Schedule the call for later this week because the prior note carried a concrete reason rather than a vague interest signal. Lead with the action you'd outlined — to confirm crew capacity for May inspection ads — and ask whether it should still happen.",
+      "recoveryScore": 66,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 3,
+      "companyName": "Northpoint Mechanical",
+      "contactName": "Alicia Warren",
+      "location": null,
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 158,
+        "lastTouchAt": "2025-12-08T06:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Requested a callback before cooling-season demand picks up\" — that thread is still the cleanest reason to come back. 158 days is long enough that a direct, specific reopen reads better than a soft touch.",
+      "verifiedContactPath": "(913)386-2490 — Phone on homepage",
+      "suggestedOpener": "Hi Alicia, Last we spoke, you requested a callback before cooling-season demand picks up. If that thread is still active, I'd pick it back up exactly where we left it.",
+      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the prior note (\"Requested a callback before cooling-season demand picks up\") and treat this as a continuation, not a restart.",
+      "recoveryScore": 66,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 4,
+      "companyName": "Ironline Plumbing Co.",
+      "contactName": "Renee Carter",
+      "location": null,
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 174,
+        "lastTouchAt": "2025-11-22T00:00:00.000Z"
+      },
+      "whyNow": "Last contact closed on paused conversation around the after-hours dispatch SLA pending a budget review; the conversation never resolved, and recovery starts there. 174 days is long enough that a direct, specific reopen reads better than a soft touch.",
+      "verifiedContactPath": "8165529038 — Phone on homepage",
+      "suggestedOpener": "Hi Renee, I had a note from our last conversation — you paused conversation around the after-hours dispatch SLA pending a budget review. If that's still live on your end, the cleanest next step is a short call to close the loop rather than restart.",
+      "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the prior note (\"Paused conversation around the after-hours dispatch SLA pending a budget review\") and treat this as a continuation, not a restart.",
+      "recoveryScore": 66,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 5,
+      "companyName": "Oakline Remodel & Repair",
+      "contactName": "Evan Cho",
+      "location": null,
+      "relationshipFreshness": "Dormant",
+      "staleness": {
+        "staleScore": 70,
+        "staleCategory": "Dormant",
+        "daysSinceTouch": 72,
+        "lastTouchAt": "2026-03-04T00:00:00.000Z"
+      },
+      "whyNow": "Last contact closed on asked for examples of turning project photos into estimate requests; the conversation never resolved, and recovery starts there. 72 days of silence is exactly the window where these threads quietly die.",
+      "verifiedContactPath": "816-319-7764 — Phone on homepage",
+      "suggestedOpener": "Hi Evan, I had a note from our last conversation — you asked for examples of turning project photos into estimate requests. If that's still live on your end, the cleanest next step is a short call to close the loop rather than restart.",
+      "priorityContext": "Schedule the call for later this week because the prior note carried a concrete reason rather than a vague interest signal. Lead with the action you'd outlined — to share three project-photo conversion examples — and ask whether it should still happen.",
+      "recoveryScore": 59,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 6,
+      "companyName": "Westgate HVAC",
+      "contactName": "Sam Patel",
+      "location": null,
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 134,
+        "lastTouchAt": "2026-01-01T06:00:00.000Z"
+      },
+      "whyNow": "The natural opening here is cooling-season demand — a specific cycle that lets the call sound timely instead of cold.",
+      "verifiedContactPath": "sam@westgatehvac.com — Email on homepage",
+      "suggestedOpener": "Hi Sam, Reaching out ahead of cooling-season demand, which is usually when these threads either restart or get displaced for the season. Worth a 15-minute conversation before that window closes?",
+      "priorityContext": "Soft touch only — keep the thread warm without forcing a meeting because the relationship is at the inflection point between dormant and lost.",
+      "recoveryScore": 56,
+      "decision": {
+        "bucket": "Watch",
+        "score": 35
+      }
+    },
+    {
+      "rank": 7,
+      "companyName": "Bayline Plumbing",
+      "contactName": null,
+      "location": null,
+      "relationshipFreshness": "Dormant",
+      "staleness": {
+        "staleScore": 72,
+        "staleCategory": "Dormant",
+        "daysSinceTouch": null,
+        "lastTouchAt": null
+      },
+      "whyNow": "Limited prior context on file. Keep this exploratory — no specific thread to lean on yet.",
+      "verifiedContactPath": "Manual verification needed",
+      "suggestedOpener": "Hi, Quick note since this account has gone quiet. No agenda — just want to confirm whether there is still a thread worth picking up.",
+      "priorityContext": "Keep this exploratory. Without a clear prior thread, the safest move is a short, low-pressure touch rather than a strong angle.",
+      "recoveryScore": 49,
+      "decision": {
+        "bucket": "Watch",
+        "score": 35
+      }
+    },
+    {
+      "rank": 8,
+      "companyName": "Stormgate Roofing",
+      "contactName": null,
+      "location": null,
+      "relationshipFreshness": "Dormant",
+      "staleness": {
+        "staleScore": 72,
+        "staleCategory": "Dormant",
+        "daysSinceTouch": null,
+        "lastTouchAt": null
+      },
+      "whyNow": "The natural opening here is spring inspection demand — a specific cycle that lets the call sound timely instead of cold.",
+      "verifiedContactPath": "info@stormgateroofing.com — Email on homepage",
+      "suggestedOpener": "Hi, Reaching out ahead of spring inspection demand, which is usually when these threads either restart or get displaced for the season. Worth a 15-minute conversation before that window closes?",
+      "priorityContext": "Soft touch only — keep the thread warm without forcing a meeting because the account has cooled, but the prior thread can still carry the call.",
+      "recoveryScore": 49,
+      "decision": {
+        "bucket": "Watch",
+        "score": 35
+      }
+    }
+  ]
+}

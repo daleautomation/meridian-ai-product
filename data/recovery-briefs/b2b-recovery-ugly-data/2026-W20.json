@@ -1,12 +1,12 @@
 {
-  "customer": "B2B Services Recovery",
+  "customer": "B2B Recovery (Ugly Data)",
   "week": "2026-W20",
-  "generatedAt": "2026-05-15T21:02:16.760Z",
-  "sourceCsv": "fixtures/recovery-b2b-raw.csv",
+  "generatedAt": "2026-05-15T21:04:06.705Z",
+  "sourceCsv": "fixtures/recovery-b2b-ugly.csv",
   "summary": {
-    "inputRows": 5,
-    "opportunities": 5,
-    "recoveryCandidates": 3
+    "inputRows": 8,
+    "opportunities": 7,
+    "recoveryCandidates": 4
   },
   "opportunities": [
     {
@@ -22,7 +22,7 @@
         "lastTouchAt": "2025-12-19T00:00:00.000Z"
       },
       "whyNow": "The last note reads \"Asked to revisit after the regional maintenance RFP\" — that thread is still the cleanest reason to come back. The relationship has been quiet for 147 days; the prior thread is the most credible way back in.",
-      "verifiedContactPath": "(720) 389-6124 — Phone on homepage",
+      "verifiedContactPath": "(720)389-6124 — Phone on homepage",
       "suggestedOpener": "Hi Rebecca, Picking up where we left off: you asked to revisit after the regional maintenance RFP. If the door is still open on that, I'd come in narrow rather than start from the top.",
       "priorityContext": "Schedule the call for later this week because the prior note carried a concrete reason rather than a vague interest signal. Lead with the prior note (\"Asked to revisit after the regional maintenance RFP\") and treat this as a continuation, not a restart.",
       "recoveryScore": 66,
@@ -44,7 +44,7 @@
         "lastTouchAt": "2025-11-04T00:00:00.000Z"
       },
       "whyNow": "The last note reads \"Paused conversation around intake automation pending Q1 partner review\" — that thread is still the cleanest reason to come back. The relationship has been quiet for 192 days; the prior thread is the most credible way back in.",
-      "verifiedContactPath": "(404) 218-7531 — Phone on homepage",
+      "verifiedContactPath": "(404)218-7531 — Phone on homepage",
       "suggestedOpener": "Hi Sasha, Last we spoke, you paused conversation around intake automation pending Q1 partner review. If that thread is still active, I'd pick it back up exactly where we left it.",
       "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the prior note (\"Paused conversation around intake automation pending Q1 partner review\") and treat this as a continuation, not a restart.",
       "recoveryScore": 66,
@@ -66,9 +66,9 @@
         "lastTouchAt": "2026-01-30T00:00:00.000Z"
       },
       "whyNow": "They left it at \"Asked for a partner-referral campaign outline tied to their healthcare logistics push\" and the account has been quiet since. The original line is the recovery line. After 105 days, the relationship is past polite and into recovery range.",
-      "verifiedContactPath": "(317) 204-8716 — Phone on homepage",
-      "suggestedOpener": "Hi Marcus, Picking up where we left off: you asked for a partner-referral campaign outline tied to their healthcare logistics push. If the door is still open on that, I'd come in narrow rather than start from the top.",
-      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the action you'd outlined — to send referral campaign outline — and ask whether it should still happen.",
+      "verifiedContactPath": "317-204-8716 — Phone on homepage",
+      "suggestedOpener": "Hi Marcus, Last we spoke, you asked for a partner-referral campaign outline tied to their healthcare logistics push. If that thread is still active, I'd pick it back up exactly where we left it.",
+      "priorityContext": "Schedule the call for later this week because the prior note carried a concrete reason rather than a vague interest signal. Lead with the action you'd outlined — to send referral campaign outline — and ask whether it should still happen.",
       "recoveryScore": 62,
       "decision": {
         "bucket": "Call this week",
@@ -88,7 +88,7 @@
         "lastTouchAt": "2026-03-07T00:00:00.000Z"
       },
       "whyNow": "The last note reads \"Asked for a cleaner handoff between webinar leads and partner follow-up\" — that thread is still the cleanest reason to come back. 69 days of silence is exactly the window where these threads quietly die.",
-      "verifiedContactPath": "(512) 441-9028 — Phone on homepage",
+      "verifiedContactPath": "5124419028 — Phone on homepage",
       "suggestedOpener": "Hi Theo, I had a note from our last conversation — you asked for a cleaner handoff between webinar leads and partner follow-up. If that's still live on your end, the cleanest next step is a short call to close the loop rather than restart.",
       "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the action you'd outlined — to outline a simple webinar-to-partner handoff motion — and ask whether it should still happen.",
       "recoveryScore": 59,
@@ -99,6 +99,28 @@
     },
     {
       "rank": 5,
+      "companyName": "Acme Corp",
+      "contactName": "J Smith",
+      "location": null,
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 851,
+        "lastTouchAt": "2024-01-15T00:00:00.000Z"
+      },
+      "whyNow": "The account has been quiet for 851 days without a closed-out reason. Worth a single, specific check-in before it slides further.",
+      "verifiedContactPath": "acme.example — Website contact page",
+      "suggestedOpener": "Hi J, Quiet for a while on my end, which isn't a great look. I'd rather reopen with a specific question than a soft touch. If there's a piece worth revisiting, I'd take 15 minutes this week.",
+      "priorityContext": "Soft touch only — keep the thread warm without forcing a meeting because the account is in the window where threads either restart or quietly die.",
+      "recoveryScore": 56,
+      "decision": {
+        "bucket": "Watch",
+        "score": 35
+      }
+    },
+    {
+      "rank": 6,
       "companyName": "Crestline Medical Billing",
       "contactName": "Anika Rao",
       "location": "St. Louis, MO",
@@ -109,14 +131,36 @@
         "daysSinceTouch": 84,
         "lastTouchAt": "2026-02-20T00:00:00.000Z"
       },
-      "whyNow": "They left it at \"Wanted case-study examples before the next provider webinar\" and the account has been quiet since. The original line is the recovery line. 84 days of silence is exactly the window where these threads quietly die.",
-      "verifiedContactPath": "(314) 256-4409 — Phone on homepage",
-      "suggestedOpener": "Hi Anika, Last we spoke, you wanted case-study examples before the next provider webinar. If that thread is still active, I'd pick it back up exactly where we left it.",
-      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the action you'd outlined — to send denial-management case study ahead of webinar — and ask whether it should still happen.",
+      "whyNow": "They left it at \"Wanted case-study examples before the next provider webinar. They specifically asked about denial-management proof\" and the account has been quiet since. The original line is the recovery line. 84 days of silence is exactly the window where these threads quietly die.",
+      "verifiedContactPath": "314.256.4409 — Phone on homepage",
+      "suggestedOpener": "Hi Anika, Last we spoke, you wanted case-study examples before the next provider webinar. They specifically asked about denial-management proof. If that thread is still active, I'd pick it back up exactly where we left it.",
+      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the action you'd outlined — to send denial-management case study — and ask whether it should still happen.",
       "recoveryScore": 55,
       "decision": {
         "bucket": "Call this week",
         "score": 60
+      }
+    },
+    {
+      "rank": 7,
+      "companyName": "Coastline Compliance",
+      "contactName": null,
+      "location": null,
+      "relationshipFreshness": "Dormant",
+      "staleness": {
+        "staleScore": 72,
+        "staleCategory": "Dormant",
+        "daysSinceTouch": null,
+        "lastTouchAt": null
+      },
+      "whyNow": "Quiet account with limited context on file. Keep the ask narrow.",
+      "verifiedContactPath": "coastlinecompliance.com — Website contact page",
+      "suggestedOpener": "Hi, Coming back to this account because the last touch is overdue. If now isn't right, a one-line reply will help me step back without filling the inbox.",
+      "priorityContext": "Soft touch only — keep the thread warm without forcing a meeting because the account has cooled, but the prior thread can still carry the call.",
+      "recoveryScore": 49,
+      "decision": {
+        "bucket": "Watch",
+        "score": 35
       }
     }
   ]

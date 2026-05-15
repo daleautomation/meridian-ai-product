@@ -1,103 +1,104 @@
 {
   "customer": "Contractor Growth Recovery",
   "week": "2026-W20",
-  "generatedAt": "2026-05-15T19:26:48.376Z",
-  "sourceCsv": "fixtures/sample-recovery.csv",
+  "generatedAt": "2026-05-15T21:02:15.220Z",
+  "sourceCsv": "fixtures/recovery-contractor-raw.csv",
   "summary": {
-    "inputRows": 4,
-    "opportunities": 4,
-    "recoveryCandidates": 3
+    "inputRows": 5,
+    "opportunities": 5,
+    "recoveryCandidates": 4
   },
   "opportunities": [
     {
       "rank": 1,
-      "companyName": "Harbor Ridge Roofing",
-      "contactName": "Mara Ellis",
-      "location": "Kansas City, MO",
-      "relationshipFreshness": "Recovery candidate",
-      "staleness": {
-        "staleScore": 96,
-        "staleCategory": "Recovery candidate",
-        "daysSinceTouch": 98,
-        "lastTouchAt": "2026-02-06T00:00:00.000Z"
-      },
-      "whyNow": "They added financing language for hail-damage roof replacements after the March storms. Last touch was 98 days ago, so the follow-up has a real business reason.",
-      "verifiedContactPath": "Phone on homepage (medium): (816) 204-4127",
-      "suggestedOpener": "Hi Mara, saw Harbor Ridge added financing language around storm-damage replacements. We had talked about making that path easier for homeowners after inspections - worth revisiting before the next hail push?",
-      "priorityContext": "Call now. 82/100 fit with 96/100 relationship staleness. Lead with: Storm-season roof replacement demand. Reopen around financing and storm-response pages; ask whether quote volume is still leaking after inspection calls.",
-      "recoveryScore": 86,
-      "decision": {
-        "bucket": "Call now",
-        "score": 82,
-        "primaryOpportunity": {
-          "id": "storm-season-roof-replacement-demand",
-          "label": "Storm-season roof replacement demand",
-          "reason": "Reopen around financing and storm-response pages; ask whether quote volume is still leaking after inspection calls.",
-          "revenueImpact": "medium",
-          "services": []
-        }
-      }
-    },
-    {
-      "rank": 2,
       "companyName": "Northpoint Mechanical",
       "contactName": "Alicia Warren",
       "location": "Lenexa, KS",
       "relationshipFreshness": "Recovery candidate",
       "staleness": {
-        "staleScore": 100,
+        "staleScore": 86,
         "staleCategory": "Recovery candidate",
         "daysSinceTouch": 158,
         "lastTouchAt": "2025-12-08T00:00:00.000Z"
       },
-      "whyNow": "Last note: Requested a callback before cooling-season demand. No touch for 158 days, which gives the operator a specific thread to reopen.",
-      "verifiedContactPath": "Phone on homepage (medium): (913) 386-2490",
-      "suggestedOpener": "Hi Alicia, I had a note to circle back before cooling season. If after-hours service calls are still slipping to voicemail, we can tighten that path without changing your dispatch process.",
-      "priorityContext": "Call this week. 70/100 fit with 100/100 relationship staleness. Lead with: Cooling-season service calls. Use cooling-season capacity as the reason; ask if after-hours calls are still getting missed.",
-      "recoveryScore": 83,
+      "whyNow": "The last note reads \"Requested a callback before cooling-season demand picks up\" — that thread is still the cleanest reason to come back. 158 days is long enough that a direct, specific reopen reads better than a soft touch.",
+      "verifiedContactPath": "(913) 386-2490 — Phone on homepage",
+      "suggestedOpener": "Hi Alicia, Last we spoke, you requested a callback before cooling-season demand picks up. If that thread is still active, I'd pick it back up exactly where we left it.",
+      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the prior note (\"Requested a callback before cooling-season demand picks up\") and treat this as a continuation, not a restart.",
+      "recoveryScore": 66,
       "decision": {
         "bucket": "Call this week",
-        "score": 70,
-        "primaryOpportunity": {
-          "id": "cooling-season-service-calls",
-          "label": "Cooling-season service calls",
-          "reason": "Use cooling-season capacity as the reason; ask if after-hours calls are still getting missed.",
-          "revenueImpact": "medium",
-          "services": []
-        }
+        "score": 60
+      }
+    },
+    {
+      "rank": 2,
+      "companyName": "Ironline Plumbing Co.",
+      "contactName": "Renee Carter",
+      "location": "Independence, MO",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 174,
+        "lastTouchAt": "2025-11-22T00:00:00.000Z"
+      },
+      "whyNow": "Last contact closed on paused conversation around the after-hours dispatch SLA pending a budget review; the conversation never resolved, and recovery starts there. 174 days is long enough that a direct, specific reopen reads better than a soft touch.",
+      "verifiedContactPath": "(816) 552-9038 — Phone on homepage",
+      "suggestedOpener": "Hi Renee, Picking up where we left off: you paused conversation around the after-hours dispatch SLA pending a budget review. If the door is still open on that, I'd come in narrow rather than start from the top.",
+      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the prior note (\"Paused conversation around the after-hours dispatch SLA pending a budget review\") and treat this as a continuation, not a restart.",
+      "recoveryScore": 66,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
       }
     },
     {
       "rank": 3,
+      "companyName": "Harbor Ridge Roofing",
+      "contactName": "Mara Ellis",
+      "location": "Kansas City, MO",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 78,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 98,
+        "lastTouchAt": "2026-02-06T00:00:00.000Z"
+      },
+      "whyNow": "They left it at \"Asked for a storm-season landing page estimate before the next hail push\" and the account has been quiet since. The original line is the recovery line. After 98 days, the relationship is past polite and into recovery range.",
+      "verifiedContactPath": "(816) 204-4127 — Phone on homepage",
+      "suggestedOpener": "Hi Mara, I had a note from our last conversation — you asked for a storm-season landing page estimate before the next hail push. If that's still live on your end, the cleanest next step is a short call to close the loop rather than restart.",
+      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the action you'd outlined — to send revised landing page scope by end of week — and ask whether it should still happen.",
+      "recoveryScore": 62,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 4,
       "companyName": "Cedar & Slate Exteriors",
       "contactName": "Daniel Price",
       "location": "Overland Park, KS",
       "relationshipFreshness": "Recovery candidate",
       "staleness": {
-        "staleScore": 90,
+        "staleScore": 78,
         "staleCategory": "Recovery candidate",
         "daysSinceTouch": 116,
         "lastTouchAt": "2026-01-19T00:00:00.000Z"
       },
-      "whyNow": "Google reviews moved from 82 to 91 while nearby roofers are advertising spring inspections. Last touch was 116 days ago, so the follow-up has a real business reason.",
-      "verifiedContactPath": "Phone on homepage (medium): (913) 274-6186",
-      "suggestedOpener": "Hi Daniel, you mentioned wanting to revisit after crews were scheduled. I noticed the review count moved again and competitors are pushing spring inspections - should we look at the lead path before June?",
-      "priorityContext": "Call now. 80/100 fit with 90/100 relationship staleness. Lead with: Spring inspection follow-up. Lead with the inspection-ad gap; ask whether the owner still wants inbound work balanced across both crews.",
-      "recoveryScore": 82,
+      "whyNow": "They left it at \"Wanted to revisit after Q1 crews were scheduled\" and the account has been quiet since. The original line is the recovery line. 116 days of silence is exactly the window where these threads quietly die.",
+      "verifiedContactPath": "(913) 274-6186 — Phone on homepage",
+      "suggestedOpener": "Hi Daniel, Last we spoke, you wanted to revisit after Q1 crews were scheduled. If that thread is still active, I'd pick it back up exactly where we left it.",
+      "priorityContext": "Schedule the call for later this week because the prior note carried a concrete reason rather than a vague interest signal. Lead with the action you'd outlined — to confirm crew capacity for May inspection ads — and ask whether it should still happen.",
+      "recoveryScore": 62,
       "decision": {
-        "bucket": "Call now",
-        "score": 80,
-        "primaryOpportunity": {
-          "id": "spring-inspection-follow-up",
-          "label": "Spring inspection follow-up",
-          "reason": "Lead with the inspection-ad gap; ask whether the owner still wants inbound work balanced across both crews.",
-          "revenueImpact": "medium",
-          "services": []
-        }
+        "bucket": "Call this week",
+        "score": 60
       }
     },
     {
-      "rank": 4,
+      "rank": 5,
       "companyName": "Oakline Remodel & Repair",
       "contactName": "Evan Cho",
       "location": "Lee's Summit, MO",
@@ -108,21 +109,14 @@
         "daysSinceTouch": 72,
         "lastTouchAt": "2026-03-04T00:00:00.000Z"
       },
-      "whyNow": "Last note: Asked for examples of project-photo follow-up. No touch for 72 days, which gives the operator a specific thread to reopen.",
-      "verifiedContactPath": "Phone on homepage (medium): (816) 319-7764",
-      "suggestedOpener": "Hi Evan, you asked for examples of turning project photos into estimate requests. I pulled a simple version for remodelers - worth a quick look while spring projects are fresh?",
-      "priorityContext": "Call now. 80/100 fit with 70/100 relationship staleness. Lead with: Project-photo conversion gap. Keep it practical: ask whether recent bathroom projects are turning into referral and estimate requests.",
-      "recoveryScore": 73,
+      "whyNow": "Last contact closed on asked for examples of turning project photos into estimate requests; the conversation never resolved, and recovery starts there. 72 days of silence is exactly the window where these threads quietly die.",
+      "verifiedContactPath": "(816) 319-7764 — Phone on homepage",
+      "suggestedOpener": "Hi Evan, I had a note from our last conversation — you asked for examples of turning project photos into estimate requests. If that's still live on your end, the cleanest next step is a short call to close the loop rather than restart.",
+      "priorityContext": "Schedule the call for later this week because the prior note carried a concrete reason rather than a vague interest signal. Lead with the action you'd outlined — to share three project-photo conversion examples — and ask whether it should still happen.",
+      "recoveryScore": 59,
       "decision": {
-        "bucket": "Call now",
-        "score": 80,
-        "primaryOpportunity": {
-          "id": "project-photo-conversion-gap",
-          "label": "Project-photo conversion gap",
-          "reason": "Keep it practical: ask whether recent bathroom projects are turning into referral and estimate requests.",
-          "revenueImpact": "medium",
-          "services": []
-        }
+        "bucket": "Call this week",
+        "score": 60
       }
     }
   ]
