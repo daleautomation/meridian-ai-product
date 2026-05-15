@@ -9,7 +9,6 @@
 // Calendar / Gmail / Airtable / CRM without touching the UI.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { palette } from "../lib/theme";
 import { dateFromHydrationTime } from "../lib/hydrationTime";
 import {
@@ -3109,7 +3108,6 @@ function ExecutionOutcomePanel({
   readOnly = false,
   onLeadUpdate,
 }) {
-  const router = useRouter();
   const [outcome, setOutcome] = useState(() => getDefaultExecutionOutcome());
   const [persistState, setPersistState] = useState("idle");
   const [loggedClock, setLoggedClock] = useState(0);
@@ -3162,7 +3160,6 @@ function ExecutionOutcomePanel({
       overflowEntries,
       workspaceSlug,
       pulledKeys: pulledRef.current,
-      onPulled: () => router.refresh(),
     });
   };
 
@@ -3483,7 +3480,6 @@ export function SelectedLeadPanel({
   serverExecutionOutcomeMap = {},
   readOnly = false,
 }) {
-  const router = useRouter();
   // Popover state removed — Call Now now fires tel: directly. No
   // intermediate confirmation step on a desktop operator workflow.
   const status = executionStatusFor(task);
@@ -5381,7 +5377,7 @@ export default function CalendarCommandCenter({
         })
           .then(async (res) => {
             const body = await res.json().catch(() => null);
-            if (res.ok && body?.persisted === true) router.refresh();
+            if (!res.ok || body?.persisted !== true) return;
           })
           .catch(() => { /* local optimistic outcome remains available */ });
       }
@@ -5390,7 +5386,6 @@ export default function CalendarCommandCenter({
         overflowEntries,
         workspaceSlug,
         pulledKeys: pulledForwardRef.current,
-        onPulled: () => router.refresh(),
       });
     } catch { /* fail silent */ }
 
