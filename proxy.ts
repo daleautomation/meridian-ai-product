@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 const SESSION_COOKIE = "meridian_session";
 
 // Public paths that do NOT require authentication.
-const PUBLIC_PATHS = new Set(["/", "/login", "/about", "/roofing-intelligence"]);
+const PUBLIC_PATHS = new Set(["/", "/login", "/about", "/roofing-intelligence", "/showcase"]);
 
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -17,6 +17,7 @@ export function proxy(req: NextRequest) {
     pathname.startsWith("/api/ai") ||
     pathname.startsWith("/api/mcp") ||
     pathname.startsWith("/demo/") ||
+    pathname.startsWith("/showcase/") ||
     pathname.startsWith("/_next/") ||
     pathname === "/favicon.ico"
   ) {
