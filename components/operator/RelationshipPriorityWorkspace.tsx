@@ -361,10 +361,10 @@ function PriorityCard({
           </div>
         ))}
       </div>
-      <div style={styles.nextStep}>{card.nextStep}</div>
+      {dominant && showcase ? null : <div style={styles.nextStep}>{card.nextStep}</div>}
       {dominant && showcase ? (
         <div style={styles.showcaseFocusGrid}>
-          <FocusItem label="Who matters" value={card.company} />
+          <FocusItem label="Who matters" value={`${card.bestContact.name}, ${card.bestContact.title}`} />
           <FocusItem label="Why now" value={card.topReasons[0]} />
           <FocusItem label="Next action" value={card.nextStep} />
         </div>
