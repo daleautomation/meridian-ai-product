@@ -9,6 +9,8 @@ export const BOOK_STRATEGY_CALL_HREF = "/intake/strategy-call?source=homepage";
 export const CLIENT_LOGIN_HREF = "/login?next=/operator";
 export const SHOWCASE_HREF = "/showcase";
 export const ABOUT_HREF = "/about";
+export const RECOVERY_SAMPLE_BRIEF_HREF = "/#sample-brief-preview";
+export const REQUEST_FIRST_BRIEF_HREF = "/intake/workspace-request?source=first-brief";
 
 export const productLadder = [
   "Relationships",
