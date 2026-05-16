@@ -22,11 +22,11 @@ export function HeroSection() {
             Request the first brief on your list
           </a>
         </div>
-        <div className="public-hero-proof" aria-label="Meridian operating loop">
+        <div className="public-hero-proof" aria-label="Recovery Brief trust signals">
           <span>Built for boutique firms</span>
           <span>No automated outreach</span>
           <span>No invented context</span>
-          <span>Manual workflow</span>
+          <span>Manual weekly delivery</span>
         </div>
       </div>
       <div
@@ -41,28 +41,27 @@ export function HeroSection() {
         <div className="public-brief-card-body">
           <p>Relationship recovery memo</p>
           <h2>4 dormant relationships worth reopening this week.</h2>
-          <div className="public-brief-card-section">
-            <span>Who to reopen</span>
-            <strong>Past client with an inactive expansion conversation</strong>
-          </div>
-          <div className="public-brief-card-grid">
-            <div>
+          <ul className="public-brief-card-list">
+            <li>
+              <span>Who to reopen</span>
+              <strong>Past client with an inactive expansion conversation</strong>
+            </li>
+            <li>
               <span>Why now</span>
-              <p>Recent hiring signal suggests the original need may be active again.</p>
-            </div>
-            <div>
+              <strong>Recent hiring signal suggests the original need may be active again.</strong>
+            </li>
+            <li>
               <span>What to say</span>
-              <p>Lead with the prior context and ask whether the role is still open.</p>
-            </div>
-            <div>
+              <strong>Lead with the prior context and ask whether the role is still open.</strong>
+            </li>
+            <li>
               <span>Contact path</span>
-              <p>Founder email, LinkedIn, then direct phone if already known.</p>
-            </div>
-            <div>
-              <span>Next step</span>
-              <p>Founder sends the note manually after review.</p>
-            </div>
-          </div>
+              <strong>Founder email, LinkedIn, then direct phone if already known.</strong>
+            </li>
+          </ul>
+          <p className="public-brief-card-note">
+            Founder reviews the brief, edits the note, and sends outreach manually.
+          </p>
         </div>
       </div>
     </section>

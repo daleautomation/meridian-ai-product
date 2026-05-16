@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  ABOUT_HREF,
   CLIENT_LOGIN_HREF,
   RECOVERY_SAMPLE_BRIEF_HREF,
   REQUEST_FIRST_BRIEF_HREF,
@@ -12,7 +13,8 @@ export function PublicFooter() {
       <span>Founder-reviewed weekly Recovery Briefs for boutique firms.</span>
       <a href={RECOVERY_SAMPLE_BRIEF_HREF}>Sample brief</a>
       <a href={REQUEST_FIRST_BRIEF_HREF}>Request first brief</a>
-      <Link href={CLIENT_LOGIN_HREF}>Client Login</Link>
+      <Link href={ABOUT_HREF}>About</Link>
+      <Link href={CLIENT_LOGIN_HREF}>Login</Link>
     </footer>
   );
 }

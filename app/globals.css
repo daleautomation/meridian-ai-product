@@ -1042,8 +1042,7 @@ html, body {
 }
 
 .public-brief-card-body > p,
-.public-brief-card-section span,
-.public-brief-card-grid span,
+.public-brief-card-list span,
 .public-recovery-brief-grid span {
   color: var(--public-faint);
   font-size: 12px;
@@ -1066,43 +1065,35 @@ html, body {
   text-wrap: balance;
 }
 
-.public-brief-card-section {
-  margin-top: 28px;
-  padding: 18px;
-  border: 1px solid #ece5dc;
-  border-radius: 22px;
-  background: #fffaf1;
-}
-
-.public-brief-card-section strong {
-  display: block;
-  margin-top: 8px;
-  color: var(--public-text);
-  font-size: 19px;
-  letter-spacing: -0.03em;
-  line-height: 1.2;
-}
-
-.public-brief-card-grid {
+.public-brief-card-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 12px;
+  gap: 0;
+  margin: 28px 0 0;
+  padding: 0;
+  list-style: none;
 }
 
-.public-brief-card-grid div {
-  min-height: 136px;
-  padding: 16px;
-  border: 1px solid #ece5dc;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.74);
+.public-brief-card-list li {
+  padding: 16px 0;
+  border-top: 1px solid #ece5dc;
 }
 
-.public-brief-card-grid p {
-  margin: 9px 0 0;
+.public-brief-card-list strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--public-text);
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.public-brief-card-note {
+  margin: 12px 0 0;
+  padding-top: 18px;
+  border-top: 1px solid #ece5dc;
   color: var(--public-muted);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 1.55;
 }
 
 .public-section {
@@ -4536,7 +4527,6 @@ html, body {
   .public-intelligence-links,
   .public-command-grid,
   .public-hero-metrics,
-  .public-brief-card-grid,
   .public-preview-card-grid {
     grid-template-columns: 1fr;
   }
