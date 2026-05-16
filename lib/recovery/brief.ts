@@ -33,8 +33,9 @@ export type RecoveryBrief = {
 export function formatContactPath(path: ContactPath | undefined): string {
   if (!path) return "Manual verification needed";
   const label = path.label ?? `${path.method} path`;
-  const status = path.verified ? "verified" : path.confidence;
-  return `${label} (${status}): ${path.value}`;
+  // Per docs/copywriting-principles.md: anchor first (the dialable value),
+  // provenance follows as a small label. No inline (medium) confidence.
+  return `${path.value} — ${label}`;
 }
 
 export function buildSuggestedOpener(companyName: string, contactName: string | null, whyNow: string): string {

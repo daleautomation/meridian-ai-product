@@ -32,6 +32,10 @@ function daysLabel(days: number | null): string {
   return `${days} days since touch`;
 }
 
+function rankLabel(rank: number): string {
+  return rank < 10 ? `0${rank}` : String(rank);
+}
+
 export default async function RecoveryBriefPage({ params }: BriefPageProps) {
   const { customer, week } = await params;
   const brief = await loadBrief(customer, week);
@@ -65,12 +69,12 @@ export default async function RecoveryBriefPage({ params }: BriefPageProps) {
           {brief.opportunities.map((item) => (
             <article className="recovery-brief-card" key={`${item.rank}-${item.companyName}`}>
               <div className="recovery-brief-card-topline">
-                <span>No. {item.rank}</span>
-                <span>{item.recoveryScore} recovery score</span>
+                <span>{rankLabel(item.rank)}</span>
+                <span>Recovery {item.recoveryScore} / 100</span>
               </div>
               <h2>{item.companyName}</h2>
               <p className="recovery-brief-card-meta">
-                {item.contactName ?? "Contact not named"} · {item.location ?? "Location not provided"} · {item.relationshipFreshness} · {daysLabel(item.staleness.daysSinceTouch)}
+                {item.contactName ?? "Contact not named"} · {item.location ?? "Location not provided"} · {daysLabel(item.staleness.daysSinceTouch)}
               </p>
               <div className="recovery-brief-card-grid">
                 <section>
@@ -214,9 +218,18 @@ export default async function RecoveryBriefPage({ params }: BriefPageProps) {
 
         .recovery-brief-card-grid {
           display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
+          grid-template-columns: 2fr 1fr;
           gap: 18px 22px;
           margin-top: 22px;
+        }
+
+        /* Why now and Suggested opener occupy the first row; the first
+           gets the wider lane so it lands as the answer to "why now?"
+           when scanned at speed. Priority read and Contact path drop into
+           the second row at equal width. */
+        .recovery-brief-card-grid > section:nth-child(3),
+        .recovery-brief-card-grid > section:nth-child(4) {
+          grid-column: span 1;
         }
 
         .recovery-brief-card section {
