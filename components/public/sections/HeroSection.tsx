@@ -8,11 +8,10 @@ export function HeroSection() {
     <section className="public-hero">
       <div className="public-hero-copy">
         <span className="public-eyebrow">Founder-reviewed weekly Recovery Briefs</span>
-        <h1>Recover dormant relationships without guessing who to call next.</h1>
+        <h1>Weekly Recovery Briefs for dormant relationships.</h1>
         <p>
-          Meridian helps boutique firms turn a founder-controlled CSV into a
-          weekly Recovery Brief: who to reopen, why now, what to say, and the
-          verified contact path to use.
+          See who is worth reopening, why now, and what to say. Built for
+          boutique firms; outreach stays manual.
         </p>
         <div className="public-hero-actions">
           <a className="public-primary-button" href={RECOVERY_SAMPLE_BRIEF_HREF}>
@@ -39,12 +38,12 @@ export function HeroSection() {
           <strong>Founder review</strong>
         </div>
         <div className="public-brief-card-body">
-          <p>Relationship recovery memo</p>
-          <h2>4 dormant relationships worth reopening this week.</h2>
+          <p>Weekly recovery memo</p>
+          <h2>This week&apos;s relationships worth reopening.</h2>
           <ul className="public-brief-card-list">
             <li>
               <span>Who to reopen</span>
-              <strong>Past client with an inactive expansion conversation</strong>
+              <strong>Past client with a paused expansion conversation</strong>
             </li>
             <li>
               <span>Why now</span>
@@ -56,11 +55,11 @@ export function HeroSection() {
             </li>
             <li>
               <span>Contact path</span>
-              <strong>Founder email, LinkedIn, then direct phone if already known.</strong>
+              <strong>Verified email, LinkedIn, then known direct phone.</strong>
             </li>
           </ul>
           <p className="public-brief-card-note">
-            Founder reviews the brief, edits the note, and sends outreach manually.
+            Founder-reviewed. No automated outreach.
           </p>
         </div>
       </div>

@@ -626,42 +626,6 @@ export const platformModules = [
   },
 ] as const;
 
-export const heroMetrics = [
-  {
-    label: "Relationship",
-    value: "Warm",
-    detail: "Existing trust already exists",
-  },
-  {
-    label: "Revenue",
-    value: "At risk",
-    detail: "Follow-up window is closing",
-  },
-  {
-    label: "Action",
-    value: "Today",
-    detail: "Operator move is clear",
-  },
-] as const;
-
-export const heroQueue = [
-  {
-    label: "Who matters",
-    title: "Warm relationship with revenue potential",
-    meta: "Existing context, recent signal, reachable contact",
-  },
-  {
-    label: "Why now",
-    title: "Momentum is starting to cool",
-    meta: "The follow-up window is still recoverable",
-  },
-  {
-    label: "What next",
-    title: "Call with a specific recovery angle",
-    meta: "Move the relationship before it disappears",
-  },
-] as const;
-
 export const workspacePreviewCards = [
   {
     title: "Closeability score",
