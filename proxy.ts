@@ -8,7 +8,13 @@ const PUBLIC_PATHS = new Set(["/", "/login", "/about", "/roofing-intelligence", 
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Allow public pages, intake funnels, auth API, AI API, demo entry, and static assets.
+  // Allow public pages, intake funnels, auth API, AI API, demo entry,
+  // delivered Recovery Briefs, and static assets.
+  //
+  // /brief/* is intentionally public: briefs are founder-delivered artifacts
+  // shared via direct link to prospects and customers, and the public
+  // "See a sample brief" CTA depends on this. Access control is the
+  // obscurity of the per-customer slug, not authentication.
   if (
     PUBLIC_PATHS.has(pathname) ||
     pathname.startsWith("/intake") ||
@@ -18,6 +24,7 @@ export function proxy(req: NextRequest) {
     pathname.startsWith("/api/mcp") ||
     pathname.startsWith("/demo/") ||
     pathname.startsWith("/showcase/") ||
+    pathname.startsWith("/brief/") ||
     pathname.startsWith("/_next/") ||
     pathname === "/favicon.ico"
   ) {
