@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
 import { PublicFooter } from "@/components/public/layout/PublicFooter";
 import { PublicHeader } from "@/components/public/layout/PublicHeader";
-import { REQUEST_WORKSPACE_HREF, SHOWCASE_HREF, VISIBILITY_SCAN_HREF } from "@/content/public/home";
+import {
+  RECOVERY_SAMPLE_BRIEF_HREF,
+  REQUEST_FIRST_BRIEF_HREF,
+} from "@/content/public/home";
 
 export const metadata: Metadata = {
-  title: "About Meridian | Relationship Priority and Operator Systems",
+  title: "About Meridian | Weekly Recovery Briefs for Boutique Firms",
   description:
-    "Meridian is a founder-led relationship-priority and execution company building practical software for revenue clarity, workflow simplification, and operator focus.",
+    "Meridian is a founder-led service that sends boutique firms a weekly Recovery Brief: who to reopen, why now, what to say, and the verified contact path.",
 };
 
 const storyPoints = [
@@ -27,20 +30,20 @@ const storyPoints = [
     text: "The goal was not to start with a big platform idea. The work kept pointing back to small systems that removed friction, saved time, and made the next step obvious.",
   },
   {
-    title: "The work became relationship execution.",
-    text: "Solving operational problems became the part worth building around: relationship priority, stale opportunity recovery, follow-up execution, workspace generation, and calm operator surfaces.",
+    title: "The work became relationship recovery.",
+    text: "Solving operational problems pointed back to the same shape: relationships a business had earned, then lost track of. Recovery Briefs are the practical version of that.",
   },
   {
-    title: "The systems should help both sides succeed.",
-    text: "Meridian builds tools that improve its own operating rhythm while giving clients practical systems they can use to recover revenue and execute with less confusion.",
+    title: "The product should help both sides succeed.",
+    text: "Meridian sends a weekly brief that helps a founder act with care on the relationships they already own. The work is manual on both ends — that is the promise.",
   },
 ] as const;
 
 const principles = [
-  "Practical software over AI hype",
-  "Revenue clarity over dashboard volume",
-  "Operator judgment over black-box automation",
-  "Workflow simplification over tool sprawl",
+  "Practical over performative",
+  "Founder judgment over black-box automation",
+  "Manual outreach over auto-sending",
+  "Evidence over invented context",
 ] as const;
 
 export default function About() {
@@ -51,22 +54,22 @@ export default function About() {
         <span className="public-eyebrow">About Meridian</span>
         <h1>Built by following operational problems until they became software.</h1>
         <p>
-          Meridian is a founder-led relationship-priority and execution company.
-          It grew from construction experience, systems thinking, and a practical
-          curiosity about how software can make real business work calmer,
-          clearer, and more commercially useful.
+          Meridian is a founder-led service that sends boutique firms a weekly
+          Recovery Brief: who to reopen, why now, what to say, and the verified
+          contact path. It grew from construction experience and a practical
+          curiosity about how the right small note can save a relationship.
         </p>
       </section>
 
       <section className="about-public-section about-public-split">
         <div>
-          <span className="public-eyebrow">Founder-led and operator-minded</span>
-          <h2>Meridian is not trying to be an AI spectacle.</h2>
+          <span className="public-eyebrow">Founder-led and grounded</span>
+          <h2>A weekly memo, not a platform.</h2>
           <p>
-            The work is grounded: help businesses see which relationships matter,
-            why now, and what should happen next. The product should help
-            Meridian run better and help clients recover revenue from the
-            relationships they already own.
+            The work is grounded: help boutique firms see which relationships
+            deserve attention, why now, and what to say first. Briefs are
+            founder-reviewed and outreach stays manual on both ends — that is
+            the entire promise.
           </p>
           <div className="public-pill-row">
             {principles.map((principle) => (
@@ -89,19 +92,16 @@ export default function About() {
           <span className="public-eyebrow">What Meridian believes</span>
           <h2>Good software should reduce the amount of business a person has to carry in their head.</h2>
           <p>
-            Meridian builds toward simple execution surfaces: relationship queues,
-            recovery desks, demo systems, and workspaces that translate messy
-            operations into clear next moves.
+            Meridian sends a weekly Recovery Brief that surfaces which dormant
+            relationships deserve a careful follow-up, with a verified contact
+            path and a restrained opener the founder can edit before sending.
           </p>
           <div className="public-hero-actions">
-            <a className="public-primary-button" href={VISIBILITY_SCAN_HREF}>
-              Start with a Priority Scan
+            <a className="public-primary-button" href={RECOVERY_SAMPLE_BRIEF_HREF}>
+              See a sample brief
             </a>
-            <a className="public-secondary-button" href={SHOWCASE_HREF}>
-              View Showcase
-            </a>
-            <a className="public-secondary-button" href={REQUEST_WORKSPACE_HREF}>
-              Request Workspace
+            <a className="public-secondary-button" href={REQUEST_FIRST_BRIEF_HREF}>
+              Request the first brief on your list
             </a>
           </div>
         </div>
