@@ -1,42 +1,25 @@
-import Link from "next/link";
 import {
-  BOOK_STRATEGY_CALL_HREF,
-  CLIENT_LOGIN_HREF,
-  EXPLORE_SYSTEMS_HREF,
-  REQUEST_WORKSPACE_HREF,
-  SHOWCASE_HREF,
-  VISIBILITY_SCAN_HREF,
+  RECOVERY_SAMPLE_BRIEF_HREF,
+  REQUEST_FIRST_BRIEF_HREF,
 } from "@/content/public/home";
 
 export function FinalCta() {
   return (
     <section className="public-final-cta">
-      <span className="public-eyebrow">Relationships to revenue</span>
-      <h2>Start by finding the relationships that can move revenue now.</h2>
+      <span className="public-eyebrow">Weekly, manual, founder-reviewed</span>
+      <h2>Send a small list. Get back a Recovery Brief worth acting on.</h2>
       <p>
-        Meridian helps businesses protect revenue already inside their pipeline,
-        recover stale opportunities, and build calm workspaces operators can
-        actually use.
+        Start with dormant relationships from a CSV you control. Meridian
+        returns a clear weekly brief so the founder can decide who to reopen
+        and send the outreach manually.
       </p>
       <div className="public-hero-actions">
-        <a className="public-primary-button" href={VISIBILITY_SCAN_HREF}>
-          Get a Priority Scan
+        <a className="public-primary-button" href={RECOVERY_SAMPLE_BRIEF_HREF}>
+          See a sample brief
         </a>
-        <a className="public-secondary-button" href={SHOWCASE_HREF}>
-          View Showcase
+        <a className="public-secondary-button" href={REQUEST_FIRST_BRIEF_HREF}>
+          Request the first brief on your list
         </a>
-        <a className="public-secondary-button" href={REQUEST_WORKSPACE_HREF}>
-          Request Workspace
-        </a>
-        <a className="public-secondary-button" href={EXPLORE_SYSTEMS_HREF}>
-          Explore Systems
-        </a>
-        <a className="public-secondary-button" href={BOOK_STRATEGY_CALL_HREF}>
-          Book Strategy Call
-        </a>
-        <Link className="public-login-button" href={CLIENT_LOGIN_HREF}>
-          Client Login
-        </Link>
       </div>
     </section>
   );

@@ -9,6 +9,8 @@ export const BOOK_STRATEGY_CALL_HREF = "/intake/strategy-call?source=homepage";
 export const CLIENT_LOGIN_HREF = "/login?next=/operator";
 export const SHOWCASE_HREF = "/showcase";
 export const ABOUT_HREF = "/about";
+export const RECOVERY_SAMPLE_BRIEF_HREF = "/#sample-brief-preview";
+export const REQUEST_FIRST_BRIEF_HREF = "/intake/workspace-request?source=first-brief";
 
 export const productLadder = [
   "Relationships",
@@ -621,42 +623,6 @@ export const platformModules = [
   {
     title: "Client Portal",
     text: "Gives clients and teams a clean status layer.",
-  },
-] as const;
-
-export const heroMetrics = [
-  {
-    label: "Relationship",
-    value: "Warm",
-    detail: "Existing trust already exists",
-  },
-  {
-    label: "Revenue",
-    value: "At risk",
-    detail: "Follow-up window is closing",
-  },
-  {
-    label: "Action",
-    value: "Today",
-    detail: "Operator move is clear",
-  },
-] as const;
-
-export const heroQueue = [
-  {
-    label: "Who matters",
-    title: "Warm relationship with revenue potential",
-    meta: "Existing context, recent signal, reachable contact",
-  },
-  {
-    label: "Why now",
-    title: "Momentum is starting to cool",
-    meta: "The follow-up window is still recoverable",
-  },
-  {
-    label: "What next",
-    title: "Call with a specific recovery angle",
-    meta: "Move the relationship before it disappears",
   },
 ] as const;
 
