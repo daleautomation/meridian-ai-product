@@ -3,6 +3,13 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { safeReadJson } from "@/lib/utils/fsSafeWrite";
 import type { RecoveryBrief } from "@/lib/recovery/brief";
+import {
+  DEFAULT_SAMPLE_DISCLAIMER,
+  FOUNDER_SIGNATURE,
+  MEMO_DESCRIPTION,
+  humanWeekLabel,
+  sourceDisplayLabel,
+} from "@/lib/recovery/brief";
 
 export const dynamic = "force-dynamic";
 
@@ -21,15 +28,31 @@ async function loadBrief(customer: string, week: string): Promise<RecoveryBrief 
 export async function generateMetadata({ params }: BriefPageProps): Promise<Metadata> {
   const { customer, week } = await params;
   return {
-    title: `Recovery Brief | ${customer} | ${week}`,
-    description: "Founder-delivered relationship recovery memo.",
+    title: `Recovery Brief | ${customer} | ${humanWeekLabel(week)}`,
+    description: MEMO_DESCRIPTION,
+    robots: { index: false, follow: false },
   };
 }
 
 function daysLabel(days: number | null): string {
-  if (days === null) return "No prior touch";
+  if (days === null) return "First outreach";
   if (days === 1) return "1 day since touch";
   return `${days} days since touch`;
+}
+
+function rankLabel(rank: number): string {
+  return rank < 10 ? `0${rank}` : String(rank);
+}
+
+function summarySentence(brief: RecoveryBrief): string {
+  const n = brief.summary.opportunities;
+  if (n === 0) return "No relationships above the recovery threshold this week.";
+  const headline = brief.isSample
+    ? "fictional recovery cards illustrating the format"
+    : "relationships worth reopening this week";
+  if (n === 1) return brief.isSample ? "One fictional recovery card illustrating the format." : "One relationship worth reopening this week.";
+  const word = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"][n] ?? String(n);
+  return `${word.charAt(0).toUpperCase() + word.slice(1)} ${headline}.`;
 }
 
 export default async function RecoveryBriefPage({ params }: BriefPageProps) {
@@ -37,27 +60,37 @@ export default async function RecoveryBriefPage({ params }: BriefPageProps) {
   const brief = await loadBrief(customer, week);
   if (!brief) notFound();
 
+  const weekLabel = humanWeekLabel(brief.week);
+  const sourceLabel = sourceDisplayLabel(brief);
+  const sampleDisclaimer = brief.isSample ? (brief.sampleDisclaimer ?? DEFAULT_SAMPLE_DISCLAIMER) : null;
+  const kickerPrefix = brief.isSample ? "Sample Recovery Brief" : "Recovery Brief";
+  const h1Prefix = brief.isSample ? "Sample · " : "";
+
   return (
     <main className="recovery-brief-page">
       <section className="recovery-brief-memo" aria-label="Recovery Brief memo">
+        {brief.isSample ? (
+          <div className="recovery-brief-sample-banner">
+            Sample · Built from public information · No CRM data accessed
+          </div>
+        ) : null}
         <header className="recovery-brief-header">
           <div>
-            <p className="recovery-brief-kicker">Recovery Brief - {brief.week}</p>
-            <h1>{brief.customer} relationship recovery memo</h1>
-            <p className="recovery-brief-subtitle">
-              {brief.summary.opportunities} prioritized opportunities from {brief.summary.inputRows} input rows.
-              {" "}{brief.summary.recoveryCandidates} recovery candidates.
-            </p>
+            <p className="recovery-brief-kicker">{kickerPrefix} · {weekLabel}</p>
+            <h1>{h1Prefix}{brief.customer} — {weekLabel}</h1>
+            <p className="recovery-brief-subtitle">{summarySentence(brief)}</p>
           </div>
           <dl className="recovery-brief-stats">
             <div>
               <dt>Generated</dt>
               <dd>{new Date(brief.generatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</dd>
             </div>
-            <div>
-              <dt>Source</dt>
-              <dd>{brief.sourceCsv}</dd>
-            </div>
+            {sourceLabel ? (
+              <div>
+                <dt>Source</dt>
+                <dd>{sourceLabel}</dd>
+              </div>
+            ) : null}
           </dl>
         </header>
 
@@ -65,12 +98,12 @@ export default async function RecoveryBriefPage({ params }: BriefPageProps) {
           {brief.opportunities.map((item) => (
             <article className="recovery-brief-card" key={`${item.rank}-${item.companyName}`}>
               <div className="recovery-brief-card-topline">
-                <span>No. {item.rank}</span>
-                <span>{item.recoveryScore} recovery score</span>
+                <span>{rankLabel(item.rank)}</span>
+                <span>Recovery {item.recoveryScore} / 100</span>
               </div>
               <h2>{item.companyName}</h2>
               <p className="recovery-brief-card-meta">
-                {item.contactName ?? "Contact not named"} · {item.location ?? "Location not provided"} · {item.relationshipFreshness} · {daysLabel(item.staleness.daysSinceTouch)}
+                {item.contactName ?? "Contact not named"} · {item.location ?? "Location not provided"} · {daysLabel(item.staleness.daysSinceTouch)}
               </p>
               <div className="recovery-brief-card-grid">
                 <section>
@@ -93,6 +126,12 @@ export default async function RecoveryBriefPage({ params }: BriefPageProps) {
             </article>
           ))}
         </div>
+
+        <footer className="recovery-brief-footer">
+          <span className="signature">{FOUNDER_SIGNATURE}</span>
+          <span className="description">{MEMO_DESCRIPTION}</span>
+          {sampleDisclaimer ? <span className="sample-note">{sampleDisclaimer}</span> : null}
+        </footer>
       </section>
 
       <style>{`
@@ -233,6 +272,44 @@ export default async function RecoveryBriefPage({ params }: BriefPageProps) {
           color: #2f3a46;
           font-size: 14px;
           line-height: 1.55;
+        }
+
+        .recovery-brief-sample-banner {
+          padding: 12px clamp(28px, 4vw, 42px);
+          background: #f4ead8;
+          border-bottom: 1px solid #e7d9b8;
+          color: #6b5a3a;
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+        }
+
+        .recovery-brief-footer {
+          padding: 22px clamp(28px, 4vw, 42px) 30px;
+          border-top: 1px solid #e7e0d6;
+          color: #7c6f61;
+          font-size: 13px;
+          line-height: 1.55;
+        }
+
+        .recovery-brief-footer .signature {
+          color: #2f3a46;
+        }
+
+        .recovery-brief-footer .description {
+          display: block;
+          margin-top: 4px;
+          color: #7c6f61;
+        }
+
+        .recovery-brief-footer .sample-note {
+          display: block;
+          margin-top: 12px;
+          padding-top: 12px;
+          border-top: 1px dashed #e0d6c4;
+          color: #6b5a3a;
+          font-size: 12px;
         }
 
         @media (max-width: 760px) {

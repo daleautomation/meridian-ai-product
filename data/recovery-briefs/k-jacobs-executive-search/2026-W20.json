@@ -1,0 +1,125 @@
+{
+  "customer": "K. Jacobs Executive Search",
+  "week": "2026-W20",
+  "generatedAt": "2026-05-16T01:29:52.897Z",
+  "sourceCsv": "fixtures/outreach-sample-kjacobs.csv",
+  "isSample": true,
+  "sampleDisclaimer": "Built from public industry positioning only. The accounts shown are fictional examples chosen to match the firm's specialty — Meridian has no access to your CRM or your client list. Your real brief would be generated from a CSV export of your own contacts.",
+  "summary": {
+    "inputRows": 5,
+    "opportunities": 5,
+    "recoveryCandidates": 5
+  },
+  "opportunities": [
+    {
+      "rank": 1,
+      "companyName": "Cobblestone Architecture Group",
+      "contactName": "Eleanor Ridley",
+      "location": "Concord, NH",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 121,
+        "lastTouchAt": "2026-01-15T00:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Asked to revisit the senior project architect search once the federal-courthouse RFP closed\" — that thread is still the cleanest reason to come back. 121 days is long enough that a direct, specific reopen reads better than a soft touch.",
+      "verifiedContactPath": "(603) 488-2104 — Phone on homepage",
+      "suggestedOpener": "Hi Eleanor, I had a note from our last conversation — you asked to revisit the senior project architect search once the federal-courthouse RFP closed. If that's still live on your end, the cleanest next step is a short call to close the loop rather than restart.",
+      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the action you'd outlined — to re-engage on senior PA search after RFP outcome — and ask whether it should still happen.",
+      "recoveryScore": 66,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 2,
+      "companyName": "Bayline Structural Engineers",
+      "contactName": "Marcus Holt",
+      "location": "Boston, MA",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 159,
+        "lastTouchAt": "2025-12-08T00:00:00.000Z"
+      },
+      "whyNow": "Last contact closed on wanted a director-level structural engineer with hospital experience before the next phase of the Worcester health-campus project; the conversation never resolved, and recovery starts there. 159 days is long enough that a direct, specific reopen reads better than a soft touch.",
+      "verifiedContactPath": "(617) 388-7220 — Phone on homepage",
+      "suggestedOpener": "Hi Marcus, I had a note from our last conversation — you wanted a director-level structural engineer with hospital experience before the next phase of the Worcester health-campus project. If that's still live on your end, the cleanest next step is a short call to close the loop rather than restart.",
+      "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the prior note (\"Wanted a director-level structural engineer with hospital experience before the next phase…\") and treat this as a continuation, not a restart.",
+      "recoveryScore": 66,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 3,
+      "companyName": "Northpoint MEP Engineering",
+      "contactName": "Henry Park",
+      "location": "Manchester, NH",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 175,
+        "lastTouchAt": "2025-11-22T00:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Paused the lead-electrical-engineer search after the firm consolidated with a regional partner\" — that thread is still the cleanest reason to come back. The relationship has been quiet for 175 days; the prior thread is the most credible way back in.",
+      "verifiedContactPath": "(603) 274-9043 — Phone on homepage",
+      "suggestedOpener": "Hi Henry, Picking up where we left off: you paused the lead-electrical-engineer search after the firm consolidated with a regional partner. If the door is still open on that, I'd come in narrow rather than start from the top.",
+      "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the prior note (\"Paused the lead-electrical-engineer search after the firm consolidated with a regional…\") and treat this as a continuation, not a restart.",
+      "recoveryScore": 66,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 4,
+      "companyName": "Granite & Glass Construction",
+      "contactName": "Dana Whitcomb",
+      "location": "Portland, ME",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 78,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 106,
+        "lastTouchAt": "2026-01-30T00:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Asked for a preconstruction manager who had run mixed-use ground-up projects in New England\" — that thread is still the cleanest reason to come back. After 106 days, the relationship is past polite and into recovery range.",
+      "verifiedContactPath": "(207) 552-6118 — Phone on homepage",
+      "suggestedOpener": "Hi Dana, Last we spoke, you asked for a preconstruction manager who had run mixed-use ground-up projects in New England. If that thread is still active, I'd pick it back up exactly where we left it.",
+      "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the action you'd outlined — to send preconstruction-manager shortlist with NE mixed-use experience — and ask whether it should still happen.",
+      "recoveryScore": 62,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 5,
+      "companyName": "Coastline Civil Group",
+      "contactName": "Priya Shah",
+      "location": "Providence, RI",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 78,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 93,
+        "lastTouchAt": "2026-02-12T00:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Asked for a senior estimator who'd worked on coastal-resilience public-works packages\" — that thread is still the cleanest reason to come back. After 93 days, the relationship is past polite and into recovery range.",
+      "verifiedContactPath": "(401) 555-9128 — Phone on homepage",
+      "suggestedOpener": "Hi Priya, I had a note from our last conversation — you asked for a senior estimator who'd worked on coastal-resilience public-works packages. If that's still live on your end, the cleanest next step is a short call to close the loop rather than restart.",
+      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the action you'd outlined — to send senior-estimator shortlist with coastal-resilience experience — and ask whether it should still happen.",
+      "recoveryScore": 62,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    }
+  ]
+}

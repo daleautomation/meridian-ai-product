@@ -1,0 +1,125 @@
+{
+  "customer": "Finer Recruiting",
+  "week": "2026-W20",
+  "generatedAt": "2026-05-16T01:29:52.230Z",
+  "sourceCsv": "fixtures/outreach-sample-finer.csv",
+  "isSample": true,
+  "sampleDisclaimer": "Built from public industry positioning only. The accounts shown are fictional examples chosen to match the firm's specialty — Meridian has no access to your CRM or your client list. Your real brief would be generated from a CSV export of your own contacts.",
+  "summary": {
+    "inputRows": 5,
+    "opportunities": 5,
+    "recoveryCandidates": 5
+  },
+  "opportunities": [
+    {
+      "rank": 1,
+      "companyName": "Halcyon Capital Partners",
+      "contactName": "Marcus Whitfield",
+      "location": "New York, NY",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 127,
+        "lastTouchAt": "2026-01-09T00:00:00.000Z"
+      },
+      "whyNow": "Last contact closed on asked for a credit-side analyst shortlist after the mid-cap fundraise closed but said hiring was paused through Q1; the conversation never resolved, and recovery starts there. The relationship has been quiet for 127 days; the prior thread is the most credible way back in.",
+      "verifiedContactPath": "(212) 388-4421 — Phone on homepage",
+      "suggestedOpener": "Hi Marcus, Picking up where we left off: you asked for a credit-side analyst shortlist after the mid-cap fundraise closed but said hiring was paused through Q1. If the door is still open on that, I'd come in narrow rather than start from the top.",
+      "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the action you'd outlined — to resend credit-analyst shortlist once Q1 hiring unlocks — and ask whether it should still happen.",
+      "recoveryScore": 66,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 2,
+      "companyName": "Pinegrove Macro",
+      "contactName": "Daniel Kessler",
+      "location": "New York, NY",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 163,
+        "lastTouchAt": "2025-12-04T00:00:00.000Z"
+      },
+      "whyNow": "They left it at \"Paused conversation around the systematic-research seat pending the senior portfolio-manager hire\" and the account has been quiet since. The original line is the recovery line. The relationship has been quiet for 163 days; the prior thread is the most credible way back in.",
+      "verifiedContactPath": "(212) 414-6293 — Phone on homepage",
+      "suggestedOpener": "Hi Daniel, Last we spoke, you paused conversation around the systematic-research seat pending the senior portfolio-manager hire. If that thread is still active, I'd pick it back up exactly where we left it.",
+      "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the prior note (\"Paused conversation around the systematic-research seat pending the senior…\") and treat this as a continuation, not a restart.",
+      "recoveryScore": 66,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 3,
+      "companyName": "Stonebridge Equity Partners",
+      "contactName": "Henry Park",
+      "location": "New York, NY",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 185,
+        "lastTouchAt": "2025-11-12T00:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Asked for an associate-class long list once the next vintage's hiring plan was finalized\" — that thread is still the cleanest reason to come back. 185 days is long enough that a direct, specific reopen reads better than a soft touch.",
+      "verifiedContactPath": "(212) 388-9015 — Phone on homepage",
+      "suggestedOpener": "Hi Henry, Last we spoke, you asked for an associate-class long list once the next vintage's hiring plan was finalized. If that thread is still active, I'd pick it back up exactly where we left it.",
+      "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the prior note (\"Asked for an associate-class long list once the next vintage's hiring plan was finalized\") and treat this as a continuation, not a restart.",
+      "recoveryScore": 66,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 4,
+      "companyName": "Northbridge Asset Management",
+      "contactName": "Sasha Rao",
+      "location": "New York, NY",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 78,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 114,
+        "lastTouchAt": "2026-01-22T00:00:00.000Z"
+      },
+      "whyNow": "They left it at \"Wanted distressed-credit PM candidates before the next mandate review and asked to keep the shortlist tight\" and the account has been quiet since. The original line is the recovery line. 114 days of silence is exactly the window where these threads quietly die.",
+      "verifiedContactPath": "(212) 559-1138 — Phone on homepage",
+      "suggestedOpener": "Hi Sasha, I had a note from our last conversation — you wanted distressed-credit PM candidates before the next mandate review and asked to keep the shortlist tight. If that's still live on your end, the cleanest next step is a short call to close the loop rather than restart.",
+      "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the action you'd outlined — to send 3 distressed-credit PM profiles before next mandate review — and ask whether it should still happen.",
+      "recoveryScore": 62,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 5,
+      "companyName": "Westbrook Private Credit",
+      "contactName": "Olivia Tran",
+      "location": "New York, NY",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 78,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 101,
+        "lastTouchAt": "2026-02-04T00:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Asked to revisit the originations VP search once the fund's regional expansion plan was approved by the IC\" — that thread is still the cleanest reason to come back. After 101 days, the relationship is past polite and into recovery range.",
+      "verifiedContactPath": "(212) 552-7841 — Phone on homepage",
+      "suggestedOpener": "Hi Olivia, Picking up where we left off: you asked to revisit the originations VP search once the fund's regional expansion plan was approved by the IC. If the door is still open on that, I'd come in narrow rather than start from the top.",
+      "priorityContext": "Schedule the call for later this week because the prior note carried a concrete reason rather than a vague interest signal. Lead with the action you'd outlined — to re-engage on originations VP after IC decision — and ask whether it should still happen.",
+      "recoveryScore": 62,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    }
+  ]
+}

@@ -1,0 +1,125 @@
+{
+  "customer": "RonanVance",
+  "week": "2026-W20",
+  "generatedAt": "2026-05-16T01:29:53.570Z",
+  "sourceCsv": "fixtures/outreach-sample-ronanvance.csv",
+  "isSample": true,
+  "sampleDisclaimer": "Built from public industry positioning only. The accounts shown are fictional examples chosen to match the firm's specialty — Meridian has no access to your CRM or your client list. Your real brief would be generated from a CSV export of your own contacts.",
+  "summary": {
+    "inputRows": 5,
+    "opportunities": 5,
+    "recoveryCandidates": 4
+  },
+  "opportunities": [
+    {
+      "rank": 1,
+      "companyName": "Argent Biosciences",
+      "contactName": "Marcus Tang",
+      "location": "Boston, MA",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 163,
+        "lastTouchAt": "2025-12-04T00:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Paused the chief medical officer search pending the next financing round and the board's IND timeline review\" — that thread is still the cleanest reason to come back. 163 days is long enough that a direct, specific reopen reads better than a soft touch.",
+      "verifiedContactPath": "(617) 388-9920 — Phone on homepage",
+      "suggestedOpener": "Hi Marcus, Picking up where we left off: you paused the chief medical officer search pending the next financing round and the board's IND timeline review. If the door is still open on that, I'd come in narrow rather than start from the top.",
+      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the prior note (\"Paused the chief medical officer search pending the next financing round and the board's…\") and treat this as a continuation, not a restart.",
+      "recoveryScore": 66,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 2,
+      "companyName": "Northshore Genomics",
+      "contactName": "Priya Iyer",
+      "location": "Waltham, MA",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 86,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 178,
+        "lastTouchAt": "2025-11-19T00:00:00.000Z"
+      },
+      "whyNow": "They left it at \"Wanted a director of bioinformatics with single-cell platform experience but said hiring would wait until the Series C closed\" and the account has been quiet since. The original line is the recovery line. The relationship has been quiet for 178 days; the prior thread is the most credible way back in.",
+      "verifiedContactPath": "(617) 559-3041 — Phone on homepage",
+      "suggestedOpener": "Hi Priya, Last we spoke, you wanted a director of bioinformatics with single-cell platform experience but said hiring would wait until the Series C closed. If that thread is still active, I'd pick it back up exactly where we left it.",
+      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the prior note (\"Wanted a director of bioinformatics with single-cell platform experience but said hiring…\") and treat this as a continuation, not a restart.",
+      "recoveryScore": 66,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 3,
+      "companyName": "Helix Therapeutics",
+      "contactName": "Rebecca Holt",
+      "location": "Cambridge, MA",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 78,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 124,
+        "lastTouchAt": "2026-01-12T00:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Asked for a director-level clinical operations candidate with oncology Phase II experience after the IND clearance\" — that thread is still the cleanest reason to come back. 124 days is long enough that a direct, specific reopen reads better than a soft touch.",
+      "verifiedContactPath": "(617) 552-1184 — Phone on homepage",
+      "suggestedOpener": "Hi Rebecca, Picking up where we left off: you asked for a director-level clinical operations candidate with oncology Phase II experience after the IND clearance. If the door is still open on that, I'd come in narrow rather than start from the top.",
+      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the action you'd outlined — to send director-clinops shortlist with oncology Phase II experience — and ask whether it should still happen.",
+      "recoveryScore": 62,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 4,
+      "companyName": "Marrow Cell Therapy",
+      "contactName": "Sasha Bennett",
+      "location": "Cambridge, MA",
+      "relationshipFreshness": "Recovery candidate",
+      "staleness": {
+        "staleScore": 78,
+        "staleCategory": "Recovery candidate",
+        "daysSinceTouch": 101,
+        "lastTouchAt": "2026-02-04T00:00:00.000Z"
+      },
+      "whyNow": "Last contact closed on asked for a head of regulatory affairs with CMC experience ahead of the BLA submission window; the conversation never resolved, and recovery starts there. 101 days of silence is exactly the window where these threads quietly die.",
+      "verifiedContactPath": "(617) 414-7733 — Phone on homepage",
+      "suggestedOpener": "Hi Sasha, I had a note from our last conversation — you asked for a head of regulatory affairs with CMC experience ahead of the BLA submission window. If that's still live on your end, the cleanest next step is a short call to close the loop rather than restart.",
+      "priorityContext": "Schedule the call for later this week because the last exchange ended with something specific enough to pick up again. Lead with the action you'd outlined — to send regulatory-head shortlist with CMC + BLA experience — and ask whether it should still happen.",
+      "recoveryScore": 62,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    },
+    {
+      "rank": 5,
+      "companyName": "Pinegrove Vaccines",
+      "contactName": "Daniel Kessler",
+      "location": "Cambridge, MA",
+      "relationshipFreshness": "Dormant",
+      "staleness": {
+        "staleScore": 62,
+        "staleCategory": "Dormant",
+        "daysSinceTouch": 87,
+        "lastTouchAt": "2026-02-18T00:00:00.000Z"
+      },
+      "whyNow": "They left it at \"Asked for a VP of process development with mRNA manufacturing experience before the next CMO RFP cycle\" and the account has been quiet since. The original line is the recovery line. After 87 days, the relationship is past polite and into recovery range.",
+      "verifiedContactPath": "(617) 388-2204 — Phone on homepage",
+      "suggestedOpener": "Hi Daniel, Picking up where we left off: you asked for a VP of process development with mRNA manufacturing experience before the next CMO RFP cycle. If the door is still open on that, I'd come in narrow rather than start from the top.",
+      "priorityContext": "Schedule the call for later this week because the prior thread had a real ask attached to it, not just curiosity. Lead with the action you'd outlined — to send VP-process-dev profiles before CMO RFP cycle — and ask whether it should still happen.",
+      "recoveryScore": 55,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 60
+      }
+    }
+  ]
+}
