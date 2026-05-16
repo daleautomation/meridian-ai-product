@@ -69,11 +69,13 @@ function isoWeek(date: Date): string {
   return `${utc.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
 }
 
-function contactScore(pathLabel: string): number {
-  if (pathLabel.includes("(verified)")) return 100;
-  if (pathLabel.includes("(high)")) return 85;
-  if (pathLabel.includes("(medium)")) return 65;
-  if (pathLabel.includes("(low)")) return 40;
+function contactScore(path: { verified?: boolean; confidence?: string } | undefined): number {
+  if (!path) return 20;
+  if (path.verified) return 100;
+  const confidence = (path.confidence ?? "").toLowerCase();
+  if (confidence === "high") return 85;
+  if (confidence === "medium") return 65;
+  if (confidence === "low") return 40;
   return 20;
 }
 
@@ -84,13 +86,42 @@ function priorityContext(item: {
   opportunityLabel?: string;
   priorityNote?: string;
 }): string {
-  const action = item.decisionBucket === "Call now" ? "Call now" :
+  // Per docs/scoring-principles.md: never emit dashboard fractions like
+  // "82/100 fit with 100/100 staleness" — anchor first, then provide a
+  // single operator-grade reason sentence.
+  const action =
+    item.decisionBucket === "Call now" ? "Call now" :
     item.decisionBucket === "Call this week" ? "Call this week" :
     item.decisionBucket === "Watch" ? "Soft touch only" :
     "Hold";
-  const angle = item.opportunityLabel ? ` Lead with: ${item.opportunityLabel}.` : "";
-  const note = item.priorityNote ? ` ${item.priorityNote}` : "";
-  return `${action}. ${item.decisionScore}/100 fit with ${item.staleScore}/100 relationship staleness.${angle}${note}`;
+
+  // Reason sentence priority:
+  //   1. operator-authored priorityNote (verbatim — it's the signal)
+  //   2. opportunityLabel + minimal scaffolding when no note exists
+  //   3. anchored fallback per bucket when neither exists
+  const note = item.priorityNote?.trim();
+  if (note) {
+    const punctuated = /[.!?]$/.test(note) ? note : `${note}.`;
+    return `${action}. ${punctuated}`;
+  }
+
+  const label = item.opportunityLabel?.trim();
+  if (label) {
+    const lowered = label.charAt(0).toLowerCase() + label.slice(1);
+    return `${action}. Lead with the ${lowered} angle as the cleanest reason to revisit.`;
+  }
+
+  // No operator-authored angle and no opportunity label — keep the
+  // prescription narrow and honest per dataQuality LOW guidance.
+  const fallback =
+    item.decisionBucket === "Call now"
+      ? "Worth a single, specific check-in this week — keep the ask narrow."
+      : item.decisionBucket === "Call this week"
+        ? "Schedule a brief, low-pressure check-in this week."
+        : item.decisionBucket === "Watch"
+          ? "Keep the thread warm without forcing a meeting."
+          : "Hold for now — no fresh signal to lead with.";
+  return `${action}. ${fallback}`;
 }
 
 async function buildItem(row: CsvRow, index: number, now: Date): Promise<RecoveryBriefItem> {
@@ -172,7 +203,7 @@ async function buildItem(row: CsvRow, index: number, now: Date): Promise<Recover
   const recoveryScore = Math.round(
     (staleness.staleScore * 0.45) +
     (decision.score * 0.40) +
-    (contactScore(verifiedContactPath) * 0.15),
+    (contactScore(bestPath) * 0.15),
   );
   const opportunityLabel = get(row, "opportunityLabel", "opportunity label") ??
     decision.primaryOpportunity?.label;

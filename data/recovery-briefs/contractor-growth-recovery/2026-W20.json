@@ -1,7 +1,7 @@
 {
   "customer": "Contractor Growth Recovery",
   "week": "2026-W20",
-  "generatedAt": "2026-05-15T19:26:48.376Z",
+  "generatedAt": "2026-05-16T21:42:22.629Z",
   "sourceCsv": "fixtures/sample-recovery.csv",
   "summary": {
     "inputRows": 4,
@@ -18,13 +18,13 @@
       "staleness": {
         "staleScore": 96,
         "staleCategory": "Recovery candidate",
-        "daysSinceTouch": 98,
+        "daysSinceTouch": 99,
         "lastTouchAt": "2026-02-06T00:00:00.000Z"
       },
-      "whyNow": "They added financing language for hail-damage roof replacements after the March storms. Last touch was 98 days ago, so the follow-up has a real business reason.",
-      "verifiedContactPath": "Phone on homepage (medium): (816) 204-4127",
+      "whyNow": "They added financing language for hail-damage roof replacements after the March storms. The last meaningful interaction was 99 days ago — recent enough to anchor a call on the original thread.",
+      "verifiedContactPath": "(816) 204-4127 — Phone on homepage",
       "suggestedOpener": "Hi Mara, saw Harbor Ridge added financing language around storm-damage replacements. We had talked about making that path easier for homeowners after inspections - worth revisiting before the next hail push?",
-      "priorityContext": "Call now. 82/100 fit with 96/100 relationship staleness. Lead with: Storm-season roof replacement demand. Reopen around financing and storm-response pages; ask whether quote volume is still leaking after inspection calls.",
+      "priorityContext": "Call now. Reopen around financing and storm-response pages; ask whether quote volume is still leaking after inspection calls.",
       "recoveryScore": 86,
       "decision": {
         "bucket": "Call now",
@@ -47,13 +47,13 @@
       "staleness": {
         "staleScore": 100,
         "staleCategory": "Recovery candidate",
-        "daysSinceTouch": 158,
+        "daysSinceTouch": 159,
         "lastTouchAt": "2025-12-08T00:00:00.000Z"
       },
-      "whyNow": "Last note: Requested a callback before cooling-season demand. No touch for 158 days, which gives the operator a specific thread to reopen.",
-      "verifiedContactPath": "Phone on homepage (medium): (913) 386-2490",
+      "whyNow": "The last note reads \"Requested a callback before cooling-season demand.\" 159 days have passed without a closing move, which keeps the original thread the cleanest way back in.",
+      "verifiedContactPath": "(913) 386-2490 — Phone on homepage",
       "suggestedOpener": "Hi Alicia, I had a note to circle back before cooling season. If after-hours service calls are still slipping to voicemail, we can tighten that path without changing your dispatch process.",
-      "priorityContext": "Call this week. 70/100 fit with 100/100 relationship staleness. Lead with: Cooling-season service calls. Use cooling-season capacity as the reason; ask if after-hours calls are still getting missed.",
+      "priorityContext": "Call this week. Use cooling-season capacity as the reason; ask if after-hours calls are still getting missed.",
       "recoveryScore": 83,
       "decision": {
         "bucket": "Call this week",
@@ -76,13 +76,13 @@
       "staleness": {
         "staleScore": 90,
         "staleCategory": "Recovery candidate",
-        "daysSinceTouch": 116,
+        "daysSinceTouch": 117,
         "lastTouchAt": "2026-01-19T00:00:00.000Z"
       },
-      "whyNow": "Google reviews moved from 82 to 91 while nearby roofers are advertising spring inspections. Last touch was 116 days ago, so the follow-up has a real business reason.",
-      "verifiedContactPath": "Phone on homepage (medium): (913) 274-6186",
+      "whyNow": "Google reviews moved from 82 to 91 while nearby roofers are advertising spring inspections. The last meaningful interaction was 117 days ago — recent enough to anchor a call on the original thread.",
+      "verifiedContactPath": "(913) 274-6186 — Phone on homepage",
       "suggestedOpener": "Hi Daniel, you mentioned wanting to revisit after crews were scheduled. I noticed the review count moved again and competitors are pushing spring inspections - should we look at the lead path before June?",
-      "priorityContext": "Call now. 80/100 fit with 90/100 relationship staleness. Lead with: Spring inspection follow-up. Lead with the inspection-ad gap; ask whether the owner still wants inbound work balanced across both crews.",
+      "priorityContext": "Call now. Lead with the inspection-ad gap; ask whether the owner still wants inbound work balanced across both crews.",
       "recoveryScore": 82,
       "decision": {
         "bucket": "Call now",
@@ -105,13 +105,13 @@
       "staleness": {
         "staleScore": 70,
         "staleCategory": "Dormant",
-        "daysSinceTouch": 72,
+        "daysSinceTouch": 73,
         "lastTouchAt": "2026-03-04T00:00:00.000Z"
       },
-      "whyNow": "Last note: Asked for examples of project-photo follow-up. No touch for 72 days, which gives the operator a specific thread to reopen.",
-      "verifiedContactPath": "Phone on homepage (medium): (816) 319-7764",
+      "whyNow": "The last note reads \"Asked for examples of project-photo follow-up.\" 73 days have passed without a closing move, which keeps the original thread the cleanest way back in.",
+      "verifiedContactPath": "(816) 319-7764 — Phone on homepage",
       "suggestedOpener": "Hi Evan, you asked for examples of turning project photos into estimate requests. I pulled a simple version for remodelers - worth a quick look while spring projects are fresh?",
-      "priorityContext": "Call now. 80/100 fit with 70/100 relationship staleness. Lead with: Project-photo conversion gap. Keep it practical: ask whether recent bathroom projects are turning into referral and estimate requests.",
+      "priorityContext": "Call now. Keep it practical: ask whether recent bathroom projects are turning into referral and estimate requests.",
       "recoveryScore": 73,
       "decision": {
         "bucket": "Call now",

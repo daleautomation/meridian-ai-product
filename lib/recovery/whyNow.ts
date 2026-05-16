@@ -34,24 +34,34 @@ export function generateWhyNow(input: WhyNowInput): string {
   const activity = cleanSentence(input.activityLabel);
   const lastAction = cleanFragment(input.lastAction);
 
+  // Phrasings below are governed by docs/copywriting-principles.md
+  // (banned-phrase list) and docs/scoring-principles.md (every line must
+  // anchor on the observable signal that drove it). Banned tropes removed:
+  //   - "so the follow-up has a real business reason"
+  //   - "the operator" used in third person inside a reader-facing line
+  //   - "low-pressure re-entry"
+  //   - "to reconnect"
+
   if (typeof days === "number" && days >= 21) {
     if (activity) {
-      return `${activity} Last touch was ${days} days ago, so the follow-up has a real business reason.`;
+      // Activity boost from a CSV-supplied activityLabel column.
+      return `${activity} The last meaningful interaction was ${days} days ago — recent enough to anchor a call on the original thread.`;
     }
     if (lastAction) {
-      return `Last note: ${lastAction}. No touch for ${days} days, which gives the operator a specific thread to reopen.`;
+      // Quote the customer's exact note. The note text is the signal.
+      return `The last note reads "${lastAction}." ${days} days have passed without a closing move, which keeps the original thread the cleanest way back in.`;
     }
     if (input.priorInterest === true || isQualifiedStatus(input.crmStatus)) {
-      return `Prior interest is on file and the relationship has been quiet for ${days} days. Reopen around the unresolved next step.`;
+      return `Previously qualified and quiet for ${days} days. The original yes is still on the record — reopen around the unresolved next step.`;
     }
     if (input.hasVerifiedContactPath && stale) {
-      return `Reachable account with ${days} days of silence. Worth a direct, low-pressure re-entry before it goes fully cold.`;
+      return `Contact path on file; ${days} days of silence on an account that was already reachable is the cleanest recovery window.`;
     }
-    return `No touch for ${days} days. Enough time has passed for a useful follow-up without forcing urgency.`;
+    return `${days} days of silence with no closed-out reason. Worth a single, specific check-in before it slides out of the recovery window.`;
   }
 
   if (input.recentActivity === true) {
-    return activity ?? "Recent account activity gives the operator a timely reason to reconnect.";
+    return activity ?? "The account has shown movement on their end while we paused. A targeted reopen meets them where they are.";
   }
 
   if (input.priorInterest === true && stale) {
@@ -63,7 +73,7 @@ export function generateWhyNow(input: WhyNowInput): string {
   }
 
   if (input.hasVerifiedContactPath && stale) {
-    return "Reachable contact path exists after a quiet period.";
+    return "Contact path is still warm after a quiet stretch. Worth a single, narrow check-in.";
   }
 
   if ((input.relationshipFreshness ?? "").toLowerCase() === "cooling") {
