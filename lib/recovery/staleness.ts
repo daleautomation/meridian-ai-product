@@ -16,6 +16,15 @@ export type StalenessInput = {
   lastContactedAt?: string | Date | null;
   lastActivityAt?: string | Date | null;
   recentActivity?: boolean;
+  /**
+   * @deprecated as of the scoring audit. This field used to be folded into
+   * the stale score via freshnessAdjustment(), but that double-counted the
+   * signal already encoded by daysSinceTouch and introduced a two-vocabulary
+   * inconsistency (input "fresh/warm/cooling/cold/dormant/unknown" vs
+   * output staleCategory "Recently active/Cooling/Dormant/Recovery candidate").
+   * The field is still accepted on input so existing callers don't break,
+   * but it has no effect on the score. Derive freshness from daysSinceTouch.
+   */
   relationshipFreshness?: RelationshipFreshness | string | null;
   activityWindowDays?: number | null;
   now?: string | Date;
@@ -49,22 +58,10 @@ function baseScoreFromTouch(daysSinceTouch: number | null): number {
   return 86;
 }
 
-function freshnessAdjustment(value: string | null | undefined): number {
-  switch ((value ?? "unknown").trim().toLowerCase()) {
-    case "fresh":
-      return -14;
-    case "warm":
-      return -6;
-    case "cooling":
-      return 6;
-    case "cold":
-      return 12;
-    case "dormant":
-      return 18;
-    default:
-      return 0;
-  }
-}
+// Freshness double-count helper removed per the scoring audit. The
+// staleness signal is now derived from daysSinceTouch alone (with a small
+// recent-activity boost handled below). The input field stays for
+// back-compat — see StalenessInput.relationshipFreshness deprecation note.
 
 function categoryFromScore(score: number): StaleCategory {
   if (score < 30) return "Recently active";
@@ -82,7 +79,10 @@ export function evaluateStaleness(input: StalenessInput): StalenessResult {
   const activityWindowDays = input.activityWindowDays ?? 30;
 
   let score = baseScoreFromTouch(daysSinceTouch);
-  score += freshnessAdjustment(input.relationshipFreshness);
+  // Note: relationshipFreshness input is intentionally NOT folded into
+  // the score here — it duplicated the staleness signal already encoded
+  // by daysSinceTouch. The field is preserved on the input type for
+  // back-compat but ignored. See the deprecation note on StalenessInput.
 
   if (input.recentActivity === true) {
     score -= 8;

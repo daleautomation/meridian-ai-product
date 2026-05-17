@@ -1,63 +1,34 @@
 {
   "customer": "B2B Services Recovery",
   "week": "2026-W20",
-  "generatedAt": "2026-05-16T21:42:21.980Z",
+  "generatedAt": "2026-05-17T00:11:45.105Z",
   "sourceCsv": "fixtures/recovery-b2b-services.csv",
   "summary": {
     "inputRows": 4,
     "opportunities": 4,
-    "recoveryCandidates": 3
+    "recoveryCandidates": 2
   },
   "opportunities": [
     {
       "rank": 1,
-      "companyName": "Veridian Logistics Group",
-      "contactName": "Marcus Bell",
-      "location": "Indianapolis, IN",
-      "relationshipFreshness": "Recovery candidate",
-      "staleness": {
-        "staleScore": 90,
-        "staleCategory": "Recovery candidate",
-        "daysSinceTouch": 106,
-        "lastTouchAt": "2026-01-30T00:00:00.000Z"
-      },
-      "whyNow": "They published a dedicated healthcare logistics page after the March sales-planning call. The last meaningful interaction was 106 days ago — recent enough to anchor a call on the original thread.",
-      "verifiedContactPath": "(317) 204-8716 — Phone on homepage",
-      "suggestedOpener": "Hi Marcus, I saw the healthcare logistics page went live. You had asked about a partner-referral campaign for that vertical - should we revisit the outline while the page is fresh?",
-      "priorityContext": "Call now. Reopen around the new vertical page; ask whether partner referrals are part of the Q2 pipeline plan.",
-      "recoveryScore": 82,
-      "decision": {
-        "bucket": "Call now",
-        "score": 80,
-        "primaryOpportunity": {
-          "id": "healthcare-logistics-referral-campaign",
-          "label": "Healthcare logistics referral campaign",
-          "reason": "Reopen around the new vertical page; ask whether partner referrals are part of the Q2 pipeline plan.",
-          "revenueImpact": "medium",
-          "services": []
-        }
-      }
-    },
-    {
-      "rank": 2,
       "companyName": "Atlas Facilities Partners",
       "contactName": "Rebecca Holt",
       "location": "Denver, CO",
       "relationshipFreshness": "Recovery candidate",
       "staleness": {
-        "staleScore": 100,
+        "staleScore": 86,
         "staleCategory": "Recovery candidate",
-        "daysSinceTouch": 148,
+        "daysSinceTouch": 149,
         "lastTouchAt": "2025-12-19T00:00:00.000Z"
       },
-      "whyNow": "The last note reads \"Asked to revisit after the regional maintenance RFP.\" 148 days have passed without a closing move, which keeps the original thread the cleanest way back in.",
+      "whyNow": "The last note reads \"Asked to revisit after the regional maintenance RFP.\" 149 days have passed without a closing move, which keeps the original thread the cleanest way back in.",
       "verifiedContactPath": "(720) 389-6124 — Phone on homepage",
       "suggestedOpener": "Hi Rebecca, I had a note to reconnect after the regional maintenance RFP. If that account is moving forward, we can turn the proof into a simple follow-up motion for similar operators.",
-      "priorityContext": "Call this week. Ask whether the regional maintenance RFP created a reference account worth turning into outbound proof.",
-      "recoveryScore": 81,
+      "priorityContext": "Call now. Ask whether the regional maintenance RFP created a reference account worth turning into outbound proof.",
+      "recoveryScore": 76,
       "decision": {
-        "bucket": "Call this week",
-        "score": 65,
+        "bucket": "Call now",
+        "score": 66,
         "primaryOpportunity": {
           "id": "rfp-follow-up-motion",
           "label": "RFP follow-up motion",
@@ -68,29 +39,58 @@
       }
     },
     {
-      "rank": 3,
-      "companyName": "Crestline Medical Billing",
-      "contactName": "Anika Rao",
-      "location": "St. Louis, MO",
+      "rank": 2,
+      "companyName": "Veridian Logistics Group",
+      "contactName": "Marcus Bell",
+      "location": "Indianapolis, IN",
       "relationshipFreshness": "Recovery candidate",
       "staleness": {
-        "staleScore": 80,
+        "staleScore": 78,
         "staleCategory": "Recovery candidate",
-        "daysSinceTouch": 85,
-        "lastTouchAt": "2026-02-20T00:00:00.000Z"
+        "daysSinceTouch": 107,
+        "lastTouchAt": "2026-01-30T00:00:00.000Z"
       },
-      "whyNow": "They added denial-management language to the services page after asking for case-study ideas. The last meaningful interaction was 85 days ago — recent enough to anchor a call on the original thread.",
-      "verifiedContactPath": "(314) 256-4409 — Phone on homepage",
-      "suggestedOpener": "Hi Anika, noticed the denial-management language is now on the services page. You wanted case-study examples before the next provider webinar - still useful if we keep it short and sales-ready?",
-      "priorityContext": "Call now. Lead with the webinar deadline; ask whether a short case-study asset would still help sales follow-up.",
-      "recoveryScore": 78,
+      "whyNow": "They published a dedicated healthcare logistics page after the March sales-planning call. The last meaningful interaction was 107 days ago — recent enough to anchor a call on the original thread.",
+      "verifiedContactPath": "(317) 204-8716 — Phone on homepage",
+      "suggestedOpener": "Hi Marcus, I saw the healthcare logistics page went live. You had asked about a partner-referral campaign for that vertical - should we revisit the outline while the page is fresh?",
+      "priorityContext": "Call now. Reopen around the new vertical page; ask whether partner referrals are part of the Q2 pipeline plan.",
+      "recoveryScore": 72,
       "decision": {
         "bucket": "Call now",
-        "score": 80,
+        "score": 66,
         "primaryOpportunity": {
-          "id": "denial-management-proof-point",
-          "label": "Denial-management proof point",
-          "reason": "Lead with the webinar deadline; ask whether a short case-study asset would still help sales follow-up.",
+          "id": "healthcare-logistics-referral-campaign",
+          "label": "Healthcare logistics referral campaign",
+          "reason": "Reopen around the new vertical page; ask whether partner referrals are part of the Q2 pipeline plan.",
+          "revenueImpact": "medium",
+          "services": []
+        }
+      }
+    },
+    {
+      "rank": 3,
+      "companyName": "Lumen Advisory Works",
+      "contactName": "Theo Grant",
+      "location": "Austin, TX",
+      "relationshipFreshness": "Dormant",
+      "staleness": {
+        "staleScore": 64,
+        "staleCategory": "Dormant",
+        "daysSinceTouch": 71,
+        "lastTouchAt": "2026-03-07T00:00:00.000Z"
+      },
+      "whyNow": "The last note reads \"Asked for a cleaner handoff between webinar leads and partner follow-up.\" 71 days have passed without a closing move, which keeps the original thread the cleanest way back in.",
+      "verifiedContactPath": "(512) 441-9028 — Phone on homepage",
+      "suggestedOpener": "Hi Theo, you asked about cleaning up the handoff from webinar leads to partner follow-up. If that is still slowing the team down, I can show the simplest version this week.",
+      "priorityContext": "Call this week. Keep the ask narrow: confirm whether partner follow-up is still delayed after webinars.",
+      "recoveryScore": 65,
+      "decision": {
+        "bucket": "Call this week",
+        "score": 66,
+        "primaryOpportunity": {
+          "id": "webinar-to-partner-handoff",
+          "label": "Webinar-to-partner handoff",
+          "reason": "Keep the ask narrow: confirm whether partner follow-up is still delayed after webinars.",
           "revenueImpact": "medium",
           "services": []
         }
@@ -98,28 +98,28 @@
     },
     {
       "rank": 4,
-      "companyName": "Lumen Advisory Works",
-      "contactName": "Theo Grant",
-      "location": "Austin, TX",
+      "companyName": "Crestline Medical Billing",
+      "contactName": "Anika Rao",
+      "location": "St. Louis, MO",
       "relationshipFreshness": "Dormant",
       "staleness": {
-        "staleScore": 70,
+        "staleScore": 62,
         "staleCategory": "Dormant",
-        "daysSinceTouch": 70,
-        "lastTouchAt": "2026-03-07T00:00:00.000Z"
+        "daysSinceTouch": 86,
+        "lastTouchAt": "2026-02-20T00:00:00.000Z"
       },
-      "whyNow": "The last note reads \"Asked for a cleaner handoff between webinar leads and partner follow-up.\" 70 days have passed without a closing move, which keeps the original thread the cleanest way back in.",
-      "verifiedContactPath": "(512) 441-9028 — Phone on homepage",
-      "suggestedOpener": "Hi Theo, you asked about cleaning up the handoff from webinar leads to partner follow-up. If that is still slowing the team down, I can show the simplest version this week.",
-      "priorityContext": "Call now. Keep the ask narrow: confirm whether partner follow-up is still delayed after webinars.",
-      "recoveryScore": 74,
+      "whyNow": "They added denial-management language to the services page after asking for case-study ideas. The last meaningful interaction was 86 days ago — recent enough to anchor a call on the original thread.",
+      "verifiedContactPath": "(314) 256-4409 — Phone on homepage",
+      "suggestedOpener": "Hi Anika, noticed the denial-management language is now on the services page. You wanted case-study examples before the next provider webinar - still useful if we keep it short and sales-ready?",
+      "priorityContext": "Call this week. Lead with the webinar deadline; ask whether a short case-study asset would still help sales follow-up.",
+      "recoveryScore": 64,
       "decision": {
-        "bucket": "Call now",
-        "score": 82,
+        "bucket": "Call this week",
+        "score": 66,
         "primaryOpportunity": {
-          "id": "webinar-to-partner-handoff",
-          "label": "Webinar-to-partner handoff",
-          "reason": "Keep the ask narrow: confirm whether partner follow-up is still delayed after webinars.",
+          "id": "denial-management-proof-point",
+          "label": "Denial-management proof point",
+          "reason": "Lead with the webinar deadline; ask whether a short case-study asset would still help sales follow-up.",
           "revenueImpact": "medium",
           "services": []
         }

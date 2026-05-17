@@ -3,10 +3,10 @@ import path from "node:path";
 import { parseCsv } from "../lib/ingestion/csvParser";
 import { normalizeLead } from "../lib/leads/normalizedLead";
 import { resolveContact } from "../lib/contacts/resolver";
-import { decideNormalizedLead } from "../lib/scoring/decision";
 import { safeWriteJson } from "../lib/utils/fsSafeWrite";
 import { evaluateStaleness } from "../lib/recovery/staleness";
 import { generateWhyNow } from "../lib/recovery/whyNow";
+import { computeRecoveryDecision } from "../lib/recovery/decisionScore";
 import {
   buildSuggestedOpener,
   formatContactPath,
@@ -184,29 +184,47 @@ async function buildItem(row: CsvRow, index: number, now: Date): Promise<Recover
     activityWindowDays: parseNumber(get(row, "activityWindowDays", "activity window days")),
     now,
   });
-  const decision = decideNormalizedLead({
-    ...lead,
-    phone: contactResolution.phone ?? lead.phone,
-    email: contactResolution.email ?? lead.email,
-  });
+  // Recovery-specific decision scorer. Replaces decideNormalizedLead
+  // (which is LaborTech roofing-vertical) for the Recovery Brief
+  // generator only. Scores three recovery-relevant signals: real thread
+  // to pull, qualified prior history, and a verified contact path.
+  // See lib/recovery/decisionScore.ts.
+  const priorInterestFlag = parseBoolean(get(row, "priorInterest", "prior interest")) ?? null;
+  const activityLabelText = get(row, "activityLabel", "activity reason") ?? null;
+  const decision = computeRecoveryDecision({
+    lastNote: lead.crm.lastAction ?? null,
+    nextStep: get(row, "nextStep", "next step", "next action") ?? null,
+    activityLabel: activityLabelText,
+    priorInterest: priorInterestFlag,
+    crmStatus: lead.crm.status ?? null,
+    hasVerifiedContactPath: Boolean(bestPath?.verified),
+  }, staleness.staleScore);
+
   const whyNow = generateWhyNow({
     daysSinceTouch: staleness.daysSinceTouch,
     staleCategory: staleness.staleCategory,
     recentActivity,
-    activityLabel: get(row, "activityLabel", "activity reason"),
-    priorInterest: parseBoolean(get(row, "priorInterest", "prior interest")),
+    activityLabel: activityLabelText,
+    priorInterest: priorInterestFlag ?? undefined,
     relationshipFreshness,
     crmStatus: lead.crm.status,
     lastAction: lead.crm.lastAction,
     hasVerifiedContactPath: Boolean(bestPath?.verified),
   });
+
+  // recoveryScore composite weights (50 / 25 / 25) per docs/scoring-principles.md.
+  // Stale dominant: a card must be stale enough to qualify as recovery.
+  // Decision and contact equal-weighted: a qualified-history account
+  // and a reachable account are equally important secondary signals.
+  // Old weights (0.45 / 0.40 / 0.15) inverse-ranked reachability vs
+  // commercial relevance — corrected here per the scoring audit.
   const recoveryScore = Math.round(
-    (staleness.staleScore * 0.45) +
-    (decision.score * 0.40) +
-    (contactScore(bestPath) * 0.15),
+    (staleness.staleScore * 0.50) +
+    (decision.score * 0.25) +
+    (contactScore(bestPath) * 0.25),
   );
-  const opportunityLabel = get(row, "opportunityLabel", "opportunity label") ??
-    decision.primaryOpportunity?.label;
+
+  const opportunityLabel = get(row, "opportunityLabel", "opportunity label") ?? null;
   const priorityNote = get(row, "priorityNote", "priority note");
   const primaryOpportunity = opportunityLabel
     ? {
@@ -216,7 +234,7 @@ async function buildItem(row: CsvRow, index: number, now: Date): Promise<Recover
         revenueImpact: opportunityImpact(get(row, "opportunityImpact", "opportunity impact")),
         services: [],
       }
-    : decision.primaryOpportunity;
+    : undefined;
 
   return {
     rank: 0,
@@ -233,7 +251,7 @@ async function buildItem(row: CsvRow, index: number, now: Date): Promise<Recover
       staleScore: staleness.staleScore,
       decisionScore: decision.score,
       decisionBucket: decision.bucket,
-      opportunityLabel,
+      opportunityLabel: opportunityLabel ?? undefined,
       priorityNote,
     }),
     recoveryScore,
