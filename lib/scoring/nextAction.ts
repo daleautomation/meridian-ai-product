@@ -12,11 +12,11 @@
 // Action precedence (walked top-to-bottom; first match wins):
 //   1) blocked (closed/archived)                 → SKIP FOR NOW
 //   2) already-touched + still-qualified          → FOLLOW UP
-//   3) strong-fit + phone + verified issue        → CALL NOW
+//   3) strong-fit + trusted phone + verified issue → CALL NOW
 //   4) no phone + email + fit                     → EMAIL FIRST
-//   5) fit + website scan + no verified contact   → REVIEW SITE FIRST
+//   5) weak/stale/conflicting phone               → VERIFY CONTACT
 //   6) weak fit / no contact path / low evidence  → SKIP FOR NOW
-//   7) phone exists + some fit signal             → CALL NOW (medium conf)
+//   7) phone exists + some fit signal             → VERIFY CONTACT
 //   8) fallback                                   → REVIEW SITE FIRST
 
 import type { CompanyDecision } from "./companyDecision";
@@ -25,6 +25,7 @@ export type NextActionLabel =
   | "CALL NOW"
   | "EMAIL FIRST"
   | "REVIEW SITE FIRST"
+  | "VERIFY CONTACT"
   | "FOLLOW UP"
   | "SKIP FOR NOW";
 
@@ -54,6 +55,8 @@ export function computeNextAction(decision: CompanyDecision): NextAction {
   const fit = decision.labortechFit?.overall;
   const hasPhone = !!decision.contacts?.primaryPhone;
   const hasEmail = !!decision.contacts?.primaryEmail;
+  const phoneCanCallNow = decision.contacts?.canCallNow === true;
+  const phoneTrustLevel = decision.contacts?.phoneTrust?.trustLevel ?? decision.contacts?.trustLevel;
   const verifiedContact = !!decision.verifiedContact;
   const verifiedIssue = !!decision.verifiedIssue;
   const hasWebsiteScan = !!decision.websiteProof;
@@ -63,7 +66,7 @@ export function computeNextAction(decision: CompanyDecision): NextAction {
   const topService = decision.serviceRecommendations?.[0];
 
   // 2) Already touched and still qualified — follow-up is the smartest move.
-  if (alreadyTouched && notPass) {
+  if (alreadyTouched && notPass && (phoneCanCallNow || !hasPhone)) {
     const attempts = decision.callAttempts ?? 0;
     return {
       action: "FOLLOW UP",
@@ -73,8 +76,8 @@ export function computeNextAction(decision: CompanyDecision): NextAction {
     };
   }
 
-  // 3) CALL NOW — strong fit + phone + verified issue.
-  if (fitStrongOrGood && hasPhone && verifiedIssue) {
+  // 3) CALL NOW — strong fit + trusted phone + verified issue.
+  if (fitStrongOrGood && hasPhone && phoneCanCallNow && verifiedIssue) {
     return {
       action: "CALL NOW",
       confidence: verifiedContact ? "HIGH" : "MEDIUM",
@@ -83,6 +86,16 @@ export function computeNextAction(decision: CompanyDecision): NextAction {
       supportDetail: topService
         ? `Lead the pitch with ${topService}.`
         : undefined,
+    };
+  }
+
+  if (hasPhone && !phoneCanCallNow) {
+    return {
+      action: "VERIFY CONTACT",
+      confidence: phoneTrustLevel === "CONFLICTING" || phoneTrustLevel === "STALE" ? "HIGH" : "MEDIUM",
+      reason: decision.contacts?.confidenceReason
+        || "Phone is present but not trusted enough for a call.",
+      supportDetail: "Confirm source and freshness before outreach.",
     };
   }
 
@@ -127,7 +140,7 @@ export function computeNextAction(decision: CompanyDecision): NextAction {
   }
 
   // 7) Medium-confidence fallback — phone + some signal.
-  if (hasPhone) {
+  if (hasPhone && phoneCanCallNow) {
     return {
       action: "CALL NOW",
       confidence: "MEDIUM",

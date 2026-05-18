@@ -9,6 +9,7 @@
 // a display strip + a small status mapper for plain-business labels.
 
 import { palette } from "../lib/theme";
+import { getDialablePhoneDetails } from "../lib/leads/phone";
 
 // ── Display-status mapper ────────────────────────────────────────────
 //
@@ -58,10 +59,11 @@ export function displayLeadStatus(input) {
   if (raw === "CONTACTED" || raw === "CALLED" || raw === "VOICEMAIL" || raw === "EMAILED") return "Contacted";
 
   // Call-now signals (highest urgency before contact).
-  if (lead?.forceAction || task?.forceAction) return "Call Today";
-  if (lead?.recommendedAction === "CALL NOW") return "Call Today";
-  if (lead?.bucket === "CALL NOW" || task?.bucket === "CALL NOW") return "Call Today";
-  if (typeof lead?.score === "number" && lead.score >= 70) return "Call Today";
+  const hasTrustedPhone = !!getDialablePhoneDetails(lead) || !!getDialablePhoneDetails(task);
+  if (hasTrustedPhone && (lead?.forceAction || task?.forceAction)) return "Call Today";
+  if (hasTrustedPhone && lead?.recommendedAction === "CALL NOW") return "Call Today";
+  if (hasTrustedPhone && (lead?.bucket === "CALL NOW" || task?.bucket === "CALL NOW")) return "Call Today";
+  if (hasTrustedPhone && typeof lead?.score === "number" && lead.score >= 70) return "Call Today";
   if (task?.priority === "critical" || task?.priority === "high") return "Call Today";
 
   return "New Lead";

@@ -4,6 +4,9 @@
 // contact paths win when available, then the ranked contact-path waterfall,
 // then already-normalized lead contact fields.
 
+import { canTrustPhoneForCallNow, classifyContactPathTrust } from "@/lib/contacts/trust";
+import type { ContactTrustEvidence, ContactTrustLevel, ContactConflictStatus } from "@/lib/contacts/types";
+
 type PhonePathLike = {
   method?: string | null;
   value?: string | null;
@@ -11,6 +14,9 @@ type PhonePathLike = {
   rank?: number | null;
   confidence?: string | null;
   verified?: boolean | null;
+  lastVerifiedAt?: string | null;
+  trustLevel?: ContactTrustLevel | null;
+  conflictStatus?: ContactConflictStatus | null;
 };
 
 export type CanonicalPhoneLeadLike = {
@@ -19,10 +25,15 @@ export type CanonicalPhoneLeadLike = {
   confidence?: string | null;
   confidenceLabel?: string | null;
   phoneAuthority?: string | null;
+  lastChecked?: string | null;
+  contactResolutionCheckedAt?: string | null;
   contacts?: {
     primaryPhone?: string | null;
     source?: string | null;
     confidence?: string | null;
+    lastVerifiedAt?: string | null;
+    phoneTrust?: ContactTrustEvidence | null;
+    contactTrust?: ContactTrustEvidence | null;
     [key: string]: unknown;
   } | null;
   contactPaths?: PhonePathLike[] | null;
@@ -107,6 +118,25 @@ function isDialableShape(value: string | null | undefined): boolean {
 function isTrustedDialablePath(path: PhonePathLike): boolean {
   const phone = phoneValue(path.value);
   if (!isDialableShape(phone)) return false;
+  if (path.trustLevel) {
+    return (path.trustLevel === "VERIFIED" || path.trustLevel === "ACCEPTABLE")
+      && path.conflictStatus !== "phone_conflict"
+      && path.conflictStatus !== "multiple_conflicts"
+      && path.conflictStatus !== "ambiguous_ownership";
+  }
+  const trust = classifyContactPathTrust({
+    method: "phone",
+    value: phone ?? "",
+    source: phoneValue(path.source) ?? "unknown",
+    verified: path.verified === true,
+    confidence: phoneValue(path.confidence) ?? "none",
+    rank: typeof path.rank === "number" ? path.rank : 99,
+    label: "Phone path",
+  }, {
+    lastVerifiedAt: path.lastVerifiedAt ?? null,
+    conflictStatus: path.conflictStatus ?? "none",
+  });
+  if (!canTrustPhoneForCallNow(trust)) return false;
   if (path.verified === false) return false;
   const confidence = String(path.confidence ?? "").toLowerCase();
   if (confidence === "low" || confidence === "none") return false;
@@ -163,6 +193,18 @@ export function getDialablePhoneDetails(
     ?? phoneValue(lead?.confidenceLabel)
     ?? phoneValue(lead?.confidence);
   const fallbackPhone = phoneValue(lead?.contacts?.primaryPhone) ?? phoneValue(lead?.phone);
+  const fallbackTrust = lead?.contacts?.phoneTrust ?? lead?.contacts?.contactTrust ?? classifyContactPathTrust({
+    method: "phone",
+    value: fallbackPhone ?? "",
+    source: fallbackSource ?? "",
+    verified: isTrustedSource(fallbackSource),
+    confidence: fallbackConfidence ?? "none",
+    rank: SOURCE_RANK[String(fallbackSource ?? "").toLowerCase()] ?? 99,
+    label: "Primary phone",
+  }, {
+    lastVerifiedAt: phoneValue(lead?.contacts?.lastVerifiedAt) ?? phoneValue(lead?.contactResolutionCheckedAt) ?? phoneValue(lead?.lastChecked) ?? null,
+  });
+  if (fallbackPhone && !canTrustPhoneForCallNow(fallbackTrust)) return null;
   if (isTrustedSource(fallbackSource) && !isLowConfidence(fallbackConfidence) && isDialableShape(fallbackPhone)) {
     return {
       phone: fallbackPhone!,

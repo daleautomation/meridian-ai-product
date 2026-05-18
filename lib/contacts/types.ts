@@ -76,6 +76,35 @@ export type MatchedCandidate = ContactCandidate & { score: CandidateScore };
 export type ContactSummary = "found" | "fallback" | "empty";
 
 export type ContactConfidence = "high" | "medium" | "low" | "none";
+export type ContactTrustLevel =
+  | "VERIFIED"
+  | "ACCEPTABLE"
+  | "WEAK"
+  | "STALE"
+  | "CONFLICTING"
+  | "MISSING";
+export type ContactConflictStatus =
+  | "none"
+  | "phone_conflict"
+  | "email_conflict"
+  | "name_conflict"
+  | "ambiguous_ownership"
+  | "stale_overwrite"
+  | "multiple_conflicts";
+
+export type ContactTrustEvidence = {
+  trustLevel: ContactTrustLevel;
+  source: string | null;
+  lastVerifiedAt: string | null;
+  freshnessAgeDays: number | null;
+  confidenceReason: string;
+  conflictStatus: ContactConflictStatus;
+  conflictReasons: string[];
+  verificationPresent: boolean;
+  evidence: string[];
+  rejectedAlternatives: string[];
+  canCallNow: boolean;
+};
 
 export type FallbackRoute = "facebook" | "contact_page" | null;
 
@@ -92,6 +121,15 @@ export type ContactPath = {
   confidence: ContactConfidence;
   rank: number;                                // lower is better (1 = best)
   label?: string;                              // optional UI label (e.g. "GBP phone")
+  providerConfidence?: number;                 // provider-specific confidence, if exposed
+  lastVerifiedAt?: string | null;
+  trustLevel?: ContactTrustLevel;
+  trustSource?: string | null;
+  trustLastVerifiedAt?: string | null;
+  freshnessAgeDays?: number | null;
+  confidenceReason?: string;
+  conflictStatus?: ContactConflictStatus;
+  conflictReasons?: string[];
 };
 
 // Email classification for the primary email, when one exists.
@@ -231,4 +269,12 @@ export type ContactResolution = {
     | "provider_observed"
     | "fallback_listing"
     | "unresolved";
+  phoneTrust?: ContactTrustEvidence;
+  emailTrust?: ContactTrustEvidence;
+  contactTrust?: ContactTrustEvidence;
+  trustLevel?: ContactTrustLevel;
+  conflictStatus?: ContactConflictStatus;
+  conflictReasons?: string[];
+  rejectedContactAlternatives?: string[];
+  operationalTrace?: string[];
 };

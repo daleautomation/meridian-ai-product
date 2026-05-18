@@ -480,11 +480,15 @@ function resolveExecutionOutcomeStatus(
 }
 
 function isCallNow(l: LeadLike): boolean {
+  const hasTrustedPhone = !!getDialablePhoneDetails(l);
   return !!(
-    l.forceAction ||
-    l.bucket === "CALL NOW" ||
-    l.opportunity_label === "CALL NOW" ||
-    l.recommendedAction === "CALL NOW"
+    hasTrustedPhone &&
+    (
+      l.forceAction ||
+      l.bucket === "CALL NOW" ||
+      l.opportunity_label === "CALL NOW" ||
+      l.recommendedAction === "CALL NOW"
+    )
   );
 }
 
@@ -582,8 +586,8 @@ function callDueIso(l: LeadLike, now: Date): string {
       return coerceWeekday(d).toISOString();
     }
   }
-  // CALL NOW or forceAction → end of today. Otherwise tomorrow EOD.
-  if (l.forceAction || isCallNow(l)) return isoOffsetDays(now, 0, 17);
+  // Trusted CALL NOW → end of today. Otherwise tomorrow EOD.
+  if (isCallNow(l)) return isoOffsetDays(now, 0, 17);
   if (isToday(l) || (l.score ?? 0) >= 70) return isoOffsetDays(now, 0, 18);
   return isoOffsetDays(now, 1, 17);
 }
@@ -784,10 +788,13 @@ function leadPatternKeys(l: LeadLike, pipe?: PipelineEntryLike): string[] {
   else if (score >= 60) keys.push("medium_score");
   else keys.push("low_score");
   const isCallNow =
-    !!l.forceAction ||
-    l.bucket === "CALL NOW" ||
-    l.opportunity_label === "CALL NOW" ||
-    l.recommendedAction === "CALL NOW";
+    !!getDialablePhoneDetails(l) &&
+    (
+      !!l.forceAction ||
+      l.bucket === "CALL NOW" ||
+      l.opportunity_label === "CALL NOW" ||
+      l.recommendedAction === "CALL NOW"
+    );
   if (isCallNow) keys.push("call_now");
   const isToday =
     l.bucket === "TODAY" ||

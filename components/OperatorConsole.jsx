@@ -186,12 +186,13 @@ function opportunityLabel(lead) {
   // Prefer canonical engine bucket when present (from decideCompany).
   if (lead.bucket && OPP_META[lead.bucket]) return lead.bucket;
   if (lead.opportunity_label && OPP_META[lead.opportunity_label]) return lead.opportunity_label;
-  if (lead.forceAction) return "CALL NOW";
-  if (lead.closeReadiness === "READY TO CLOSE") return "CALL NOW";
-  if (lead.recommendedAction === "CALL NOW") return "CALL NOW";
+  const hasTrustedPhone = !!getDialablePhone(lead);
+  if (hasTrustedPhone && lead.forceAction) return "CALL NOW";
+  if (hasTrustedPhone && lead.closeReadiness === "READY TO CLOSE") return "CALL NOW";
+  if (hasTrustedPhone && lead.recommendedAction === "CALL NOW") return "CALL NOW";
   if (lead.recommendedAction === "TODAY") return "TODAY";
   const score = typeof lead.score === "number" ? lead.score : 0;
-  if (score >= 75) return "CALL NOW";
+  if (hasTrustedPhone && score >= 75) return "CALL NOW";
   if (score >= 55) return "TODAY";
   if (score >= 35) return "MONITOR";
   return "PASS";
@@ -3800,6 +3801,7 @@ function decorateActionLabel(action, confidence) {
     return conf === "HIGH" ? "FOLLOW UP — CLOSE THIS" : "FOLLOW UP — WARM LEAD";
   }
   if (action === "EMAIL FIRST") return "EMAIL FIRST — NO PHONE YET";
+  if (action === "VERIFY CONTACT") return "VERIFY CONTACT";
   if (action === "REVIEW SITE FIRST") return "REVIEW SITE FIRST";
   if (action === "SKIP FOR NOW") return "SKIP FOR NOW";
   return action;
@@ -3876,6 +3878,7 @@ function NextActionBlock({ nextAction, canCall, onEnterCallMode, mailtoHref }) {
 const NEXT_ACTION_META = {
   "CALL NOW":          { accent: palette.danger,   bg: "#FFF7F7" },
   "EMAIL FIRST":       { accent: palette.blue,     bg: palette.bluePale },
+  "VERIFY CONTACT":    { accent: palette.warning,  bg: palette.warningBg },
   "REVIEW SITE FIRST": { accent: palette.warning,  bg: palette.warningBg },
   "FOLLOW UP":         { accent: palette.blue,     bg: palette.bluePale },
   "SKIP FOR NOW":      { accent: palette.textTertiary, bg: palette.surfaceHover },
