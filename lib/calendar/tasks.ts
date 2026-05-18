@@ -573,6 +573,9 @@ function isoOffsetDays(now: Date, days: number, hour = 17, minute = 0): string {
 }
 
 function callDueIso(l: LeadLike, now: Date): string {
+  // Without trusted dial authority this is verification work, not a
+  // same-day call. Keep it out of CALL NOW/TODAY visual dominance.
+  if (!getDialablePhoneDetails(l)) return isoOffsetDays(now, 1, 17);
   // Respect a server-attached schedule (lib/scheduling/leadSchedule.ts).
   // Falls back to the legacy "EOD today / tomorrow" rule when absent.
   // In both paths the result passes through coerceWeekday so a stale
@@ -618,7 +621,11 @@ function riskFromLead(l: LeadLike): TaskSeverity {
   return "low";
 }
 
-function callPriority(l: LeadLike): TaskPriority {
+function callPriority(l: LeadLike, hasTrustedPhone: boolean): TaskPriority {
+  if (!hasTrustedPhone) {
+    const email = l.verifiedEmail ?? l.contacts?.primaryEmail ?? l.email ?? null;
+    return email ? "medium" : "low";
+  }
   const rev = deriveRevenueImpact(l) ?? 0;
   if (l.forceAction || isCallNow(l) || rev >= 50_000) return "critical";
   if (isToday(l) || (l.score ?? 0) >= 70) return "high";
@@ -1056,8 +1063,14 @@ export function buildTasksFromLeads(
           : scan?.primaryPain
             ? `Lead with: ${scan.primaryPain}.`
             : null;
+      const verifyContactAction = !dialablePhone
+        ? (email
+          ? "Verify a trusted phone before dialing; use email only as a fallback."
+          : "Verify contact before outreach — no trusted dialable phone on file.")
+        : null;
       const actionText =
-        scanAction
+        verifyContactAction
+        || scanAction
         || strategyAction
         || safeStr(l.nextAction)
         || findingAction
@@ -1074,9 +1087,9 @@ export function buildTasksFromLeads(
       );
       push({
         id: `lead-${id}-call`,
-        title: `Call ${company}`,
+        title: dialablePhone ? `Call ${company}` : `Verify contact: ${company}`,
         category: "priority",
-        priority: callPriority(l),
+        priority: callPriority(l, !!dialablePhone),
         status: "todo",
         dueDate: callDueIso(l, now),
         ...(rev ? { revenueImpact: rev } : {}),

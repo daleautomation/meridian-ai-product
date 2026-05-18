@@ -103,6 +103,22 @@ function ContactTrustChips({ items }) {
   );
 }
 
+function primaryActionabilityChips(task, fallbackChips = []) {
+  if (task?.phone && task?.phoneAuthority === "dialable") {
+    return [{ label: "Trusted phone", tone: "good", title: "Dialable phone passed contact trust checks" }];
+  }
+  if (task?.verifiedEmail || (task?.email && String(task?.emailConfidence ?? "").toLowerCase() === "high")) {
+    return [{ label: "Verified email", tone: "good", title: "Verified non-phone contact path" }];
+  }
+  if (task?.email) {
+    return [{ label: "Email fallback", tone: "watch", title: "Phone should be verified before dialing" }];
+  }
+  const trust = Array.isArray(fallbackChips)
+    ? fallbackChips.find((chip) => chip?.tone === "danger" || chip?.tone === "watch")
+    : null;
+  return [trust ?? { label: "Verify contact", tone: "watch", title: "No trusted dialable phone on file" }];
+}
+
 function contactTrustToneStyle(tone) {
   if (tone === "good") return { color: palette.success, background: palette.successBg, borderColor: "#BBF7D0" };
   if (tone === "watch") return { color: palette.warning, background: palette.warningBg, borderColor: "#FDE68A" };
@@ -673,6 +689,7 @@ function isTaskBlocked(task) {
 // priority call task. Used to paint the strongest visual treatment.
 function isCallNowTask(task) {
   if (!task) return false;
+  if (task.phoneAuthority !== "dialable") return false;
   if (task.priority === "critical") return true;
   if (typeof task.id === "string" && task.id.endsWith("-call") && task.priority === "high") return true;
   return false;
@@ -689,7 +706,6 @@ function executionStatusFor(task) {
 
 function TaskCard({ task, compact = false, now, isExecuteNow = false, onTaskFeedback, isSelected = false, onSelect, onOpen, pipelineLinkedCount = 0, viewMode = "single", readOnly = false }) {
   const cat = TASK_CATEGORIES[task.category] ?? TASK_CATEGORIES.priority;
-  const pri = priorityTone(task.priority);
   const overdue = isOverdue(task, now);
   const highlight = isHighlight(task);
   const blocked = isTaskBlocked(task);
@@ -920,7 +936,7 @@ function TaskCard({ task, compact = false, now, isExecuteNow = false, onTaskFeed
           ) : null}
         </div>
         <div style={{ gridColumn: "1 / -1" }}>
-          <ContactTrustChips items={recommendationTrust.chips.slice(0, 4)} />
+          <ContactTrustChips items={primaryActionabilityChips(task, recommendationTrust.chips)} />
         </div>
       </div>
     );
@@ -994,9 +1010,6 @@ function TaskCard({ task, compact = false, now, isExecuteNow = false, onTaskFeed
          The standalone left priority pill has been removed; the row's
          left side stays empty so the company-name row reads cleanly. */}
       {(() => {
-        const priorityKey = typeof task.priority === "string" ? task.priority : "";
-        const priorityText = priorityKey ? `${priorityKey.toUpperCase()} PRIORITY` : null;
-
         if (DEBUG_UI && typeof console !== "undefined") {
           // eslint-disable-next-line no-console
           console.log(
@@ -1051,18 +1064,18 @@ function TaskCard({ task, compact = false, now, isExecuteNow = false, onTaskFeed
               minWidth: 0,
               maxWidth: "100%",
             }}>
-              {priorityText ? (
+              {statusChip ? (
                 <span
-                  title={`Priority: ${priorityText}`}
+                  title={statusChip.label}
                   style={{
                     ...chipBase,
                     fontWeight: 800,
-                    color: pri.color,
-                    background: pri.bg,
-                    border: `1px solid ${pri.border}`,
+                    color: statusChip.color,
+                    background: statusChip.bg,
+                    border: `1px solid ${statusChip.border}`,
                   }}
                 >
-                  {priorityText}
+                  {statusChip.label}
                 </span>
               ) : null}
               {blocked ? (
@@ -1075,16 +1088,6 @@ function TaskCard({ task, compact = false, now, isExecuteNow = false, onTaskFeed
                   border: "1px solid #FECACA",
                 }}>
                   Blocked
-                </span>
-              ) : null}
-              {closeFit ? (
-                <span
-                  title={typeof closeFit.pct === "number"
-                    ? `Market fit: ${closeFit.pct}% · Source: ${closeabilitySourceLabel(closeFit.source)}`
-                    : `Market fit scan limited · Source: ${closeabilitySourceLabel(closeFit.source)}`}
-                  style={CLOSEABILITY_CHIP_STYLE}
-                >
-                  {closeFit.label}
                 </span>
               ) : null}
               {tradeText ? (
@@ -1115,26 +1118,11 @@ function TaskCard({ task, compact = false, now, isExecuteNow = false, onTaskFeed
                   {serviceText}
                 </span>
               ) : null}
-              {pipelineLinkedCount > 1 ? (
-                <span
-                  title={`${pipelineLinkedCount} steps in this lead's pipeline`}
-                  style={{
-                    fontSize: "9px", fontWeight: 700, letterSpacing: "0.04em",
-                    padding: "1px 6px", borderRadius: R.xs,
-                    color: palette.textSecondary, background: palette.surfaceHover,
-                    border: `1px solid ${palette.borderLight}`,
-                    whiteSpace: "nowrap",
-                    marginTop: "2px",
-                  }}
-                >
-                  ↻ {pipelineLinkedCount}
-                </span>
-              ) : null}
             </span>
           </div>
         );
       })()}
-      <ContactTrustChips items={recommendationTrust.chips} />
+      <ContactTrustChips items={primaryActionabilityChips(task, recommendationTrust.chips)} />
 
       {/* ── Row 2: company name ── */}
       {task.linkedCompany ? (
@@ -5275,7 +5263,7 @@ export default function CalendarCommandCenter({
       serviceBucketId: task?.laborTechScan?.primaryService ?? null,
       metadata: { source: "calendar" },
     });
-    handleOpenAssist(task);
+    handleOpenLeadFromToday(task);
   };
   const handleOpenLeadFromToday = (task) => {
     if (!task) return;
@@ -5533,6 +5521,10 @@ export default function CalendarCommandCenter({
     }),
     [weekStart],
   );
+  const operationalDays = useMemo(
+    () => days.filter((d) => d.getDay() !== 0 && d.getDay() !== 6),
+    [days],
+  );
 
   const tasksByDay = useMemo(() => {
     const map = {};
@@ -5572,7 +5564,7 @@ export default function CalendarCommandCenter({
     return map;
   }, [data, now]);
 
-  const weekLabel = `${formatCivilDate(weekStart)} – ${formatCivilDate(days[6])}`;
+  const weekLabel = `${formatCivilDate(operationalDays[0] ?? weekStart)} – ${formatCivilDate(operationalDays[operationalDays.length - 1] ?? days[days.length - 1])}`;
 
   // First active day of the visible week — the column that should get
   // the "Day 1 · Start here" emphasis. Pure UI hint; no scheduling
@@ -5587,19 +5579,19 @@ export default function CalendarCommandCenter({
   const firstActiveDayKey = useMemo(() => {
     if (laborTechDemoAnchorActive()) {
       const anchorKey = laborTechDemoAnchorKey();
-      for (const d of days) {
+      for (const d of operationalDays) {
         if (dayKey(d) === anchorKey) return anchorKey;
       }
     }
     const todayKey = dayKey(now);
-    for (const d of days) {
+    for (const d of operationalDays) {
       const k = dayKey(d);
       if (k < todayKey) continue;
       const items = tasksByDay[k];
       if (Array.isArray(items) && items.length > 0) return k;
     }
     return null;
-  }, [days, tasksByDay, now]);
+  }, [operationalDays, tasksByDay, now]);
 
   // View-aware navigation labels.
   const dayLabel = (() => {
@@ -6013,6 +6005,15 @@ export default function CalendarCommandCenter({
                 return toBusinessDateIso(a) === businessTodayKey;
               });
               pool.sort((a, b) => {
+                const actionability = (t) => {
+                  if (t?.phone && t?.phoneAuthority === "dialable") return 3;
+                  if (t?.verifiedEmail || (t?.email && String(t?.emailConfidence ?? "").toLowerCase() === "high")) return 2;
+                  if (t?.email) return 1;
+                  return 0;
+                };
+                const aa = actionability(a);
+                const ab = actionability(b);
+                if (ab !== aa) return ab - aa;
                 const qa = resolveLeadQualityDisplay(a);
                 const qb = resolveLeadQualityDisplay(b);
                 const sa = typeof qa.value === "number" ? qa.value : 0;
@@ -6258,7 +6259,7 @@ export default function CalendarCommandCenter({
           ) : (
             <div style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
               gap: "10px",
               // Calendar lanes are queue cards, not oversized day
               // columns. They wrap naturally on narrow screens so the
@@ -6268,7 +6269,7 @@ export default function CalendarCommandCenter({
               overflowY: "visible",
               paddingBottom: "12px",
             }}>
-              {days.map((d) => {
+              {operationalDays.map((d) => {
                 const k = dayKey(d);
                 const items = tasksByDay[k] ?? [];
                 const today = k === dayKey(now);
@@ -6391,7 +6392,9 @@ function MonthGrid({ monthOffset, now, tasks, selectedTaskId, onSelectTask, link
     const out = [];
     const cursor = new Date(gridStart);
     while (cursor.getTime() <= gridEnd.getTime()) {
-      out.push(new Date(cursor));
+      if (cursor.getDay() !== 0 && cursor.getDay() !== 6) {
+        out.push(new Date(cursor));
+      }
       cursor.setDate(cursor.getDate() + 1);
     }
     return out;
@@ -6412,11 +6415,11 @@ function MonthGrid({ monthOffset, now, tasks, selectedTaskId, onSelectTask, link
     <div>
       <div style={{
         display: "grid",
-        gridTemplateColumns: "repeat(7, 1fr)",
+        gridTemplateColumns: "repeat(5, 1fr)",
         gap: "4px",
         marginBottom: "6px",
       }}>
-        {DAY_SHORT.map((d) => (
+        {DAY_SHORT.slice(1, 6).map((d) => (
           <div key={d} style={{
             fontSize: "10px", fontWeight: 600, letterSpacing: "0.08em",
             color: palette.textTertiary, textTransform: "uppercase",
@@ -6426,7 +6429,7 @@ function MonthGrid({ monthOffset, now, tasks, selectedTaskId, onSelectTask, link
           </div>
         ))}
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "4px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "4px" }}>
         {allDays.map((d) => {
           const k = dayKey(d);
           const items = (tasksByDay[k] ?? []);

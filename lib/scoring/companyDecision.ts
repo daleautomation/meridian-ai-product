@@ -1774,7 +1774,7 @@ export function decideCompany(snap: CompanySnapshot): CompanyDecision {
       && (verifiedEmailTrust.trustLevel === "VERIFIED" || verifiedEmailTrust.trustLevel === "ACCEPTABLE")
     );
   if (action === "CALL NOW" && !phoneCanCallNow) {
-    action = hasAnyPhone || siteEmail || siteForm ? "TODAY" : "MONITOR";
+    action = verifiedContact || contactabilityScore >= 35 ? "TODAY" : "MONITOR";
   }
 
   // ── Bucket assignment (tightened placement rules) ────────────────────
@@ -1784,13 +1784,13 @@ export function decideCompany(snap: CompanySnapshot): CompanyDecision {
   let bucket: Bucket;
   if (forceAction && verifiedIssue && phoneCanCallNow && !staleFlag) {
     bucket = "CALL NOW";
-  } else if (forceAction && verifiedIssue) {
+  } else if (forceAction && verifiedIssue && (verifiedContact || contactabilityScore >= 35)) {
     bucket = "TODAY";
   } else if (level === "HIGH" && verifiedIssue && phoneCanCallNow && !staleFlag) {
     bucket = "CALL NOW";
-  } else if (level === "HIGH" && verifiedIssue) {
+  } else if (level === "HIGH" && verifiedIssue && (verifiedContact || contactabilityScore >= 35)) {
     bucket = "TODAY";
-  } else if (level === "MEDIUM" && verifiedIssue) {
+  } else if (level === "MEDIUM" && verifiedIssue && (verifiedContact || contactabilityScore >= 35)) {
     bucket = "TODAY";
   } else if (level === "MEDIUM" || (level === "LOW" && verifiedIssue && contactabilityScore >= 40)) {
     bucket = "MONITOR";
@@ -2063,18 +2063,34 @@ export function decideCompany(snap: CompanySnapshot): CompanyDecision {
 
 export function rankCompanies(snaps: CompanySnapshot[]): CompanyDecision[] {
   const LEVEL_RANK: Record<OpportunityLevel, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+  const actionabilityRank = (d: CompanyDecision): number => {
+    const phoneTrust = d.contacts?.phoneTrust ?? d.contacts?.contactTrust;
+    if (phoneTrust?.canCallNow) return 0;
+    if (d.verifiedContact) return 1;
+    if ((d.contactabilityScore ?? 0) >= 35) return 2;
+    return 3;
+  };
   const ranked = snaps
     .map(decideCompany)
     .filter((d) => !d.blocked)
     .sort((a, b) => {
-      // Force-action items get a boost but still sort by score within group
-      const aForce = a.forceAction ? 0 : 1;
-      const bForce = b.forceAction ? 0 : 1;
+      // Force-action items get a boost only when the contact path is
+      // executable. Otherwise they remain verification work.
+      const aAction = actionabilityRank(a);
+      const bAction = actionabilityRank(b);
+      const aForce = a.forceAction && aAction <= 1 ? 0 : 1;
+      const bForce = b.forceAction && bAction <= 1 ? 0 : 1;
       if (aForce !== bForce) return aForce - bForce;
 
       // Within same force-action group, sort by score first
       if (aForce === bForce && aForce === 0) {
         return b.score - a.score;
+      }
+
+      const aOperational = a.bucket === "CALL NOW" || a.bucket === "TODAY" || a.score >= 55;
+      const bOperational = b.bucket === "CALL NOW" || b.bucket === "TODAY" || b.score >= 55;
+      if (aAction !== bAction && (aOperational || bOperational)) {
+        return aAction - bAction;
       }
 
       // HOT deals next (only for high-scoring leads)
@@ -2093,10 +2109,10 @@ export function rankCompanies(snaps: CompanySnapshot[]): CompanyDecision[] {
       // Composite tiebreaker — contactability + proof fold into the blend so
       // two equally-scored leads sort by how reachable and how well-verified
       // they are.
-      const aComp = a.opportunityScore * 0.30 + a.closabilityScore * 0.20 + a.urgency * 0.15
-                  + a.dealHeat * 0.10 + a.contactabilityScore * 0.15 + a.proofScore * 0.10;
-      const bComp = b.opportunityScore * 0.30 + b.closabilityScore * 0.20 + b.urgency * 0.15
-                  + b.dealHeat * 0.10 + b.contactabilityScore * 0.15 + b.proofScore * 0.10;
+      const aComp = a.opportunityScore * 0.25 + a.closabilityScore * 0.18 + a.urgency * 0.12
+                  + a.dealHeat * 0.08 + a.contactabilityScore * 0.27 + a.proofScore * 0.10;
+      const bComp = b.opportunityScore * 0.25 + b.closabilityScore * 0.18 + b.urgency * 0.12
+                  + b.dealHeat * 0.08 + b.contactabilityScore * 0.27 + b.proofScore * 0.10;
       if (Math.abs(bComp - aComp) > 2) return bComp - aComp;
 
       const as = a.staleDays ?? 9999;
@@ -2111,6 +2127,7 @@ export function rankCompanies(snaps: CompanySnapshot[]): CompanyDecision[] {
       const next = ranked[i + 1];
       const reasons: string[] = [];
       if (d.forceAction && !next.forceAction) reasons.push("has overdue follow-up");
+      if (actionabilityRank(d) < actionabilityRank(next)) reasons.push("has a more actionable contact path");
       if (d.dealHeatLevel === "HOT" && next.dealHeatLevel !== "HOT") reasons.push("hotter deal");
       if (d.dealStrategy.closeabilityTier === "EASY CLOSE" && next.dealStrategy.closeabilityTier !== "EASY CLOSE") reasons.push("easier to close");
       if (d.urgency > next.urgency + 10) reasons.push("more urgent");

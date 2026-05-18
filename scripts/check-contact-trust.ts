@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { decideCompany } from "../lib/scoring/companyDecision";
 import { decideLead, decideNormalizedLead } from "../lib/scoring/decision";
 import { detectContactConflicts, classifyContactPathTrust } from "../lib/contacts/trust";
+import { buildTasksFromLeads, rankTasks } from "../lib/calendar/tasks";
+import { scoreLeadTask } from "../lib/calendar/leadScore";
 import type { CompanySnapshot } from "../lib/state/companySnapshotStore";
 import type { ContactResolution, ContactPath } from "../lib/contacts/types";
 import type { NormalizedLead } from "../lib/leads/normalizedLead";
@@ -152,6 +154,46 @@ function verifiedGoogleResolution(lastVerifiedAt: string): ContactResolution {
   };
   const decision = decideNormalizedLead(lead);
   assert.equal(decision.bucket, "Watch", "seed phone without deterministic verification is not Call now");
+}
+
+{
+  const trustedLead = {
+    key: "trusted-phone-lead",
+    name: "Trusted Phone Roofer",
+    score: 80,
+    bucket: "CALL NOW",
+    recommendedAction: "CALL NOW",
+    websiteProof: { homepage_fetch_ok: true, issues: ["weak quote path"] },
+    contactPaths: [{
+      method: "phone",
+      value: "(816) 555-2200",
+      source: "google_places",
+      verified: true,
+      confidence: "high",
+      rank: 1,
+      lastVerifiedAt: nowIso,
+    }],
+  };
+  const weakLead = {
+    key: "weak-contact-lead",
+    name: "Weak Contact Roofer",
+    score: 99,
+    bucket: "CALL NOW",
+    recommendedAction: "CALL NOW",
+    phone: "(816) 555-2201",
+    source: "seed",
+    websiteProof: { homepage_fetch_ok: true, issues: ["website down"] },
+  };
+  const tasks = buildTasksFromLeads([weakLead, trustedLead], { now, maxLeads: 2 });
+  const trustedTask = tasks.find((task) => task.id === "lead-trusted-phone-lead-call");
+  const weakTask = tasks.find((task) => task.id === "lead-weak-contact-lead-call");
+  assert.ok(trustedTask, "trusted phone lead gets a call task");
+  assert.ok(weakTask, "weak contact lead gets verification work");
+  assert.equal(trustedTask.phoneAuthority, "dialable", "trusted lead carries dial authority");
+  assert.equal(weakTask.phoneAuthority, undefined, "weak contact lead does not carry dial authority");
+  assert.ok(weakTask.title.startsWith("Verify contact:"), "weak contact lead is framed as contact verification");
+  assert.ok(scoreLeadTask(trustedTask, { now }).taskScore > scoreLeadTask(weakTask, { now }).taskScore, "trusted phone outranks weak contact");
+  assert.equal(rankTasks([weakTask, trustedTask], now)[0].id, trustedTask.id, "ranked call queue prefers executable contact paths");
 }
 
 console.log("contact trust checks passed");

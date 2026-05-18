@@ -20,7 +20,6 @@ import { trackEvent } from "../lib/tracking/clientTracker";
 import { resolveLeadQualityDisplay } from "../lib/display/leadQuality";
 import {
   buildContactTrustDisplay,
-  buildRecommendationTrustDisplay,
 } from "../lib/display/trustVisibility";
 import { getDialablePhone } from "../lib/leads/phone";
 import { formatTelHref } from "../lib/leads/leadActions";
@@ -85,6 +84,18 @@ function TrustChips({ items }) {
       ))}
     </span>
   );
+}
+
+function primaryActionabilityChips(task, phone, phoneTrust) {
+  if (phone) return [{ label: "Trusted phone", tone: "good", title: "Dialable phone passed contact trust checks" }];
+  if (task?.verifiedEmail || (task?.email && String(task?.emailConfidence ?? "").toLowerCase() === "high")) {
+    return [{ label: "Verified email", tone: "good", title: "Verified non-phone contact path" }];
+  }
+  if (task?.email) return [{ label: "Email fallback", tone: "watch", title: "Verify phone before dialing" }];
+  const trust = Array.isArray(phoneTrust?.chips)
+    ? phoneTrust.chips.find((chip) => chip?.tone === "danger" || chip?.tone === "watch")
+    : null;
+  return [trust ?? { label: "Verify contact", tone: "watch", title: "No trusted dialable phone on file" }];
 }
 
 export default function TodayExecutionPlan({
@@ -262,12 +273,14 @@ export default function TodayExecutionPlan({
           const lead = (linkedKey && leadByKey && leadByKey.get) ? leadByKey.get(linkedKey) : null;
           const phone = getDialablePhone(lead) ?? (task.phoneAuthority === "dialable" ? task.phone : null);
           const tel = formatTelHref(phone);
-          const recommendationTrust = buildRecommendationTrustDisplay(lead ?? task, "Today queue ranking");
           const phoneTrust = buildContactTrustDisplay(lead, "phone", task);
           const quality = resolveLeadQualityDisplay(task);
-          const badge = priorityBadge(quality);
+          const baseBadge = priorityBadge(quality);
+          const badge = phone
+            ? baseBadge
+            : { label: "VERIFY CONTACT", icon: "", fg: "#9A3412", bg: "#FFFBEB", border: "#FDE68A" };
           const confidencePct = typeof quality.value === "number" && !quality.isUnknown ? `${Math.round(quality.value)}%` : null;
-          const urgency = task.laborTechScan?.urgency?.label ?? null;
+          const urgency = phone ? (task.laborTechScan?.urgency?.label ?? null) : null;
           const isHotUrgency = urgency === "Critical" || urgency === "High";
           const company = task.linkedCompany ?? "Unknown lead";
           const fit = getLaborTechServiceFit(task);
@@ -421,7 +434,7 @@ export default function TodayExecutionPlan({
                     </span>
                   ) : null}
                 </div>
-                <TrustChips items={[...recommendationTrust.chips.slice(0, 4), ...phoneTrust.chips.slice(1, 3)]} />
+                <TrustChips items={primaryActionabilityChips(task, phone, phoneTrust)} />
               </div>
 
               {/* Actions: primary open · Call Direct · Skip. Order stays fixed

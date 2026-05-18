@@ -24,6 +24,7 @@ export interface LeadScoreBreakdown {
   strategicScore: number;
   riskScore: number;
   confidenceScore: number;
+  actionabilityScore: number;
 }
 
 export interface LeadScoreResult {
@@ -145,6 +146,26 @@ export function confidenceScore(t: TaskItem): number {
   return CONF_W[t.dealConfidence] ?? MISSING_CONFIDENCE;
 }
 
+function hasTrustedPhone(t: TaskItem): boolean {
+  return !!(t.phone && t.phoneAuthority === "dialable");
+}
+
+function hasVerifiedEmail(t: TaskItem): boolean {
+  return !!(t.verifiedEmail || (t.email && t.emailConfidence && t.emailConfidence.toLowerCase() === "high"));
+}
+
+function isCallWork(t: TaskItem): boolean {
+  return typeof t.id === "string" && t.id.endsWith("-call");
+}
+
+function actionabilityScoreOf(t: TaskItem): number {
+  if (hasTrustedPhone(t)) return 100;
+  if (hasVerifiedEmail(t)) return 70;
+  if (t.email) return 55;
+  if (typeof t.id === "string" && t.id.endsWith("-contact")) return 35;
+  return 15;
+}
+
 function deriveConfidence(t: TaskItem): "high" | "medium" | "low" {
   if (t.dealConfidence) return t.dealConfidence;
   const cs = confidenceScore(t);
@@ -185,32 +206,45 @@ export function scoreLeadTask(
     strategicScore:       strategicScoreOf(task),
     riskScore:            riskScoreOf(task),
     confidenceScore:      confidenceScore(task),
+    actionabilityScore:   actionabilityScoreOf(task),
   };
 
+  if (isCallWork(task) && !hasTrustedPhone(task)) {
+    breakdown.priorityScore = Math.min(breakdown.priorityScore, hasVerifiedEmail(task) ? 55 : 35);
+    breakdown.urgencyScore = Math.min(breakdown.urgencyScore, hasVerifiedEmail(task) ? 60 : 40);
+    breakdown.riskScore = Math.min(breakdown.riskScore, 50);
+  }
+
   const executeScore = roundScore(
-    breakdown.priorityScore         * 0.25 +
-    breakdown.economicScore         * 0.25 +
-    breakdown.urgencyScore          * 0.20 +
+    breakdown.priorityScore         * 0.20 +
+    breakdown.economicScore         * 0.20 +
+    breakdown.urgencyScore          * 0.18 +
     breakdown.closeProbabilityScore * 0.10 +
     breakdown.strategicScore        * 0.10 +
-    breakdown.riskScore             * 0.10,
+    breakdown.riskScore             * 0.07 +
+    breakdown.actionabilityScore    * 0.15,
   );
 
   const allocationScore = roundScore(
-    breakdown.economicScore         * 0.35 +
-    breakdown.closeProbabilityScore * 0.20 +
-    breakdown.urgencyScore          * 0.15 +
-    breakdown.confidenceScore       * 0.15 +
-    breakdown.strategicScore        * 0.15,
+    breakdown.economicScore         * 0.25 +
+    breakdown.closeProbabilityScore * 0.18 +
+    breakdown.urgencyScore          * 0.12 +
+    breakdown.confidenceScore       * 0.12 +
+    breakdown.strategicScore        * 0.13 +
+    breakdown.actionabilityScore    * 0.20,
   );
 
-  const taskScore = roundScore(
+  let taskScore = roundScore(
     breakdown.priorityScore  * 0.30 +
-    breakdown.urgencyScore   * 0.20 +
-    breakdown.economicScore  * 0.20 +
-    breakdown.strategicScore * 0.15 +
-    breakdown.riskScore      * 0.15,
+    breakdown.urgencyScore   * 0.18 +
+    breakdown.economicScore  * 0.17 +
+    breakdown.strategicScore * 0.13 +
+    breakdown.riskScore      * 0.10 +
+    breakdown.actionabilityScore * 0.12,
   );
+  if (isCallWork(task) && !hasTrustedPhone(task)) {
+    taskScore = Math.min(taskScore, hasVerifiedEmail(task) ? 62 : 48);
+  }
 
   return {
     executeScore,
@@ -249,6 +283,9 @@ export function compareLeadTasks(
   if (sb.taskScore !== sa.taskScore) return sb.taskScore - sa.taskScore;
   if (sb.executeScore !== sa.executeScore) return sb.executeScore - sa.executeScore;
   if (sb.allocationScore !== sa.allocationScore) return sb.allocationScore - sa.allocationScore;
+  if (sb.breakdown.actionabilityScore !== sa.breakdown.actionabilityScore) {
+    return sb.breakdown.actionabilityScore - sa.breakdown.actionabilityScore;
+  }
   if (sb.urgencyScore !== sa.urgencyScore) return sb.urgencyScore - sa.urgencyScore;
   return 0;
 }
