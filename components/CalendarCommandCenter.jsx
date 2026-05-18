@@ -44,6 +44,10 @@ import { triggerPullForward } from "../lib/execution/pullForward";
 import { formatTelHref, formatSmsHref } from "../lib/leads/leadActions";
 import { trackEvent } from "../lib/tracking/clientTracker";
 import { resolveLeadQualityDisplay } from "../lib/display/leadQuality";
+import {
+  buildContactTrustDisplay,
+  buildRecommendationTrustDisplay,
+} from "../lib/display/trustVisibility";
 import { explainTaskAction, explainTaskPriority } from "../lib/calendar/taskExplain";
 import LeadContextStrip from "./LeadContextStrip";
 import LeadEmailAction from "./LeadEmailAction";
@@ -75,59 +79,35 @@ const MONTH_LONG = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-function cleanTrustToken(value) {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  if (!trimmed || /^(unknown|none|n\/a)$/i.test(trimmed)) return null;
-  return trimmed;
-}
-
-function sourceLabel(value) {
-  const raw = cleanTrustToken(value);
-  if (!raw) return null;
-  const key = raw.toLowerCase().replace(/[_-]+/g, " ");
-  if (key.includes("google") || key === "gbp") return "Google Business Profile";
-  if (key.includes("yelp")) return "Yelp";
-  if (key.includes("bbb")) return "BBB";
-  if (key.includes("hunter")) return "Hunter";
-  if (key.includes("website") || key.includes("site")) return "Website";
-  if (key.includes("manual")) return "Manual";
-  return raw;
-}
-
-function formatVerifiedDate(iso) {
-  const raw = cleanTrustToken(iso);
-  if (!raw) return null;
-  const d = new Date(raw);
-  if (Number.isNaN(d.getTime())) return null;
-  return `Verified ${d.toLocaleDateString([], { month: "short", day: "numeric" })}`;
-}
-
 function contactTrustItems(lead, task, method) {
-  const paths = Array.isArray(lead?.contactPaths) ? lead.contactPaths : [];
-  const path = paths
-    .filter((p) => p && p.method === method)
-    .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99))[0] ?? null;
-  const contacts = lead?.contacts ?? {};
-  const source = sourceLabel(path?.source ?? path?.label ?? (method === "email" ? lead?.emailSource ?? task?.emailSource : contacts.source ?? lead?.source));
-  const verified = formatVerifiedDate(
-    path?.lastChecked
-    ?? path?.lastCheckedAt
-    ?? path?.checkedAt
-    ?? (method === "email" ? lead?.emailVerifiedAt ?? task?.emailVerifiedAt : contacts.lastVerifiedAt)
-    ?? lead?.lastChecked
-    ?? lead?.websiteProof?.last_checked
-  );
-  return [source, verified].filter(Boolean).slice(0, 2);
+  return buildContactTrustDisplay(lead, method, task).chips;
 }
 
 function ContactTrustChips({ items }) {
   if (!Array.isArray(items) || items.length === 0) return null;
   return (
     <span style={CONTACT_TRUST_CHIP_ROW}>
-      {items.map((item) => <span key={item} style={CONTACT_TRUST_CHIP}>{item}</span>)}
+      {items.map((item) => (
+        <span
+          key={typeof item === "string" ? item : item.label}
+          title={typeof item === "string" ? undefined : item.title}
+          style={{
+            ...CONTACT_TRUST_CHIP,
+            ...(typeof item === "string" ? null : contactTrustToneStyle(item.tone)),
+          }}
+        >
+          {typeof item === "string" ? item : item.label}
+        </span>
+      ))}
     </span>
   );
+}
+
+function contactTrustToneStyle(tone) {
+  if (tone === "good") return { color: palette.success, background: palette.successBg, borderColor: "#BBF7D0" };
+  if (tone === "watch") return { color: palette.warning, background: palette.warningBg, borderColor: "#FDE68A" };
+  if (tone === "danger") return { color: palette.danger, background: palette.dangerBg, borderColor: "#FECACA" };
+  return { color: palette.textSecondary, background: palette.surfaceHover, borderColor: palette.borderLight };
 }
 
 // ── Design tokens ──────────────────────────────────────────────────────
@@ -806,6 +786,7 @@ function TaskCard({ task, compact = false, now, isExecuteNow = false, onTaskFeed
       : callNow
         ? { label: "Call now", color: palette.blue, bg: palette.bluePale, border: palette.blueBorder }
         : null;
+  const recommendationTrust = buildRecommendationTrustDisplay(task, "Calendar priority scoring");
 
   if (compact) {
     return (
@@ -937,6 +918,9 @@ function TaskCard({ task, compact = false, now, isExecuteNow = false, onTaskFeed
               {statusChip.label}
             </span>
           ) : null}
+        </div>
+        <div style={{ gridColumn: "1 / -1" }}>
+          <ContactTrustChips items={recommendationTrust.chips.slice(0, 4)} />
         </div>
       </div>
     );
@@ -1150,6 +1134,7 @@ function TaskCard({ task, compact = false, now, isExecuteNow = false, onTaskFeed
           </div>
         );
       })()}
+      <ContactTrustChips items={recommendationTrust.chips} />
 
       {/* ── Row 2: company name ── */}
       {task.linkedCompany ? (
@@ -3558,6 +3543,7 @@ export function SelectedLeadPanel({
       : (phone || null);
   const phoneTrust = contactTrustItems(selectedLead, task, "phone");
   const emailTrust = contactTrustItems(selectedLead, task, "email");
+  const recommendationTrust = buildRecommendationTrustDisplay(selectedLead ?? task, "Selected lead priority");
   const callable = !!telHref && !blocked;
   const handlePrimaryCall = (e) => {
     if (readOnly) { if (e?.preventDefault) e.preventDefault(); return; }
@@ -3717,6 +3703,7 @@ export function SelectedLeadPanel({
           </button>
         </span>
       </div>
+      <ContactTrustChips items={recommendationTrust.chips} />
 
       {/* Cross-tab context strip — identical visual identity in
           Today, All Leads, and History so the user reads them as
@@ -4266,7 +4253,7 @@ export function SelectedLeadPanel({
                   textTransform: "uppercase",
                   marginBottom: "3px",
                 }}>
-                  AI support
+                  Operator support
                 </span>
                 <span style={{
                   display: "block",
