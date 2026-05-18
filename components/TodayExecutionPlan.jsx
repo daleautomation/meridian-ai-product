@@ -10,7 +10,6 @@
 
 import { useEffect, useState } from "react";
 import { palette } from "../lib/theme";
-import { getLaborTechServiceFit } from "../lib/scan/serviceFit";
 import {
   EXECUTION_OUTCOME_CHANGED_EVENT,
   loadAllExecutionOutcomes,
@@ -196,13 +195,13 @@ export default function TodayExecutionPlan({
             fontSize: "10px", fontWeight: 800, letterSpacing: "0.12em",
             color: palette.blue, textTransform: "uppercase",
           }}>
-            Today&apos;s Command Queue
+            Today
           </div>
           <div style={{
             fontSize: "15px", fontWeight: 700, color: palette.textPrimary,
             marginTop: "3px", lineHeight: 1.25,
           }}>
-            {totalCount} {totalCount === 1 ? "lead" : "leads"} scheduled for today
+            {totalCount} to work now
           </div>
           <div style={{
             fontSize: "11.5px",
@@ -210,7 +209,7 @@ export default function TodayExecutionPlan({
             marginTop: "4px",
             lineHeight: 1.45,
           }}>
-            Opens the calendar, Operator, and Intelligence Panel in one step.
+            Start at the top. Work one lead at a time.
           </div>
         </div>
         <div style={{
@@ -283,8 +282,6 @@ export default function TodayExecutionPlan({
           const urgency = phone ? (task.laborTechScan?.urgency?.label ?? null) : null;
           const isHotUrgency = urgency === "Critical" || urgency === "High";
           const company = task.linkedCompany ?? "Unknown lead";
-          const fit = getLaborTechServiceFit(task);
-          const fitLabel = fit?.primaryServiceLabel ?? null;
           const outcome = resolveExecutionOutcome(
             outcomeMap,
             task.id,
@@ -302,6 +299,16 @@ export default function TodayExecutionPlan({
           })();
 
           const isRouting = routingTaskId === task.id;
+          const actionLine = (() => {
+            const raw =
+              (typeof task.nextAction === "string" && task.nextAction.trim())
+              || task?.laborTechScan?.recommendedAction
+              || task?.serviceNeed?.reason
+              || null;
+            if (!raw) return phone ? "Open lead and call with the prepared angle." : "Verify contact before outreach.";
+            return raw.length > 92 ? raw.slice(0, 90).trim() + "…" : raw;
+          })();
+          const primaryLabel = phone ? "Work Lead" : "Verify Contact";
           return (
             <li
               key={task.id ?? i}
@@ -309,8 +316,8 @@ export default function TodayExecutionPlan({
                 display: "grid",
                 gridTemplateColumns: "24px minmax(0, 1fr) auto",
                 alignItems: "center",
-                gap: "12px",
-                padding: "10px 12px",
+                gap: "14px",
+                padding: "12px 14px",
                 background: isRouting ? palette.bluePale : palette.surface,
                 border: `1px solid ${isRouting ? palette.blue : palette.borderLight}`,
                 borderRadius: "10px",
@@ -332,10 +339,10 @@ export default function TodayExecutionPlan({
               {/* PRIORITY layer ONLY — rank, company, confidence,
                   urgency. No pain tag (Operator's job). No insight
                   line (Operator + Intelligence Panel cover it). */}
-              <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "5px" }}>
+              <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "6px" }}>
                 <div style={{
-                  fontSize: "13px",
-                  fontWeight: 700,
+                  fontSize: "15px",
+                  fontWeight: 800,
                   color: palette.textPrimary,
                   lineHeight: 1.2,
                   overflow: "hidden",
@@ -344,6 +351,19 @@ export default function TodayExecutionPlan({
                   maxWidth: "100%",
                 }}>
                   {company}
+                </div>
+                <div style={{
+                  fontSize: "12px",
+                  fontWeight: phone ? 700 : 650,
+                  color: phone ? palette.textPrimary : palette.warning,
+                  lineHeight: 1.35,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                }}>
+                  {actionLine}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
                   {badge ? (
@@ -365,7 +385,7 @@ export default function TodayExecutionPlan({
                       <span>{badge.label}</span>
                     </span>
                   ) : null}
-                  {confidencePct ? (
+                  {confidencePct && phone ? (
                     <span
                       title={`Fit source: ${qualitySourceLabel(quality.source)}`}
                       style={{
@@ -394,24 +414,6 @@ export default function TodayExecutionPlan({
                       textTransform: "uppercase",
                     }}>
                       {urgency} urgency
-                    </span>
-                  ) : null}
-                  {fitLabel ? (
-                    <span
-                      title={`LaborTech service fit: ${fitLabel}`}
-                      style={{
-                        fontSize: "10px",
-                        fontWeight: 800,
-                        letterSpacing: "0.06em",
-                        padding: "2px 9px",
-                        borderRadius: "999px",
-                        color: palette.blue,
-                        background: palette.bluePale,
-                        border: `1px solid ${palette.blueBorder}`,
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {fitLabel}
                     </span>
                   ) : null}
                   {outcomeStatus && outcomeTone ? (
@@ -447,8 +449,8 @@ export default function TodayExecutionPlan({
                   style={{
                     fontSize: "11px", fontWeight: 800,
                     color: "#fff",
-                    background: palette.blue,
-                    border: `1px solid ${palette.blue}`,
+                    background: phone ? palette.blue : palette.warning,
+                    border: `1px solid ${phone ? palette.blue : palette.warning}`,
                     borderRadius: "999px",
                     padding: "6px 14px",
                     cursor: "pointer",
@@ -457,7 +459,7 @@ export default function TodayExecutionPlan({
                     boxShadow: "0 1px 2px rgba(37,99,235,0.20), 0 6px 14px -8px rgba(37,99,235,0.45)",
                   }}
                 >
-                  Open Lead →
+                  {primaryLabel}
                 </button>
                 {tel ? (
                   <a
