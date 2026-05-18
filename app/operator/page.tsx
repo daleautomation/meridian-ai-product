@@ -1233,8 +1233,18 @@ type UiLead = NormalizedLead & {
   name: string;
   rank: number;
   score: number;
+  bucket: "CALL NOW" | "TODAY" | "MONITOR" | "PASS";
+  recommendedAction: "CALL NOW" | "TODAY" | "MONITOR";
   trade: string;
-  contacts: { primaryPhone?: string; primaryEmail?: string; source?: string };
+  contacts: {
+    primaryPhone?: string;
+    primaryEmail?: string;
+    source?: string;
+    phoneTrust?: NormalizedLead["phoneTrust"];
+    emailTrust?: NormalizedLead["emailTrust"];
+    contactTrust?: NormalizedLead["contactTrust"];
+    canCallNow?: boolean;
+  };
   domain?: string;
   resolvedBusinessUrl?: string;
   companyKey: string;
@@ -1255,10 +1265,26 @@ function toUiLead(lead: NormalizedLead & { decision: LeadDecision }, idx: number
     name: lead.companyName,
     rank: idx + 1,
     score: lead.decision.score,
+    bucket: lead.decision.bucket === "Call now"
+      ? "CALL NOW"
+      : lead.decision.bucket === "Call this week"
+        ? "TODAY"
+        : lead.decision.bucket === "Watch"
+          ? "MONITOR"
+          : "PASS",
+    recommendedAction: lead.decision.bucket === "Call now"
+      ? "CALL NOW"
+      : lead.decision.bucket === "Call this week"
+        ? "TODAY"
+        : "MONITOR",
     contacts: {
       primaryPhone: lead.phone,
       primaryEmail: lead.email,
       source: lead.source,
+      phoneTrust: lead.phoneTrust,
+      emailTrust: lead.emailTrust,
+      contactTrust: lead.contactTrust,
+      canCallNow: lead.phoneTrust?.canCallNow ?? lead.contactTrust?.canCallNow,
     },
     domain: lead.website,
     resolvedBusinessUrl: lead.website,

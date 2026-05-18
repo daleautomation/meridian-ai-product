@@ -16,6 +16,8 @@
 import type { CompanyDecision } from "@/lib/scoring/companyDecision";
 import type { CompanySnapshot } from "@/lib/state/companySnapshotStore";
 import { computeCloseability, type Closeability } from "@/lib/scoring/closeability";
+import { canTrustPhoneForCallNow, classifyContactPathTrust } from "@/lib/contacts/trust";
+import type { ContactTrustEvidence } from "@/lib/contacts/types";
 
 export type LeadBucket = "Call now" | "Call this week" | "Watch" | "Skip";
 
@@ -315,6 +317,19 @@ function decideNormalizedBucket(lead: NormalizedLead): {
   reason: string;
 } {
   const hasPhone = !!lead.phone;
+  const phoneTrust: ContactTrustEvidence = lead.phoneTrust ?? lead.contactTrust ?? classifyContactPathTrust({
+    method: "phone",
+    value: lead.phone ?? "",
+    source: lead.source,
+    verified: ["google_places", "yelp", "bbb", "manual"].includes(lead.source),
+    confidence: lead.source === "google_places" || lead.source === "yelp" || lead.source === "manual" ? "high" : "medium",
+    rank: lead.source === "google_places" ? 1 : lead.source === "yelp" ? 2 : lead.source === "bbb" ? 3 : 99,
+    label: `${lead.source} phone`,
+  }, {
+    lastVerifiedAt: lead.lastChecked ?? null,
+    conflictStatus: lead.sourceStatus === "stale" ? "none" : "none",
+  });
+  const phoneCanCallNow = hasPhone && canTrustPhoneForCallNow(phoneTrust) && lead.sourceStatus !== "stale";
   const reviewCount = typeof lead.signals.reviewCount === "number" ? lead.signals.reviewCount : undefined;
   const rating = typeof lead.signals.rating === "number" ? lead.signals.rating : undefined;
   const recentActivity = lead.signals.recentActivity === true;
@@ -326,12 +341,14 @@ function decideNormalizedBucket(lead: NormalizedLead): {
     return { bucket: "Skip", score: 10, reason: `Closed in CRM (${status}) — out of play.` };
   }
 
-  // No phone → Watch. (Never Call when there's no way to reach them.)
-  if (!hasPhone) {
+  // No trusted phone → Watch. (Never Call when contact trust is weak/stale/conflicting.)
+  if (!phoneCanCallNow) {
     return {
       bucket: "Watch",
-      score: 35,
-      reason: "Possible angle on file, but no verified phone yet — not callable today.",
+      score: hasPhone ? 40 : 35,
+      reason: hasPhone
+        ? `Possible angle on file, but phone needs verification — ${phoneTrust.confidenceReason}`
+        : "Possible angle on file, but no verified phone yet — not callable today.",
     };
   }
 

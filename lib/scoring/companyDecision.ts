@@ -22,7 +22,8 @@
 
 import type { CompanySnapshot } from "@/lib/state/companySnapshotStore";
 import type { ToolResult } from "@/lib/mcp/types";
-import type { ContactResolution, ContactPath } from "@/lib/contacts/types";
+import type { ContactResolution, ContactPath, ContactTrustEvidence, ContactTrustLevel, ContactConflictStatus } from "@/lib/contacts/types";
+import { classifyContactPathTrust, canTrustPhoneForCallNow, normalizePhoneForTrust } from "@/lib/contacts/trust";
 import { computeNextAction, type NextAction } from "./nextAction";
 
 // ── Types ───────────────────────────────────────────────────────────────
@@ -77,6 +78,19 @@ export type DecisionContacts = {
   emailMethod?: string;
   alternateEmails?: string[];
   alternatePhones?: string[];
+  trustLevel?: ContactTrustLevel;
+  contactTrust?: ContactTrustEvidence;
+  phoneTrust?: ContactTrustEvidence;
+  emailTrust?: ContactTrustEvidence;
+  trustSource?: string | null;
+  freshnessAgeDays?: number | null;
+  confidenceReason?: string;
+  conflictStatus?: ContactConflictStatus;
+  conflictReasons?: string[];
+  verificationPresent?: boolean;
+  rejectedContactAlternatives?: string[];
+  operationalTrace?: string[];
+  canCallNow?: boolean;
 };
 
 // LaborTech Fit — five observable signals that map directly to the five
@@ -355,6 +369,35 @@ function buildWebsiteProof(
   };
 }
 
+function applyContactTrust(out: DecisionContacts, trust: ContactTrustEvidence | undefined): void {
+  if (!trust) return;
+  out.contactTrust = trust;
+  out.trustLevel = trust.trustLevel;
+  out.trustSource = trust.source;
+  out.freshnessAgeDays = trust.freshnessAgeDays;
+  out.confidenceReason = trust.confidenceReason;
+  out.conflictStatus = trust.conflictStatus;
+  out.conflictReasons = trust.conflictReasons;
+  out.verificationPresent = trust.verificationPresent;
+  out.rejectedContactAlternatives = trust.rejectedAlternatives;
+  out.canCallNow = canTrustPhoneForCallNow(trust);
+}
+
+function pathConflictStatusForLegacyPhone(
+  phone: string | undefined,
+  resolvedContact: ContactResolution | null,
+): { status: ContactConflictStatus; reasons: string[]; rejected: string[] } {
+  if (!phone || !resolvedContact?.phone) return { status: "none", reasons: [], rejected: [] };
+  const legacy = normalizePhoneForTrust(phone);
+  const resolved = normalizePhoneForTrust(resolvedContact.phone);
+  if (!legacy || !resolved || legacy === resolved) return { status: "none", reasons: [], rejected: [] };
+  return {
+    status: "stale_overwrite",
+    reasons: ["legacy contact phone differs from latest resolver phone"],
+    rejected: [`resolver_phone:${resolved}`],
+  };
+}
+
 // Project the best contact into the UI-friendly shape the operator console
 // consumes. Precedence, high → low:
 //   1. snapshot.preferred* (manual operator override — Phase 6)
@@ -382,44 +425,135 @@ function buildDecisionContacts(
 
   // Phone precedence
   if (snap.preferredPhone) {
+    const trust = classifyContactPathTrust({
+      method: "phone",
+      value: snap.preferredPhone,
+      source: snap.preferredContactSource ?? "operator",
+      verified: true,
+      confidence: "high",
+      rank: 0,
+      label: "Operator preferred phone",
+    }, {
+      lastVerifiedAt: snap.preferredUpdatedAt ?? null,
+    });
     out.primaryPhone = snap.preferredPhone;
     out.source = snap.preferredContactSource ?? "operator";
     out.confidence = "high";
     out.phoneConfidence = "high";
+    out.phoneTrust = trust;
+    applyContactTrust(out, trust);
   } else if (snap.contactPhone) {
+    const conflict = pathConflictStatusForLegacyPhone(snap.contactPhone, resolvedContact);
+    const trust = classifyContactPathTrust({
+      method: "phone",
+      value: snap.contactPhone,
+      source: "operator",
+      verified: true,
+      confidence: "high",
+      rank: 1,
+      label: "Curated contact phone",
+    }, {
+      lastVerifiedAt: snap.contactResolutionCheckedAt ?? resolvedContact?.lastCheckedAt ?? null,
+      conflictStatus: conflict.status,
+      conflictReasons: conflict.reasons,
+      rejectedAlternatives: conflict.rejected,
+    });
     out.primaryPhone = snap.contactPhone;
     out.source = "operator";
     out.confidence = "high";
     out.phoneConfidence = "high";
+    out.phoneTrust = trust;
+    applyContactTrust(out, trust);
   } else if (bestPhonePath) {
+    const trust = resolvedContact?.phoneTrust ?? classifyContactPathTrust(bestPhonePath, {
+      lastVerifiedAt: bestPhonePath.lastVerifiedAt ?? resolvedContact?.lastCheckedAt ?? null,
+      conflictStatus: resolvedContact?.conflictStatus,
+      conflictReasons: resolvedContact?.conflictReasons,
+      rejectedAlternatives: resolvedContact?.rejectedContactAlternatives,
+    });
     out.primaryPhone = bestPhonePath.value;
     out.source = bestPhonePath.source;
     out.confidence = bestPhonePath.confidence;
     out.phoneConfidence = resolvedContact?.phoneConfidence ?? bestPhonePath.confidence;
+    out.phoneTrust = trust;
+    applyContactTrust(out, trust);
   } else if (websiteProof?.phone_from_site) {
+    const trust = classifyContactPathTrust({
+      method: "phone",
+      value: websiteProof.phone_from_site,
+      source: "website",
+      verified: false,
+      confidence: "medium",
+      rank: 10,
+      label: "Phone from website proof",
+    }, {
+      lastVerifiedAt: websiteProof.last_checked,
+    });
     out.primaryPhone = websiteProof.phone_from_site;
     out.source = "website";
     out.confidence = "medium";
     out.phoneConfidence = "medium";
+    out.phoneTrust = trust;
+    applyContactTrust(out, trust);
   }
 
   // Email precedence
   if (snap.preferredEmail) {
+    out.emailTrust = classifyContactPathTrust({
+      method: "email",
+      value: snap.preferredEmail,
+      source: snap.preferredContactSource ?? "operator",
+      verified: true,
+      confidence: "high",
+      rank: 0,
+      label: "Operator preferred email",
+    }, {
+      lastVerifiedAt: snap.preferredUpdatedAt ?? null,
+    });
     out.primaryEmail = snap.preferredEmail;
     out.emailConfidence = "high";
   } else if (snap.contactEmail) {
+    out.emailTrust = classifyContactPathTrust({
+      method: "email",
+      value: snap.contactEmail,
+      source: "operator",
+      verified: true,
+      confidence: "high",
+      rank: 1,
+      label: "Curated contact email",
+    }, {
+      lastVerifiedAt: snap.contactResolutionCheckedAt ?? resolvedContact?.lastCheckedAt ?? null,
+    });
     out.primaryEmail = snap.contactEmail;
     out.emailConfidence = "high";
   } else {
     const emailPath = paths.find((p) => p.method === "email");
     if (emailPath) {
+      out.emailTrust = resolvedContact?.emailTrust ?? classifyContactPathTrust(emailPath, {
+        lastVerifiedAt: emailPath.lastVerifiedAt ?? resolvedContact?.lastCheckedAt ?? null,
+        conflictStatus: resolvedContact?.conflictStatus,
+        conflictReasons: resolvedContact?.conflictReasons,
+        rejectedAlternatives: resolvedContact?.rejectedContactAlternatives,
+      });
       out.primaryEmail = emailPath.value;
       out.emailConfidence = resolvedContact?.emailConfidence ?? emailPath.confidence;
     } else if (websiteProof?.email_from_site) {
+      out.emailTrust = classifyContactPathTrust({
+        method: "email",
+        value: websiteProof.email_from_site,
+        source: "website",
+        verified: false,
+        confidence: "low",
+        rank: 40,
+        label: "Email from website proof",
+      }, {
+        lastVerifiedAt: websiteProof.last_checked,
+      });
       out.primaryEmail = websiteProof.email_from_site;
       out.emailConfidence = "low";
     }
   }
+  if (!out.contactTrust && out.emailTrust) applyContactTrust(out, out.emailTrust);
 
   // Contact name precedence — always prefer real person over business entity.
   // Defensive guard: if a legacy snap.contactName equals the business
@@ -505,6 +639,11 @@ function buildDecisionContacts(
     : resolvedContact?.emailMethod;
   out.alternateEmails = resolvedContact?.alternateEmails;
   out.alternatePhones = resolvedContact?.alternatePhones;
+  out.operationalTrace = resolvedContact?.operationalTrace;
+  out.rejectedContactAlternatives =
+    out.rejectedContactAlternatives ?? resolvedContact?.rejectedContactAlternatives;
+  out.conflictStatus = out.conflictStatus ?? resolvedContact?.conflictStatus;
+  out.conflictReasons = out.conflictReasons ?? resolvedContact?.conflictReasons;
 
   out.lastVerifiedAt =
     snap.preferredUpdatedAt
@@ -1289,11 +1428,7 @@ export function decideCompany(snap: CompanySnapshot): CompanyDecision {
       },
       websiteProof: null,
       contactPaths: [],
-      contacts: {
-        primaryPhone: snap.contactPhone ?? undefined,
-        primaryEmail: snap.contactEmail ?? undefined,
-        contactName: snap.contactName ?? undefined,
-      },
+      contacts: buildDecisionContacts(snap, [], null, snap.contactResolution ?? null),
       blocked: status,
       scriptTone: "neutral",
       dealStrategy: {
@@ -1493,7 +1628,7 @@ export function decideCompany(snap: CompanySnapshot): CompanyDecision {
   const level: OpportunityLevel =
     finalScore >= 75 ? "HIGH" : finalScore >= 55 ? "MEDIUM" : "LOW";
 
-  const action: RecommendedAction =
+  let action: RecommendedAction =
     level === "HIGH" && !staleFlag
       ? "CALL NOW"
       : level === "HIGH"
@@ -1518,9 +1653,63 @@ export function decideCompany(snap: CompanySnapshot): CompanyDecision {
   const sitePhone = website?.data?.phone_from_site ?? null;
   const siteEmail = website?.data?.email_from_site ?? null;
   const siteForm = website?.data?.has_contact_form ?? false;
+  const selectedPhoneTrust: ContactTrustEvidence = (() => {
+    if (snap.preferredPhone) {
+      return classifyContactPathTrust({
+        method: "phone",
+        value: snap.preferredPhone,
+        source: snap.preferredContactSource ?? "operator",
+        verified: true,
+        confidence: "high",
+        rank: 0,
+        label: "Operator preferred phone",
+      }, { lastVerifiedAt: snap.preferredUpdatedAt ?? null });
+    }
+    if (snap.contactPhone) {
+      const conflict = pathConflictStatusForLegacyPhone(snap.contactPhone, resolvedContact);
+      return classifyContactPathTrust({
+        method: "phone",
+        value: snap.contactPhone,
+        source: "operator",
+        verified: true,
+        confidence: "high",
+        rank: 1,
+        label: "Curated contact phone",
+      }, {
+        lastVerifiedAt: snap.contactResolutionCheckedAt ?? resolvedContact?.lastCheckedAt ?? null,
+        conflictStatus: conflict.status,
+        conflictReasons: conflict.reasons,
+        rejectedAlternatives: conflict.rejected,
+      });
+    }
+    const phonePath = contactPaths.find((p) => p.method === "phone");
+    if (phonePath) {
+      return resolvedContact?.phoneTrust ?? classifyContactPathTrust(phonePath, {
+        lastVerifiedAt: phonePath.lastVerifiedAt ?? resolvedContact?.lastCheckedAt ?? null,
+        conflictStatus: resolvedContact?.conflictStatus,
+        conflictReasons: resolvedContact?.conflictReasons,
+        rejectedAlternatives: resolvedContact?.rejectedContactAlternatives,
+      });
+    }
+    if (sitePhone) {
+      return classifyContactPathTrust({
+        method: "phone",
+        value: sitePhone,
+        source: "website",
+        verified: false,
+        confidence: "medium",
+        rank: 10,
+        label: "Phone from website proof",
+      }, { lastVerifiedAt: website?.timestamp ?? website?.data?.last_checked ?? null });
+    }
+    return classifyContactPathTrust(null);
+  })();
+  const phoneCanCallNow = canTrustPhoneForCallNow(selectedPhoneTrust);
+  const hasTrustedPhonePath = phoneCanCallNow;
 
   let contactabilityScore = 0;
-  if (hasVerifiedPath) contactabilityScore += 55;
+  if (hasTrustedPhonePath) contactabilityScore += 55;
+  else if (hasVerifiedPath) contactabilityScore += 35;
   else if (hasAnyPhone) contactabilityScore += 35;
   if (sitePhone) contactabilityScore += 15;
   if (siteEmail) contactabilityScore += 10;
@@ -1539,6 +1728,9 @@ export function decideCompany(snap: CompanySnapshot): CompanyDecision {
   else if (resolvedContact?.contactCompleteness === "STRONG") contactabilityScore = Math.max(contactabilityScore, 55);
   // WEAK leads should not float into the CALL NOW zone.
   if (resolvedContact?.contactCompleteness === "WEAK") contactabilityScore = Math.min(contactabilityScore, 25);
+  if (["WEAK", "STALE", "CONFLICTING", "MISSING"].includes(selectedPhoneTrust.trustLevel)) {
+    contactabilityScore = Math.min(contactabilityScore, selectedPhoneTrust.trustLevel === "MISSING" ? 15 : 25);
+  }
 
   if (!hasSnapshotPhone && !hasAnyPhone && !sitePhone && !siteEmail && !siteForm) {
     contactabilityScore = 5; // not zero — we can still try research
@@ -1570,22 +1762,31 @@ export function decideCompany(snap: CompanySnapshot): CompanyDecision {
     website.data.reachable === false ||
     (website.data.weaknesses?.length ?? 0) >= 1
   );
-  // verifiedContact: a provider-verified contact path exists (GBP / Yelp /
-  // BBB), an operator-curated phone is on file, or an explicit manual
-  // override has been set. Site-scraped or inferred paths do not satisfy.
-  const verifiedContact = hasVerifiedPath
-    || hasSnapshotPhone
-    || !!snap.preferredPhone
-    || !!snap.preferredEmail;
+  // verifiedContact: deterministic trust layer has accepted a fresh,
+  // non-conflicting phone or verified email path. Site-scraped or stale
+  // contacts do not satisfy CALL NOW trust.
+  const verifiedEmailTrust = resolvedContact?.emailTrust;
+  const verifiedContact = phoneCanCallNow
+    || (
+      !!verifiedEmailTrust
+      && verifiedEmailTrust.verificationPresent
+      && verifiedEmailTrust.conflictStatus === "none"
+      && (verifiedEmailTrust.trustLevel === "VERIFIED" || verifiedEmailTrust.trustLevel === "ACCEPTABLE")
+    );
+  if (action === "CALL NOW" && !phoneCanCallNow) {
+    action = hasAnyPhone || siteEmail || siteForm ? "TODAY" : "MONITOR";
+  }
 
   // ── Bucket assignment (tightened placement rules) ────────────────────
-  // CALL NOW requires verifiedIssue AND verifiedContact AND (not stale OR
-  // overdue follow-up). TODAY is a solid issue with weaker contact or lower
+  // CALL NOW requires verifiedIssue AND phoneCanCallNow AND not stale.
+  // TODAY is a solid issue with weaker contact or lower
   // urgency. MONITOR is partial value. PASS has no actionable angle.
   let bucket: Bucket;
-  if (forceAction) {
+  if (forceAction && verifiedIssue && phoneCanCallNow && !staleFlag) {
     bucket = "CALL NOW";
-  } else if (level === "HIGH" && verifiedIssue && verifiedContact && !staleFlag) {
+  } else if (forceAction && verifiedIssue) {
+    bucket = "TODAY";
+  } else if (level === "HIGH" && verifiedIssue && phoneCanCallNow && !staleFlag) {
     bucket = "CALL NOW";
   } else if (level === "HIGH" && verifiedIssue) {
     bucket = "TODAY";
@@ -1605,7 +1806,9 @@ export function decideCompany(snap: CompanySnapshot): CompanyDecision {
   if (website?.data?.reachable === false) reasons.push("Live site check failed — page did not load content");
   else if ((website?.data?.weaknesses?.length ?? 0) >= 4) reasons.push(`${website!.data.weaknesses!.length} system checks failed on site`);
   else if ((website?.data?.weaknesses?.length ?? 0) >= 1) reasons.push("Live site check flagged visibility gaps");
-  if (verifiedContact) reasons.push(`Verified contact path: ${bestPath?.label ?? "on file"}`);
+  if (phoneCanCallNow) reasons.push(`Trusted phone path: ${bestPath?.label ?? selectedPhoneTrust.source ?? "on file"}`);
+  else if (selectedPhoneTrust.trustLevel !== "MISSING") reasons.push(`Verify contact before calling: ${selectedPhoneTrust.confidenceReason}`);
+  else if (verifiedContact) reasons.push("Verified non-phone contact path on file");
   else if (hasAnyPhone) reasons.push("Contact path available (unverified)");
   else reasons.push("No verified contact path yet");
   if (bucket === "CALL NOW") reasons.push("Fast fix opportunity");
@@ -1664,7 +1867,9 @@ export function decideCompany(snap: CompanySnapshot): CompanyDecision {
 
   // ── Why priority — one-liner for operator ─────────────────────────────
   let whyPriority: string;
-  if (forceAction) {
+  if (!phoneCanCallNow && (forceAction || level === "HIGH")) {
+    whyPriority = `Verify contact before outreach — ${selectedPhoneTrust.confidenceReason}`;
+  } else if (forceAction) {
     whyPriority = `${forceAction} — follow-up is due. Don't let this slip.`;
   } else if (INTERESTED_STATUSES.has(status)) {
     whyPriority = "Already interested — high close probability. Follow up NOW.";
@@ -1742,7 +1947,9 @@ export function decideCompany(snap: CompanySnapshot): CompanyDecision {
 
   // ── Next move command (one-line instruction) ───────────────────────────
   let nextMoveCommand: string;
-  if (forceAction) {
+  if (!phoneCanCallNow && (forceAction || action === "CALL NOW" || bucket === "TODAY")) {
+    nextMoveCommand = `Next move: Verify contact — ${selectedPhoneTrust.confidenceReason}`;
+  } else if (forceAction) {
     const na = snap.nextAction ?? "follow up";
     nextMoveCommand = `Next move: ${na} — ${forceAction.toLowerCase()}`;
   } else if (isInterested && closePlan.step1) {

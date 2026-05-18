@@ -12,6 +12,7 @@ import type { LeadDecision } from "@/lib/scoring/decision";
 import type { LeadDiagnostics } from "@/lib/diagnostics/leadDiagnostics";
 import type { SalesStrategy } from "@/lib/sales/salesStrategy";
 import type { LaborTechScan } from "@/lib/scan/laborTechScan";
+import type { ContactTrustEvidence } from "@/lib/contacts/types";
 
 export type ModuleId =
   | "roofing"
@@ -107,6 +108,9 @@ export type NormalizedLead = {
   emailSource?: EmailEnrichmentSource;
   emailVerifiedAt?: string;
   emailConfidence?: "high" | "medium" | "low";
+  phoneTrust?: ContactTrustEvidence;
+  emailTrust?: ContactTrustEvidence;
+  contactTrust?: ContactTrustEvidence;
   source: SourceName;
   sourceStatus: SourceStatus;
   lastChecked?: string;
@@ -257,6 +261,21 @@ export function normalizeLead(
   const decision = (src.decision && typeof src.decision === "object")
     ? (src.decision as LeadDecision)
     : undefined;
+  const phoneTrust = (src.phoneTrust && typeof src.phoneTrust === "object")
+    ? (src.phoneTrust as ContactTrustEvidence)
+    : (contacts.phoneTrust && typeof contacts.phoneTrust === "object")
+      ? (contacts.phoneTrust as ContactTrustEvidence)
+      : undefined;
+  const emailTrust = (src.emailTrust && typeof src.emailTrust === "object")
+    ? (src.emailTrust as ContactTrustEvidence)
+    : (contacts.emailTrust && typeof contacts.emailTrust === "object")
+      ? (contacts.emailTrust as ContactTrustEvidence)
+      : undefined;
+  const contactTrust = (src.contactTrust && typeof src.contactTrust === "object")
+    ? (src.contactTrust as ContactTrustEvidence)
+    : (contacts.contactTrust && typeof contacts.contactTrust === "object")
+      ? (contacts.contactTrust as ContactTrustEvidence)
+      : phoneTrust ?? emailTrust;
 
   return {
     id,
@@ -272,6 +291,9 @@ export function normalizeLead(
     emailSource: pickEmailSource(src.emailSource),
     emailVerifiedAt: asString(src.emailVerifiedAt),
     emailConfidence: pickEmailConfidence(src.emailConfidence),
+    phoneTrust,
+    emailTrust,
+    contactTrust,
     source: pickSource(src.source),
     sourceStatus: pickSourceStatus(src.sourceStatus),
     lastChecked,

@@ -27,6 +27,12 @@ import type {
   ContactCompleteness,
   PerSourceTimestamps,
 } from "./types";
+import {
+  classifyContactPathTrust,
+  detectContactConflicts,
+  weakestTrustLevel,
+  type ContactTrustEvidence,
+} from "./trust";
 
 // Provider rank for verified-phone paths. Lower number = higher preference.
 // Matches the waterfall spec: GBP > Yelp > BBB > Facebook.
@@ -96,6 +102,7 @@ function buildContactPaths(
       confidence: sourceConfidence(c.source),
       rank: PROVIDER_RANK[c.source],
       label: `${providerLabel(c.source)} phone`,
+      providerConfidence: c.providerConfidence,
     });
   }
 
@@ -185,6 +192,7 @@ function buildContactPaths(
       confidence: conf,
       rank: c.source === "hunter" ? 35 : 38,
       label: `${providerLabel(c.source)} email${personLabel}`,
+      providerConfidence: c.providerConfidence,
     });
   }
 
@@ -789,12 +797,6 @@ function enrichResolution(
   const websiteCheckedAt = input.website ? now : undefined;
   const timestamps = buildTimestamps(scored, now, websiteCheckedAt);
 
-  const { score: contactQualityScore, label: contactQualityLabel } = computeContactQuality(
-    r.paths, corroborated, corroborationReasons, primaryEmailType, contactCompleteness, contactName,
-  );
-  const hasBusinessMatch = !!businessName || scored.length > 0;
-  const askFor = buildAskFor(contactName, contactRole, hasBusinessMatch);
-
   // Match type — deterministic. "exact" when a provider-verified candidate
   // agreed on name+location strongly (i.e. at least one scored candidate
   // passed the match threshold AND supplied a phone or domain). "closest"
@@ -805,6 +807,84 @@ function enrichResolution(
   else if (scored.some((c) => c.source !== "hunter" && c.source !== "scrape" && (!!c.phone || !!c.website))) {
     matchType = "exact";
   } else matchType = "closest";
+
+  const conflict = detectContactConflicts({
+    paths: r.paths,
+    contactNames: scored.map((c) => c.contactName),
+    matchType,
+  });
+
+  const pathLastVerifiedAt = (path: ContactPath): string | null => {
+    switch (path.source) {
+      case "google_places": return timestamps.googleVerifiedAt ?? null;
+      case "yelp": return timestamps.yelpCheckedAt ?? null;
+      case "bbb": return timestamps.bbbCheckedAt ?? null;
+      case "facebook": return timestamps.facebookCheckedAt ?? null;
+      case "hunter": return timestamps.hunterCheckedAt ?? null;
+      case "website": return timestamps.websiteCheckedAt ?? null;
+      default: return now;
+    }
+  };
+
+  const trustedPaths = r.paths.map((path) => {
+    const lastVerifiedAt = pathLastVerifiedAt(path);
+    const trust = classifyContactPathTrust(path, {
+      lastVerifiedAt,
+      conflictStatus: conflict.status,
+      conflictReasons: conflict.reasons,
+      rejectedAlternatives: conflict.rejectedAlternatives,
+    });
+    return {
+      ...path,
+      lastVerifiedAt,
+      trustLevel: trust.trustLevel,
+      trustSource: trust.source,
+      trustLastVerifiedAt: trust.lastVerifiedAt,
+      freshnessAgeDays: trust.freshnessAgeDays,
+      confidenceReason: trust.confidenceReason,
+      conflictStatus: trust.conflictStatus,
+      conflictReasons: trust.conflictReasons.length > 0 ? trust.conflictReasons : undefined,
+    };
+  });
+
+  const phoneTrust = classifyContactPathTrust(
+    trustedPaths.find((p) => p.method === "phone"),
+    {
+      lastVerifiedAt: trustedPaths.find((p) => p.method === "phone")?.lastVerifiedAt ?? null,
+      conflictStatus: conflict.status,
+      conflictReasons: conflict.reasons,
+      rejectedAlternatives: conflict.rejectedAlternatives,
+    },
+  );
+  const emailTrust = classifyContactPathTrust(
+    trustedPaths.find((p) => p.method === "email"),
+    {
+      lastVerifiedAt: trustedPaths.find((p) => p.method === "email")?.lastVerifiedAt ?? null,
+      conflictStatus: conflict.status,
+      conflictReasons: conflict.reasons,
+      rejectedAlternatives: conflict.rejectedAlternatives,
+    },
+  );
+  const fallbackTrust = classifyContactPathTrust(
+    trustedPaths.find((p) => p.method === "form" || p.method === "website" || p.method === "social"),
+    {
+      lastVerifiedAt: trustedPaths.find((p) => p.method === "form" || p.method === "website" || p.method === "social")?.lastVerifiedAt ?? null,
+      conflictStatus: conflict.status,
+      conflictReasons: conflict.reasons,
+      rejectedAlternatives: conflict.rejectedAlternatives,
+    },
+  );
+  const contactTrust: ContactTrustEvidence =
+    r.phone ? phoneTrust
+    : r.email ? emailTrust
+    : fallbackTrust;
+  const trustLevel = weakestTrustLevel([contactTrust, phoneTrust.trustLevel === "MISSING" ? undefined : phoneTrust, emailTrust.trustLevel === "MISSING" ? undefined : emailTrust]);
+
+  const { score: contactQualityScore, label: contactQualityLabel } = computeContactQuality(
+    trustedPaths, corroborated, corroborationReasons, primaryEmailType, contactCompleteness, contactName,
+  );
+  const hasBusinessMatch = !!businessName || scored.length > 0;
+  const askFor = buildAskFor(contactName, contactRole, hasBusinessMatch);
 
   // Matched domain — prefer a scored candidate's website; fall back to the
   // input.website we were called with.
@@ -828,9 +908,22 @@ function enrichResolution(
   }
   const alternatePhones = Array.from(altPhoneSet);
   const alternateEmails = Array.from(altEmailSet);
+  const operationalTrace = [
+    contactTrust.confidenceReason,
+    `Selected source: ${contactTrust.source ?? "none"}.`,
+    `Verification: ${contactTrust.verificationPresent ? "present" : "absent"}.`,
+    `Freshness: ${contactTrust.freshnessAgeDays === null ? "unknown" : `${contactTrust.freshnessAgeDays} days old`}.`,
+    conflict.status === "none"
+      ? "No deterministic contact conflict detected."
+      : `Conflict detected: ${conflict.reasons.join("; ")}.`,
+    ...(conflict.rejectedAlternatives.length > 0
+      ? [`Rejected alternatives: ${conflict.rejectedAlternatives.join(", ")}.`]
+      : []),
+  ];
 
   return {
     ...r,
+    paths: trustedPaths,
     phoneConfidence,
     emailConfidence,
     fallbackConfidence,
@@ -855,6 +948,14 @@ function enrichResolution(
     noEmailReason,
     emailDomainMismatch: emailDomainMismatch ? true : undefined,
     emailMethod,
+    phoneTrust,
+    emailTrust,
+    contactTrust,
+    trustLevel,
+    conflictStatus: conflict.status,
+    conflictReasons: conflict.reasons.length > 0 ? conflict.reasons : undefined,
+    rejectedContactAlternatives: conflict.rejectedAlternatives.length > 0 ? conflict.rejectedAlternatives : undefined,
+    operationalTrace,
     matchType,
     matchedDomain,
     alternatePhones: alternatePhones.length > 0 ? alternatePhones : undefined,

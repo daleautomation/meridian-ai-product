@@ -213,6 +213,7 @@ function scoreReach(
   snap: CompanySnapshot | undefined,
 ): CloseabilityAxis<ReachLevel> {
   const primaryPhone = d.contacts?.primaryPhone;
+  const phoneTrust = d.contacts?.phoneTrust ?? d.contacts?.contactTrust;
   const source = (d.contacts?.source ?? "").toLowerCase();
   const phoneConf = (d.contacts?.phoneConfidence ?? d.contacts?.confidence ?? "").toLowerCase();
   const seedPhone = snap?.contactPhone;
@@ -240,6 +241,37 @@ function scoreReach(
       points: 0,
       reason: "No phone on file for this lead.",
     };
+  }
+
+  if (phoneTrust) {
+    if (phoneTrust.trustLevel === "CONFLICTING") {
+      return {
+        level: "Missing",
+        points: 0,
+        reason: `Phone conflict requires review before calling: ${phoneTrust.confidenceReason}`,
+      };
+    }
+    if (phoneTrust.trustLevel === "STALE") {
+      return {
+        level: "Missing",
+        points: 0,
+        reason: `Phone is stale: ${phoneTrust.confidenceReason}`,
+      };
+    }
+    if (phoneTrust.trustLevel === "WEAK" || phoneTrust.trustLevel === "MISSING") {
+      return {
+        level: "Weak",
+        points: 6,
+        reason: `Phone is not trusted for CALL NOW: ${phoneTrust.confidenceReason}`,
+      };
+    }
+    if (phoneTrust.canCallNow && phoneTrust.verificationPresent) {
+      return {
+        level: "Verified",
+        points: phoneTrust.trustLevel === "VERIFIED" ? 22 : 18,
+        reason: phoneTrust.confidenceReason,
+      };
+    }
   }
 
   // "operator" on decision.contacts means the phone was curated into

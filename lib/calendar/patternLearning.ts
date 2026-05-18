@@ -12,6 +12,7 @@
 
 import type { OutcomeEvent, OutcomeType } from "./outcomeLearning";
 import type { LeadLike, PipelineEntryLike } from "./tasks";
+import { getDialablePhoneDetails } from "../leads/phone";
 
 // ── Public types ───────────────────────────────────────────────────────
 
@@ -94,7 +95,7 @@ export function deriveLeadPatterns(
   const out: LeadPattern[] = [];
 
   const c = l.contacts ?? {};
-  const hasPhone = !!c.primaryPhone;
+  const hasPhone = !!getDialablePhoneDetails(l);
   const hasEmail = !!c.primaryEmail;
   if (hasPhone || hasEmail) out.push(pat("has_contact"));
   else out.push(pat("missing_contact"));
@@ -109,10 +110,13 @@ export function deriveLeadPatterns(
   else out.push(pat("low_score"));
 
   const isCallNow =
-    !!l.forceAction ||
-    l.bucket === "CALL NOW" ||
-    l.opportunity_label === "CALL NOW" ||
-    l.recommendedAction === "CALL NOW";
+    hasPhone &&
+    (
+      !!l.forceAction ||
+      l.bucket === "CALL NOW" ||
+      l.opportunity_label === "CALL NOW" ||
+      l.recommendedAction === "CALL NOW"
+    );
   if (isCallNow) out.push(pat("call_now"));
 
   const isToday =
