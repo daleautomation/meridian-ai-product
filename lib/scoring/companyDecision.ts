@@ -12,9 +12,8 @@
 // Philosophy:
 //   - Hard signals (website reachability, HTTPS, viewport, weakness count)
 //     are deterministic and carry the most weight.
-//   - The Claude-authored summary is treated as ONE signal, not ground
-//     truth. It nudges level and contributes its own confidence, but cannot
-//     outvote the deterministic evidence.
+//   - AI/Claude summaries are non-authoritative assistance only. They must
+//     never change score, confidence, rank, bucket, action, or weakness order.
 //   - Pipeline momentum (statusHistory) adjusts the action, not the score:
 //     CLOSED_* and ARCHIVED short-circuit to LOW/MONITOR regardless of
 //     website signals.
@@ -306,15 +305,6 @@ type WebsiteSignals = {
   form_field_count?: number;
   issues?: SiteProofIssue[];
   site_classification?: string;
-};
-
-type SummaryData = {
-  opportunityLevel?: OpportunityLevel;
-  recommendedAction?: RecommendedAction;
-  topWeakness?: string;
-  weaknesses?: string[];
-  pitchAngle?: string;
-  closeProbability?: CloseProbability;
 };
 
 // ── Helpers ─────────────────────────────────────────────────────────────
@@ -1326,45 +1316,10 @@ export function decideCompany(snap: CompanySnapshot): CompanyDecision {
   }
 
   const website = getLatest<WebsiteSignals>(snap, "inspect_website");
-  const summary = getLatest<SummaryData>(snap, "generate_opportunity_summary");
 
-  const confidenceFloor = Math.min(
-    website?.confidence ?? 100,
-    summary?.confidence ?? 100
-  );
-
-  // ── Summary signal (level + confidence) ────────────────────────────────
-  if (summary) {
-    const level = summary.data?.opportunityLevel;
-    if (level === "HIGH") {
-      score += 20;
-      trace.push({ factor: "summary_level", contribution: 20, note: "summary says HIGH" });
-    } else if (level === "MEDIUM") {
-      score += 5;
-      trace.push({ factor: "summary_level", contribution: 5, note: "summary says MEDIUM" });
-    } else if (level === "LOW") {
-      score -= 10;
-      trace.push({ factor: "summary_level", contribution: -10, note: "summary says LOW" });
-    }
-
-    // Scale confidence (0–100) → 0–15 so confident summaries move the needle.
-    const conf = Math.round((summary.confidence / 100) * 15);
-    if (conf !== 0) {
-      score += conf;
-      trace.push({
-        factor: "summary_confidence",
-        contribution: conf,
-        note: `summary confidence ${summary.confidence}/100`,
-      });
-    }
-  } else {
-    trace.push({
-      factor: "summary_missing",
-      contribution: -5,
-      note: "no generate_opportunity_summary on file",
-    });
-    score -= 5;
-  }
+  // AI-authored generate_opportunity_summary may exist on the snapshot for
+  // narrative assistance, but deterministic scoring owns confidence and rank.
+  const confidenceFloor = website?.confidence ?? 100;
 
   // ── Website signals (the ground truth) ─────────────────────────────────
   if (website) {
@@ -1663,7 +1618,8 @@ export function decideCompany(snap: CompanySnapshot): CompanyDecision {
   else if (confidenceFloor >= 50 || momentumBonus > 0) closeProbability = "Medium";
   else closeProbability = "Low";
 
-  // Merge + de-dupe weaknesses; summary-chosen topWeakness bubbles first.
+  // Merge + de-dupe observed weaknesses only. AI summaries cannot reorder
+  // pitch issues because topWeaknesses feeds closeability and queue helpers.
   const weaknessSet: string[] = [];
   const push = (w?: string) => {
     if (!w) return;
@@ -1671,8 +1627,6 @@ export function decideCompany(snap: CompanySnapshot): CompanyDecision {
     if (!trimmed) return;
     if (!weaknessSet.includes(trimmed)) weaknessSet.push(trimmed);
   };
-  push(summary?.data?.topWeakness);
-  for (const w of summary?.data?.weaknesses ?? []) push(w);
   for (const w of website?.data?.weaknesses ?? []) push(w);
 
   // ── Value estimation ──────────────────────────────────────────────────
@@ -1737,7 +1691,8 @@ export function decideCompany(snap: CompanySnapshot): CompanyDecision {
     .map((t) => `${t.note} (${t.contribution > 0 ? "+" : ""}${t.contribution})`)
     .join("; ");
 
-  // Evidence refs: exactly the tools that contributed.
+  // Evidence refs: exactly the tools that contributed to deterministic truth.
+  // AI summaries are intentionally omitted from this operational evidence set.
   const evidenceRefs: EvidenceRef[] = [];
   if (website) {
     evidenceRefs.push({
@@ -1745,14 +1700,6 @@ export function decideCompany(snap: CompanySnapshot): CompanyDecision {
       timestamp: website.timestamp,
       confidence: website.confidence,
       stub: website.stub,
-    });
-  }
-  if (summary) {
-    evidenceRefs.push({
-      tool: "generate_opportunity_summary",
-      timestamp: summary.timestamp,
-      confidence: summary.confidence,
-      stub: summary.stub,
     });
   }
   const reviews = getLatest(snap, "inspect_reviews");
@@ -1865,7 +1812,7 @@ export function decideCompany(snap: CompanySnapshot): CompanyDecision {
     verifiedContact,
     closeProbability,
     topWeaknesses: weaknessSet.slice(0, 5),
-    pitchAngle: summary?.data?.pitchAngle ?? null,
+    pitchAngle: null,
     whyPriority,
     reasons,
     valueEstimate,

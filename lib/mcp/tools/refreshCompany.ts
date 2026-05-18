@@ -1,12 +1,12 @@
 // Meridian AI — refresh_company tool.
 //
-// Re-runs the inspection + summary pipeline for a persisted company and
+// Re-runs the inspection pipeline for a persisted company and
 // reports deltas vs the prior snapshot: score change, level change,
 // recommended-action change, new weaknesses, resolved weaknesses.
 //
 // This is the Phase 6 refresh surface — it reuses Phase 1 tools and
 // Phase 2 persistence; nothing new is stored beyond what save_company_snapshot
-// already writes. Delta detection reads scoreHistory and the prior
+// already writes. Delta detection reads deterministic decisions and the prior
 // inspect_website result.
 
 import type { CompanyRef, ToolDefinition, ToolResult } from "@/lib/mcp/types";
@@ -41,9 +41,8 @@ export type RefreshCompanyData = {
 function weaknessesFromSnapshot(tools: Record<string, { data?: unknown }> | undefined): string[] {
   const w: string[] = [];
   const web = tools?.inspect_website?.data as { weaknesses?: string[] } | undefined;
-  const sum = tools?.generate_opportunity_summary?.data as { weaknesses?: string[]; topWeakness?: string } | undefined;
-  if (sum?.topWeakness) w.push(sum.topWeakness);
-  for (const x of sum?.weaknesses ?? []) if (!w.includes(x)) w.push(x);
+  // AI-generated summary weaknesses are non-authoritative; refresh deltas
+  // compare only observed website findings.
   for (const x of web?.weaknesses ?? []) if (!w.includes(x)) w.push(x);
   return w;
 }
@@ -55,10 +54,6 @@ async function handler(input: RefreshCompanyInput): Promise<ToolResult<RefreshCo
   // 1. Capture "before" state.
   const before = await getSnapshot(company);
   const beforeWeaknesses = weaknessesFromSnapshot(before?.latest);
-  const priorScorePoint =
-    before?.scoreHistory && before.scoreHistory.length > 0
-      ? before.scoreHistory[before.scoreHistory.length - 1]
-      : null;
   const beforeDecision = before ? decideCompany(before) : null;
   const lastCheckedBefore = before?.lastCheckedAt ?? null;
 
@@ -133,7 +128,7 @@ async function handler(input: RefreshCompanyInput): Promise<ToolResult<RefreshCo
           accountSnapshot: { status: "NEW", touches: 0, lastOutcome: "none", recommendation: "N/A", readiness: "NOT READY", nextAction: "N/A" },
         },
         delta: {
-          scoreBefore: priorScorePoint ? beforeDecision?.score ?? null : null,
+          scoreBefore: beforeDecision?.score ?? null,
           scoreAfter: 0,
           scoreDelta: 0,
           levelBefore: beforeDecision?.opportunityLevel ?? null,
@@ -218,7 +213,7 @@ async function handler(input: RefreshCompanyInput): Promise<ToolResult<RefreshCo
 export const refreshCompanyTool: ToolDefinition<RefreshCompanyInput, RefreshCompanyData> = {
   name: "refresh_company",
   description:
-    "Re-runs inspect_website + inspect_reviews + summary for a company, persists the new snapshot, and reports score / level / action / weakness deltas versus the prior snapshot.",
+    "Re-runs inspections for a company, persists the new snapshot, and reports deterministic score / level / action / website-weakness deltas versus the prior snapshot.",
   inputSchema: {
     type: "object",
     properties: {

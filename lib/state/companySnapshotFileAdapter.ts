@@ -13,7 +13,6 @@ import type {
   DealAction,
   PaidPresence,
   PaidPresenceOverride,
-  ScorePoint,
   StatusChange,
 } from "./companySnapshotStore";
 
@@ -71,23 +70,11 @@ function freshSnapshot(company: CompanyRef, now: string): CompanySnapshot {
   };
 }
 
-type SummaryData = {
-  opportunityLevel?: "HIGH" | "MEDIUM" | "LOW";
-  recommendedAction?: string;
-};
-
 function maybeAppendScorePoint(snap: CompanySnapshot, result: ToolResult<unknown>): void {
+  // AI-authored summaries are narrative artifacts only; never persist them as
+  // score history because scoreHistory is consumed as operational truth.
   if (result.tool !== "generate_opportunity_summary") return;
-  const data = (result.data ?? {}) as SummaryData;
-  if (!data.opportunityLevel) return;
-  const point: ScorePoint = {
-    at: result.timestamp,
-    opportunityLevel: data.opportunityLevel,
-    confidence: result.confidence,
-    recommendedAction: data.recommendedAction ?? "MONITOR",
-    sourceTool: result.tool,
-  };
-  snap.scoreHistory = [...(snap.scoreHistory ?? []), point].slice(-MAX_SCORE_HISTORY);
+  snap.scoreHistory = [...(snap.scoreHistory ?? [])].slice(-MAX_SCORE_HISTORY);
 }
 
 function boundHistory(snap: CompanySnapshot): void {

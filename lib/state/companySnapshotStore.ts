@@ -58,6 +58,8 @@ export type ScorePoint = {
   opportunityLevel: "HIGH" | "MEDIUM" | "LOW";
   confidence: number;
   recommendedAction: string;
+  // Must reference deterministic scoring tools only. AI/Claude summaries are
+  // assistive prose and are not allowed to write operational score history.
   sourceTool: string;
 };
 
