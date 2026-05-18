@@ -1,8 +1,8 @@
 // Meridian AI — generate_opportunity_summary tool.
 //
 // Purpose: compose the output of other inspection tools into a single
-// structured opportunity summary: opportunity level, recommended action,
-// top weakness, pitch angle, close probability, confidence.
+// non-authoritative operator summary. These fields are assistive prose only
+// and must not drive score, priority, confidence, action, or queue order.
 //
 // This tool calls other tools in the registry (inspect_website, inspect_reviews),
 // then asks Claude to produce a STRUCTURED JSON summary. The prompt forces
@@ -41,14 +41,16 @@ export type OpportunitySummary = {
 };
 
 const SYSTEM_PROMPT = `
-You are Meridian AI's decision engine.
+You are Meridian AI's non-authoritative summarization assistant.
 
 You are given structured inspection evidence for a company. Your job is to
-produce a decision-grade opportunity summary.
+produce an operator-facing explanation. Deterministic code owns all scores,
+priorities, confidence values, recommendations, action status, and queue order.
 
 HARD RULES:
 - Ground every claim in the provided evidence. Do NOT invent facts.
 - If evidence is thin or stubbed, say so and lower the opportunity level.
+- Your output is advisory only and must never be treated as operational truth.
 - Keep the pitch angle specific, one sentence, and tied to a concrete weakness.
 - Respond with STRICT JSON only. No prose, no markdown, no code fences.
 

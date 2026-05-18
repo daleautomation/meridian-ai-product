@@ -7,6 +7,7 @@
 import type { ToolDefinition, ToolResult } from "@/lib/mcp/types";
 import { nowIso } from "@/lib/mcp/types";
 import { listSnapshots } from "@/lib/state/companySnapshotStore";
+import { decideCompany } from "@/lib/scoring/companyDecision";
 
 export type ListCompaniesInput = {
   status?: string;            // optional filter
@@ -44,9 +45,9 @@ async function handler(input: ListCompaniesInput): Promise<ToolResult<ListCompan
   const sliced = filtered.slice(0, limit);
 
   const companies: CompanyListing[] = sliced.map((s) => {
-    const last = s.scoreHistory && s.scoreHistory.length > 0
-      ? s.scoreHistory[s.scoreHistory.length - 1]
-      : null;
+    // Current level/action/confidence must come from deterministic scoring.
+    // Legacy scoreHistory can contain AI-authored summaries and is count-only.
+    const decision = decideCompany(s);
     return {
       key: s.key,
       name: s.company.name,
@@ -54,9 +55,9 @@ async function handler(input: ListCompaniesInput): Promise<ToolResult<ListCompan
       location: s.company.location,
       status: s.status,
       lastCheckedAt: s.lastCheckedAt,
-      latestOpportunityLevel: last?.opportunityLevel,
-      latestConfidence: last?.confidence,
-      latestRecommendedAction: last?.recommendedAction,
+      latestOpportunityLevel: decision.opportunityLevel,
+      latestConfidence: decision.confidenceFloor,
+      latestRecommendedAction: decision.recommendedAction,
       noteCount: s.notes?.length ?? 0,
       scorePointCount: s.scoreHistory?.length ?? 0,
     };

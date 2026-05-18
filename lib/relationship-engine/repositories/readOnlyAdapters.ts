@@ -113,6 +113,14 @@ interface RelationshipAccumulator {
   attributes: Record<string, string | number | boolean | null>;
 }
 
+function authoritativeScoreHistory(
+  scoreHistory: SourceCompanySnapshot["scoreHistory"] = [],
+): NonNullable<SourceCompanySnapshot["scoreHistory"]> {
+  // Legacy generate_opportunity_summary entries are AI-authored summaries,
+  // not relationship warmth truth.
+  return scoreHistory.filter((score) => score.sourceTool !== "generate_opportunity_summary");
+}
+
 export function createReadOnlyFileRelationshipAdapterBundle(
   options: ReadOnlyFileRelationshipAdapterOptions,
 ): ReadOnlyRelationshipAdapterBundle {
@@ -299,7 +307,7 @@ async function readRelationships(
   };
 
   for (const snapshot of stableCompanySnapshots(state.companySnapshots)) {
-    const latestScore = latestBy(snapshot.scoreHistory ?? [], (score) => isoOrDefault(score.at));
+    const latestScore = latestBy(authoritativeScoreHistory(snapshot.scoreHistory), (score) => isoOrDefault(score.at));
     const action = latestBy([
       ...(snapshot.dealActions ?? []),
       ...(snapshot.lastAction ? [snapshot.lastAction] : []),
