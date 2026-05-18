@@ -49,7 +49,6 @@ import {
   buildRecommendationTrustDisplay,
 } from "../lib/display/trustVisibility";
 import { explainTaskAction, explainTaskPriority } from "../lib/calendar/taskExplain";
-import LeadContextStrip from "./LeadContextStrip";
 import LeadEmailAction from "./LeadEmailAction";
 import ContactStrategyPanel from "./ContactStrategyPanel";
 import TodayExecutionPlan from "./TodayExecutionPlan";
@@ -3447,7 +3446,6 @@ export function SelectedLeadPanel({
   const status = executionStatusFor(task);
   const action = explainTaskAction(task);
   const overdue = isOverdue(task, now);
-  const money = fmtMoney(task.revenueImpact);
   const company = task.linkedCompany ?? action.actionLabel;
   const scan = task?.laborTechScan ?? null;
   const scanQualified = !!(scan && scan.qualified);
@@ -3499,29 +3497,13 @@ export function SelectedLeadPanel({
   const phone = dialableTaskPhone(task);
   const phoneDigits = phone ? String(phone).replace(/\D/g, "") : "";
   const telHref = formatTelHref(phone);
-  const smsHref = formatSmsHref(phone);
   const phoneDisplay = phoneDigits.length === 10
     ? `(${phoneDigits.slice(0,3)}) ${phoneDigits.slice(3,6)}-${phoneDigits.slice(6)}`
     : phoneDigits.length === 11 && phoneDigits.startsWith("1")
       ? `+1 (${phoneDigits.slice(1,4)}) ${phoneDigits.slice(4,7)}-${phoneDigits.slice(7)}`
       : (phone || null);
-  const phoneTrust = contactTrustItems(selectedLead, task, "phone");
   const emailTrust = contactTrustItems(selectedLead, task, "email");
   const recommendationTrust = buildRecommendationTrustDisplay(selectedLead ?? task, "Selected lead priority");
-  const callable = !!telHref && !blocked;
-  const handlePrimaryCall = (e) => {
-    if (readOnly) { if (e?.preventDefault) e.preventDefault(); return; }
-    if (!callable) { if (e?.preventDefault) e.preventDefault(); return; }
-    if (typeof onMutate === "function") onMutate(task.id, { status: "in_progress" });
-    if (typeof onOpen === "function") onOpen(task);
-  };
-
-  const ev = typeof task.expectedValue === "number" && task.expectedValue > 0 ? task.expectedValue : null;
-  const probPct = typeof task.closeProbability === "number"
-    ? Math.round(Math.max(0, Math.min(1, task.closeProbability)) * 100)
-    : (typeof task.closeProbability100 === "number"
-      ? Math.round(task.closeProbability100)
-      : null);
   const opener = scan?.salesAngle?.opener ?? task?.suggestedOpeningLine ?? null;
   const hasPanelEmail = !!(
     selectedLead?.verifiedEmail
@@ -3540,6 +3522,25 @@ export function SelectedLeadPanel({
     return "Verify contact before outreach.";
   })();
   const panelActionChips = primaryActionabilityChips(task, recommendationTrust.chips);
+  const fit = getLaborTechServiceFit(task);
+  const offerEvidence = fit?.evidenceByService?.[fit?.primaryService ?? ""] ?? [];
+  const offerWhyNow = fit?.whyNow ?? null;
+  const offerOpener = fit?.openingAngle ?? null;
+  const fallbackOpener =
+    (typeof opener === "string" && opener.trim())
+    || (typeof recommendedAction === "string" && recommendedAction.trim())
+    || null;
+  const openingLine = offerOpener ?? fallbackOpener ?? primaryMove;
+  const strongestEvidence =
+    (typeof offerEvidence[0] === "string" && offerEvidence[0])
+    || (Array.isArray(scan?.evidence) && typeof scan.evidence[0] === "string" ? scan.evidence[0] : null)
+    || offerWhyNow
+    || null;
+  const contactState = phoneDisplay
+    ? `Call ${phoneDisplay}`
+    : hasPanelEmail
+      ? "Email fallback available"
+      : "Verify contact first";
 
   return (
     <>
@@ -3581,80 +3582,103 @@ export function SelectedLeadPanel({
       overflowY: "auto",
       overscrollBehavior: "contain",
     }}>
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{
-            fontSize: "20px",
-            fontWeight: 850,
-            color: palette.textPrimary,
-            lineHeight: 1.12,
-            letterSpacing: "-0.015em",
-          }}>
-            {company}
-          </div>
-          {address || tradeBadge || serviceLabel ? (
-            <div style={{
-              fontSize: "11.5px",
-              color: palette.textTertiary,
-              marginTop: "5px",
-              lineHeight: 1.35,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}>
-              {[tradeBadge, address, serviceLabel].filter(Boolean).join(" · ")}
-            </div>
-          ) : null}
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close selected lead"
-          onFocus={applyFocusRing}
-          onBlur={clearFocusRing}
-          style={{
-            fontSize: "18px",
-            color: palette.textTertiary,
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            padding: "0 2px",
-            lineHeight: 1,
-          }}
-        >
-          ×
-        </button>
-      </div>
-
       <section style={{
-        padding: "12px 13px",
-        borderRadius: "12px",
-        background: phoneDigits ? palette.bluePale : palette.warningBg,
+        padding: "14px 14px 13px",
+        borderRadius: "14px",
+        background: phoneDigits
+          ? "linear-gradient(180deg, rgba(37,99,235,0.085) 0%, rgba(37,99,235,0.035) 100%)"
+          : "linear-gradient(180deg, rgba(245,158,11,0.12) 0%, rgba(245,158,11,0.045) 100%)",
         border: `1px solid ${phoneDigits ? palette.blueBorder : "#FDE68A"}`,
         display: "flex",
         flexDirection: "column",
-        gap: "8px",
+        gap: "11px",
       }}>
-        <div style={{ fontSize: "10px", fontWeight: 800, letterSpacing: "0.10em", color: phoneDigits ? palette.blue : palette.warning, textTransform: "uppercase" }}>
-          Next move
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{
+              fontSize: "21px",
+              fontWeight: 850,
+              color: palette.textPrimary,
+              lineHeight: 1.1,
+              letterSpacing: "-0.018em",
+            }}>
+              {company}
+            </div>
+            {address || tradeBadge || serviceLabel ? (
+              <div style={{
+                fontSize: "11.5px",
+                color: palette.textTertiary,
+                marginTop: "5px",
+                lineHeight: 1.35,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}>
+                {[tradeBadge, address, serviceLabel].filter(Boolean).join(" · ")}
+              </div>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close selected lead"
+            onFocus={applyFocusRing}
+            onBlur={clearFocusRing}
+            style={{
+              fontSize: "18px",
+              color: palette.textTertiary,
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              padding: "0 2px",
+              lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
         </div>
-        <div style={{ fontSize: "15px", fontWeight: 800, color: palette.textPrimary, lineHeight: 1.35 }}>
-          {primaryMove}
-        </div>
-        <ContactTrustChips items={panelActionChips} />
-      </section>
 
-      {/* Cross-tab context strip — identical visual identity in
-          Today, All Leads, and History so the user reads them as
-          one system, not three views. */}
-      <LeadContextStrip
-        companyName={company}
-        trade={tradeBadge}
-        location={address}
-        sourceTab="today"
-        statusInput={task}
-        onSwitchTab={onSwitchTab}
-      />
+        <div>
+          <div style={{ fontSize: "10px", fontWeight: 800, letterSpacing: "0.10em", color: phoneDigits ? palette.blue : palette.warning, textTransform: "uppercase" }}>
+            Do now
+          </div>
+          <div style={{ fontSize: "15.5px", fontWeight: 850, color: palette.textPrimary, lineHeight: 1.32, marginTop: "4px" }}>
+            {primaryMove}
+          </div>
+        </div>
+
+        <div style={{
+          padding: "10px 11px",
+          borderRadius: "11px",
+          background: "rgba(255,255,255,0.82)",
+          border: `1px solid ${phoneDigits ? "rgba(37,99,235,0.14)" : "rgba(245,158,11,0.18)"}`,
+        }}>
+          <div style={{ fontSize: "10px", fontWeight: 800, letterSpacing: "0.09em", color: palette.textTertiary, textTransform: "uppercase" }}>
+            Say
+          </div>
+          <div style={{ fontSize: "13px", fontWeight: 650, color: palette.textPrimary, lineHeight: 1.45, marginTop: "4px" }}>
+            “{openingLine}”
+          </div>
+          {strongestEvidence ? (
+            <div style={{ fontSize: "11.5px", color: palette.textSecondary, lineHeight: 1.4, marginTop: "7px" }}>
+              Proof: {strongestEvidence.length > 92 ? strongestEvidence.slice(0, 90).trim() + "…" : strongestEvidence}
+            </div>
+          ) : null}
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", flexWrap: "wrap" }}>
+          <ContactTrustChips items={panelActionChips} />
+          <span style={{
+            fontSize: "11px",
+            fontWeight: 750,
+            color: phoneDigits ? palette.blue : palette.warning,
+            whiteSpace: "nowrap",
+            fontVariantNumeric: "tabular-nums",
+          }}>
+            {contactState}
+          </span>
+        </div>
+      </section>
 
       {/* Manual email action — single shared component. Picks the
           right mode for this lead: Email ✓ if Hunter-verified, plain
@@ -3706,118 +3730,6 @@ export function SelectedLeadPanel({
           {overdue ? "OVERDUE · " : "Due "}{dueLabel}
         </div>
       ) : null}
-
-      {/* ── TIER-2 OPERATOR: SERVICE-FIT EXECUTION PANEL ────────
-          Best LaborTech offer · Why this company needs it · Evidence ·
-          Opening angle · Next move. The full service map (every
-          service scored, secondary offers, pitch path) lives in the
-          Intelligence Panel — this surface picks the ONE offer the
-          rep should lead with. */}
-      {(() => {
-        const fit = getLaborTechServiceFit(task);
-
-        // BEST LABORTECH OFFER — primary service from the fit engine.
-        const offerLabel = fit?.recommendedOffer ?? null;
-        const offerConfidence = fit?.confidence ?? null;
-        const offerScore = fit?.scores?.[fit?.primaryService ?? ""] ?? null;
-        const offerEvidence = fit?.evidenceByService?.[fit?.primaryService ?? ""] ?? [];
-        const offerWhyNow = fit?.whyNow ?? null;
-        const offerOpener = fit?.openingAngle ?? null;
-
-        // Fallback opener — if no fit (e.g. no scan), reach back to
-        // the legacy salesAngle + recommendedAction so we never blank
-        // the Operator on legacy leads.
-        const fallbackOpener =
-          (typeof opener === "string" && opener.trim())
-          || (typeof recommendedAction === "string" && recommendedAction.trim())
-          || null;
-
-        return (
-          <>
-            {offerLabel ? (
-              <section>
-                <div style={SECTION_EYEBROW}>Best LaborTech offer</div>
-                <div style={{
-                  display: "flex",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                  gap: "8px",
-                  marginBottom: "6px",
-                }}>
-                  <span style={{
-                    fontSize: "14px",
-                    fontWeight: 800,
-                    color: palette.textPrimary,
-                    letterSpacing: "0.01em",
-                  }}>
-                    {offerLabel}
-                  </span>
-                  {offerConfidence ? (
-                    <span style={{
-                      fontSize: "10px", fontWeight: 800, letterSpacing: "0.06em",
-                      padding: "2px 8px", borderRadius: "999px",
-                      color: offerConfidence === "High" ? palette.success : offerConfidence === "Medium" ? palette.blue : palette.textSecondary,
-                      background: offerConfidence === "High" ? palette.successBg : offerConfidence === "Medium" ? palette.bluePale : palette.surfaceHover,
-                      border: `1px solid ${offerConfidence === "High" ? "#BBF7D0" : offerConfidence === "Medium" ? palette.blueBorder : palette.borderLight}`,
-                      whiteSpace: "nowrap",
-                      textTransform: "uppercase",
-                      fontVariantNumeric: "tabular-nums",
-                    }}>
-                      {offerConfidence}{typeof offerScore === "number" ? ` · ${Math.round(offerScore)}%` : ""} fit
-                    </span>
-                  ) : null}
-                </div>
-              </section>
-            ) : null}
-
-            {offerWhyNow ? (
-              <section>
-                <div style={SECTION_EYEBROW}>Why this company needs it</div>
-                <div style={{
-                  fontSize: "12.5px",
-                  color: palette.textSecondary,
-                  lineHeight: 1.5,
-                }}>
-                  {offerWhyNow}
-                </div>
-              </section>
-            ) : null}
-
-            {offerEvidence.length > 0 ? (
-              <section>
-                <div style={SECTION_EYEBROW}>Evidence</div>
-                <ul style={{
-                  margin: 0, paddingLeft: "16px",
-                  fontSize: "12px", color: palette.textPrimary, lineHeight: 1.5,
-                }}>
-                  {offerEvidence.slice(0, 3).map((e, i) => (
-                    <li key={`fit-ev-${i}`} style={{ marginBottom: "3px" }}>{e}</li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
-
-            {(offerOpener || fallbackOpener) ? (
-              <section>
-                <div style={SECTION_EYEBROW}>Opening angle</div>
-                <div style={{
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: palette.textPrimary,
-                  lineHeight: 1.5,
-                  padding: "10px 12px",
-                  background: palette.bluePale,
-                  border: `1px solid ${palette.blueBorder}`,
-                  borderRadius: "10px",
-                }}>
-                  “{offerOpener ?? fallbackOpener}”
-                </div>
-              </section>
-            ) : null}
-
-          </>
-        );
-      })()}
 
       <details style={{
         border: `1px solid ${palette.borderLight}`,
@@ -3959,7 +3871,6 @@ export function SelectedLeadPanel({
             </span>
           ) : null}
         </a>
-        <ContactTrustChips items={phoneTrust} />
         {/* Call Mode outcome capture. Only renders while a call is
             in progress. Outcome buttons mutate the task + auto-load
             the next lead via onRecordOutcome. */}
@@ -4087,11 +3998,27 @@ export function SelectedLeadPanel({
             </button>
           </div>
         ) : null}
-        <div style={{
-          display: "flex", gap: "6px", flexWrap: "wrap",
+        <details style={{
+          border: `1px solid ${palette.borderLight}`,
+          borderRadius: "10px",
+          padding: "8px 10px",
+          background: palette.surface,
           opacity: callMode === "active" ? 0.45 : 1,
           pointerEvents: callMode === "active" ? "none" : "auto",
         }}>
+          <summary style={{
+            cursor: "pointer",
+            fontSize: "11px",
+            fontWeight: 750,
+            color: palette.textSecondary,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+          }}>
+            More actions
+          </summary>
+          <div style={{
+            display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "9px",
+          }}>
           <button
             type="button"
             onClick={() => onMutate?.(task.id, { status: "done", feedbackApplied: true, feedbackReason: "Marked contacted" })}
@@ -4125,7 +4052,8 @@ export function SelectedLeadPanel({
           >
             Kill Lead
           </button>
-        </div>
+          </div>
+        </details>
       </div>
 
       {aiAssistEnabled ? (
@@ -4213,20 +4141,37 @@ export function SelectedLeadPanel({
         </>
       ) : null}
 
-      <Divider />
-
-      <ExecutionOutcomePanel
-        taskId={task.id}
-        linkedLeadId={task?.linkedLeadId ?? null}
-        linkedCompany={task?.linkedCompany ?? null}
-        companyKey={task?.companyKey ?? null}
-        crmKey={task?.crmKey ?? null}
-        overflowEntries={overflowEntries}
-        workspaceSlug={workspaceSlug}
-        serverExecutionOutcomeMap={serverExecutionOutcomeMap}
-        readOnly={readOnly}
-        onLeadUpdate={onLeadUpdate}
-      />
+      <details style={{
+        border: `1px solid ${palette.borderLight}`,
+        borderRadius: "10px",
+        padding: "8px 10px",
+        background: palette.surface,
+      }}>
+        <summary style={{
+          cursor: "pointer",
+          fontSize: "11px",
+          fontWeight: 750,
+          color: palette.textSecondary,
+          letterSpacing: "0.04em",
+          textTransform: "uppercase",
+        }}>
+          Outcome history
+        </summary>
+        <div style={{ marginTop: "10px" }}>
+          <ExecutionOutcomePanel
+            taskId={task.id}
+            linkedLeadId={task?.linkedLeadId ?? null}
+            linkedCompany={task?.linkedCompany ?? null}
+            companyKey={task?.companyKey ?? null}
+            crmKey={task?.crmKey ?? null}
+            overflowEntries={overflowEntries}
+            workspaceSlug={workspaceSlug}
+            serverExecutionOutcomeMap={serverExecutionOutcomeMap}
+            readOnly={readOnly}
+            onLeadUpdate={onLeadUpdate}
+          />
+        </div>
+      </details>
 
     </aside>
     </>
