@@ -699,6 +699,12 @@ async function renderOperatorPage({
     opener?: string;
     recommendedOffer?: string;
     topObjection?: { objection: string; response: string };
+    source?: NormalizedLead["source"];
+    lastChecked?: string;
+    phoneTrust?: NormalizedLead["phoneTrust"];
+    emailTrust?: NormalizedLead["emailTrust"];
+    contactTrust?: NormalizedLead["contactTrust"];
+    contactPaths?: unknown;
   };
   type ServiceBucketsForTrade = {
     cards: ServiceBucketCard[];
@@ -810,6 +816,12 @@ async function renderOperatorPage({
           location: lead.location,
           phone: dialablePhone ?? undefined,
           phoneAuthority: dialablePhone ? "dialable" : undefined,
+          source: lead.source,
+          lastChecked: lead.lastChecked,
+          phoneTrust: lead.phoneTrust,
+          emailTrust: lead.emailTrust,
+          contactTrust: lead.contactTrust,
+          contactPaths: (lead as unknown as { contactPaths?: unknown }).contactPaths,
           serviceLabel: need.label,
           reason: need.reason,
           needScore: need.needScore,

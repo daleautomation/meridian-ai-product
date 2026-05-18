@@ -18,6 +18,10 @@ import {
 } from "../lib/execution/executionOutcome";
 import { trackEvent } from "../lib/tracking/clientTracker";
 import { resolveLeadQualityDisplay } from "../lib/display/leadQuality";
+import {
+  buildContactTrustDisplay,
+  buildRecommendationTrustDisplay,
+} from "../lib/display/trustVisibility";
 import { getDialablePhone } from "../lib/leads/phone";
 import { formatTelHref } from "../lib/leads/leadActions";
 import { taskAnchorIso } from "../lib/calendar/tasks";
@@ -43,6 +47,44 @@ function qualitySourceLabel(source) {
   if (source === "closeProbability") return "task probability fallback";
   if (source === "laborTechScan.incomplete") return "incomplete LaborTech scan";
   return "unknown source";
+}
+
+function trustChipToneStyle(tone) {
+  if (tone === "good") return { color: palette.success, background: palette.successBg, borderColor: "#BBF7D0" };
+  if (tone === "watch") return { color: palette.warning, background: palette.warningBg, borderColor: "#FDE68A" };
+  if (tone === "danger") return { color: palette.danger, background: palette.dangerBg, borderColor: "#FECACA" };
+  return { color: palette.textSecondary, background: palette.surfaceHover, borderColor: palette.borderLight };
+}
+
+function TrustChips({ items }) {
+  if (!Array.isArray(items) || items.length === 0) return null;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", flexWrap: "wrap" }}>
+      {items.map((item) => (
+        <span
+          key={item.label}
+          title={item.title}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            minHeight: "18px",
+            padding: "1px 7px",
+            borderRadius: "999px",
+            border: `1px solid ${palette.borderLight}`,
+            background: palette.surfaceHover,
+            color: palette.textSecondary,
+            fontSize: "10px",
+            fontWeight: 650,
+            letterSpacing: "0.01em",
+            whiteSpace: "nowrap",
+            ...trustChipToneStyle(item.tone),
+          }}
+        >
+          {item.label}
+        </span>
+      ))}
+    </span>
+  );
 }
 
 export default function TodayExecutionPlan({
@@ -220,6 +262,8 @@ export default function TodayExecutionPlan({
           const lead = (linkedKey && leadByKey && leadByKey.get) ? leadByKey.get(linkedKey) : null;
           const phone = getDialablePhone(lead) ?? (task.phoneAuthority === "dialable" ? task.phone : null);
           const tel = formatTelHref(phone);
+          const recommendationTrust = buildRecommendationTrustDisplay(lead ?? task, "Today queue ranking");
+          const phoneTrust = buildContactTrustDisplay(lead, "phone", task);
           const quality = resolveLeadQualityDisplay(task);
           const badge = priorityBadge(quality);
           const confidencePct = typeof quality.value === "number" && !quality.isUnknown ? `${Math.round(quality.value)}%` : null;
@@ -377,6 +421,7 @@ export default function TodayExecutionPlan({
                     </span>
                   ) : null}
                 </div>
+                <TrustChips items={[...recommendationTrust.chips.slice(0, 4), ...phoneTrust.chips.slice(1, 3)]} />
               </div>
 
               {/* Actions: primary open · Call Direct · Skip. Order stays fixed

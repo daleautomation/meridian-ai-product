@@ -6,6 +6,12 @@ import {
   type RelationshipPriorityShowcaseConfig,
   type RelationshipPriorityShowcaseModel,
 } from "@/lib/relationship-priority/showcase";
+import {
+  ageDaysFromIso,
+  freshnessLabel,
+  freshnessStateFor,
+  type FreshnessState,
+} from "@/lib/display/trustVisibility";
 
 type EngineSummary = RelationshipEngineOperatorSurface["workflows"]["relationshipSummaries"][number];
 type EngineQueueItem = RelationshipEngineOperatorSurface["queues"][number]["items"][number];
@@ -95,6 +101,12 @@ export interface RelationshipPriorityCard {
     kind: "relationship-engine" | "demo-generated";
     queueKind?: string;
     confidence: string;
+    generatedAt: string;
+    freshnessLabel: string;
+    freshnessState: FreshnessState;
+    evidenceCount: number;
+    missingDataCount: number;
+    warnings: string[];
   };
 }
 
@@ -123,6 +135,7 @@ export function buildRelationshipPriorityWorkspaceModel(args: {
       queueItem: queueIndex.get(summary.relationshipId),
       feedItems: feedIndex.get(summary.relationshipId) ?? [],
       index,
+      generatedAt: surface.generatedAt,
     }));
   const generatedCards = generateDemoPriorityCards(workspace, surface.generatedAt);
   const demoMode = workspace.access.dataMode === "demo" || engineCards.length === 0;
@@ -206,8 +219,9 @@ function engineSummaryToCard(args: {
   queueItem?: EngineQueueItem;
   feedItems: EngineFeedItem[];
   index: number;
+  generatedAt: string;
 }): RelationshipPriorityCard {
-  const { summary, queueItem, feedItems, index } = args;
+  const { summary, queueItem, feedItems, index, generatedAt } = args;
   const marketFit = marketFitFromHealth(summary.healthScore, summary.confidence, index);
   const topReasons = compact([
     queueItem?.whyItExists,
@@ -217,6 +231,18 @@ function engineSummaryToCard(args: {
   const action = recommendedAction(summary, queueItem);
   const company = summary.displayName || `Relationship ${index + 1}`;
   const contact = contactFor(company, index);
+  const evidenceCount = new Set([
+    ...summary.whyNow.evidenceReferences.flatMap((ref) => ref.evidence.map((item) => item.id)),
+    ...(queueItem?.latestEvidence ?? []).flatMap((ref) => ref.evidence.map((item) => item.id)),
+    ...(queueItem?.reasons ?? []).flatMap((reason) => reason.evidence.map((ref) => ref.id)),
+    ...feedItems.flatMap((item) => item.latestEvidence.flatMap((ref) => ref.evidence.map((evidence) => evidence.id))),
+  ].filter(Boolean)).size;
+  const missingData = [
+    ...summary.missingDataEffects,
+    ...(queueItem?.missingDataEffects ?? []),
+  ];
+  const sourceGeneratedAt = queueItem?.generatedAt ?? generatedAt;
+  const freshnessState = freshnessStateFor(ageDaysFromIso(sourceGeneratedAt));
 
   return {
     id: `engine-${summary.relationshipId}`,
@@ -251,13 +277,22 @@ function engineSummaryToCard(args: {
     ]).slice(0, 3),
     optionalContext: {
       deepReport: "Open compressed reasoning and evidence.",
-      aiAssistant: "Ask Meridian for the best opener.",
+      aiAssistant: "Prepare the best opener from current signals.",
       relationshipHistory: "Review timeline and prior touchpoints.",
     },
     source: {
       kind: "relationship-engine",
       queueKind: summary.deterministicOrder.sourceQueueKind,
       confidence: summary.confidence,
+      generatedAt: sourceGeneratedAt,
+      freshnessLabel: freshnessLabel(freshnessState, ageDaysFromIso(sourceGeneratedAt)),
+      freshnessState,
+      evidenceCount,
+      missingDataCount: missingData.length,
+      warnings: [
+        ...missingData.map((effect) => effect.message),
+        ...(queueItem?.integrityFindings ?? []).map((finding) => finding.message),
+      ].slice(0, 3),
     },
   };
 }
@@ -280,6 +315,7 @@ function generateDemoPriorityCards(
     const contact = contactFor(company, index + 10);
     const rank = index + 1;
     const actionValue = action as RelationshipPriorityCard["recommendedAction"];
+    const state = freshnessStateFor(ageDaysFromIso(generatedAt));
     return {
       id: `demo-${demoSeed}-${rank}`,
       relationshipId: `demo-${demoSeed}-${rank}`,
@@ -331,6 +367,12 @@ function generateDemoPriorityCards(
         kind: "demo-generated",
         queueKind: "generated_demo_priority_queue",
         confidence: "high",
+        generatedAt,
+        freshnessLabel: freshnessLabel(state, ageDaysFromIso(generatedAt)),
+        freshnessState: state,
+        evidenceCount: 3,
+        missingDataCount: 0,
+        warnings: [],
       },
     };
   });

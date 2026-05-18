@@ -67,6 +67,10 @@ import {
 } from "../lib/leads/leadActions";
 import { getCanonicalPhone, getDialablePhone, withCanonicalPhoneContact } from "../lib/leads/phone";
 import {
+  buildContactTrustDisplay,
+  buildRecommendationTrustDisplay,
+} from "../lib/display/trustVisibility";
+import {
   deriveLeadCompanyKey as deriveSharedLeadCompanyKey,
   leadIdentityCandidates as sharedLeadIdentityCandidates,
 } from "../lib/leads/identity";
@@ -317,43 +321,8 @@ function cleanTrustToken(value) {
   return trimmed;
 }
 
-function sourceLabel(value) {
-  const raw = cleanTrustToken(value);
-  if (!raw) return null;
-  const key = raw.toLowerCase().replace(/[_-]+/g, " ");
-  if (key.includes("google") || key === "gbp") return "Google Business Profile";
-  if (key.includes("yelp")) return "Yelp";
-  if (key.includes("bbb")) return "BBB";
-  if (key.includes("hunter")) return "Hunter";
-  if (key.includes("website") || key.includes("site")) return "Website";
-  if (key.includes("manual")) return "Manual";
-  return raw;
-}
-
-function formatVerifiedDate(iso) {
-  const raw = cleanTrustToken(iso);
-  if (!raw) return null;
-  const d = new Date(raw);
-  if (Number.isNaN(d.getTime())) return null;
-  return `Verified ${d.toLocaleDateString([], { month: "short", day: "numeric" })}`;
-}
-
 function contactTrustItems(lead, method) {
-  const paths = Array.isArray(lead?.contactPaths) ? lead.contactPaths : [];
-  const path = paths
-    .filter((p) => p && p.method === method)
-    .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99))[0] ?? null;
-  const contacts = lead?.contacts ?? {};
-  const source = sourceLabel(path?.source ?? path?.label ?? (method === "email" ? lead?.emailSource : contacts.source));
-  const verified = formatVerifiedDate(
-    path?.lastChecked
-    ?? path?.lastCheckedAt
-    ?? path?.checkedAt
-    ?? (method === "email" ? lead?.emailVerifiedAt : contacts.lastVerifiedAt)
-    ?? lead?.lastChecked
-    ?? lead?.websiteProof?.last_checked
-  );
-  return [source, verified].filter(Boolean).slice(0, 2);
+  return buildContactTrustDisplay(lead, method).chips;
 }
 
 function ContactTrustChips({ items }) {
@@ -361,10 +330,32 @@ function ContactTrustChips({ items }) {
   return (
     <span style={S.contactTrustChipRow}>
       {items.map((item) => (
-        <span key={item} style={S.contactTrustChip}>{item}</span>
+        <span
+          key={typeof item === "string" ? item : item.label}
+          title={typeof item === "string" ? undefined : item.title}
+          style={{
+            ...S.contactTrustChip,
+            ...(typeof item === "string" ? null : trustChipToneStyle(item.tone)),
+          }}
+        >
+          {typeof item === "string" ? item : item.label}
+        </span>
       ))}
     </span>
   );
+}
+
+function trustChipToneStyle(tone) {
+  if (tone === "good") {
+    return { color: palette.success, background: palette.successBg, borderColor: "#BBF7D0" };
+  }
+  if (tone === "watch") {
+    return { color: palette.warning, background: palette.warningBg, borderColor: "#FDE68A" };
+  }
+  if (tone === "danger") {
+    return { color: palette.danger, background: palette.dangerBg, borderColor: "#FECACA" };
+  }
+  return { color: palette.textSecondary, background: palette.surfaceHover, borderColor: palette.borderLight };
 }
 
 function knownConfidenceLabel(value) {
@@ -1425,6 +1416,7 @@ function LeadRow({ lead, index, isSelected, onSelect, sectionBucket }) {
   const bestContact = compactBestContact(lead);
   const methods = compactContactMethods(lead);
   const riskLabel = compactRiskLabel(lead, tier);
+  const recommendationTrust = buildRecommendationTrustDisplay(lead);
   const serviceId = lead?.decision?.primaryOpportunity?.services?.[0]?.id ?? null;
   const serviceCfg = serviceId ? getServiceCatalogEntry(serviceId) : null;
   const serviceLabel =
@@ -1507,6 +1499,7 @@ function LeadRow({ lead, index, isSelected, onSelect, sectionBucket }) {
             <span style={S.rowExecutionValue}>{nextStep}</span>
           </span>
         </div>
+        <ContactTrustChips items={recommendationTrust.chips} />
       </div>
 
       <div style={S.rowRight}>
@@ -2355,6 +2348,7 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
         const emailIsHunter = lead.emailSource === "hunter";
         return (
           <NextActionBlock
+            lead={lead}
             nextAction={lead.nextAction}
             canCall={!!getDialablePhone(lead)}
             onEnterCallMode={() => setShowCallMode(true)}
@@ -2379,8 +2373,10 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
         const bucket = getServiceBucket(tradeKey, lead.serviceBucket);
         const headerPhone = getDialablePhone(lead);
         const hasPhoneAtHeader = !!headerPhone;
-        const phoneTrust = contactTrustItems(lead, "phone");
-        const emailTrust = contactTrustItems(lead, "email");
+        const phoneTrustDisplay = buildContactTrustDisplay(lead, "phone");
+        const emailTrustDisplay = buildContactTrustDisplay(lead, "email");
+        const phoneTrust = phoneTrustDisplay.chips;
+        const emailTrust = emailTrustDisplay.chips;
         const trustConfidence = knownConfidenceLabel(trust.confidence);
         return (
           <div style={S.companyHeaderCard}>
@@ -2418,23 +2414,34 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
               <div style={S.companyHeaderRight}>
                 {hasPhoneAtHeader ? (
                   <>
-                    <div style={S.companyHeaderPhoneLabel} title="Verified phone">Primary Phone</div>
+                    <div
+                      style={S.companyHeaderPhoneLabel}
+                      title={phoneTrustDisplay.reason || phoneTrustDisplay.lastVerifiedLabel}
+                    >
+                      {phoneTrustDisplay.isAuthoritative ? "Primary Phone" : "Verify Phone"}
+                    </div>
                     <div style={S.companyHeaderPhone}>{headerPhone}</div>
                     <ContactTrustChips items={phoneTrust} />
                     {/* Paired CTA group — primary Call Now + secondary Call
                         Script, aligned horizontally at the same height so
                         the rep reads them as one action cluster. */}
                     <div style={S.companyHeaderCtaRow}>
-                      <a
-                        href={telHref(headerPhone)}
-                        onClick={() => {
-                          copyText(headerPhone || "").catch(() => {});
-                          logOutreach("call_started", "header");
-                        }}
-                        style={S.companyHeaderCallBtn}
-                      >
-                        📞 Call Now
-                      </a>
+                      {phoneTrustDisplay.isAuthoritative ? (
+                        <a
+                          href={telHref(headerPhone)}
+                          onClick={() => {
+                            copyText(headerPhone || "").catch(() => {});
+                            logOutreach("call_started", "header");
+                          }}
+                          style={S.companyHeaderCallBtn}
+                        >
+                          📞 Call Now
+                        </a>
+                      ) : (
+                        <button type="button" style={S.companyHeaderCallBtnCaution}>
+                          Verify before call
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => setShowScript((v) => !v)}
@@ -2455,6 +2462,11 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
                       />
                     </div>
                     <ContactTrustChips items={emailTrust} />
+                    {phoneTrustDisplay.conflict ? (
+                      <div style={S.contactTrustWarning}>
+                        Contact conflict: {phoneTrustDisplay.conflictDetail || "review sources before outreach"}
+                      </div>
+                    ) : null}
                   </>
                 ) : (
                   <>
@@ -3807,11 +3819,12 @@ function decorateActionLabel(action, confidence) {
   return action;
 }
 
-function NextActionBlock({ nextAction, canCall, onEnterCallMode, mailtoHref }) {
+function NextActionBlock({ lead, nextAction, canCall, onEnterCallMode, mailtoHref }) {
   const { action, confidence, reason, supportDetail } = nextAction;
   const meta = NEXT_ACTION_META[action] ?? NEXT_ACTION_META["REVIEW SITE FIRST"];
   const decorated = decorateActionLabel(action, confidence);
   const confidenceLabel = knownConfidenceLabel(confidence);
+  const recommendationTrust = buildRecommendationTrustDisplay(lead, "Deterministic next action");
 
   // Primary right-side action button. The Next Action bar owns exactly
   // one CTA — Enter Call Mode — regardless of which action variant is
@@ -3855,6 +3868,7 @@ function NextActionBlock({ nextAction, canCall, onEnterCallMode, mailtoHref }) {
       <div style={S.nextActionBarCenter}>
         <div style={S.nextActionReason}>{reason}</div>
         {supportDetail && <div style={S.nextActionSupport}>{supportDetail}</div>}
+        <ContactTrustChips items={recommendationTrust.chips} />
       </div>
 
       {/* RIGHT — confidence badge + primary action */}
@@ -3898,6 +3912,7 @@ function ScanModal({ lead, trust, site, proof, siteStatus, onClose }) {
   const trustConfidence = knownConfidenceLabel(trust.confidence);
   const phoneConfidence = knownConfidenceLabel(c.phoneConfidence);
   const emailConfidence = knownConfidenceLabel(c.emailConfidence);
+  const scanTrust = buildRecommendationTrustDisplay(lead, "Live scan and contact evidence");
   const classification = wp?.site_classification;
   const fmtBytes = (n) => (typeof n === "number" ? `${n.toLocaleString()} bytes` : "—");
   const fmtChars = (n) => (typeof n === "number" ? `${n.toLocaleString()} chars` : "—");
@@ -3936,6 +3951,16 @@ function ScanModal({ lead, trust, site, proof, siteStatus, onClose }) {
           <div style={S.scanCell}>
             <div style={S.scanCellLabel}>Last Checked</div>
             <div style={S.scanCellValue}>{trust.lastChecked}</div>
+          </div>
+          <div style={S.scanCell}>
+            <div style={S.scanCellLabel}>Freshness</div>
+            <div style={{
+              ...S.scanCellValue,
+              color: scanTrust.freshnessState === "stale" ? palette.danger : scanTrust.freshnessState === "fresh" ? palette.success : palette.textSecondary,
+              fontWeight: 650,
+            }}>
+              {scanTrust.freshnessLabel}
+            </div>
           </div>
           {trustConfidence ? (
             <div style={S.scanCell}>
@@ -4326,6 +4351,7 @@ function DecisionCore({
     : contactStatus === "MANUAL VERIFY" ? palette.textSecondary
     : palette.warning;
   const oppConfidence = knownConfidenceLabel(oppView.confidence);
+  const recommendationTrust = buildRecommendationTrustDisplay(lead, "Deterministic opportunity scoring");
 
   return (
     <div style={S.core}>
@@ -4388,6 +4414,7 @@ function DecisionCore({
                     </span>
                   ) : null}
                 </div>
+                <ContactTrustChips items={recommendationTrust.chips} />
 
                 {/* Only show the numeric estimate when the engine actually
                     supplied a band (HIGH confidence). Generic filler
@@ -7410,7 +7437,7 @@ function AskAIPanel({ open, onClose, topOpportunity, angle, tradeId }) {
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="AI deal coach"
+        aria-label="Deal support"
         style={{
           width: "min(440px, 100%)",
           height: "100%",
@@ -7435,7 +7462,7 @@ function AskAIPanel({ open, onClose, topOpportunity, angle, tradeId }) {
               fontSize: "10px", fontWeight: 800, letterSpacing: "0.14em",
               color: palette.blue, textTransform: "uppercase",
             }}>
-              AI Deal Coach
+              Deal Support
             </div>
             <div style={{ fontSize: "16px", fontWeight: 700, color: palette.textPrimary, marginTop: "2px", lineHeight: 1.25 }}>
               {company}
@@ -7449,7 +7476,7 @@ function AskAIPanel({ open, onClose, topOpportunity, angle, tradeId }) {
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close AI panel"
+            aria-label="Close support panel"
             style={{
               fontSize: "18px",
               fontWeight: 600,
@@ -7736,7 +7763,7 @@ function AskAIPanel({ open, onClose, topOpportunity, angle, tradeId }) {
           color: palette.textTertiary,
           fontStyle: "italic",
         }}>
-          Generated by the AI deal coach using only the lead signals already on file.
+          Generated from the lead signals already on file.
         </footer>
       </aside>
     </div>
@@ -7989,7 +8016,7 @@ function FeaturedAngleWorkspace({ angle, isActive, leads, onSelect, onOpenOperat
         </div>
       )}
 
-      {/* AI Deal Coach slide-over — additive layer, never replaces UI. */}
+      {/* Deal support slide-over — additive layer, never replaces UI. */}
       {allowAiAssist ? (
         <AskAIPanel
           open={aiOpen}
@@ -11043,6 +11070,14 @@ const S = {
     display: "inline-flex", alignItems: "center",
     boxShadow: "0 2px 4px rgba(37,99,235,0.10)",
   },
+  companyHeaderCallBtnCaution: {
+    background: palette.surfaceHover, color: palette.textSecondary,
+    border: `1px solid ${palette.border}`,
+    height: "44px", padding: "0 18px", borderRadius: "8px",
+    fontSize: "13px", fontWeight: 700, letterSpacing: "0.01em",
+    cursor: "default",
+    display: "inline-flex", alignItems: "center",
+  },
   companyHeaderCallBtnMuted: {
     background: palette.textPrimary, color: "#fff", border: "none",
     height: "44px", padding: "0 20px", borderRadius: "8px",
@@ -11053,6 +11088,13 @@ const S = {
   // the same height so they read as one action cluster.
   companyHeaderCtaRow: {
     display: "flex", alignItems: "center", gap: "8px",
+  },
+  contactTrustWarning: {
+    maxWidth: "320px",
+    color: palette.danger,
+    fontSize: "11px",
+    lineHeight: 1.35,
+    textAlign: "right",
   },
   // Call Script — secondary-primary. Matches Call Now's height and
   // typographic weight; muted dark outline keeps it clearly secondary

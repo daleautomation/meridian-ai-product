@@ -182,7 +182,7 @@ function laneTitle(nav: RelationshipPriorityNavId, model: RelationshipPriorityWo
   if (nav === "recovery") return "Relationships that need recovery";
   if (nav === "follow-up") return "Follow-ups due before momentum fades";
   if (nav === "outcomes") return "Execution outcomes ready to capture";
-  if (nav === "assistant") return "AI assistance for the selected relationship";
+  if (nav === "assistant") return "Operator support for the selected relationship";
   return "Who deserves attention first";
 }
 
@@ -230,10 +230,10 @@ function AssistantLane({
       <div style={styles.assistantHero}>
         <div style={styles.sectionKicker}>Assistant</div>
         <h3 style={styles.specialLaneTitle}>
-          {selected ? `Work the angle for ${selected.company}` : "Select a relationship to activate the assistant"}
+          {selected ? `Work the angle for ${selected.company}` : "Select a relationship for support"}
         </h3>
         <p style={styles.specialLaneCopy}>
-          The assistant starts from the selected relationship&apos;s signals, not a blank chat.
+          Support starts from the selected relationship&apos;s current signals, not a blank prompt.
         </p>
       </div>
       {model.assistantPrompts.map((prompt) => (
@@ -347,6 +347,7 @@ function PriorityCard({
         <span style={fitStyle(card.marketFit)}>{card.marketFit}% fit</span>
         <span style={urgencyStyle(card.urgency)}>{card.urgency}</span>
       </div>
+      <TrustPills card={card} compact />
       <div style={styles.cardTitleRow}>
         <div>
           <h3 style={dominant ? styles.cardTitleDominant : styles.cardTitle}>{card.company}</h3>
@@ -376,6 +377,42 @@ function PriorityCard({
         <span>{card.contactMethods[0]?.value ?? "Contact pending"}</span>
       </div>
     </button>
+  );
+}
+
+function TrustPills({
+  card,
+  compact = false,
+}: {
+  card: RelationshipPriorityCard;
+  compact?: boolean;
+}) {
+  const warning = card.source.missingDataCount > 0 || card.source.warnings.length > 0;
+  const freshnessTone = card.source.freshnessState === "stale"
+    ? styles.trustPillDanger
+    : card.source.freshnessState === "fresh"
+      ? styles.trustPillGood
+      : styles.trustPillMuted;
+  const confidenceTone = card.source.confidence === "high"
+    ? styles.trustPillGood
+    : card.source.confidence === "medium"
+      ? styles.trustPillWatch
+      : styles.trustPillMuted;
+  const pills = [
+    { label: card.source.kind === "relationship-engine" ? "Source: relationship engine" : "Source: demo queue", style: styles.trustPillMuted },
+    { label: `Confidence: ${card.source.confidence.toUpperCase()}`, style: confidenceTone },
+    { label: card.source.freshnessLabel, style: freshnessTone },
+    { label: `Evidence: ${card.source.evidenceCount}`, style: styles.trustPillMuted },
+    ...(warning ? [{ label: "Review gaps", style: styles.trustPillWatch }] : []),
+  ];
+  return (
+    <div style={compact ? styles.trustPillRowCompact : styles.trustPillRow}>
+      {pills.map((pill) => (
+        <span key={pill.label} style={{ ...styles.trustPill, ...pill.style }}>
+          {pill.label}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -414,6 +451,7 @@ function RelationshipContextPanel({
         </div>
         <span style={fitStyle(card.marketFit)}>{card.marketFit}%</span>
       </div>
+      <TrustPills card={card} />
 
       <div style={styles.contextActions}>
         <ActionButton label="Call" primary={card.recommendedAction === "Call"} />
@@ -442,7 +480,23 @@ function RelationshipContextPanel({
         {card.topSignals.map((signal) => (
           <div key={signal} style={styles.signalRow}>{signal}</div>
         ))}
+        <div style={styles.signalRow}>
+          Evidence: {card.source.evidenceCount} source {card.source.evidenceCount === 1 ? "reference" : "references"}
+        </div>
+        {card.source.missingDataCount > 0 ? (
+          <div style={{ ...styles.signalRow, color: palette.warning }}>
+            Missing data lowers confidence: {card.source.missingDataCount}
+          </div>
+        ) : null}
       </ContextBlock>
+
+      {card.source.warnings.length > 0 ? (
+        <ContextBlock title="Trust warnings">
+          {card.source.warnings.map((warning) => (
+            <div key={warning} style={{ ...styles.timelineItem, color: palette.warning }}>{warning}</div>
+          ))}
+        </ContextBlock>
+      ) : null}
 
       {showcase ? (
         <ContextBlock title="Demo narrative">
@@ -464,7 +518,7 @@ function RelationshipContextPanel({
               : <div style={styles.mutedText}>No noisy task wall. Follow-ups appear only when they change the next action.</div>}
           </ContextBlock>
 
-          <ContextBlock title="Assistant">
+          <ContextBlock title="Operator support">
             {model.assistantPrompts.map((prompt) => (
               <button key={prompt} type="button" style={styles.promptButton}>{prompt}</button>
             ))}
@@ -855,6 +909,51 @@ const styles: Record<string, CSSProperties> = {
     padding: "6px 9px",
     fontSize: "12px",
     fontWeight: 800,
+  },
+  trustPillRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "5px",
+    alignItems: "center",
+    marginTop: "2px",
+    marginBottom: "12px",
+  },
+  trustPillRowCompact: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "4px",
+    alignItems: "center",
+    marginTop: "-6px",
+    marginBottom: "12px",
+  },
+  trustPill: {
+    border: `1px solid ${palette.border}`,
+    borderRadius: "999px",
+    padding: "2px 7px",
+    fontSize: "10px",
+    fontWeight: 720,
+    letterSpacing: "0.01em",
+    whiteSpace: "nowrap",
+  },
+  trustPillGood: {
+    color: palette.success,
+    background: palette.successBg,
+    borderColor: "rgba(22,163,74,0.22)",
+  },
+  trustPillWatch: {
+    color: palette.warning,
+    background: "rgba(245,158,11,0.08)",
+    borderColor: "rgba(245,158,11,0.22)",
+  },
+  trustPillDanger: {
+    color: palette.danger,
+    background: palette.dangerBg,
+    borderColor: "rgba(220,38,38,0.22)",
+  },
+  trustPillMuted: {
+    color: palette.textSecondary,
+    background: palette.surfaceHover,
+    borderColor: palette.border,
   },
   cardTitleRow: {
     display: "flex",

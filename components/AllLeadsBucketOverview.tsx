@@ -37,6 +37,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import SchedulingMenu from "./SchedulingMenu";
+import {
+  buildContactTrustDisplay,
+  buildRecommendationTrustDisplay,
+  type TrustChip,
+} from "../lib/display/trustVisibility";
 
 // ─── All Trades id normalization ───────────────────────────────────
 // External callers (OperatorConsole's selectedTradeId, breadcrumb
@@ -77,6 +82,12 @@ interface FilteredLeadEntry {
   primaryAngleImpact?: string;
   recommendedOffer?: string;
   topObjection?: { objection: string; response: string };
+  source?: string;
+  lastChecked?: string;
+  contactPaths?: unknown;
+  phoneTrust?: unknown;
+  emailTrust?: unknown;
+  contactTrust?: unknown;
 }
 
 interface ServiceBucketCard {
@@ -201,6 +212,38 @@ const PRIORITY_STYLE: Record<PriorityLabel, { color: string; bg: string }> = {
   "Nurture": { color: "#475569", bg: "#F1F5F9" },             // slate
   "Low Priority": { color: "#94A3B8", bg: "#F8FAFC" },        // muted slate
 };
+
+function trustChipToneStyle(tone: TrustChip["tone"]): { color: string; background: string; borderColor: string } {
+  if (tone === "good") return { color: "#15803D", background: "#F0FDF4", borderColor: "#BBF7D0" };
+  if (tone === "watch") return { color: "#9A3412", background: "#FFFBEB", borderColor: "#FDE68A" };
+  if (tone === "danger") return { color: palette.destructive, background: "#FEF2F2", borderColor: "#FECACA" };
+  return { color: palette.textMuted, background: palette.bg, borderColor: palette.borderLight };
+}
+
+function TrustChips({ items }: { items: TrustChip[] }) {
+  if (!items.length) return null;
+  return (
+    <span style={{ display: "inline-flex", gap: "4px", flexWrap: "wrap", alignItems: "center", marginTop: "5px" }}>
+      {items.map((item) => (
+        <span
+          key={item.label}
+          title={item.title}
+          style={{
+            padding: "1px 7px",
+            fontSize: "10px",
+            fontWeight: 650,
+            borderRadius: "999px",
+            border: `1px solid ${palette.borderLight}`,
+            whiteSpace: "nowrap",
+            ...trustChipToneStyle(item.tone),
+          }}
+        >
+          {item.label}
+        </span>
+      ))}
+    </span>
+  );
+}
 
 // ─── All Trades aggregation ──────────────────────────────────────────
 // Sums per-service bucket counts across every real trade and merges
@@ -1153,6 +1196,13 @@ function DrillDown({
             const assignedRepId =
               ((lead as unknown) as { assignedRepId?: string }).assignedRepId ?? null;
             const assignedRepName = assignedRepId ? (repLookup[assignedRepId] ?? assignedRepId) : null;
+            const trustInput = lead as unknown as Parameters<typeof buildRecommendationTrustDisplay>[0];
+            const recommendationTrust = buildRecommendationTrustDisplay(trustInput, "All leads prioritization");
+            const contactTrust = buildContactTrustDisplay(
+              trustInput,
+              "phone",
+              { phoneTrust: lead.phoneTrust, contactTrust: lead.contactTrust } as Parameters<typeof buildContactTrustDisplay>[2],
+            );
             return (
               <div
                 key={lead.leadKey}
@@ -1264,6 +1314,7 @@ function DrillDown({
                       {lead.location}
                     </div>
                   ) : null}
+                  <TrustChips items={[...recommendationTrust.chips.slice(0, 4), ...contactTrust.chips.slice(1, 3)]} />
                 </div>
                 {lead.serviceTags && lead.serviceTags.length > 0 ? (
                   <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", justifyContent: "flex-end" }}>
