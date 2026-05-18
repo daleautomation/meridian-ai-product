@@ -257,6 +257,7 @@ function overlayCard(
         : "Follow-up window is still warm enough to act today.",
     ],
     source: {
+      ...card.source,
       kind: "demo-generated",
       queueKind: `${vertical.id}_${preset.id}_showcase`,
       confidence: "high",
