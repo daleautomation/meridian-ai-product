@@ -3582,6 +3582,207 @@ export function SelectedLeadPanel({
       overflowY: "auto",
       overscrollBehavior: "contain",
     }}>
+      {callMode === "active" ? (
+        <>
+          <section style={{
+            padding: "15px 15px 14px",
+            borderRadius: "15px",
+            background: phoneDigits
+              ? "linear-gradient(180deg, rgba(37,99,235,0.10) 0%, rgba(37,99,235,0.035) 100%)"
+              : "linear-gradient(180deg, rgba(245,158,11,0.12) 0%, rgba(245,158,11,0.04) 100%)",
+            border: `1px solid ${phoneDigits ? palette.blueBorder : "#FDE68A"}`,
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: "10px", fontWeight: 850, letterSpacing: "0.12em", color: phoneDigits ? palette.blue : palette.warning, textTransform: "uppercase" }}>
+                  Live call
+                </div>
+                <div style={{
+                  fontSize: "22px",
+                  fontWeight: 875,
+                  color: palette.textPrimary,
+                  lineHeight: 1.08,
+                  letterSpacing: "-0.02em",
+                  marginTop: "5px",
+                }}>
+                  {company}
+                </div>
+                <div style={{
+                  fontSize: "11.5px",
+                  color: palette.textTertiary,
+                  marginTop: "5px",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}>
+                  {[tradeBadge, address, serviceLabel].filter(Boolean).join(" · ")}
+                </div>
+              </div>
+              <div style={{
+                fontSize: "11px",
+                fontWeight: 800,
+                color: palette.textSecondary,
+                fontVariantNumeric: "tabular-nums",
+                whiteSpace: "nowrap",
+              }}>
+                {callsCompletedToday} done · {Math.max(0, queueRemaining - 1)} left
+              </div>
+            </div>
+
+            <div style={{
+              padding: "10px 11px",
+              borderRadius: "12px",
+              background: "rgba(255,255,255,0.84)",
+              border: `1px solid ${phoneDigits ? "rgba(37,99,235,0.14)" : "rgba(245,158,11,0.18)"}`,
+              display: "flex",
+              flexDirection: "column",
+              gap: "9px",
+            }}>
+              <div>
+                <div style={{ fontSize: "10px", fontWeight: 850, letterSpacing: "0.10em", color: palette.textTertiary, textTransform: "uppercase" }}>
+                  Say first
+                </div>
+                <div style={{ fontSize: "14px", fontWeight: 700, color: palette.textPrimary, lineHeight: 1.45, marginTop: "5px" }}>
+                  “{openingLine}”
+                </div>
+              </div>
+              {strongestEvidence ? (
+                <div style={{ fontSize: "12px", color: palette.textSecondary, lineHeight: 1.4 }}>
+                  Proof: {strongestEvidence.length > 96 ? strongestEvidence.slice(0, 94).trim() + "…" : strongestEvidence}
+                </div>
+              ) : null}
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                <ContactTrustChips items={panelActionChips} />
+                <span style={{
+                  fontSize: "11px",
+                  fontWeight: 800,
+                  color: phoneDigits ? palette.blue : palette.warning,
+                  whiteSpace: "nowrap",
+                  fontVariantNumeric: "tabular-nums",
+                }}>
+                  {contactState}
+                </span>
+              </div>
+            </div>
+
+            <div style={{ fontSize: "13px", fontWeight: 800, color: palette.textPrimary, lineHeight: 1.35 }}>
+              {primaryMove}
+            </div>
+          </section>
+
+          <section style={{
+            padding: "11px",
+            borderRadius: "13px",
+            background: palette.surface,
+            border: `1px solid ${palette.borderLight}`,
+            display: "flex",
+            flexDirection: "column",
+            gap: "9px",
+          }}>
+            <div style={{ fontSize: "10px", fontWeight: 850, letterSpacing: "0.12em", color: palette.textTertiary, textTransform: "uppercase" }}>
+              Outcome
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "7px" }}>
+              {[
+                { id: "connected_interested", label: "Interested", tone: "success" },
+                { id: "no_answer", label: "No answer", tone: "neutral" },
+                { id: "callback_needed", label: "Callback", tone: "blue" },
+                { id: "connected_not_interested", label: "Not now", tone: "neutral" },
+                { id: "wrong_number", label: "Bad number", tone: "danger" },
+              ].map((o) => {
+                const tone =
+                  o.tone === "success" ? { fg: "#fff", bg: palette.success, border: palette.success }
+                  : o.tone === "danger" ? { fg: palette.danger, bg: palette.dangerBg, border: "#FECACA" }
+                  : o.tone === "blue" ? { fg: palette.blue, bg: palette.bluePale, border: palette.blueBorder }
+                  : { fg: palette.textPrimary, bg: palette.surfaceHover, border: palette.borderLight };
+                return (
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => onRecordOutcome?.(o.id)}
+                    disabled={readOnly}
+                    title={readOnly ? "Demo mode is read-only; call outcomes are disabled." : undefined}
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: 800,
+                      color: tone.fg,
+                      background: tone.bg,
+                      border: `1px solid ${tone.border}`,
+                      borderRadius: "10px",
+                      padding: "9px 8px",
+                      cursor: readOnly ? "not-allowed" : "pointer",
+                      opacity: readOnly ? 0.65 : 1,
+                      letterSpacing: "0.01em",
+                      textAlign: "center",
+                    }}
+                    onFocus={applyFocusRing}
+                    onBlur={clearFocusRing}
+                  >
+                    {o.label}
+                  </button>
+                );
+              })}
+            </div>
+            <details>
+              <summary style={{
+                cursor: "pointer",
+                fontSize: "11px",
+                fontWeight: 750,
+                color: palette.textSecondary,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+              }}>
+                Note
+              </summary>
+              <textarea
+                value={currentNote}
+                onChange={(e) => onChangeNote?.(e.target.value)}
+                placeholder="Optional call note"
+                rows={2}
+                disabled={readOnly}
+                style={{
+                  width: "100%",
+                  marginTop: "8px",
+                  fontSize: "12px",
+                  lineHeight: 1.45,
+                  color: palette.textPrimary,
+                  background: "#FFFFFF",
+                  border: `1px solid ${palette.borderLight}`,
+                  borderRadius: "10px",
+                  padding: "8px 10px",
+                  outline: "none",
+                  resize: "vertical",
+                  fontFamily: "inherit",
+                }}
+              />
+            </details>
+          </section>
+
+          <button
+            type="button"
+            onClick={onExitCallMode}
+            style={{
+              alignSelf: "flex-end",
+              fontSize: "11px",
+              fontWeight: 700,
+              color: palette.textSecondary,
+              background: "transparent",
+              border: `1px solid ${palette.borderLight}`,
+              borderRadius: "10px",
+              padding: "6px 12px",
+              cursor: "pointer",
+            }}
+            onFocus={applyFocusRing}
+            onBlur={clearFocusRing}
+          >
+            Exit Call Mode
+          </button>
+        </>
+      ) : (
+        <>
       <section style={{
         padding: "14px 14px 13px",
         borderRadius: "14px",
@@ -4172,6 +4373,8 @@ export function SelectedLeadPanel({
           />
         </div>
       </details>
+        </>
+      )}
 
     </aside>
     </>
