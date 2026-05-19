@@ -3541,6 +3541,13 @@ export function SelectedLeadPanel({
     : hasPanelEmail
       ? "Email fallback available"
       : "Verify contact first";
+  const panelRef = useRef(null);
+  useEffect(() => {
+    if (callMode !== "active") return;
+    if (panelRef.current && typeof panelRef.current.scrollTo === "function") {
+      panelRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [callMode, task?.id]);
 
   return (
     <>
@@ -3548,7 +3555,7 @@ export function SelectedLeadPanel({
         modal interruption. The action zone itself now gains a calm
         blue highlight via the panel boxShadow ladder below when
         callMode === "active". */}
-    <aside style={{
+    <aside ref={panelRef} style={{
       width: "360px",
       flexShrink: 0,
       padding: "16px 14px",
@@ -3778,7 +3785,7 @@ export function SelectedLeadPanel({
             onFocus={applyFocusRing}
             onBlur={clearFocusRing}
           >
-            Exit Call Mode
+            Pause calling
           </button>
         </>
       ) : (
