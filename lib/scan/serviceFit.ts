@@ -535,13 +535,11 @@ export function buildServiceFitBreakdown(
   return entries;
 }
 
-// ── Strategic chat renderer ─────────────────────────────────────────
+// ── Service fit narrative renderer ──────────────────────────────────
 //
-// The Assist Mode "Services needed" chip and the Operator's
-// "Break Down Services Needed →" button both consume this. It's
-// pure synthesis from the existing scan + fit data — no /api/ai/chat
-// round-trip, no AI cost. Output reads like a senior sales
-// strategist briefing the rep on this specific lead.
+// Deterministic synthesis from the existing scan + fit data — no
+// round-trip to any model. Output is fully source-traceable to the
+// observable signals recorded by the scanner.
 
 export interface SignalReport {
   positives: Array<{ label: string; weight: number }>;

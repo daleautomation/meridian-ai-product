@@ -9,12 +9,12 @@ This folder contains both **canonical governance docs** and **legacy design note
 These documents govern every product, scoring, ingestion, UI, and roadmap decision. Conflicts with these documents indicate the proposal is wrong, not the document.
 
 - **[meridian-philosophy.md](./meridian-philosophy.md)** — the master philosophy. Permanent strategic direction.
-- **[product-principles.md](./product-principles.md)** — what to build, what not to build, decision framework.
+- **[product/product-principles.md](./product/product-principles.md)** — what to build, what not to build, decision framework.
 - **[scoring-principles.md](./scoring-principles.md)** — prioritization rules; observable signals only; banned approaches.
-- **[ingestion-principles.md](./ingestion-principles.md)** — read-only CSV-first posture; data-handling promises.
-- **[ux-principles.md](./ux-principles.md)** — calm/operator-grade visual rules; one-screen rule; banned elements.
+- **[product/ingestion-principles.md](./product/ingestion-principles.md)** — read-only CSV-first posture; data-handling promises.
+- **[product/ux-principles.md](./product/ux-principles.md)** — calm/operator-grade visual rules; one-screen rule; banned elements.
 - **[copywriting-principles.md](./copywriting-principles.md)** — voice, banned phrases, approved phrasings, sample-brief framing.
-- **[pr-review-checklist.md](./pr-review-checklist.md)** — the five acceptance questions every PR must pass.
+- **[workflows/pr-review-checklist.md](./workflows/pr-review-checklist.md)** — the five acceptance questions every PR must pass.
 
 These seven documents are **the single source of truth.** A change that conflicts with any of them requires either:
 1. Rejecting the change, OR
@@ -40,23 +40,30 @@ Never silently violate the canon.
 
 ---
 
-## Legacy design notes
+## Folder layout
 
-Everything in `docs/` *not* listed above is legacy material from earlier eras (the relationship-engine domain, multi-operator orchestration designs, operational-event envelope contracts, etc.). These documents are preserved for historical context. They are not active spec.
+After the May 2026 hygiene pass, supporting material is split into intent-based
+subfolders. The seven canonical principles above remain at the `docs/` root.
+
+- `docs/architecture/` — design intent for engines, event envelopes, contracts, and the relationship/operational-event domains. Informational, not active spec.
+- `docs/product/` — product-shape documents: limitations, scoring guardrails, source priority, principles for ingestion / product / UX.
+- `docs/workflows/` — operator and contributor workflows: handoff README, PR review checklist, contact sourcing, operator continuity.
+- `research/audits/` — historical audits and refactor retrospectives (e.g. LaborTech UX audit, public-positioning audit, pre-ingestion cleanup report).
+- `research/philosophy/` — long-form essays on the operating philosophy (AI operating system, execution compression).
 
 If a legacy doc conflicts with the canon, the canon wins. Always.
 
 The legacy material is **read-only**. Don't edit it. Don't archive it (yet). Don't delete it. It may yet inform future product decisions when the time comes.
 
 Notable legacy docs to know about:
-- `HANDOFF_README.md` — describes a roofing-vertical positioning that has since been pivoted away from
-- `KNOWN_LIMITATIONS.md` — still current; flags providers and edge cases that aren't wired
-- `SOURCE_PRIORITY.md` — still current; contact-resolution provider ranking
-- The `RELATIONSHIP_ENGINE_*.md` family (10+ files) — design intent for a read-only DTO domain; informational only
-- The `OPERATIONAL_EVENT_*.md` family — informational only
-- `LABORTECH_OPERATOR_UX_REFACTOR_AUDIT.md` — historical UX audit for the live LaborTech operator path
+- `workflows/HANDOFF_README.md` — describes a roofing-vertical positioning that has since been pivoted away from
+- `product/KNOWN_LIMITATIONS.md` — still current; flags providers and edge cases that aren't wired
+- `product/SOURCE_PRIORITY.md` — still current; contact-resolution provider ranking
+- The `architecture/RELATIONSHIP_ENGINE_*.md` family (10+ files) — design intent for a read-only DTO domain; informational only
+- The `architecture/OPERATIONAL_EVENT_*.md` family — informational only
+- `research/audits/LABORTECH_OPERATOR_UX_REFACTOR_AUDIT.md` — historical UX audit for the live LaborTech operator path
 
-When a future audit identifies legacy docs that contradict the canon and would mislead a new contributor, move them to `docs/_archive/`. Never delete without explicit founder approval.
+When a future audit identifies legacy docs that contradict the canon and would mislead a new contributor, move them to `archive/`. Never delete without explicit founder approval.
 
 ---
 

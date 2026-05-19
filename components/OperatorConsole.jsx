@@ -4,7 +4,6 @@ import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { palette } from "../lib/theme";
 import SourceReadiness from "./SourceReadiness";
-import LaborTechServicesPanel from "./LaborTechServicesPanel";
 import SnapshotFreshnessPill from "./SnapshotFreshnessPill";
 import SchedulingMenu from "./SchedulingMenu";
 import AllLeadsBucketOverview from "./AllLeadsBucketOverview";
@@ -101,14 +100,6 @@ const DEBUG_UI =
   typeof process !== "undefined"
   && typeof process.env !== "undefined"
   && process.env.NEXT_PUBLIC_DEBUG_MERIDIAN === "1";
-
-const MERIDIAN_AI_PREVIEW =
-  typeof process !== "undefined"
-  && typeof process.env !== "undefined"
-  && (
-    process.env.NEXT_PUBLIC_MERIDIAN_AI_PREVIEW === "1"
-    || process.env.MERIDIAN_AI_PREVIEW === "1"
-  );
 
 // No-op logger used in heavy memo paths. Errors + warnings still go
 // through the real console; only verbose dev info is silenced.
@@ -896,7 +887,6 @@ function proofFound(lead) {
 
 // ── Module-level caches (survive card collapse/expand) ────────────────
 
-const scriptCache = new Map();   // leadKey → { data, source: "ai"|"default" }
 const draftCache  = new Map();   // leadKey → { mode, subject, body, generatedAt }
 const assistantMemory = new Map(); // leadKey → [{ at, action, detail }]   (max 6 per lead)
 
@@ -1239,35 +1229,6 @@ function defaultTalkTrack(lead, user) {
     impact,
     close: "Worth 15 minutes this week so I can walk through what I found and how we fix it?",
     voicemail: `Hi, ${user.name} with LaborTech. Our live check on ${lead.name}'s site flagged items costing you inbound leads. Quick callback and I will walk you through them. Thanks.`,
-  };
-}
-
-function normalizeAiScript(ai, lead, user) {
-  const base = defaultTalkTrack(lead, user);
-  if (!ai) return base;
-  const open = stripDash(ai.opener || base.open);
-  const ask = Array.isArray(ai.discoveryQuestions) && ai.discoveryQuestions.length > 0
-    ? ai.discoveryQuestions.slice(0, 3).map(stripDash)
-    : base.ask;
-  let problem = base.problem;
-  if (ai.weaknessTransition) {
-    const txt = stripDash(ai.weaknessTransition);
-    problem = txt.split(/(?<=\.)\s+/).map((s) => s.trim()).filter(Boolean).slice(0, 3);
-    if (problem.length === 0) problem = base.problem;
-  }
-  let impact = base.impact;
-  if (ai.valueProp) {
-    const txt = stripDash(ai.valueProp);
-    impact = txt.split(/(?<=\.)\s+/).map((s) => s.trim()).filter(Boolean).slice(0, 3);
-    if (impact.length === 0) impact = base.impact;
-  }
-  return {
-    open,
-    ask,
-    problem,
-    impact,
-    close: stripDash(ai.closeAsk || base.close),
-    voicemail: stripDash(ai.voicemailScript || base.voicemail),
   };
 }
 
@@ -1786,11 +1747,7 @@ function timelineLabel(a) {
 function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwitchTab, hunterAvailable = false }) {
   const leadKey = lead.key;
 
-  const [script, setScript] = useState(() => {
-    const hit = scriptCache.get(leadKey);
-    return hit ? hit.data : defaultTalkTrack(lead, user);
-  });
-  const [scriptSource, setScriptSource] = useState(() => scriptCache.get(leadKey)?.source ?? "default");
+  const [script] = useState(() => defaultTalkTrack(lead, user));
   const [showScript, setShowScript] = useState(false);
 
   const [showObjections, setShowObjections] = useState(false);
@@ -1883,28 +1840,6 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
       }
     })();
   }, [ref, user.id, notifyLeadUpdated, leadKey]);
-
-  // Background AI enhancement for talk track.
-  useEffect(() => {
-    const cached = scriptCache.get(leadKey);
-    if (cached?.source === "ai") return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await callMcp("generate_call_script", {
-          company: ref, callerName: user.name, callerCompany: "LaborTech Solutions",
-        });
-        if (cancelled || !res?.data) return;
-        const normalized = normalizeAiScript(res.data, lead, user);
-        scriptCache.set(leadKey, { data: normalized, source: "ai" });
-        setScript(normalized);
-        setScriptSource("ai");
-      } catch {
-        // keep the default silently
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [leadKey, ref, user, lead]);
 
   async function handleLog(type, outcome) {
     setLogLoading(true);
@@ -3177,9 +3112,7 @@ function LeadDetail({ lead, user, onUpdate, findTask, onStartFindContact, onSwit
       {showScript && (
         <Section label="Talk Track">
           <TalkTrackView script={script} gatekeeper={gatekeeperOpener(lead, user)} />
-          <div style={S.statusCalm}>
-            {scriptSource === "ai" ? "Script ready" : "Structured script ready"}
-          </div>
+          <div style={S.statusCalm}>Structured script ready</div>
         </Section>
       )}
 
@@ -5218,194 +5151,6 @@ function CallPlanSection({ lead }) {
   );
 }
 
-// ── Assistant chat (lightweight, reuses existing /api/ai/chat) ──
-// Operator types a question about the selected lead; we POST to the
-// existing AI endpoint with the lead as context. Keeps one latest
-// response visible so the panel stays compact — no full chat history,
-// no parallel state system.
-function AssistantChat({ lead, workspace }) {
-  const [input, setInput] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [answer, setAnswer] = useState(null);  // { text?: string, error?: string }
-  const canSubmit = input.trim().length > 0 && !busy && !!lead;
-
-  async function handleSend(e) {
-    e?.preventDefault?.();
-    if (!canSubmit) return;
-    const message = input.trim();
-    setBusy(true);
-    setAnswer(null);
-    // Structured LeadContext — the assistant decides from this shape.
-    const decision = lead.decision || null;
-    const issuesArr = Array.isArray(lead.websiteProof?.issues) ? lead.websiteProof.issues : [];
-    const scanIssues = issuesArr
-      .slice(0, 5)
-      .map((i) => (typeof i === "string" ? i : (i.headline || i.label || i.description || i.reason || "")))
-      .filter(Boolean);
-    const weakSignals = [];
-    if (!getDialablePhone(lead)) weakSignals.push("No verified phone");
-    if (!lead.contacts?.primaryEmail) weakSignals.push("No verified email");
-    if (!(lead.resolvedBusinessUrl || lead.domain)) weakSignals.push("No website on file");
-    if (!lead.lastChecked && !lead.websiteProof?.last_checked) weakSignals.push("Never scanned");
-    const context = {
-      companyName: lead.name,
-      workspaceSlug: workspace?.slug || "",
-      moduleId: workspace?.defaultModule || lead.trade || "roofing",
-      bucket: decision?.bucket || "",
-      score: typeof decision?.score === "number" ? decision.score : 0,
-      reason: decision?.reason || "",
-      suggestedOpening: decision?.suggestedOpening || "",
-      website: lead.resolvedBusinessUrl || lead.domain || lead.websiteProof?.homepage_url || undefined,
-      phone: getDialablePhone(lead) || undefined,
-      email: lead.contacts?.primaryEmail || undefined,
-      status: lead.accountSnapshot?.status || undefined,
-      lastChecked: lead.lastChecked || lead.websiteProof?.last_checked || undefined,
-      scanIssues,
-      source: lead.contacts?.source || undefined,
-      weakSignals,
-      salesStrategy: lead.salesStrategy || undefined,
-    };
-    try {
-      const res = await fetch("/api/ai/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ message, context }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (json.error || json.fallback) {
-        setAnswer({ error: json.error || "Assistant unavailable right now." });
-      } else {
-        setAnswer({ text: json.response || "" });
-      }
-    } catch (err) {
-      setAnswer({ error: err instanceof Error ? err.message : "Network error" });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  // Reset the latest answer when the operator switches leads so the panel
-  // doesn't carry a stale response from another company.
-  useEffect(() => { setAnswer(null); setInput(""); }, [lead?.key]);
-
-  function onKey(e) {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-      handleSend(e);
-    }
-  }
-
-  const suggestions = [
-    "Why does this lead matter?",
-    "Give me a stronger opening",
-    "What objections should I expect?",
-    "What signal is weakest here?",
-  ];
-
-  return (
-    <div style={S.opSection}>
-      <div style={S.opHead}><span style={S.opTitle}>Assistant</span></div>
-      <form onSubmit={handleSend} style={S.chatForm}>
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={onKey}
-          placeholder="Ask about this lead (Cmd+Enter to send)…"
-          rows={3}
-          style={S.chatInput}
-          disabled={busy}
-        />
-        <div style={S.chatFoot}>
-          <div style={S.chatSuggestions}>
-            {suggestions.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setInput(s)}
-                style={S.chatSuggestion}
-                disabled={busy}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-          <button
-            type="submit"
-            disabled={!canSubmit}
-            style={canSubmit ? S.chatSend : S.chatSendDisabled}
-          >
-            {busy ? "Thinking…" : "Send"}
-          </button>
-        </div>
-      </form>
-      {answer?.text && (
-        <div style={S.chatAnswer}>{answer.text}</div>
-      )}
-      {answer?.error && (
-        <div style={S.chatError}>Assistant error: {answer.error}</div>
-      )}
-    </div>
-  );
-}
-
-function AiPanel({ selectedLead, findTask, onStartFindContact, workspace, allowAiAssist = false }) {
-  const [logFlash, setLogFlash] = useState(null);
-  const logTimerRef = useRef(null);
-  // (id attached in render below for responsive CSS hook)
-
-  async function logAttempt() {
-    if (!selectedLead) return;
-    const ref = { name: selectedLead.name, domain: selectedLead.domain };
-    try {
-      await callMcp("log_crm_activity", {
-        company: ref,
-        activityType: "call",
-        outcome: "no_answer",
-        performedBy: "assistant",
-      });
-      recordAssistantAction(selectedLead.key, "Logged attempt", "no_answer");
-      setLogFlash("Attempt logged");
-    } catch {
-      setLogFlash("Could not log");
-    }
-    if (logTimerRef.current) clearTimeout(logTimerRef.current);
-    logTimerRef.current = setTimeout(() => setLogFlash(null), 1600);
-  }
-
-  return (
-    <div id="meridian-ai" style={S.ai}>
-      <div style={S.aiHead}>
-        <span style={S.aiTitle}>Assistant</span>
-        {selectedLead && <span style={S.aiCtx}>{selectedLead.name}</span>}
-      </div>
-      <div style={S.aiBody}>
-        {!selectedLead && <div style={S.aiHint}>Select a lead to load the panel.</div>}
-        {selectedLead && (
-          <>
-            <ContactSearchSection
-              lead={selectedLead}
-              findTask={findTask}
-              onRetry={() => {
-                recordAssistantAction(selectedLead.key, "Retry search", "assistant");
-                onStartFindContact?.(selectedLead);
-              }}
-              onExpand={() => {
-                recordAssistantAction(selectedLead.key, "Expanded sources", "assistant");
-                onStartFindContact?.(selectedLead);
-              }}
-            />
-            {logFlash && <div style={S.statusCalm}>{logFlash}</div>}
-            <CallPlanSection lead={selectedLead} />
-            {allowAiAssist ? (
-              <AssistantChat lead={selectedLead} workspace={workspace} />
-            ) : null}
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // Today dashboard strip — derived counts + one-click queue entry points.
 // Each card carries a short subtext that frames the value of the action
 // without adding clutter.
@@ -5730,7 +5475,6 @@ function TradeLeadsPortfolio({
   // reflect actual lead state, not bucket coverage.
   pipelineMap,
   showOpportunitySurfaces = true,
-  allowAiAssist = false,
 }) {
   // Outcome capture (Booked / Follow Up / Dead / No Answer) lives here
   // — local-state-first, persisted to localStorage, ready to swap for
@@ -6132,7 +5876,6 @@ function TradeLeadsPortfolio({
                   selectedTradeId={selectedTradeId}
                   selectedLeadKey={selectedLeadKey}
                   onSelectLead={onSelectLead}
-                  allowAiAssist={allowAiAssist}
                 />
               )}
             </>
@@ -7154,629 +6897,13 @@ function PriorityTierCard({ label, tone, stats, meaning }) {
   );
 }
 
-// ── AskAIPanel ──────────────────────────────────────────────────────
-// Right-side slide-over. Pulls a deal coach response from /api/ai/deal-coach
-// (server-side, ANTHROPIC_API_KEY-gated). Renders three sections:
-// improved pitch, objection handling, angle expansion. Additive only —
-// never displaces the existing FeaturedAngleWorkspace UI.
 
-// Compact secondary button used for pitch interactions (Copy, Shorten,
-// More aggressive). Stays consistent with the panel's quiet UI ladder.
-function pitchActionButtonStyle({ active = false, busy = false } = {}) {
-  return {
-    fontSize: "11px",
-    fontWeight: 600,
-    color: active ? palette.success : busy ? palette.textTertiary : palette.blue,
-    background: active ? palette.successBg : palette.bluePale,
-    border: `1px solid ${active ? "#BBF7D0" : palette.blueBorder}`,
-    borderRadius: "8px",
-    padding: "6px 10px",
-    cursor: busy ? "default" : "pointer",
-    whiteSpace: "nowrap",
-    transition: "all 180ms cubic-bezier(0.4, 0, 0.2, 1)",
-    opacity: busy ? 0.7 : 1,
-  };
-}
-
-function AskAIPanel({ open, onClose, topOpportunity, angle, tradeId }) {
-  const [state, setState] = useState({ loading: false, error: null, data: null });
-  const [messages, setMessages] = useState([]);
-  const [chatInput, setChatInput] = useState("");
-  const [chatLoading, setChatLoading] = useState(false);
-  const [chatError, setChatError] = useState(null);
-  const [pitchActionBusy, setPitchActionBusy] = useState(null); // "shorten" | "aggressive" | null
-  const [pitchCopyState, setPitchCopyState] = useState(null);   // "copied" | null
-  const scrollRef = useRef(null);
-
-  // Reset on close so reopening triggers a fresh load against the
-  // current (possibly newly selected) lead.
-  useEffect(() => {
-    if (!open) {
-      setState({ loading: false, error: null, data: null });
-      setMessages([]);
-      setChatInput("");
-      setChatLoading(false);
-      setChatError(null);
-      setPitchActionBusy(null);
-      setPitchCopyState(null);
-    }
-  }, [open]);
-
-  // Whenever the structured pitch arrives, seed the chat thread with
-  // a synthesized "system" turn so the operator sees the brief and the
-  // model gets the prior context on every follow-up.
-  useEffect(() => {
-    if (!state.data) return;
-    const summary = [
-      state.data.summary ? `Best move: ${state.data.summary}` : null,
-      state.data.pitch.length ? `Pitch:\n${state.data.pitch.join("\n")}` : null,
-      state.data.objections.length
-        ? `Objection handling:\n${state.data.objections.map((o) => `- “${o.objection}” → ${o.response}`).join("\n")}`
-        : null,
-      state.data.angles.length
-        ? `Alternative angles:\n${state.data.angles.map((a) => `- ${a}`).join("\n")}`
-        : null,
-    ].filter(Boolean).join("\n\n");
-    setMessages(summary ? [{ role: "system", content: summary }] : []);
-  }, [state.data]);
-
-  // Auto-scroll the chat container to the bottom on every new turn /
-  // loading state so the operator always sees the latest message.
-  useEffect(() => {
-    if (!open) return;
-    const node = scrollRef.current;
-    if (!node) return;
-    requestAnimationFrame(() => {
-      node.scrollTop = node.scrollHeight;
-    });
-  }, [open, messages, chatLoading, state.data]);
-
-  // Esc to close.
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (e) => { if (e.key === "Escape") onClose?.(); };
-    if (typeof window !== "undefined") {
-      window.addEventListener("keydown", onKey);
-      return () => window.removeEventListener("keydown", onKey);
-    }
-    return undefined;
-  }, [open, onClose]);
-
-  // Fire the request when the panel opens with a real top opportunity.
-  useEffect(() => {
-    if (!open || !topOpportunity || !tradeId) return;
-    let cancelled = false;
-    setState({ loading: true, error: null, data: null });
-    (async () => {
-      try {
-        const res = await fetch("/api/ai/deal-coach", {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            lead: topOpportunity.lead,
-            bucketId: topOpportunity.bucketId,
-            bucketLabel: angle?.bucketLabel,
-            reasons: topOpportunity.lead?.classifierReasons ?? [],
-            script: topOpportunity.script,
-            tradeId,
-            tradeLabel: TRADE_MODULES[tradeId]?.label ?? tradeId,
-            johnServiceAngle: angle?.johnServiceAngle,
-            why: topOpportunity.why,
-            value: topOpportunity.value,
-            actionLabel: topOpportunity.actionLabel,
-          }),
-        });
-        const json = await res.json().catch(() => null);
-        if (cancelled) return;
-        if (!res.ok || !json?.ok) {
-          const error = json?.error || `Request failed (${res.status})`;
-          const friendly = typeof error === "string" && error.toLowerCase().includes("anthropic_api_key")
-            ? "ANTHROPIC_API_KEY is missing. Add it to .env.local and restart the dev server."
-            : error;
-          setState({ loading: false, error: friendly, data: null });
-          return;
-        }
-        setState({
-          loading: false,
-          error: null,
-          data: {
-            summary: typeof json.summary === "string" ? json.summary : "",
-            pitch: Array.isArray(json.pitch) ? json.pitch : [],
-            objections: Array.isArray(json.objections) ? json.objections : [],
-            angles: Array.isArray(json.angles) ? json.angles : [],
-          },
-        });
-      } catch (err) {
-        if (cancelled) return;
-        setState({
-          loading: false,
-          error: `Request failed: ${err instanceof Error ? err.message : "unknown error"}`,
-          data: null,
-        });
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [open, topOpportunity, angle, tradeId]);
-
-  const handleChatSubmit = async (e) => {
-    if (e && typeof e.preventDefault === "function") e.preventDefault();
-    const text = chatInput.trim();
-    if (!text || chatLoading || !topOpportunity || !tradeId) return;
-    const nextMessages = [...messages, { role: "user", content: text }];
-    setMessages(nextMessages);
-    setChatInput("");
-    setChatLoading(true);
-    setChatError(null);
-    try {
-      const res = await fetch("/api/ai/deal-coach", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          lead: topOpportunity.lead,
-          bucketId: topOpportunity.bucketId,
-          bucketLabel: angle?.bucketLabel,
-          reasons: topOpportunity.lead?.classifierReasons ?? [],
-          script: topOpportunity.script,
-          tradeId,
-          tradeLabel: TRADE_MODULES[tradeId]?.label ?? tradeId,
-          johnServiceAngle: angle?.johnServiceAngle,
-          why: topOpportunity.why,
-          value: topOpportunity.value,
-          actionLabel: topOpportunity.actionLabel,
-          messages: nextMessages,
-        }),
-      });
-      const json = await res.json().catch(() => null);
-      if (!res.ok || !json?.ok) {
-        const error = json?.error || `Request failed (${res.status})`;
-        const friendly = typeof error === "string" && error.toLowerCase().includes("anthropic_api_key")
-          ? "ANTHROPIC_API_KEY is missing. Add it to .env.local and restart the dev server."
-          : error;
-        setChatError(friendly);
-        return;
-      }
-      const reply = typeof json.reply === "string" && json.reply.trim().length > 0
-        ? json.reply.trim()
-        : "(no reply)";
-      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
-    } catch (err) {
-      setChatError(err instanceof Error ? err.message : "Request failed");
-    } finally {
-      setChatLoading(false);
-    }
-  };
-
-  // Copy the current pitch to the clipboard. No fabrication — just the
-  // lines already shown in the panel. Shows transient "Copied" feedback.
-  const handleCopyPitch = async () => {
-    if (!state.data?.pitch?.length) return;
-    const text = state.data.pitch.join("\n");
-    try {
-      if (typeof navigator !== "undefined" && navigator.clipboard) {
-        await navigator.clipboard.writeText(text);
-      }
-      setPitchCopyState("copied");
-      setTimeout(() => setPitchCopyState(null), 1400);
-    } catch {
-      setPitchCopyState(null);
-    }
-  };
-
-  // Re-call the chat branch with a tight instruction to rewrite the
-  // current pitch. We surface the result as a chat assistant turn so
-  // the original brief stays intact and the operator can compare.
-  const handlePitchAction = async (action) => {
-    if (!topOpportunity || !tradeId) return;
-    if (pitchActionBusy || chatLoading) return;
-    if (!state.data?.pitch?.length) return;
-    const instruction = action === "shorten"
-      ? "Rewrite the pitch as ONE sentence. Plain operator voice. No filler. Return just the sentence."
-      : "Rewrite the pitch to be more direct and urgent. 2 short lines max. End on a question. Return just the rewritten pitch.";
-    const userTurn = action === "shorten" ? "Shorten the pitch to one sentence." : "Make the pitch more direct and urgent.";
-    const nextMessages = [...messages, { role: "user", content: userTurn }];
-    setMessages(nextMessages);
-    setPitchActionBusy(action);
-    setChatError(null);
-    try {
-      const res = await fetch("/api/ai/deal-coach", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          lead: topOpportunity.lead,
-          bucketId: topOpportunity.bucketId,
-          bucketLabel: angle?.bucketLabel,
-          reasons: topOpportunity.lead?.classifierReasons ?? [],
-          script: topOpportunity.script,
-          tradeId,
-          tradeLabel: TRADE_MODULES[tradeId]?.label ?? tradeId,
-          johnServiceAngle: angle?.johnServiceAngle,
-          why: topOpportunity.why,
-          value: topOpportunity.value,
-          actionLabel: topOpportunity.actionLabel,
-          messages: [...nextMessages, { role: "user", content: instruction }],
-        }),
-      });
-      const json = await res.json().catch(() => null);
-      if (!res.ok || !json?.ok) {
-        const error = json?.error || `Request failed (${res.status})`;
-        setChatError(error);
-        return;
-      }
-      const reply = typeof json.reply === "string" && json.reply.trim().length > 0
-        ? json.reply.trim()
-        : "(no reply)";
-      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
-    } catch (err) {
-      setChatError(err instanceof Error ? err.message : "Request failed");
-    } finally {
-      setPitchActionBusy(null);
-    }
-  };
-
-  if (!open) return null;
-  const lead = topOpportunity?.lead ?? null;
-  const company = lead?.name ?? lead?.companyName ?? "this deal";
-
-  return (
-    <div
-      onClick={onClose}
-      role="presentation"
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(15,23,42,0.32)",
-        zIndex: 1100,
-        display: "flex",
-        justifyContent: "flex-end",
-      }}
-    >
-      <aside
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Deal support"
-        style={{
-          width: "min(440px, 100%)",
-          height: "100%",
-          background: palette.surface,
-          boxShadow: "-12px 0 30px rgba(15,23,42,0.10)",
-          borderLeft: `1px solid ${palette.border}`,
-          display: "flex",
-          flexDirection: "column",
-          overflowY: "auto",
-        }}
-      >
-        <header style={{
-          padding: "18px 22px",
-          borderBottom: `1px solid ${palette.borderLight}`,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          gap: "12px",
-        }}>
-          <div>
-            <div style={{
-              fontSize: "10px", fontWeight: 800, letterSpacing: "0.14em",
-              color: palette.blue, textTransform: "uppercase",
-            }}>
-              Deal Support
-            </div>
-            <div style={{ fontSize: "16px", fontWeight: 700, color: palette.textPrimary, marginTop: "2px", lineHeight: 1.25 }}>
-              {company}
-            </div>
-            {angle?.bucketLabel && (
-              <div style={{ fontSize: "11px", color: palette.textTertiary, marginTop: "2px" }}>
-                Angle: {angle.bucketLabel}
-              </div>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close support panel"
-            style={{
-              fontSize: "18px",
-              fontWeight: 600,
-              color: palette.textTertiary,
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-              padding: "0 4px",
-              lineHeight: 1,
-            }}
-          >
-            ×
-          </button>
-        </header>
-
-        <div
-          ref={scrollRef}
-          style={{
-            padding: "18px 22px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "18px",
-            flex: 1,
-            overflowY: "auto",
-            minHeight: 0,
-          }}
-        >
-          {state.loading && (
-            <div style={{ fontSize: "13px", color: palette.textSecondary }}>
-              Thinking through this deal…
-            </div>
-          )}
-          {state.error && (
-            <div style={{
-              padding: "10px 12px",
-              borderRadius: "10px",
-              background: palette.dangerBg,
-              border: "1px solid #FECACA",
-              color: palette.danger,
-              fontSize: "12px",
-            }}>
-              {state.error}
-            </div>
-          )}
-
-          {state.data && (
-            <>
-              {state.data.summary && (
-                <section>
-                  <div style={{
-                    padding: "12px 14px",
-                    borderRadius: "10px",
-                    background: "linear-gradient(180deg, rgba(37,99,235,0.10), rgba(37,99,235,0.02))",
-                    border: `1px solid ${palette.blueBorder}`,
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    color: palette.textPrimary,
-                    lineHeight: 1.5,
-                  }}>
-                    {state.data.summary}
-                  </div>
-                </section>
-              )}
-              {state.data.pitch.length > 0 && (
-                <section>
-                  <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.10em", color: palette.textTertiary, textTransform: "uppercase", marginBottom: "8px" }}>
-                    Improved pitch
-                  </div>
-                  <ul style={{
-                    margin: 0,
-                    paddingLeft: "18px",
-                    fontSize: "13px",
-                    color: palette.textPrimary,
-                    lineHeight: 1.55,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "6px",
-                  }}>
-                    {state.data.pitch.map((line, i) => (
-                      <li key={`pitch-${i}`}>{line}</li>
-                    ))}
-                  </ul>
-                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "10px" }}>
-                    <button
-                      type="button"
-                      onClick={handleCopyPitch}
-                      disabled={!state.data.pitch.length}
-                      style={pitchActionButtonStyle({ active: pitchCopyState === "copied" })}
-                    >
-                      {pitchCopyState === "copied" ? "Copied ✓" : "Copy pitch"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handlePitchAction("shorten")}
-                      disabled={!!pitchActionBusy || chatLoading}
-                      style={pitchActionButtonStyle({ busy: pitchActionBusy === "shorten" })}
-                    >
-                      {pitchActionBusy === "shorten" ? "Shortening…" : "Shorten"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handlePitchAction("aggressive")}
-                      disabled={!!pitchActionBusy || chatLoading}
-                      style={pitchActionButtonStyle({ busy: pitchActionBusy === "aggressive" })}
-                    >
-                      {pitchActionBusy === "aggressive" ? "Sharpening…" : "More aggressive"}
-                    </button>
-                  </div>
-                </section>
-              )}
-
-              {state.data.objections.length > 0 && (
-                <section>
-                  <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.10em", color: palette.textTertiary, textTransform: "uppercase", marginBottom: "8px" }}>
-                    Objection handling
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                    {state.data.objections.map((o, i) => (
-                      <div key={`obj-${i}`} style={{
-                        padding: "10px 12px",
-                        borderRadius: "10px",
-                        background: palette.surface,
-                        border: `1px solid ${palette.borderLight}`,
-                      }}>
-                        <div style={{ fontSize: "12px", fontWeight: 600, color: palette.textPrimary, marginBottom: "4px" }}>
-                          “{o.objection}”
-                        </div>
-                        <div style={{ fontSize: "12px", color: palette.textSecondary, lineHeight: 1.5 }}>
-                          {o.response}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {state.data.angles.length > 0 && (
-                <section>
-                  <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.10em", color: palette.textTertiary, textTransform: "uppercase", marginBottom: "8px" }}>
-                    Angle expansion
-                  </div>
-                  <ul style={{
-                    margin: 0,
-                    paddingLeft: "18px",
-                    fontSize: "13px",
-                    color: palette.textPrimary,
-                    lineHeight: 1.55,
-                  }}>
-                    {state.data.angles.map((a, i) => (
-                      <li key={`angle-${i}`} style={{ marginBottom: "6px" }}>{a}</li>
-                    ))}
-                  </ul>
-                </section>
-              )}
-            </>
-          )}
-
-          {/* Chat thread — appears below the static brief once it loads. */}
-          {state.data && (
-            <section>
-              <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.10em", color: palette.textTertiary, textTransform: "uppercase", marginBottom: "8px" }}>
-                Ask follow-up
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {messages
-                  .filter((m) => m.role !== "system")
-                  .map((m, i) => (
-                    <div
-                      key={`chat-${i}`}
-                      style={{
-                        alignSelf: m.role === "user" ? "flex-end" : "flex-start",
-                        maxWidth: "92%",
-                        padding: "9px 12px",
-                        borderRadius: "10px",
-                        fontSize: "13px",
-                        lineHeight: 1.5,
-                        whiteSpace: "pre-wrap",
-                        wordBreak: "break-word",
-                        background: m.role === "user" ? palette.bluePale : palette.surfaceHover,
-                        border: `1px solid ${m.role === "user" ? palette.blueBorder : palette.borderLight}`,
-                        color: palette.textPrimary,
-                      }}
-                    >
-                      {m.content}
-                    </div>
-                  ))}
-                {chatLoading && (
-                  <div style={{
-                    alignSelf: "flex-start",
-                    maxWidth: "92%",
-                    padding: "9px 12px",
-                    borderRadius: "10px",
-                    fontSize: "13px",
-                    color: palette.textSecondary,
-                    background: palette.surfaceHover,
-                    border: `1px solid ${palette.borderLight}`,
-                    fontStyle: "italic",
-                  }}>
-                    Thinking…
-                  </div>
-                )}
-                {chatError && (
-                  <div style={{
-                    padding: "9px 12px",
-                    borderRadius: "10px",
-                    background: palette.dangerBg,
-                    border: "1px solid #FECACA",
-                    color: palette.danger,
-                    fontSize: "12px",
-                  }}>
-                    {chatError}
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
-        </div>
-
-        {/* Chat input — sits between content and footer, never covers it. */}
-        {state.data && (
-          <form
-            onSubmit={handleChatSubmit}
-            style={{
-              padding: "10px 14px",
-              borderTop: `1px solid ${palette.borderLight}`,
-              display: "flex",
-              gap: "8px",
-              alignItems: "flex-end",
-              background: palette.surface,
-            }}
-          >
-            <textarea
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleChatSubmit();
-                }
-              }}
-              placeholder="Ask a follow-up about this deal…"
-              rows={1}
-              style={{
-                flex: 1,
-                resize: "none",
-                fontSize: "13px",
-                fontFamily: "inherit",
-                color: palette.textPrimary,
-                background: palette.surfaceHover,
-                border: `1px solid ${palette.borderLight}`,
-                borderRadius: "10px",
-                padding: "10px 12px",
-                outline: "none",
-                lineHeight: 1.4,
-                maxHeight: "120px",
-                minHeight: "38px",
-              }}
-            />
-            <button
-              type="submit"
-              disabled={chatLoading || chatInput.trim().length === 0}
-              style={{
-                fontSize: "13px",
-                fontWeight: 600,
-                color: "#fff",
-                background: chatLoading || chatInput.trim().length === 0 ? "rgba(37,99,235,0.45)" : palette.blue,
-                border: "none",
-                borderRadius: "10px",
-                padding: "10px 16px",
-                cursor: chatLoading || chatInput.trim().length === 0 ? "default" : "pointer",
-                whiteSpace: "nowrap",
-                transition: "all 180ms cubic-bezier(0.4, 0, 0.2, 1)",
-              }}
-            >
-              Send
-            </button>
-          </form>
-        )}
-
-        <footer style={{
-          padding: "12px 22px",
-          borderTop: `1px solid ${palette.borderLight}`,
-          fontSize: "11px",
-          color: palette.textTertiary,
-          fontStyle: "italic",
-        }}>
-          Generated from the lead signals already on file.
-        </footer>
-      </aside>
-    </div>
-  );
-}
-
-function FeaturedAngleWorkspace({ angle, isActive, leads, onSelect, onOpenOperator, selectedTradeId, selectedLeadKey, onSelectLead, allowAiAssist = false }) {
+function FeaturedAngleWorkspace({ angle, isActive, leads, onSelect, onOpenOperator, selectedTradeId, selectedLeadKey, onSelectLead }) {
   const ready = angle.count > 0;
   const topOpportunity = useMemo(
     () => (ready && selectedTradeId ? buildTopOpportunity(angle.bucketId, leads, selectedTradeId) : null),
     [ready, angle.bucketId, leads, selectedTradeId],
   );
-  const [aiOpen, setAiOpen] = useState(false);
   const copy = angleCopy(angle);
   const toneColor =
     angle.priorityLabel === "Focus Now" ? palette.blue
@@ -7794,9 +6921,6 @@ function FeaturedAngleWorkspace({ angle, isActive, leads, onSelect, onOpenOperat
     setFilter("all");
     setVisibleCount(10);
   }, [angle?.bucketId]);
-  useEffect(() => {
-    if (!allowAiAssist) setAiOpen(false);
-  }, [allowAiAssist]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -7992,40 +7116,9 @@ function FeaturedAngleWorkspace({ angle, isActive, leads, onSelect, onOpenOperat
             >
               {topOpportunity.actionLabel} →
             </button>
-            {allowAiAssist ? (
-              <button
-                type="button"
-                onClick={() => setAiOpen(true)}
-                style={{
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: palette.blue,
-                  background: palette.bluePale,
-                  border: `1px solid ${palette.blueBorder}`,
-                  borderRadius: "10px",
-                  padding: "11px 18px",
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                  transition: "all 180ms cubic-bezier(0.4, 0, 0.2, 1)",
-                }}
-              >
-                Get help with this call
-              </button>
-            ) : null}
           </div>
         </div>
       )}
-
-      {/* Deal support slide-over — additive layer, never replaces UI. */}
-      {allowAiAssist ? (
-        <AskAIPanel
-          open={aiOpen}
-          onClose={() => setAiOpen(false)}
-          topOpportunity={topOpportunity}
-          angle={angle}
-          tradeId={selectedTradeId}
-        />
-      ) : null}
 
       {/* Why + Sell */}
       <div style={{
@@ -8746,7 +7839,10 @@ export default function OperatorConsole({
       ? "Read-only"
       : null;
   const showRelationshipsTab = workspace?.features?.showRelationshipsTab === true;
-  const allowAiAssist = workspace?.features?.showAskAI === true || MERIDIAN_AI_PREVIEW;
+  // AI-assistant surfaces (Ask Meridian / Deal Coach) were removed in the
+  // AI-theater removal pass; the flag stays false so gated branches and
+  // effect dependencies stay compile-clean until they are fully pruned.
+  const allowAiAssist = false;
   const showOpportunitySurfaces = workspace?.features?.showOpportunitySurfaces === true;
   const hydrationNowIso = snapshotHydrationNow ?? snapshotGeneratedAt ?? "1970-01-01T00:00:00.000Z";
   // Server-supplied set of connected env-var names. Used by
@@ -10702,11 +9798,11 @@ export default function OperatorConsole({
               hunterAvailable={hunterAvailable}
               assistantCollapsed={assistantCollapsed}
               onToggleAssistant={handleToggleAssistant}
-              deepReportOpen={allowAiAssist && deepReportOpen}
-              onDeepReportOpen={() => { if (allowAiAssist) setDeepReportOpen(true); }}
+              deepReportOpen={false}
+              onDeepReportOpen={() => {}}
               onDeepReportClose={() => setDeepReportOpen(false)}
               onEnterAssistMode={handleEnterAssistMode}
-              enableAiAssist={allowAiAssist}
+              enableAiAssist={false}
               tradeSlot={(
                 <TradeModuleSelector
                   selectedTradeId={selectedTradeId}
@@ -10865,8 +9961,8 @@ export default function OperatorConsole({
                 render and the list takes the full row. */}
             <LeadWorkflowDrawer
               selectedTask={selectedTaskFromLead}
-              deepReportOpen={allowAiAssist && deepReportOpen}
-              onDeepReportOpen={() => { if (allowAiAssist) setDeepReportOpen(true); }}
+              deepReportOpen={false}
+              onDeepReportOpen={() => {}}
               onDeepReportClose={() => setDeepReportOpen(false)}
               assistantCollapsed={assistantCollapsed}
               onToggleAssistant={handleToggleAssistant}
@@ -10892,10 +9988,10 @@ export default function OperatorConsole({
                   selectedLead={selectedLead}
                   onLeadUpdate={handleUpdate}
                   hunterAvailable={!isReadOnlyWorkspace && hunterAvailable}
-                  onOpenDeepReport={allowAiAssist ? () => setDeepReportOpen(true) : undefined}
+                  onOpenDeepReport={undefined}
                   workspaceSlug={workspace?.slug ?? ""}
                   readOnly={isReadOnlyWorkspace}
-                  aiAssistEnabled={workspace?.slug === "labortech" || allowAiAssist}
+                  aiAssistEnabled={false}
                 />
               ) : null}
             />

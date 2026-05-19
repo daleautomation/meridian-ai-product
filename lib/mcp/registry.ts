@@ -7,7 +7,6 @@
 import type { ToolDefinition, ToolResult } from "@/lib/mcp/types";
 import { inspectWebsiteTool } from "./tools/inspectWebsite";
 import { inspectReviewsTool } from "./tools/inspectReviews";
-import { generateOpportunitySummaryTool } from "./tools/generateOpportunitySummary";
 import { saveCompanySnapshotTool } from "./tools/saveCompanySnapshot";
 import { getCompanySnapshotTool } from "./tools/getCompanySnapshot";
 import { addCompanyNoteTool } from "./tools/addCompanyNote";
@@ -20,12 +19,10 @@ import { findStaleCompaniesTool } from "./tools/findStaleCompanies";
 import { refreshCompanyTool } from "./tools/refreshCompany";
 import { knowledgeAddTool } from "./tools/knowledgeAdd";
 import { knowledgeSearchTool } from "./tools/knowledgeSearch";
-import { generatePitchTool } from "./tools/generatePitch";
 import { importCompaniesTool } from "./tools/importCompanies";
 import { prefilterCompaniesTool } from "./tools/prefilterCompanies";
 import { batchInspectTool } from "./tools/batchInspect";
 import { topOpportunitiesTool } from "./tools/topOpportunities";
-import { generateCallScriptTool } from "./tools/generateCallScript";
 import { logDealActionTool } from "./tools/logDealAction";
 import { setNextActionTool } from "./tools/setNextAction";
 import { logCrmActivityTool } from "./tools/logCrmActivity";
@@ -45,7 +42,6 @@ const TOOLS: ToolDefinition<any, any>[] = [
   // Phase 1 — inspection + persistence
   inspectWebsiteTool,
   inspectReviewsTool,
-  generateOpportunitySummaryTool,
   saveCompanySnapshotTool,
   // Phase 2 — entity layer read/write
   getCompanySnapshotTool,
@@ -63,15 +59,12 @@ const TOOLS: ToolDefinition<any, any>[] = [
   // Phase 8 — retrieval-ready knowledge base (minimal, vector-compatible interface)
   knowledgeAddTool,
   knowledgeSearchTool,
-  // Execution layer — grounded pitch composer (uses snapshot + knowledge)
-  generatePitchTool,
   // Wide-funnel lead intelligence pipeline
   importCompaniesTool,
   prefilterCompaniesTool,
   batchInspectTool,
   topOpportunitiesTool,
-  // LaborTech execution layer — call scripts + deal pipeline
-  generateCallScriptTool,
+  // Deal pipeline
   logDealActionTool,
   setNextActionTool,
   // CRM layer — activity log, timeline, calendar

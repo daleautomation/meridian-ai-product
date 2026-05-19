@@ -1,6 +1,6 @@
 <!--
   Meridian PR template. Auto-applied by GitHub.
-  Full checklist + rationale: docs/pr-review-checklist.md
+  Full checklist + rationale: docs/workflows/pr-review-checklist.md
   Governing philosophy:        docs/meridian-philosophy.md
 -->
 
@@ -35,8 +35,8 @@
 - [ ] No Recovery Brief generator change unintended (`lib/recovery/*`)
 - [ ] No customer-facing copy uses banned phrases (`docs/copywriting-principles.md § Banned phrases`)
 - [ ] No new black-box scoring, ML model, or hidden weight (`docs/scoring-principles.md`)
-- [ ] No new write path against a customer's CRM (`docs/ingestion-principles.md`)
-- [ ] No new dashboard, chat surface, or sticky bar (`docs/ux-principles.md`)
+- [ ] No new write path against a customer's CRM (`docs/product/ingestion-principles.md`)
+- [ ] No new dashboard, chat surface, or sticky bar (`docs/product/ux-principles.md`)
 
 ## Verification
 

@@ -1,0 +1,71 @@
+# ---------------------------------------------------------------------------
+# Cursor semantic-indexing ignore list.
+#
+# Goal: keep the indexed workspace focused on source code that Cursor agents
+# actually reason about (apps/packages/scripts/lib/components/app), and exclude
+# anything that bloats embeddings without helping retrieval — build outputs,
+# committed generated artifacts, long-form research/audit prose, large JSON/CSV
+# snapshots, and binary/media files.
+#
+# This file uses .gitignore syntax. Patterns later in the file CAN override
+# earlier ones using `!`.
+# ---------------------------------------------------------------------------
+
+# --- Dependencies & build outputs ------------------------------------------
+node_modules
+.next
+.next/**
+dist
+build
+coverage
+.vercel
+.git
+*.tsbuildinfo
+
+# --- Generated / archived / out-of-source trees ----------------------------
+generated
+generated/**
+archive
+archive/**
+research
+research/**
+prompts
+prompts/**
+
+# --- Committed generated artifacts inside data/ ----------------------------
+# These are large generated outputs that live in data/ for runtime reasons
+# but should not be semantically indexed.
+data/recovery-briefs
+data/recovery-briefs/**
+data/snapshots
+data/snapshots/**
+data/companySnapshots.json
+data/usage-events.jsonl
+data/pipelineJobHistory.json
+
+# --- Bulk file types that overwhelm semantic indexing ----------------------
+# The blanket patterns below match every file with these extensions anywhere
+# in the repo. Carve-outs immediately follow for the small set of structured
+# files Cursor genuinely benefits from understanding (package manifests, app
+# configs, etc.).
+*.json
+*.csv
+*.log
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.jsonl
+*.html
+
+# --- Carve-outs: project-level manifests Cursor should still see -----------
+!package.json
+!package-lock.json
+!tsconfig.json
+!next.config.ts
+!eslint.config.mjs
+!postcss.config.mjs
+!.vercel/project.json
+!**/route.json
+!.github/**/*.json

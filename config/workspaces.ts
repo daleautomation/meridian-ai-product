@@ -24,7 +24,6 @@ export type WorkspaceConfig = {
   comingSoonModules: ModuleId[];
   features: {
     showRelationshipsTab: boolean;
-    showAskAI: boolean;
     showOpportunitySurfaces: boolean;
   };
   access: {
@@ -48,7 +47,6 @@ export const WORKSPACES: Record<string, WorkspaceConfig> = {
     comingSoonModules: ["remodeling"],
     features: {
       showRelationshipsTab: false,
-      showAskAI: false,
       showOpportunitySurfaces: false,
     },
     access: {
@@ -70,7 +68,6 @@ export const WORKSPACES: Record<string, WorkspaceConfig> = {
     comingSoonModules: ["hvac", "plumbing", "carpentry", "painting", "electrical", "remodeling"],
     features: {
       showRelationshipsTab: true,
-      showAskAI: true,
       showOpportunitySurfaces: true,
     },
     access: {

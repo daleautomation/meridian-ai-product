@@ -1,8 +1,52 @@
+# --- Dependencies ----------------------------------------------------------
 node_modules
+
+# --- Build outputs ---------------------------------------------------------
 .next
+dist
+build
+coverage
+out
+*.tsbuildinfo
+
+# --- Environment / secrets -------------------------------------------------
 .env
 .env.local
-dist
-.DS_Store
 .env.local*
+.env.*.local
+
+# --- OS / editor -----------------------------------------------------------
+.DS_Store
+.idea
+.vscode/*
+!.vscode/extensions.json
+
+# --- Local runtime state ---------------------------------------------------
 .meridian/
+
+# --- Deploy ----------------------------------------------------------------
+.vercel/output
+
+# --- Generated artifacts ---------------------------------------------------
+# generated/ is the canonical home for new generated outputs. Anything in it
+# should never be committed — except the directory scaffolding (subdir markers
+# and READMEs) so the tree exists on a fresh clone.
+generated/**/*
+!generated/recovery-briefs/
+!generated/exports/
+!generated/reports/
+!generated/snapshots/
+!generated/**/.gitkeep
+!generated/**/README.md
+
+# Legacy generated outputs that still live under data/ for runtime reasons.
+# Existing committed copies are preserved (use `git rm --cached <path>` to
+# detach individually); these patterns only stop *future* writes from being
+# committed.
+data/snapshots/*.json
+data/recovery-briefs/**/*.html
+data/recovery-briefs/**/*.json
+data/usage-events.jsonl
+data/pipelineJobHistory.json
+!data/recovery-briefs/.gitkeep
+!data/snapshots/.gitkeep

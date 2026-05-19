@@ -17,7 +17,6 @@ import {
   type CompanyCrmSummary,
 } from "@/lib/state/crmStore";
 import { logDealAction, setNextAction, setStatus } from "@/lib/state/companySnapshotStore";
-import { callClaude } from "@/lib/ai/claudeClient";
 
 export type LogCrmActivityInput = {
   company: CompanyRef;
@@ -45,22 +44,8 @@ async function handler(input: LogCrmActivityInput): Promise<ToolResult<LogCrmAct
   const timestamp = nowIso();
   const key = companyKey(company);
 
-  // 0. Claude note interpretation — if note provided but no recommendation, extract signals
-  let derivedSummary = summary;
-  let derivedRecommendation = strategicRecommendation;
-  if (note && note.length > 10 && !strategicRecommendation) {
-    try {
-      const raw = await callClaude([{ role: "user", content:
-        `Interpret this CRM call note for a roofing sales outreach. Return ONLY a JSON object.\n\nNote: "${note}"\nOutcome: ${outcome ?? "unknown"}\n\nJSON format:\n{"summary":"one sentence clean summary","recommendation":"close|negotiate|follow_up|hold|walk_away","signals":["extracted signal 1","signal 2"]}` }],
-        "You are a CRM assistant. Extract sales signals from operator notes. Be concise. Return strict JSON only.");
-      const trimmed = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/```$/, "").trim();
-      const parsed = JSON.parse(trimmed);
-      if (parsed.summary) derivedSummary = parsed.summary;
-      if (parsed.recommendation && !strategicRecommendation) derivedRecommendation = parsed.recommendation;
-    } catch { /* Claude unavailable — proceed without interpretation */ }
-  }
-
-  // 1. Log to CRM store
+  // 1. Log to CRM store — caller supplies summary/recommendation; we do
+  //    not derive them. Notes are operator-authored, source-traceable text.
   const activity = await logActivity({
     companyKey: key,
     companyName: company.name,
@@ -69,11 +54,11 @@ async function handler(input: LogCrmActivityInput): Promise<ToolResult<LogCrmAct
     performedBy,
     outcome: outcome ?? null,
     note: note ?? "",
-    summary: derivedSummary,
+    summary,
     noteTag,
     nextAction,
     nextActionDate,
-    strategicRecommendation: derivedRecommendation,
+    strategicRecommendation,
     closeConfidence,
     metadata,
   });

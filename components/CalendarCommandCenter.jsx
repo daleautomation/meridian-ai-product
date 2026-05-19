@@ -60,7 +60,6 @@ import {
   panelBlueGlow,
 } from "./workflowLayout";
 import LeadWorkflowDrawer from "./LeadWorkflowDrawer";
-import MeridianAssistantPanel from "./MeridianAssistantPanel";
 
 // Debug-log gate. Per-render console.log calls flood the main thread
 // when the calendar renders ~200 cards × N re-renders. Enable via
@@ -2806,10 +2805,9 @@ function ServiceFitOperatorSection({ task, onOpenDeepReport }) {
     // Open Assist Mode (no-op if already open). Routing is unchanged.
     if (typeof onOpenDeepReport === "function") onOpenDeepReport(task);
     if (typeof window === "undefined") return;
-    // Wait two frames: one for React to commit the new deepReportOpen
-    // state, one for the IntelligencePanel + AssistantSection effects
-    // to register their listeners. Then dispatch the populate event
-    // and scroll to the Services Needed section.
+    // Wait two frames so the assist column (now inert after the
+    // IntelligencePanel removal) has time to settle before scrolling
+    // to the Services Needed section.
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => {
         try {
@@ -3439,7 +3437,6 @@ export function SelectedLeadPanel({
   workspaceSlug = "",
   serverExecutionOutcomeMap = {},
   readOnly = false,
-  aiAssistEnabled = true,
 }) {
   // Popover state removed — Call Now now fires tel: directly. No
   // intermediate confirmation step on a desktop operator workflow.
@@ -3479,10 +3476,6 @@ export function SelectedLeadPanel({
     : null;
   const tradeBadge = task.tradeLabel ?? tradeLabel ?? null;
   const address = task?.linkedLocation ?? null;
-  const [aiSupportOpen, setAiSupportOpen] = useState(false);
-  useEffect(() => {
-    setAiSupportOpen(false);
-  }, [task?.id]);
 
   // Mirror the calendar card's middle pill copy resolution.
   const serviceLabel =
@@ -4305,91 +4298,6 @@ export function SelectedLeadPanel({
           </div>
         </details>
       </div>
-
-      {aiAssistEnabled ? (
-        <>
-          <Divider />
-          <section style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "8px",
-          }}>
-            <button
-              type="button"
-              onClick={() => setAiSupportOpen((open) => !open)}
-              aria-expanded={aiSupportOpen}
-              style={{
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "12px",
-                padding: "10px 12px",
-                borderRadius: "12px",
-                background: palette.surface,
-                border: `1px solid ${palette.borderLight}`,
-                cursor: "pointer",
-                textAlign: "left",
-              }}
-              onFocus={applyFocusRing}
-              onBlur={clearFocusRing}
-            >
-              <span style={{ minWidth: 0 }}>
-                <span style={{
-                  display: "block",
-                  fontSize: "9px",
-                  fontWeight: 800,
-                  letterSpacing: "0.12em",
-                  color: palette.textTertiary,
-                  textTransform: "uppercase",
-                  marginBottom: "3px",
-                }}>
-                  Operator support
-                </span>
-                <span style={{
-                  display: "block",
-                  fontSize: "12px",
-                  fontWeight: 700,
-                  color: palette.textPrimary,
-                  lineHeight: 1.35,
-                }}>
-                  Ask for opener, objection, or follow-up help
-                </span>
-              </span>
-              <span style={{
-                fontSize: "11px",
-                fontWeight: 800,
-                color: palette.blue,
-                background: palette.bluePale,
-                border: `1px solid ${palette.blueBorder}`,
-                borderRadius: "999px",
-                padding: "4px 9px",
-                whiteSpace: "nowrap",
-              }}>
-                {aiSupportOpen ? "Hide" : "Open chat"}
-              </span>
-            </button>
-            {aiSupportOpen ? (
-              <div style={{
-                height: "360px",
-                minHeight: 0,
-                overflow: "hidden",
-                border: `1px solid ${palette.borderLight}`,
-                borderRadius: "14px",
-                background: palette.surface,
-              }}>
-                <MeridianAssistantPanel
-                  task={task}
-                  workspace={{ slug: workspaceSlug }}
-                  tradeLabel={tradeBadge}
-                  collapsed={false}
-                  onToggleCollapsed={() => setAiSupportOpen(false)}
-                />
-              </div>
-            ) : null}
-          </section>
-        </>
-      ) : null}
 
       <details style={{
         border: `1px solid ${palette.borderLight}`,
@@ -6197,12 +6105,11 @@ export default function CalendarCommandCenter({
                 selectedLead={selectedLead}
                 onLeadUpdate={onLeadUpdate}
                 hunterAvailable={hunterAvailable}
-                onOpenDeepReport={enableAiAssist ? () => setDeepReportOpen(true) : undefined}
+                onOpenDeepReport={undefined}
                 overflowEntries={overflowEntries}
                 workspaceSlug={workspaceSlug}
                 serverExecutionOutcomeMap={serverExecutionOutcomeMap}
                 readOnly={readOnly}
-                aiAssistEnabled={enableAiAssist}
               />
             )}
           />
