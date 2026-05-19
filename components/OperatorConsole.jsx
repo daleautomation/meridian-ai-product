@@ -9838,12 +9838,24 @@ export default function OperatorConsole({
     const map = new Map();
     const collect = (l) => {
       if (!l) return;
-      const sid = l.decision?.primaryOpportunity?.services?.[0]?.id;
+      const sid =
+        l.serviceNeed?.serviceId
+        ?? l.salesStrategy?.primaryAngle?.serviceId
+        ?? l.decision?.primaryOpportunity?.services?.[0]?.id;
       if (l.key && sid) map.set(l.key, sid);
     };
     [...callTheseFirst, ...todayList, ...remaining, ...rest].forEach(collect);
+    for (const bundle of Object.values(serviceBucketsByTrade ?? {})) {
+      const byService = bundle?.leadsByService ?? {};
+      for (const [serviceId, entries] of Object.entries(byService)) {
+        if (!Array.isArray(entries)) continue;
+        for (const entry of entries) {
+          if (entry?.leadKey && !map.has(entry.leadKey)) map.set(entry.leadKey, serviceId);
+        }
+      }
+    }
     return map;
-  }, [callTheseFirst, todayList, remaining, rest]);
+  }, [callTheseFirst, todayList, remaining, rest, serviceBucketsByTrade]);
 
   // Service-filter aware calendar tasks. When a LaborTech service is
   // selected, only tasks whose linked lead is in that service's lead
@@ -9894,8 +9906,11 @@ export default function OperatorConsole({
       pool = pool.filter((t) => !t?.assignedRepId || t.assignedRepId === selectedRepId);
     }
     if (selectedLaborTechServiceId) {
-      const tradeBundle = serviceBucketsByTrade?.[selectedTradeId];
-      const list = tradeBundle?.leadsByService?.[selectedLaborTechServiceId] ?? [];
+      const list = selectedTradeId === "all"
+        ? Object.values(serviceBucketsByTrade ?? {}).flatMap((bundle) => (
+          bundle?.leadsByService?.[selectedLaborTechServiceId] ?? []
+        ))
+        : (serviceBucketsByTrade?.[selectedTradeId]?.leadsByService?.[selectedLaborTechServiceId] ?? []);
       const allowed = new Set(list.map((e) => e.leadKey));
       pool = pool.filter((t) => {
         const k = t?.linkedLeadId;
@@ -10178,8 +10193,10 @@ export default function OperatorConsole({
 
   const serviceFilterLabel = useMemo(() => {
     if (!selectedLaborTechServiceId) return null;
-    const tradeBundle = serviceBucketsByTrade?.[selectedTradeId];
-    const card = tradeBundle?.cards?.find((c) => c.serviceId === selectedLaborTechServiceId);
+    const cards = selectedTradeId === "all"
+      ? Object.values(serviceBucketsByTrade ?? {}).flatMap((bundle) => bundle?.cards ?? [])
+      : (serviceBucketsByTrade?.[selectedTradeId]?.cards ?? []);
+    const card = cards.find((c) => c.serviceId === selectedLaborTechServiceId);
     return card?.label ?? selectedLaborTechServiceId;
   }, [selectedLaborTechServiceId, selectedTradeId, serviceBucketsByTrade]);
   const visibilitySummary = useMemo(

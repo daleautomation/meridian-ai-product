@@ -134,7 +134,7 @@ function painScore(t: TaskItem): number {
 function contactScore(t: TaskItem): number {
   // Lower is better (sorted ascending).
   let pts = 0;
-  if (t.phone) pts -= 2;
+  if (t.phone && t.phoneAuthority === "dialable") pts -= 3;
   if (t.email || t.verifiedEmail) pts -= 1;
   if (t.laborTechScan?.salesAngle?.opener) pts -= 1;
   return pts;
@@ -215,9 +215,8 @@ function buildDemoSlotIso(slotIndex: number): string {
 function isCallTask(t: TaskItem): boolean {
   if (t.category !== "priority") return false;
   const id = t.id ?? "";
-  if (id.endsWith("-call")) return true;
   const title = t.title ?? "";
-  return title.startsWith("Call ");
+  return id.endsWith("-call") && title.startsWith("Call ") && t.phoneAuthority === "dialable";
 }
 
 /**
