@@ -20,8 +20,12 @@ export function proxy(req: NextRequest) {
     pathname.startsWith("/intake") ||
     pathname.startsWith("/api/intake") ||
     pathname.startsWith("/api/auth") ||
-    pathname.startsWith("/api/ai") ||
     pathname.startsWith("/api/mcp") ||
+    // /api/outcomes is gated by the route handler itself: the
+    // recovery_brief source is publicly capturable (briefs are shared
+    // by direct link); operator_console writes require a session +
+    // workspace allow-list match.
+    pathname.startsWith("/api/outcomes") ||
     pathname.startsWith("/demo/") ||
     pathname.startsWith("/showcase/") ||
     pathname.startsWith("/brief/") ||

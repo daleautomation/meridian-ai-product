@@ -3,6 +3,10 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { safeReadJson } from "@/lib/utils/fsSafeWrite";
 import type { RecoveryBrief } from "@/lib/recovery/brief";
+import { companyKey } from "@/lib/mcp/types";
+import { listOutcomesFor } from "@/lib/recovery/outcomes/store";
+import type { RelationshipOutcome } from "@/lib/recovery/outcomes/types";
+import { LeadOutcomeBlock } from "@/components/outcomes/LeadOutcomeBlock";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +45,22 @@ export default async function RecoveryBriefPage({ params }: BriefPageProps) {
   const brief = await loadBrief(customer, week);
   if (!brief) notFound();
 
+  // One read of the customer's continuity log — sliced per-card below.
+  // Outcome captures on the brief itself are tagged with source="recovery_brief".
+  let allOutcomes: RelationshipOutcome[] = [];
+  try {
+    allOutcomes = await listOutcomesFor(customer);
+  } catch {
+    allOutcomes = [];
+  }
+  const outcomesByLead = new Map<string, RelationshipOutcome[]>();
+  for (const o of allOutcomes) {
+    const arr = outcomesByLead.get(o.leadKey);
+    if (arr) arr.push(o);
+    else outcomesByLead.set(o.leadKey, [o]);
+  }
+  const now = new Date();
+
   return (
     <main className="recovery-brief-page">
       <section className="recovery-brief-memo" aria-label="Recovery Brief memo">
@@ -66,36 +86,55 @@ export default async function RecoveryBriefPage({ params }: BriefPageProps) {
         </header>
 
         <div className="recovery-brief-deck">
-          {brief.opportunities.map((item) => (
-            <article className="recovery-brief-card" key={`${item.rank}-${item.companyName}`}>
-              <div className="recovery-brief-card-topline">
-                <span>{rankLabel(item.rank)}</span>
-                <span>Recovery {item.recoveryScore} / 100</span>
-              </div>
-              <h2>{item.companyName}</h2>
-              <p className="recovery-brief-card-meta">
-                {item.contactName ?? "Contact not named"} · {item.location ?? "Location not provided"} · {daysLabel(item.staleness.daysSinceTouch)}
-              </p>
-              <div className="recovery-brief-card-grid">
-                <section>
-                  <h3>Why now</h3>
-                  <p>{item.whyNow}</p>
+          {brief.opportunities.map((item) => {
+            const leadKey = companyKey({ name: item.companyName });
+            const itemOutcomes = outcomesByLead.get(leadKey) ?? [];
+            return (
+              <article className="recovery-brief-card" key={`${item.rank}-${item.companyName}`}>
+                <div className="recovery-brief-card-topline">
+                  <span>{rankLabel(item.rank)}</span>
+                  <span>Recovery {item.recoveryScore} / 100</span>
+                </div>
+                <h2>{item.companyName}</h2>
+                <p className="recovery-brief-card-meta">
+                  {item.contactName ?? "Contact not named"} · {item.location ?? "Location not provided"} · {daysLabel(item.staleness.daysSinceTouch)}
+                </p>
+                <div className="recovery-brief-card-grid">
+                  <section>
+                    <h3>Why now</h3>
+                    <p>{item.whyNow}</p>
+                  </section>
+                  <section>
+                    <h3>Suggested opener</h3>
+                    <p>{item.suggestedOpener}</p>
+                  </section>
+                  <section>
+                    <h3>Priority read</h3>
+                    <p>{item.priorityContext}</p>
+                  </section>
+                  <section>
+                    <h3>Contact path</h3>
+                    <p>{item.verifiedContactPath}</p>
+                  </section>
+                </div>
+                <section className="recovery-brief-card-outcome">
+                  <h3>Continuity</h3>
+                  <LeadOutcomeBlock
+                    customer={customer}
+                    leadKey={leadKey}
+                    source="recovery_brief"
+                    variant="memory"
+                    initialOutcomes={itemOutcomes}
+                    fallbackDaysSinceTouch={item.staleness.daysSinceTouch}
+                    staleScoreAtTime={item.recoveryScore}
+                    decisionBucketAtTime={item.decision.bucket}
+                    now={now}
+                    outcomes={["contacted", "no_response", "follow_up_later", "meeting_booked", "not_worth_pursuing"]}
+                  />
                 </section>
-                <section>
-                  <h3>Suggested opener</h3>
-                  <p>{item.suggestedOpener}</p>
-                </section>
-                <section>
-                  <h3>Priority read</h3>
-                  <p>{item.priorityContext}</p>
-                </section>
-                <section>
-                  <h3>Contact path</h3>
-                  <p>{item.verifiedContactPath}</p>
-                </section>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
       </section>
 
@@ -235,6 +274,10 @@ export default async function RecoveryBriefPage({ params }: BriefPageProps) {
         .recovery-brief-card section {
           padding-top: 15px;
           border-top: 1px solid #ece5dc;
+        }
+
+        .recovery-brief-card-outcome {
+          margin-top: 18px;
         }
 
         .recovery-brief-card h3 {

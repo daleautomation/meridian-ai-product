@@ -60,6 +60,8 @@ import {
   panelBlueGlow,
 } from "./workflowLayout";
 import LeadWorkflowDrawer from "./LeadWorkflowDrawer";
+import { LeadOutcomeBlock } from "./outcomes/LeadOutcomeBlock";
+import { companyKey } from "../lib/mcp/types";
 
 // Debug-log gate. Per-render console.log calls flood the main thread
 // when the calendar renders ~200 cards × N re-renders. Enable via
@@ -4330,6 +4332,37 @@ export function SelectedLeadPanel({
           />
         </div>
       </details>
+
+      {workspaceSlug && (task?.companyKey || task?.linkedCompany) ? (
+        <section
+          aria-label="Relationship continuity"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            padding: "12px 12px 14px",
+            borderRadius: 10,
+            border: `1px solid ${palette.borderLight}`,
+            background: palette.surface,
+          }}
+        >
+          <div style={{
+            fontSize: 11,
+            fontWeight: 750,
+            color: palette.textSecondary,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+          }}>
+            Continuity
+          </div>
+          <LeadOutcomeBlock
+            customer={workspaceSlug}
+            leadKey={task.companyKey ?? companyKey({ name: task.linkedCompany })}
+            source="operator_console"
+            fetchOnMount
+          />
+        </section>
+      ) : null}
         </>
       )}
 
