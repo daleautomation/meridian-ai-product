@@ -43,7 +43,7 @@ export const TENANTS: Record<string, Tenant> = {
   dylan: {
     id: "dylan",
     name: "Dylan",
-    password: "meridian",
+    password: "Meridian",
     accessRole: "admin_operator",
     modules: ["roofing"],
     geo: [],
@@ -52,7 +52,7 @@ export const TENANTS: Record<string, Tenant> = {
   nicole: {
     id: "nicole",
     name: "Nicole Lonergan",
-    password: "nicole",
+    password: "brookside",
     accessRole: "client_user",
     modules: ["roofing"],
     geo: [],

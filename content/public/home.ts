@@ -1,5 +1,7 @@
 export const ABOUT_HREF = "/about";
-export const CLIENT_LOGIN_HREF = "/login?next=/operator";
+export const WORKSPACE_LOGIN_HREF = "/login";
+/** @deprecated Use WORKSPACE_LOGIN_HREF */
+export const CLIENT_LOGIN_HREF = WORKSPACE_LOGIN_HREF;
 
 // Points at a real Recovery Brief so the CTA delivers what it promises.
 // Staffing Pipeline Recovery matches the recruiting/staffing outreach cohort

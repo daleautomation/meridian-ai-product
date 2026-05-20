@@ -38,6 +38,7 @@ export type WorkspaceConfig = {
   branding?: {
     displayName?: string;
     accentLabel?: string;
+    companyName?: string;
   };
 };
 
@@ -104,8 +105,9 @@ export const WORKSPACES: Record<string, WorkspaceConfig> = {
       readOnlyByDefault: false,
     },
     branding: {
-      displayName: "Nicole Lonergan",
-      accentLabel: "Nicole's Relationship Workspace",
+      displayName: "Nicole Lonergan Workspace",
+      accentLabel: "Brookside Real Estate relationship workspace",
+      companyName: "Brookside Real Estate",
     },
   },
 };

@@ -9,7 +9,12 @@ import { buildResurfacingBuckets } from "@/lib/relationship-intelligence/resurfa
 import { buildRelationshipPriorityWorkspaceModel } from "@/lib/relationship-priority/workspace";
 import { parseShowcaseConfig } from "@/lib/relationship-priority/showcase";
 import { getWorkspaceAccess } from "@/lib/workspaceAccess";
-import { isPersonalWorkspace, workspaceHomePath } from "@/lib/workspaceRouting";
+import {
+  isPersonalWorkspace,
+  shouldRedirectToWorkspaceSelect,
+  WORKSPACE_SELECT_PATH,
+  workspaceHomePath,
+} from "@/lib/workspaceRouting";
 import { palette } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
@@ -70,6 +75,9 @@ async function renderRelationshipPriorityPage({
   }
 
   if (!workspace) {
+    if (shouldRedirectToWorkspaceSelect(user)) {
+      redirect(WORKSPACE_SELECT_PATH);
+    }
     if (userWorkspaces.length === 1) {
       const only = defaultWorkspaceFor(user.workspaces ?? []);
       if (only) {

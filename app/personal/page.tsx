@@ -11,7 +11,12 @@ import {
   listWorkspacesForUser,
   type WorkspaceConfig,
 } from "@/config/workspaces";
-import { isPersonalWorkspace, workspaceHomePath } from "@/lib/workspaceRouting";
+import {
+  isPersonalWorkspace,
+  shouldRedirectToWorkspaceSelect,
+  WORKSPACE_SELECT_PATH,
+  workspaceHomePath,
+} from "@/lib/workspaceRouting";
 import { personalPalette } from "@/lib/personal-workspace/config";
 
 export const dynamic = "force-dynamic";
@@ -75,6 +80,9 @@ export default async function PersonalWorkspacePage(props: {
   }
 
   if (!workspace) {
+    if (shouldRedirectToWorkspaceSelect(user)) {
+      redirect(WORKSPACE_SELECT_PATH);
+    }
     if (userWorkspaces.length === 1) {
       const only = defaultWorkspaceFor(user.workspaces ?? []);
       if (only && isPersonalWorkspace(only)) {

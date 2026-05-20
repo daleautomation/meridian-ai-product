@@ -4,6 +4,7 @@ import { createSessionToken, isSecureSessionRequest, SESSION_COOKIE } from "@/li
 import { makeEvent, writeEvent } from "@/lib/tracking/eventLog";
 import { isDemoAllowedHost, describeDemoAllowlist } from "@/lib/demo/access";
 import { getDemoProfile, type DemoProfile } from "@/lib/demo/profiles";
+import { postLoginRouteForUser } from "@/lib/auth/postLoginRouting";
 import { getWorkspaceAccess } from "@/lib/workspaceAccess";
 import { isPersonalWorkspace, workspaceHomePath } from "@/lib/workspaceRouting";
 
@@ -45,8 +46,14 @@ export async function createDemoSessionResponse(input: DemoSessionInput) {
     return NextResponse.json({ error: "Demo tenant unavailable" }, { status: 404 });
   }
 
-  const workspaceSlug = input.workspaceSlug ?? profile?.workspaceSlug ?? tenant.workspaces[0] ?? null;
-  const access = getWorkspaceAccess(toPublicUser(tenant), workspaceSlug);
+  const explicitWorkspace =
+    input.workspaceSlug
+    ?? profile?.workspaceSlug
+    ?? url.searchParams.get("workspace")
+    ?? null;
+  const workspaceSlug = explicitWorkspace ?? tenant.workspaces[0] ?? null;
+  const user = toPublicUser(tenant);
+  const access = getWorkspaceAccess(user, workspaceSlug);
   if (!access.ok) {
     // eslint-disable-next-line no-console
     console.log(
@@ -90,10 +97,10 @@ export async function createDemoSessionResponse(input: DemoSessionInput) {
   }
   const isHttps = isSecureSessionRequest(req);
   const proto = isHttps ? "https" : "http";
-  const redirectUrl = new URL(
-    workspaceHomePath(access.workspace),
-    `${proto}://${fwdHost}`,
-  );
+  const redirectPath = explicitWorkspace
+    ? workspaceHomePath(access.workspace)
+    : postLoginRouteForUser(user);
+  const redirectUrl = new URL(redirectPath, `${proto}://${fwdHost}`);
   for (const key of ["mode", "showcase", "vertical", "preset"]) {
     const value = url.searchParams.get(key);
     if (value) redirectUrl.searchParams.set(key, value);

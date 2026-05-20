@@ -32,7 +32,12 @@ import {
   type WorkspaceConfig,
 } from "../../config/workspaces";
 import { getWorkspaceAccess } from "../../lib/workspaceAccess";
-import { isPersonalWorkspace, workspaceHomePath } from "../../lib/workspaceRouting";
+import {
+  isPersonalWorkspace,
+  shouldRedirectToWorkspaceSelect,
+  WORKSPACE_SELECT_PATH,
+  workspaceHomePath,
+} from "../../lib/workspaceRouting";
 import { getSourceReadiness } from "../../lib/sources/readiness";
 import { isHunterConfigured } from "../../lib/integrations/hunterConfig";
 import { ALL_TRADE_ENV_VARS } from "../../lib/modules/tradeSources";
@@ -166,6 +171,9 @@ async function renderOperatorPage({
     }
   }
   if (!workspace) {
+    if (shouldRedirectToWorkspaceSelect(user)) {
+      redirect(WORKSPACE_SELECT_PATH);
+    }
     if (userWorkspaces.length === 1) {
       const only = defaultWorkspaceFor(user.workspaces ?? []);
       if (only) redirect(workspaceHomePath(only));

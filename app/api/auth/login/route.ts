@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { findTenantByCredentials, toPublicUser } from "@/config/tenants";
+import { resolvePostLoginRedirect } from "@/lib/auth/postLoginRouting";
 import { createSessionToken, isSecureSessionRequest, SESSION_COOKIE } from "@/lib/session";
 
 export async function POST(req: Request) {
-  let body: { username?: string; password?: string; workspace?: string };
+  let body: { username?: string; password?: string; workspace?: string; next?: string };
   try {
     body = await req.json();
   } catch {
@@ -38,7 +39,9 @@ export async function POST(req: Request) {
     );
     return NextResponse.json({ error: "Authentication is not configured" }, { status: 500 });
   }
-  const res = NextResponse.json({ user: toPublicUser(tenant) });
+  const user = toPublicUser(tenant);
+  const redirectTo = resolvePostLoginRedirect(user, body.next ?? null);
+  const res = NextResponse.json({ user, redirectTo });
   const fwdProto = req.headers.get("x-forwarded-proto") ?? "";
   const isHttps = isSecureSessionRequest(req);
   res.cookies.set(SESSION_COOKIE, token, {

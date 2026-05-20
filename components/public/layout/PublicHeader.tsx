@@ -1,9 +1,9 @@
 import Link from "next/link";
 import {
   ABOUT_HREF,
-  CLIENT_LOGIN_HREF,
   RECOVERY_SAMPLE_BRIEF_HREF,
   REQUEST_FIRST_BRIEF_HREF,
+  WORKSPACE_LOGIN_HREF,
 } from "@/content/public/home";
 
 export function PublicHeader() {
@@ -17,8 +17,12 @@ export function PublicHeader() {
         <Link href={RECOVERY_SAMPLE_BRIEF_HREF}>Sample brief</Link>
         <a href={REQUEST_FIRST_BRIEF_HREF}>Request first brief</a>
         <Link href={ABOUT_HREF}>About</Link>
-        <Link href={CLIENT_LOGIN_HREF}>Login</Link>
       </nav>
+      <div className="public-header-actions">
+        <Link href={WORKSPACE_LOGIN_HREF} className="public-login-button">
+          Workspace Login
+        </Link>
+      </div>
     </header>
   );
 }

@@ -33,27 +33,19 @@ export function workspaceImportPath(workspace: WorkspaceConfig): string {
   return `/operator/import?workspace=${workspace.slug}`;
 }
 
-/** Default post-login route for a user with one or more workspace slugs. */
+import type { PublicUser } from "@/config/tenants";
+import { listWorkspacesForUser } from "@/config/workspaces";
+
+export const WORKSPACE_SELECT_PATH = "/workspace-select";
+
+/** Default post-login route for workspace slug list. */
 export function defaultRouteForWorkspaceSlugs(slugs: readonly string[]): string {
   const workspaces = slugs
     .map((slug) => getWorkspaceBySlug(slug))
     .filter((ws): ws is WorkspaceConfig => ws !== null);
 
-  const personal = workspaces.find(isPersonalWorkspace);
-  if (personal && workspaces.length === 1) {
-    return workspaceHomePath(personal);
-  }
-
-  const labortech = workspaces.find(isLaborTechWorkspace);
-  if (labortech && workspaces.length === 1) {
-    return workspaceHomePath(labortech);
-  }
-
-  const relationship = workspaces.find(
-    (ws) => isRelationshipDeskWorkspace(ws) && !isPersonalWorkspace(ws),
-  );
-  if (relationship && workspaces.length === 1) {
-    return workspaceHomePath(relationship);
+  if (workspaces.length > 1) {
+    return WORKSPACE_SELECT_PATH;
   }
 
   if (workspaces.length === 1) {
@@ -61,4 +53,11 @@ export function defaultRouteForWorkspaceSlugs(slugs: readonly string[]): string 
   }
 
   return "/login";
+}
+
+/** When a multi-workspace user hits a surface without ?workspace=, send to selector. */
+export function shouldRedirectToWorkspaceSelect(
+  user: Pick<PublicUser, "workspaces">,
+): boolean {
+  return listWorkspacesForUser(user.workspaces ?? []).length > 1;
 }

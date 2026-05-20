@@ -47,8 +47,8 @@ export const PERSONAL_NAV: Array<{
 ];
 
 export const PERSONAL_COPY_DEFAULTS = {
-  eyebrow: "Nicole's Relationship Workspace",
-  title: "Nicole Lonergan's relationship desk",
+  eyebrow: "Brookside Real Estate relationship workspace",
+  title: "Nicole Lonergan Workspace",
   subtitle: "Stay close to the people who matter — relationship intelligence without trade or operator noise.",
   heroFocus: "Today's focus",
   importCta: "Import contacts",
@@ -64,13 +64,16 @@ export const PERSONAL_COPY_DEFAULTS = {
 export function personalCopyForWorkspace(branding?: {
   displayName?: string;
   accentLabel?: string;
+  companyName?: string;
 }) {
-  const name = branding?.displayName ?? "Nicole Lonergan";
-  const accent = branding?.accentLabel ?? "Nicole's Relationship Workspace";
+  const name = branding?.displayName ?? "Nicole Lonergan Workspace";
+  const accent = branding?.accentLabel ?? "Brookside Real Estate relationship workspace";
+  const company = branding?.companyName ?? "Brookside Real Estate";
   return {
     ...PERSONAL_COPY_DEFAULTS,
     eyebrow: accent,
-    title: `${name}'s relationship desk`,
+    title: name.includes("Workspace") ? name : `${name} · ${company}`,
+    subtitle: `Relationship intelligence for ${company} — no trade or operator workflows.`,
   };
 }
 
