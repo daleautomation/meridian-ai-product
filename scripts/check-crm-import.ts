@@ -2,14 +2,37 @@
 
 import { detectColumnMapping, normalizeCrmRow } from "../lib/crm-import/normalize";
 import { findDedupePairs, verdictFromScore, scoreDuplicatePair } from "../lib/crm-import/dedupe";
+import {
+  deriveDisplayAsTrusted,
+  isTrustDisplayAligned,
+  TRUST_CONFIDENCE,
+} from "../lib/crm-import/trust";
 import { validateImportRows } from "../lib/crm-import/validate";
 import { computeRelationshipScore } from "../lib/relationship-intelligence/scoring";
 import { buildResurfacingBuckets } from "../lib/relationship-intelligence/resurfacing";
-import type { CrmContactRecord } from "../lib/crm-import/types";
+import type { ContactDatumTrust, CrmContactRecord } from "../lib/crm-import/types";
 
 function assert(condition: boolean, message: string) {
   if (!condition) throw new Error(message);
 }
+
+function assertTrustDatum(datum: ContactDatumTrust, context: string) {
+  assert(isTrustDisplayAligned(datum), `${context}: trust display matches level`);
+  if (datum.trustLevel === "weak" || datum.trustLevel === "missing") {
+    assert(!datum.displayAsTrusted, `${context}: weak/missing must not display as trusted`);
+  }
+  if (datum.trustLevel === "acceptable") {
+    assert(!datum.displayAsTrusted, `${context}: acceptable must not display as verified`);
+  }
+  if (datum.displayAsTrusted) {
+    assert(datum.trustLevel === "verified", `${context}: only verified may display as trusted`);
+    assert(datum.confidence >= TRUST_CONFIDENCE.verified, `${context}: verified requires confidence threshold`);
+  }
+}
+
+assert(deriveDisplayAsTrusted("verified") === true, "verified displays as trusted");
+assert(deriveDisplayAsTrusted("acceptable") === false, "acceptable does not display as trusted");
+assert(deriveDisplayAsTrusted("weak") === false, "weak does not display as trusted");
 
 const headers = ["Full Name", "Account Name", "Phone", "Email", "Last Contact"];
 const mapping = detectColumnMapping(headers);
@@ -29,7 +52,10 @@ const row = normalizeCrmRow(
   "hubspot",
 );
 assert(row.normalizedPhone === "8165551234", "phone normalized");
-assert(!row.dataTrust.phone.displayAsTrusted || row.dataTrust.phone.trustLevel === "verified", "trust display matches level");
+assertTrustDatum(row.dataTrust.phone, "import phone");
+assertTrustDatum(row.dataTrust.email, "import email");
+assert(row.dataTrust.phone.trustLevel === "acceptable", "csv phone is acceptable not verified");
+assert(!row.dataTrust.phone.displayAsTrusted, "csv phone must not show verified styling");
 
 const existing: CrmContactRecord = {
   id: "crm-test-1",

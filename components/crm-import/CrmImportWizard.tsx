@@ -3,7 +3,8 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { palette } from "@/lib/theme";
-import type { ImportPreviewResult } from "@/lib/crm-import/types";
+import { formatTrustChipDisplay } from "@/lib/crm-import/trust";
+import type { ContactDatumTrust, ImportPreviewResult } from "@/lib/crm-import/types";
 
 type Step = "upload" | "mapping" | "preview" | "importing" | "done";
 
@@ -189,10 +190,10 @@ export default function CrmImportWizard({ workspaceId, workspaceName }: Props) {
                         <td>{row.name}</td>
                         <td>{row.company}</td>
                         <td>
-                          <TrustChip level={row.dataTrust.phone.trustLevel} trusted={row.dataTrust.phone.displayAsTrusted} />
+                          <TrustChip datum={row.dataTrust.phone} />
                         </td>
                         <td>
-                          <TrustChip level={row.dataTrust.email.trustLevel} trusted={row.dataTrust.email.displayAsTrusted} />
+                          <TrustChip datum={row.dataTrust.email} />
                         </td>
                         <td style={styles.muted}>
                           {[...row.validationErrors, ...row.validationWarnings].join(" · ") || "—"}
@@ -279,16 +280,18 @@ function MetricRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function TrustChip({ level, trusted }: { level: string; trusted: boolean }) {
+function TrustChip({ datum }: { datum: ContactDatumTrust }) {
+  const display = formatTrustChipDisplay(datum);
   return (
     <span
+      title={display.title}
       style={{
         ...styles.chip,
-        background: trusted ? palette.successBg : palette.warningBg ?? "#FFF7ED",
-        color: trusted ? palette.success : palette.orange,
+        background: display.trusted ? palette.successBg : palette.warningBg,
+        color: display.trusted ? palette.success : palette.orange,
       }}
     >
-      {level}
+      {display.label}
     </span>
   );
 }

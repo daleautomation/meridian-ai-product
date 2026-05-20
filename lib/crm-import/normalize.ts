@@ -1,10 +1,10 @@
 // Meridian CRM import — column mapping and row normalization.
 
 import { normalizePhoneForTrust } from "@/lib/contacts/trust";
+import { buildDatumTrust } from "./trust";
 import {
   CRM_IMPORT_FIELDS,
   type ColumnMapping,
-  type ContactDatumTrust,
   type CrmImportField,
   type NormalizedCrmContact,
 } from "./types";
@@ -102,41 +102,6 @@ function parseLastInteraction(value: string): string | null {
   return parsed.toISOString();
 }
 
-function buildDatumTrust(
-  value: string | null,
-  source: string,
-  opts: { required?: boolean; verified?: boolean } = {},
-): ContactDatumTrust {
-  const hasValue = Boolean(value && value.trim());
-  const confidence = !hasValue
-    ? 0
-    : opts.verified
-      ? 92
-      : value!.includes("@") || normalizePhoneForTrust(value).length >= 10
-        ? 78
-        : 55;
-
-  let trustLevel: ContactDatumTrust["trustLevel"] = "missing";
-  if (hasValue) {
-    if (opts.verified) trustLevel = "verified";
-    else if (confidence >= 75) trustLevel = "acceptable";
-    else trustLevel = "weak";
-  } else if (opts.required) {
-    trustLevel = "missing";
-  }
-
-  return {
-    value: hasValue ? value : null,
-    source,
-    confidence,
-    trustLevel,
-    lastVerifiedAt: hasValue ? new Date().toISOString() : null,
-    enrichmentProvider: null,
-    conflictState: "none",
-    displayAsTrusted: trustLevel === "verified" || trustLevel === "acceptable",
-  };
-}
-
 export function normalizeCrmRow(
   row: Record<string, string>,
   rowIndex: number,
@@ -197,11 +162,7 @@ export function normalizeCrmRow(
       phone: buildDatumTrust(phone.trim() || null, importSource),
       email: buildDatumTrust(normalizedEmail, importSource),
       address: buildDatumTrust(address.trim() || null, importSource),
-      lastInteraction: buildDatumTrust(
-        lastInteractionAt,
-        importSource,
-        { verified: Boolean(lastInteractionAt) },
-      ),
+      lastInteraction: buildDatumTrust(lastInteractionAt, importSource),
     },
     validationErrors,
     validationWarnings,
