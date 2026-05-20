@@ -16,10 +16,13 @@ function LoginForm() {
   const [showDemoLogin, setShowDemoLogin] = useState(false);
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const host = window.location.hostname.toLowerCase();
-    const isDev = host === "localhost" || host === "127.0.0.1";
-    const isNgrok = host.includes("ngrok");
-    setShowDemoLogin(isDev || isNgrok);
+    const timer = window.setTimeout(() => {
+      const host = window.location.hostname.toLowerCase();
+      const isDev = host === "localhost" || host === "127.0.0.1";
+      const isNgrok = host.includes("ngrok");
+      setShowDemoLogin(isDev || isNgrok);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   async function onSubmit(e: React.FormEvent) {
