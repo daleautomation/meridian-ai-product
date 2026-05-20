@@ -214,7 +214,7 @@ function verifiedGoogleResolution(lastVerifiedAt: string): ContactResolution {
   };
   const decision = decideNormalizedLead(googleLead);
   assert.notEqual(decision.bucket, "Watch", "fresh Google Places phone is callable even without prebuilt contactPaths");
-  const tasks = buildTasksFromLeads([{ ...googleLead, decision, score: decision.score, bucket: "CALL NOW" }], { now, maxLeads: 1 });
+  const tasks = buildTasksFromLeads([{ ...googleLead, score: decision.score, bucket: "CALL NOW" }], { now, maxLeads: 1 });
   const callTask = tasks.find((task) => task.id === "lead-google-phone-call");
   assert.ok(callTask, "Google Places phone enters the call queue");
   assert.equal(callTask?.phoneAuthority, "dialable", "Google Places phone carries dial authority");
