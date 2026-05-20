@@ -12,6 +12,9 @@ import {
   freshnessStateFor,
   type FreshnessState,
 } from "@/lib/display/trustVisibility";
+import type { ResurfacingBucket } from "@/lib/relationship-intelligence/resurfacing";
+import { scoreFromCrmContact } from "@/lib/relationship-intelligence/scoring";
+import type { CrmContactRecord } from "@/lib/crm-import/types";
 
 type EngineSummary = RelationshipEngineOperatorSurface["workflows"]["relationshipSummaries"][number];
 type EngineQueueItem = RelationshipEngineOperatorSurface["queues"][number]["items"][number];
@@ -63,6 +66,9 @@ export interface RelationshipPriorityWorkspaceModel {
   assistantPrompts: string[];
   simplificationNotes: string[];
   deferred: string[];
+  importPath: string;
+  resurfacingBuckets: ResurfacingBucket[];
+  crmContactCount: number;
   showcase?: RelationshipPriorityShowcaseModel;
 }
 
@@ -122,8 +128,10 @@ export function buildRelationshipPriorityWorkspaceModel(args: {
   workspace: WorkspaceConfig;
   user: PublicUser;
   showcaseConfig?: RelationshipPriorityShowcaseConfig | null;
+  crmContacts?: CrmContactRecord[];
+  resurfacingBuckets?: ResurfacingBucket[];
 }): RelationshipPriorityWorkspaceModel {
-  const { surface, workspace, user, showcaseConfig } = args;
+  const { surface, workspace, user, showcaseConfig, crmContacts = [], resurfacingBuckets = [] } = args;
   const queueIndex = indexQueueItems(surface);
   const feedIndex = indexFeedItems(surface);
   const engineCards = surface.workflows.relationshipSummaries
@@ -139,7 +147,12 @@ export function buildRelationshipPriorityWorkspaceModel(args: {
     }));
   const generatedCards = generateDemoPriorityCards(workspace, surface.generatedAt);
   const demoMode = workspace.access.dataMode === "demo" || engineCards.length === 0;
-  const priorityQueue = mergeDemoBackfill(engineCards, generatedCards, demoMode);
+  const crmCards = crmContactsToPriorityCards(crmContacts, surface.generatedAt);
+  const priorityQueue = mergeDemoBackfill(
+    [...crmCards, ...engineCards],
+    generatedCards,
+    demoMode && crmCards.length === 0,
+  );
   const recoveryQueue = priorityQueue.filter((card) =>
     card.stage.toLowerCase().includes("retention")
     || card.stage.toLowerCase().includes("reactivation")
@@ -210,8 +223,89 @@ export function buildRelationshipPriorityWorkspaceModel(args: {
       "Deep Report opens as contextual detail rather than a default dashboard.",
       "Assistant actions are staged as prompts until execution endpoints are wired.",
     ],
+    importPath: `/operator/import?workspace=${workspace.slug}`,
+    resurfacingBuckets,
+    crmContactCount: crmContacts.length,
   };
   return applyShowcaseDemoPreset(model, showcaseConfig);
+}
+
+function crmContactsToPriorityCards(
+  contacts: CrmContactRecord[],
+  generatedAt: string,
+): RelationshipPriorityCard[] {
+  return contacts
+    .slice()
+    .sort((a, b) => (b.relationshipScore ?? 0) - (a.relationshipScore ?? 0))
+    .slice(0, 12)
+    .map((contact, index) => {
+      const score = scoreFromCrmContact(contact);
+      const state = freshnessStateFor(ageDaysFromIso(contact.lastInteractionAt ?? contact.updatedAt));
+      const trustWarnings = Object.entries(contact.dataTrust)
+        .filter(([, datum]) => !datum.displayAsTrusted)
+        .map(([field, datum]) => `${field}: ${datum.trustLevel}`);
+      return {
+        id: `crm-${contact.id}`,
+        relationshipId: contact.id,
+        rank: index + 1,
+        company: contact.company,
+        relationship: contact.sourceCrm ? `From ${contact.sourceCrm}` : "Imported relationship",
+        marketFit: contact.relationshipScore ?? score.total,
+        urgency: index === 0 ? "Now" : index < 3 ? "Today" : "This week",
+        importance: index === 0 ? "highest" : index < 3 ? "high" : "medium",
+        stage: "Imported contact",
+        topReasons: [
+          score.explanation,
+          contact.tags[0] ? `Tag: ${contact.tags[0]}` : "No tags on file",
+          contact.lastInteractionAt
+            ? `Last interaction ${relativeDate(contact.lastInteractionAt)}`
+            : "Last interaction unknown",
+        ],
+        bestContact: {
+          name: contact.name,
+          title: contact.company,
+        },
+        contactMethods: [
+          ...(contact.phone ? [{ type: "Call" as const, value: contact.phone, primary: true }] : []),
+          ...(contact.email ? [{ type: "Email" as const, value: contact.email }] : []),
+        ],
+        recommendedAction: contact.phone ? "Call" : contact.email ? "Email" : "Open Context",
+        nextStep: contact.phone
+          ? `Call ${contact.name} at ${contact.phone}.`
+          : contact.email
+            ? `Email ${contact.name} with one clear ask.`
+            : `Enrich contact data before outreach.`,
+        suggestedAngle: score.factors[0]?.explanation ?? "Lead with the strongest verified signal.",
+        topSignals: score.missingDataFlags.length > 0
+          ? score.missingDataFlags.slice(0, 3)
+          : ["Imported CRM", "Scored relationship"],
+        relationshipHistory: compact([
+          contact.notes ? contact.notes.slice(0, 120) : null,
+          contact.lastInteractionAt ? `Last touch ${relativeDate(contact.lastInteractionAt)}` : null,
+        ]),
+        followUpHistory: [
+          trustWarnings.length > 0
+            ? `Trust gaps: ${trustWarnings.join("; ")}`
+            : "Contact fields pass minimum trust for display.",
+        ],
+        optionalContext: {
+          deepReport: "Review import provenance and datum trust.",
+          aiAssistant: "Draft opener from scored factors only.",
+          relationshipHistory: "Timeline from CRM import.",
+        },
+        source: {
+          kind: "relationship-engine",
+          queueKind: "crm_import",
+          confidence: score.confidence,
+          generatedAt: contact.updatedAt,
+          freshnessLabel: freshnessLabel(state, ageDaysFromIso(contact.lastInteractionAt ?? contact.updatedAt)),
+          freshnessState: state,
+          evidenceCount: score.factors.length,
+          missingDataCount: score.missingDataFlags.length,
+          warnings: trustWarnings,
+        },
+      };
+    });
 }
 
 function engineSummaryToCard(args: {

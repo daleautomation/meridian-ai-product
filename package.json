@@ -14,7 +14,8 @@
     "operational-events:replay-fixtures": "tsx scripts/check-operational-event-replay-fixtures.ts",
     "operational-events:command-contracts": "tsx scripts/check-operational-event-command-contracts.ts",
     "operational-events:command-translation": "tsx scripts/check-operational-command-to-event-translation.ts",
-    "contact-trust:check": "tsx scripts/check-contact-trust.ts"
+    "contact-trust:check": "tsx scripts/check-contact-trust.ts",
+    "crm-import:check": "tsx scripts/check-crm-import.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

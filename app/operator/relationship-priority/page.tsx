@@ -4,6 +4,8 @@ import { listWorkspacesForUser, defaultWorkspaceFor, type WorkspaceConfig } from
 import { RelationshipPriorityWorkspace } from "@/components/operator";
 import { getSession } from "@/lib/auth";
 import { buildRelationshipEngineOperatorSurface } from "@/lib/relationship-engine/operatorIntegration";
+import { listContactsByWorkspace } from "@/lib/crm-import/store";
+import { buildResurfacingBuckets } from "@/lib/relationship-intelligence/resurfacing";
 import { buildRelationshipPriorityWorkspaceModel } from "@/lib/relationship-priority/workspace";
 import { parseShowcaseConfig } from "@/lib/relationship-priority/showcase";
 import { getWorkspaceAccess } from "@/lib/workspaceAccess";
@@ -79,12 +81,16 @@ async function renderRelationshipPriorityPage({
   }
 
   const surface = await buildRelationshipEngineOperatorSurface({ workspace, user });
+  const crmContacts = await listContactsByWorkspace(workspace.slug);
+  const resurfacingBuckets = buildResurfacingBuckets(crmContacts);
   const showcaseConfig = parseShowcaseConfig(params);
   const model = buildRelationshipPriorityWorkspaceModel({
     surface,
     workspace,
     user,
     showcaseConfig,
+    crmContacts,
+    resurfacingBuckets,
   });
   return <RelationshipPriorityWorkspace model={model} />;
 }

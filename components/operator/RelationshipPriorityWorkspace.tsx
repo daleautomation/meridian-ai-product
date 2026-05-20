@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, type CSSProperties } from "react";
 import { palette } from "@/lib/theme";
 import type {
@@ -47,14 +48,22 @@ export default function RelationshipPriorityWorkspace({
               {model.hero.question}
             </p>
           </div>
-          <div style={{ ...styles.workspaceBadge, ...(showcase ? styles.showcaseWorkspaceBadge : null) }}>
-            <span style={styles.statusDot} />
-            {model.workspace.name}
-            {model.demoMode ? (
-              <span style={{ ...styles.demoPill, ...(showcase ? styles.showcaseDemoPill : null) }}>
-                {showcase ? showcase.preset.label : "Demo ready"}
-              </span>
-            ) : null}
+          <div style={styles.headerActions}>
+            <Link href={model.importPath} style={styles.importLink}>
+              Import contacts
+            </Link>
+            <div style={{ ...styles.workspaceBadge, ...(showcase ? styles.showcaseWorkspaceBadge : null) }}>
+              <span style={styles.statusDot} />
+              {model.workspace.name}
+              {model.crmContactCount > 0 ? (
+                <span style={styles.crmCountPill}>{model.crmContactCount} imported</span>
+              ) : null}
+              {model.demoMode ? (
+                <span style={{ ...styles.demoPill, ...(showcase ? styles.showcaseDemoPill : null) }}>
+                  {showcase ? showcase.preset.label : "Demo ready"}
+                </span>
+              ) : null}
+            </div>
           </div>
         </div>
 
@@ -86,6 +95,10 @@ export default function RelationshipPriorityWorkspace({
         </nav>
 
         {showcase ? <ShowcaseStoryStrip showcase={showcase} /> : null}
+
+        {!showcase && model.resurfacingBuckets.some((b) => b.contacts.length > 0) ? (
+          <ResurfacingStrip buckets={model.resurfacingBuckets} />
+        ) : null}
 
         <section style={{ ...styles.heroGrid, ...(showcase ? styles.showcaseHeroGrid : null) }}>
           <div style={{ ...styles.heroCard, ...(showcase ? styles.showcaseHeroCard : null) }}>
@@ -184,6 +197,26 @@ function laneTitle(nav: RelationshipPriorityNavId, model: RelationshipPriorityWo
   if (nav === "outcomes") return "Execution outcomes ready to capture";
   if (nav === "assistant") return "Operator support for the selected relationship";
   return "Who deserves attention first";
+}
+
+function ResurfacingStrip({
+  buckets,
+}: {
+  buckets: RelationshipPriorityWorkspaceModel["resurfacingBuckets"];
+}) {
+  const active = buckets.filter((b) => b.contacts.length > 0).slice(0, 4);
+  if (active.length === 0) return null;
+  return (
+    <section style={styles.resurfacingStrip} aria-label="Resurfacing opportunities">
+      {active.map((bucket) => (
+        <div key={bucket.id} style={styles.resurfacingCard}>
+          <div style={styles.resurfacingLabel}>{bucket.label}</div>
+          <div style={styles.resurfacingCount}>{bucket.contacts.length}</div>
+          <div style={styles.resurfacingHint}>{bucket.contacts[0]?.whyNow ?? bucket.description}</div>
+        </div>
+      ))}
+    </section>
+  );
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
@@ -604,9 +637,62 @@ const styles: Record<string, CSSProperties> = {
     fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
   chrome: {
-    width: "min(1440px, 100%)",
+    width: "min(1080px, 100%)",
     margin: "0 auto",
-    padding: "24px",
+    padding: "20px clamp(16px, 4vw, 28px) 32px",
+  },
+  headerActions: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-end",
+    gap: "10px",
+  },
+  importLink: {
+    color: palette.blue,
+    fontSize: "13px",
+    fontWeight: 800,
+    textDecoration: "none",
+  },
+  crmCountPill: {
+    marginLeft: "6px",
+    padding: "2px 8px",
+    borderRadius: "999px",
+    background: palette.bluePale,
+    color: palette.blue,
+    fontSize: "11px",
+    fontWeight: 800,
+  },
+  resurfacingStrip: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+    gap: "10px",
+    marginBottom: "16px",
+  },
+  resurfacingCard: {
+    padding: "12px 14px",
+    borderRadius: "16px",
+    border: `1px solid ${palette.border}`,
+    background: palette.surface,
+  },
+  resurfacingLabel: {
+    fontSize: "12px",
+    fontWeight: 800,
+    color: palette.textPrimary,
+  },
+  resurfacingCount: {
+    fontSize: "22px",
+    fontWeight: 800,
+    letterSpacing: "-0.03em",
+    margin: "4px 0",
+  },
+  resurfacingHint: {
+    fontSize: "12px",
+    color: palette.textSecondary,
+    lineHeight: 1.35,
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
+    overflow: "hidden",
   },
   showcaseChrome: {
     width: "min(1180px, 100%)",
