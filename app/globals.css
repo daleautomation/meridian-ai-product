@@ -4706,16 +4706,27 @@ html, body {
   background: rgba(248, 250, 252, 0.9);
   text-decoration: none;
   color: inherit;
+  cursor: pointer;
   transition:
     transform 160ms ease,
     border-color 160ms ease,
-    box-shadow 160ms ease;
+    box-shadow 160ms ease,
+    background 160ms ease;
 }
 
-.workspace-select-tile:hover {
+.workspace-select-tile:hover,
+.workspace-select-tile:focus-visible {
   transform: translateY(-1px);
   border-color: rgba(37, 99, 235, 0.28);
   box-shadow: 0 12px 28px rgba(37, 99, 235, 0.10);
+  background: #fff;
+  outline: none;
+}
+
+.workspace-select-tile:focus-visible {
+  box-shadow:
+    0 0 0 3px rgba(37, 99, 235, 0.22),
+    0 12px 28px rgba(37, 99, 235, 0.10);
 }
 
 .workspace-select-tile-kind {
@@ -4730,9 +4741,17 @@ html, body {
   font-size: 16px;
 }
 
-.workspace-select-tile span:last-child {
+.workspace-select-tile span:nth-of-type(2) {
   font-size: 13px;
   color: var(--public-muted);
+}
+
+.workspace-select-tile-action {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--public-blue);
 }
 
 .workspace-select-admin {

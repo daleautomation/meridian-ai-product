@@ -26,7 +26,6 @@ export function WorkspaceLoginForm({ initialNext }: { initialNext?: string | nul
   const [showDevHints, setShowDevHints] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
     const host = window.location.hostname.toLowerCase();
     setShowDevHints(
       host === "localhost" || host === "127.0.0.1" || host.includes("ngrok"),
@@ -58,6 +57,7 @@ export function WorkspaceLoginForm({ initialNext }: { initialNext?: string | nul
         typeof data.redirectTo === "string" && data.redirectTo.startsWith("/")
           ? data.redirectTo
           : "/workspace-select";
+      setLoading(false);
       router.replace(redirectTo);
       router.refresh();
     } catch {

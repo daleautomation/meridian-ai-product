@@ -106,13 +106,13 @@ export const WORKSPACES: Record<string, WorkspaceConfig> = {
     },
     branding: {
       displayName: "Nicole Lonergan Workspace",
-      accentLabel: "Brookside Real Estate relationship workspace",
+      accentLabel: "Personal relationship workspace",
       companyName: "Brookside Real Estate",
     },
   },
 };
 
-export const WORKSPACE_ORDER: string[] = ["labortech", "advisor-demo", "nicole-lonergan"];
+export const WORKSPACE_ORDER: string[] = ["labortech", "nicole-lonergan", "advisor-demo"];
 
 /** Short slug alias for Nicole Lonergan's personal workspace URLs. */
 const WORKSPACE_SLUG_ALIASES: Record<string, string> = {

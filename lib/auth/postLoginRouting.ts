@@ -102,10 +102,19 @@ export type WorkspaceSelectCard = {
   kind: WorkspaceConfig["kind"];
 };
 
+function workspaceSelectTitle(ws: WorkspaceConfig): string {
+  const display = ws.branding?.displayName ?? ws.name;
+  const company = ws.branding?.companyName;
+  if (isPersonalWorkspace(ws) && company) {
+    return `${company} / ${display}`;
+  }
+  return display;
+}
+
 export function workspaceSelectCardsForUser(user: PublicUser): WorkspaceSelectCard[] {
   return listAccessibleWorkspacesForPrincipal(user).map((ws) => ({
     slug: ws.slug,
-    title: ws.branding?.displayName ?? ws.name,
+    title: workspaceSelectTitle(ws),
     subtitle: ws.branding?.accentLabel ?? ws.name,
     href: workspaceHomePath(ws),
     kind: ws.kind,

@@ -9,15 +9,11 @@ import type { AccessRole, PublicUser, Tenant } from "@/config/tenants";
 
 type Principal = Pick<PublicUser | Tenant, "accessRole" | "workspaces">;
 
-/** Workspace slugs this principal may enter (admin operators inherit full catalog). */
+/** Workspace slugs this principal may enter (from tenant assignment only). */
 export function effectiveWorkspaceIdsForPrincipal(
   user: Principal,
 ): string[] {
-  const assigned = (user.workspaces ?? []).map(resolveWorkspaceIdFromAssignment);
-  if (user.accessRole === "admin_operator") {
-    return [...new Set([...WORKSPACE_ORDER, ...assigned])];
-  }
-  return [...new Set(assigned)];
+  return [...new Set((user.workspaces ?? []).map(resolveWorkspaceIdFromAssignment))];
 }
 
 /** Assigned workspaces the principal can access by role, in stable display order. */

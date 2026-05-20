@@ -49,12 +49,21 @@ export default async function WorkspaceSelectPage() {
           {showAdmin ? " — admin & builder access" : ""}
         </p>
 
-        <div className="workspace-select-grid">
+        <div className="workspace-select-grid" role="list">
           {cards.map((card) => (
-            <Link key={card.slug} href={card.href} className="workspace-select-tile">
+            <Link
+              key={card.slug}
+              href={card.href}
+              className="workspace-select-tile"
+              role="listitem"
+              aria-label={`Open ${card.title}`}
+            >
               <span className="workspace-select-tile-kind">{kindLabel(card.kind)}</span>
               <strong>{card.title}</strong>
               <span>{card.subtitle}</span>
+              <span className="workspace-select-tile-action" aria-hidden="true">
+                Open workspace →
+              </span>
             </Link>
           ))}
         </div>

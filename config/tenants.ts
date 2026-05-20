@@ -52,7 +52,7 @@ export const TENANTS: Record<string, Tenant> = {
     accessRole: "admin_operator",
     modules: ["roofing"],
     geo: [],
-    workspaces: ["labortech", "advisor-demo", "nicole-lonergan"],
+    workspaces: ["labortech", "nicole-lonergan"],
   },
   nicole: {
     id: "nicole",

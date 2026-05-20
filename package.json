@@ -16,7 +16,8 @@
     "operational-events:command-translation": "tsx scripts/check-operational-command-to-event-translation.ts",
     "contact-trust:check": "tsx scripts/check-contact-trust.ts",
     "crm-import:check": "tsx scripts/check-crm-import.ts",
-    "auth:check": "tsx scripts/check-workspace-auth.ts"
+    "auth:check": "tsx scripts/check-workspace-auth.ts",
+    "auth:live": "tsx scripts/check-live-auth.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

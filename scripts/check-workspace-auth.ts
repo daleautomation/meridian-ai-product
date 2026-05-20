@@ -104,29 +104,32 @@ check("dylan routes to workspace selector", () => {
   assert.equal(postLoginRouteForUser(user), "/workspace-select");
 });
 
-check("dylan workspace selector includes Nicole Lonergan / Brookside", () => {
+check("dylan workspace selector includes LaborTech and Brookside", () => {
   const t = findTenantByCredentials("dylan", "Meridian");
   assert.ok(t);
   const user = toPublicUser(t);
   const cards = workspaceSelectCardsForUser(user);
-  assert.equal(cards.length, 3);
+  assert.equal(cards.length, 2);
+  assert.ok(cards.find((c) => c.slug === "labortech"));
+  assert.equal(cards.find((c) => c.slug === "advisor-demo"), undefined);
   const nicole = cards.find((c) => c.slug === "nicole-lonergan");
   assert.ok(nicole);
+  assert.match(nicole.title, /Brookside Real Estate/i);
   assert.match(nicole.title, /Nicole Lonergan/i);
-  assert.match(nicole.subtitle, /Brookside/i);
   assert.equal(nicole.href, "/personal?workspace=nicole-lonergan");
   assert.equal(cards.find((c) => c.slug === "labortech")?.href, "/operator?workspace=labortech");
 });
 
-check("dylan admin catalog includes all workspace kinds", () => {
+check("dylan assigned workspaces exclude advisor demo", () => {
   const t = findTenantByCredentials("dylan", "Meridian");
   assert.ok(t);
   const listed = listAccessibleWorkspacesForPrincipal(toPublicUser(t));
-  assert.equal(listed.length, 3);
+  assert.equal(listed.length, 2);
   assert.ok(listed.some((ws) => ws.slug === "nicole-lonergan"));
+  assert.equal(listed.some((ws) => ws.slug === "advisor-demo"), false);
 });
 
-check("dylan can open all assigned workspaces", () => {
+check("dylan can open assigned workspaces only", () => {
   const t = findTenantByCredentials("dylan", "Meridian");
   assert.ok(t);
   const user = toPublicUser(t);
@@ -137,7 +140,7 @@ check("dylan can open all assigned workspaces", () => {
   );
   assert.equal(
     isPostLoginPathAllowed(user, "/operator/relationship-priority?workspace=advisor-demo"),
-    true,
+    false,
   );
 });
 
