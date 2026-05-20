@@ -305,7 +305,12 @@ export default function TodayExecutionPlan({
               || task?.laborTechScan?.recommendedAction
               || task?.serviceNeed?.reason
               || null;
-            if (!raw) return phone ? "Open lead and call with the prepared angle." : "Verify contact before outreach.";
+            if (!raw) {
+              if (phone) return "Open lead and call with the prepared angle.";
+              if (task?.contactQualityState === "email_only") return "Email only — verify a phone before dialing.";
+              if (task?.contactQualityState === "phone_needs_verification") return "Phone available — complete light verification first.";
+              return "Needs contact enrichment before outreach.";
+            }
             return raw.length > 92 ? raw.slice(0, 90).trim() + "…" : raw;
           })();
           const primaryLabel = phone ? "Work Lead" : "Verify Contact";

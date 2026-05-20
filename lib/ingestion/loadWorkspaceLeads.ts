@@ -145,48 +145,8 @@ export async function loadWorkspaceLeads(opts: {
       `errored=${scanErrored} admittedCount=${admitted.length}`,
     );
 
-    // Last-resort hard test data — guarantees the UI renders at
-    // least one card while the pipeline is being verified. Only
-    // fires when nothing else produced a lead. Same NormalizedLead
-    // shape ingestFromGooglePlaces returns.
     if (admitted.length === 0) {
-      const checkedAt = new Date().toISOString();
-      const test: NormalizedLead = {
-        id: `test-${moduleId}-1`,
-        workspaceSlug,
-        moduleId: moduleId as NormalizedLead["moduleId"],
-        companyName: `Test ${moduleId} Company`,
-        location: "Kansas City, MO",
-        website: undefined,
-        phone: "8165550100",
-        email: undefined,
-        source: "google_places",
-        sourceStatus: "available",
-        lastChecked: checkedAt,
-        signals: { hasWebsite: false, reviewCount: 10, rating: 4.0 },
-        crm: {},
-        evidence: [
-          { label: "Test seed", value: "test", source: "google_places", confidence: "low" },
-        ],
-      };
-      try {
-        const diagnostics = generateLeadDiagnostics(test);
-        const laborTechScan = buildLaborTechScan(test, diagnostics);
-        laborTechScan.qualified = true;
-        const enriched: NormalizedLead = {
-          ...test,
-          diagnostics,
-          laborTechScan,
-          emailStatus: "not_searched",
-        };
-        const decision = decideNormalizedLead(enriched);
-        admitted.push({ ...enriched, decision });
-        // eslint-disable-next-line no-console
-        console.log(`[LOAD RESULT] module=${moduleId} testFallback=1`);
-      } catch (testErr) {
-        // eslint-disable-next-line no-console
-        console.error("[LOAD CRASH]", testErr);
-      }
+      console.log(`[LOAD RESULT] module=${moduleId} admittedCount=0 noSyntheticFallback=true`);
     }
     return admitted;
   } catch (err) {

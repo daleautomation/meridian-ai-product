@@ -30,6 +30,7 @@ import { applyLaborTechDemoSchedule } from "./laborTechDemoSchedule";
 
 export type TaskCategory =
   | "priority"
+  | "contact_verification"
   | "meeting"
   | "followup"
   | "revenue"
@@ -128,6 +129,12 @@ export interface TaskItem {
   /** Stamped only when shared dial authority allows operational dialing. */
   phone?: string;
   phoneAuthority?: "dialable";
+  contactQualityState?:
+    | "verified_phone"
+    | "phone_needs_verification"
+    | "email_only"
+    | "needs_contact_enrichment"
+    | "do_not_call_yet";
   email?: string;
   /** Verified-email enrichment metadata (mirrors NormalizedLead). */
   emailStatus?: string;
@@ -151,6 +158,7 @@ export const TASK_CATEGORIES: Record<
   { label: string; tint: string; glyph: string }
 > = {
   priority: { label: "Priority", tint: "#DC2626", glyph: "◆" },
+  contact_verification: { label: "Needs Contact Verification", tint: "#D97706", glyph: "◇" },
   meeting:  { label: "Meeting",  tint: "#2563EB", glyph: "◉" },
   followup: { label: "Follow Up", tint: "#7C3AED", glyph: "↻" },
   revenue:  { label: "Revenue",  tint: "#16A34A", glyph: "$" },
@@ -160,7 +168,7 @@ export const TASK_CATEGORIES: Record<
 };
 
 export const CATEGORY_ORDER: TaskCategory[] = [
-  "priority", "meeting", "followup", "revenue", "product", "admin", "personal",
+  "priority", "contact_verification", "meeting", "followup", "revenue", "product", "admin", "personal",
 ];
 
 // ── Priority scoring ───────────────────────────────────────────────────
@@ -938,6 +946,14 @@ export function buildTasksFromLeads(
     // baseLink alongside, so the same email-data shape reaches every
     // task category (call / followup / contact / revenue / admin).
     const email = l.contacts?.primaryEmail || l.email || null;
+    const rawPhone = getCanonicalPhone(l);
+    const contactQualityState: TaskItem["contactQualityState"] = dialablePhone
+      ? "verified_phone"
+      : rawPhone
+        ? "phone_needs_verification"
+        : email
+          ? "email_only"
+          : "needs_contact_enrichment";
     const baseLink = {
       linkedLeadId: id,
       linkedCompany: company,
@@ -1033,10 +1049,8 @@ export function buildTasksFromLeads(
 
     const isContacted = FOLLOWUP_STATUSES.has(status);
 
-    // TEMP: force at least one call task per non-contacted lead
-    // while the pipeline is being verified end-to-end. The original
-    // gate (isCallNow / isToday / score >= 70 / rev >= 25k) stays
-    // alongside it but the OR keeps every admitted lead visible.
+    // Keep every admitted lead visible, but only verified/dialable
+    // contacts enter the call-first lane.
     if (!isContacted) {
       // Sales-strategy-aware action text. Prefer the rank-1 angle so
       // every card opens with a closer-grade lead-with line. Falls
@@ -1065,8 +1079,10 @@ export function buildTasksFromLeads(
             : null;
       const verifyContactAction = !dialablePhone
         ? (email
-          ? "Verify a trusted phone before dialing; use email only as a fallback."
-          : "Verify contact before outreach — no trusted dialable phone on file.")
+          ? "Phone unavailable — use email as a fallback while verifying a trusted phone."
+          : rawPhone
+            ? "Phone present but not verified enough to dial — complete light contact verification."
+            : "Needs contact enrichment — find a verified phone before outreach.")
         : null;
       const actionText =
         verifyContactAction
@@ -1086,9 +1102,9 @@ export function buildTasksFromLeads(
         `[calendar-diagnostics] lead=${company} action="${actionText}"`,
       );
       push({
-        id: `lead-${id}-call`,
-        title: dialablePhone ? `Call ${company}` : `Verify contact: ${company}`,
-        category: "priority",
+        id: dialablePhone ? `lead-${id}-call` : `lead-${id}-verify-contact`,
+        title: dialablePhone ? `Call ${company}` : `Needs contact verification: ${company}`,
+        category: dialablePhone ? "priority" : "contact_verification",
         priority: callPriority(l, !!dialablePhone),
         status: "todo",
         dueDate: callDueIso(l, now),
@@ -1102,6 +1118,7 @@ export function buildTasksFromLeads(
             ? `Engine flagged: ${issue}.`
             : `Score ${l.score ?? "?"} · bucket ${l.bucket ?? l.opportunity_label ?? "n/a"}.`,
         nextAction: actionText,
+        contactQualityState,
         ...(callScript ? { callScript } : {}),
         ...(strategy ? { salesStrategy: strategy } : {}),
         ...(scan ? { laborTechScan: scan } : {}),
@@ -1217,8 +1234,9 @@ export function buildTasksFromLeads(
       }
     }
 
-    // E. Contact-info task — no phone and no email.
-    if (!hasContact(l)) {
+    // E. Contact-info task — no phone and no email on already-contacted
+    // records. Fresh leads use the explicit contact-verification lane.
+    if (!hasContact(l) && isContacted) {
       push({
         id: `lead-${id}-contact`,
         title: `Find missing contact info: ${company}`,

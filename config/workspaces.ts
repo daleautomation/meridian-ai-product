@@ -6,7 +6,14 @@ import type { AccessRole } from "./tenants";
 // site stays brand-pure; an authenticated workspace can carry an accent
 // label ("LaborTech workspace") without renaming the platform.
 
-export type ModuleId = "roofing" | "hvac" | "plumbing" | "remodeling";
+export type ModuleId =
+  | "roofing"
+  | "hvac"
+  | "plumbing"
+  | "carpentry"
+  | "painting"
+  | "electrical"
+  | "remodeling";
 
 export type WorkspaceConfig = {
   id: string;
@@ -37,8 +44,8 @@ export const WORKSPACES: Record<string, WorkspaceConfig> = {
     name: "LaborTech",
     slug: "labortech",
     defaultModule: "roofing",
-    enabledModules: ["roofing"],
-    comingSoonModules: ["hvac", "plumbing", "remodeling"],
+    enabledModules: ["roofing", "hvac", "plumbing", "carpentry", "painting", "electrical"],
+    comingSoonModules: ["remodeling"],
     features: {
       showRelationshipsTab: false,
       showAskAI: false,
@@ -60,7 +67,7 @@ export const WORKSPACES: Record<string, WorkspaceConfig> = {
     slug: "advisor-demo",
     defaultModule: "roofing",
     enabledModules: ["roofing"],
-    comingSoonModules: ["hvac", "plumbing", "remodeling"],
+    comingSoonModules: ["hvac", "plumbing", "carpentry", "painting", "electrical", "remodeling"],
     features: {
       showRelationshipsTab: true,
       showAskAI: true,

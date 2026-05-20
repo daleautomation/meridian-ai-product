@@ -12,7 +12,7 @@ import type { LeadDecision } from "@/lib/scoring/decision";
 import type { LeadDiagnostics } from "@/lib/diagnostics/leadDiagnostics";
 import type { SalesStrategy } from "@/lib/sales/salesStrategy";
 import type { LaborTechScan } from "@/lib/scan/laborTechScan";
-import type { ContactTrustEvidence } from "@/lib/contacts/types";
+import type { ContactPath, ContactTrustEvidence } from "@/lib/contacts/types";
 
 export type ModuleId =
   | "roofing"
@@ -108,6 +108,7 @@ export type NormalizedLead = {
   emailSource?: EmailEnrichmentSource;
   emailVerifiedAt?: string;
   emailConfidence?: "high" | "medium" | "low";
+  contactPaths?: ContactPath[];
   phoneTrust?: ContactTrustEvidence;
   emailTrust?: ContactTrustEvidence;
   contactTrust?: ContactTrustEvidence;
@@ -129,7 +130,15 @@ export type NormalizedLead = {
   laborTechScan?: LaborTechScan;
 };
 
-const VALID_MODULES: ModuleId[] = ["roofing", "hvac", "plumbing", "remodeling"];
+const VALID_MODULES: ModuleId[] = [
+  "roofing",
+  "hvac",
+  "carpentry",
+  "painting",
+  "plumbing",
+  "electrical",
+  "remodeling",
+];
 const VALID_SOURCES: SourceName[] = [
   "seed", "google_places", "site_scan", "serp",
   "storm_weather", "yelp", "bbb", "hunter", "manual",
@@ -276,6 +285,9 @@ export function normalizeLead(
     : (contacts.contactTrust && typeof contacts.contactTrust === "object")
       ? (contacts.contactTrust as ContactTrustEvidence)
       : phoneTrust ?? emailTrust;
+  const contactPaths = Array.isArray(src.contactPaths)
+    ? (src.contactPaths.filter((path) => path && typeof path === "object") as ContactPath[])
+    : undefined;
 
   return {
     id,
@@ -291,6 +303,7 @@ export function normalizeLead(
     emailSource: pickEmailSource(src.emailSource),
     emailVerifiedAt: asString(src.emailVerifiedAt),
     emailConfidence: pickEmailConfidence(src.emailConfidence),
+    contactPaths,
     phoneTrust,
     emailTrust,
     contactTrust,

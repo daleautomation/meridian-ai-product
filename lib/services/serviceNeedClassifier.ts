@@ -260,15 +260,17 @@ export function classifyLeadServiceNeeds(
   }
 
   // ── Lead Generation ────────────────────────────────────────────
-  if (hasPhone && hasWebsite && !lowReviews && !websiteWeak) {
+  if (hasPhone && hasWebsite && !websiteWeak) {
     push(
       "lead_generation",
-      40,
-      "Foundations are in place — net-new pipeline could compound on top.",
+      lowReviews ? 38 : 48,
+      lowReviews
+        ? "Phone and website are present, but reputation needs to support any scaled lead-gen push."
+        : "Foundations are in place — net-new pipeline could compound on top.",
       [
         "phone present",
         "website present",
-        "reviews above threshold",
+        lowReviews ? `reviewCount=${reviewCount}` : "reviews above threshold",
       ],
       "Your basics are tight. The next win is net-new pipeline that doesn't compete with your organic. Got a minute?",
     );

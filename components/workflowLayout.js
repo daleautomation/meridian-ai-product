@@ -75,8 +75,8 @@ export const WORKFLOW = {
   // stack), so the deep grid is only two columns: Operator stack |
   // Deep Report. Both columns use minmax() so the workflow reads as
   // a balanced two-column workspace at typical desktop widths.
-  operatorClosed:     "380px",
-  operatorDeep:       "minmax(390px, 430px)",
+  operatorClosed:     "minmax(460px, 620px)",
+  operatorDeep:       "minmax(430px, 520px)",
   deepReport:         "minmax(520px, 640px)",
   assistantOpen:      "320px",
   assistantRail:      "64px",
@@ -109,12 +109,12 @@ export const WORKFLOW = {
   // Drawer outer cap — guarantees the drawer never grows wide enough
   // to push the Assistant rail off-screen, no matter the viewport.
   // 280px reserves room for the workspace + horizontal padding.
-  drawerMaxWidth:     "calc(100vw - 280px)",
+  drawerMaxWidth:     "calc(100vw - 240px)",
 
   // Legacy aliases (kept so existing imports don't break).
   gap:                SPACING.panelGap,
-  operatorWidth:      "380px",
-  operatorWidthDeep:  "minmax(390px, 430px)",
+  operatorWidth:      "minmax(460px, 620px)",
+  operatorWidthDeep:  "minmax(430px, 520px)",
   deepReportWidth:    "minmax(520px, 640px)",
   assistantWidth:     "320px",
   assistantRailWidth: "64px",
@@ -143,6 +143,6 @@ export const SHELL_GRID = {
 // two grid templates: the closed one-column form and the assist
 // two-column form.
 export const DRAWER_GRID = {
-  closed: `minmax(380px, 460px)`,
+  closed: `minmax(460px, 620px)`,
   deep:   `${WORKFLOW.operatorDeep} ${WORKFLOW.deepReport}`,
 };
