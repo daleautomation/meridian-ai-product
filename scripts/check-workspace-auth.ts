@@ -4,13 +4,15 @@
  * Run: npm run auth:check
  */
 import assert from "node:assert/strict";
-import { findTenantByCredentials, TENANTS } from "../config/tenants";
+import { findTenantByCredentials, TENANTS, toPublicUser } from "../config/tenants";
+import { passwordsMatch } from "../lib/auth/credentials";
 import {
   isPostLoginPathAllowed,
   postLoginRouteForUser,
   resolvePostLoginRedirect,
+  workspaceSelectCardsForUser,
 } from "../lib/auth/postLoginRouting";
-import { toPublicUser } from "../config/tenants";
+import { listAccessibleWorkspacesForPrincipal } from "../lib/workspaceAccess";
 
 function check(label: string, fn: () => void) {
   try {
@@ -57,6 +59,12 @@ check("nicole / brookside authenticates", () => {
   assert.equal(t.id, "nicole");
 });
 
+check("nicole / brookside trims whitespace", () => {
+  const t = findTenantByCredentials(" nicole ", " brookside ");
+  assert.ok(t);
+  assert.equal(t.id, "nicole");
+});
+
 check("nicole routes to personal workspace", () => {
   const t = findTenantByCredentials("nicole", "brookside");
   assert.ok(t);
@@ -78,10 +86,15 @@ check("nicole cannot access LaborTech", () => {
   );
 });
 
-check("dylan / Meridian authenticates", () => {
+check("dylan / Meridian authenticates (exact case)", () => {
   const t = findTenantByCredentials("dylan", "Meridian");
   assert.ok(t);
   assert.equal(t.accessRole, "admin_operator");
+});
+
+check("dylan / meridian authenticates (case-insensitive)", () => {
+  const t = findTenantByCredentials("dylan", "meridian");
+  assert.ok(t);
 });
 
 check("dylan routes to workspace selector", () => {
@@ -89,6 +102,28 @@ check("dylan routes to workspace selector", () => {
   assert.ok(t);
   const user = toPublicUser(t);
   assert.equal(postLoginRouteForUser(user), "/workspace-select");
+});
+
+check("dylan workspace selector includes Nicole Lonergan / Brookside", () => {
+  const t = findTenantByCredentials("dylan", "Meridian");
+  assert.ok(t);
+  const user = toPublicUser(t);
+  const cards = workspaceSelectCardsForUser(user);
+  assert.equal(cards.length, 3);
+  const nicole = cards.find((c) => c.slug === "nicole-lonergan");
+  assert.ok(nicole);
+  assert.match(nicole.title, /Nicole Lonergan/i);
+  assert.match(nicole.subtitle, /Brookside/i);
+  assert.equal(nicole.href, "/personal?workspace=nicole-lonergan");
+  assert.equal(cards.find((c) => c.slug === "labortech")?.href, "/operator?workspace=labortech");
+});
+
+check("dylan admin catalog includes all workspace kinds", () => {
+  const t = findTenantByCredentials("dylan", "Meridian");
+  assert.ok(t);
+  const listed = listAccessibleWorkspacesForPrincipal(toPublicUser(t));
+  assert.equal(listed.length, 3);
+  assert.ok(listed.some((ws) => ws.slug === "nicole-lonergan"));
 });
 
 check("dylan can open all assigned workspaces", () => {
@@ -104,6 +139,10 @@ check("dylan can open all assigned workspaces", () => {
     isPostLoginPathAllowed(user, "/operator/relationship-priority?workspace=advisor-demo"),
     true,
   );
+});
+
+check("password helper rejects wrong secret", () => {
+  assert.equal(passwordsMatch("brookside", "labortech"), false);
 });
 
 check("no Sarah tenant remains", () => {

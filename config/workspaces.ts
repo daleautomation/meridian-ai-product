@@ -131,16 +131,28 @@ export function resolveWorkspaceIdFromAssignment(slug: string): string {
 }
 
 export function listWorkspacesForUser(workspaceIds: readonly string[]): WorkspaceConfig[] {
-  const seen = new Set<string>();
+  const assigned = new Set(workspaceIds.map(resolveWorkspaceIdFromAssignment));
   const out: WorkspaceConfig[] = [];
-  for (const id of workspaceIds) {
-    const key = resolveWorkspaceIdFromAssignment(id);
-    const ws = WORKSPACES[key];
+  const seen = new Set<string>();
+
+  for (const slug of WORKSPACE_ORDER) {
+    if (!assigned.has(slug)) continue;
+    const ws = WORKSPACES[slug];
     if (ws && !seen.has(ws.id)) {
       seen.add(ws.id);
       out.push(ws);
     }
   }
+
+  for (const slug of assigned) {
+    if (WORKSPACE_ORDER.includes(slug)) continue;
+    const ws = WORKSPACES[slug];
+    if (ws && !seen.has(ws.id)) {
+      seen.add(ws.id);
+      out.push(ws);
+    }
+  }
+
   return out;
 }
 

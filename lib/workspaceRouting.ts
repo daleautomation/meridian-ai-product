@@ -34,7 +34,7 @@ export function workspaceImportPath(workspace: WorkspaceConfig): string {
 }
 
 import type { PublicUser } from "@/config/tenants";
-import { listWorkspacesForUser } from "@/config/workspaces";
+import { listAccessibleWorkspacesForPrincipal } from "@/lib/workspaceAccess";
 
 export const WORKSPACE_SELECT_PATH = "/workspace-select";
 
@@ -57,7 +57,7 @@ export function defaultRouteForWorkspaceSlugs(slugs: readonly string[]): string 
 
 /** When a multi-workspace user hits a surface without ?workspace=, send to selector. */
 export function shouldRedirectToWorkspaceSelect(
-  user: Pick<PublicUser, "workspaces">,
+  user: Pick<PublicUser, "workspaces" | "accessRole">,
 ): boolean {
-  return listWorkspacesForUser(user.workspaces ?? []).length > 1;
+  return listAccessibleWorkspacesForPrincipal(user).length > 1;
 }

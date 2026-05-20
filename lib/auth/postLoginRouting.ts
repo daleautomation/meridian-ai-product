@@ -1,15 +1,12 @@
 import type { PublicUser } from "@/config/tenants";
-import {
-  getWorkspaceBySlug,
-  listWorkspacesForUser,
-  type WorkspaceConfig,
-} from "@/config/workspaces";
+import { getWorkspaceBySlug, type WorkspaceConfig } from "@/config/workspaces";
 import {
   isLaborTechWorkspace,
   isPersonalWorkspace,
   WORKSPACE_SELECT_PATH,
   workspaceHomePath,
 } from "@/lib/workspaceRouting";
+import { listAccessibleWorkspacesForPrincipal } from "@/lib/workspaceAccess";
 
 export { WORKSPACE_SELECT_PATH };
 
@@ -45,7 +42,7 @@ export function isPostLoginPathAllowed(user: PublicUser, path: string): boolean 
   const safe = sanitizeInternalPath(path);
   if (!safe) return false;
 
-  const assigned = listWorkspacesForUser(user.workspaces ?? []);
+  const assigned = listAccessibleWorkspacesForPrincipal(user);
   if (assigned.length === 0) return false;
 
   const kind = pathKind(safe);
@@ -75,7 +72,7 @@ export function isPostLoginPathAllowed(user: PublicUser, path: string): boolean 
 
 /** Default landing route immediately after successful authentication. */
 export function postLoginRouteForUser(user: PublicUser): string {
-  const assigned = listWorkspacesForUser(user.workspaces ?? []);
+  const assigned = listAccessibleWorkspacesForPrincipal(user);
   if (assigned.length === 0) return "/login";
 
   if (assigned.length > 1) {
@@ -106,7 +103,7 @@ export type WorkspaceSelectCard = {
 };
 
 export function workspaceSelectCardsForUser(user: PublicUser): WorkspaceSelectCard[] {
-  return listWorkspacesForUser(user.workspaces ?? []).map((ws) => ({
+  return listAccessibleWorkspacesForPrincipal(user).map((ws) => ({
     slug: ws.slug,
     title: ws.branding?.displayName ?? ws.name,
     subtitle: ws.branding?.accentLabel ?? ws.name,

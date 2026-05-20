@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { findTenantByCredentials, toPublicUser } from "@/config/tenants";
+import { toPublicUser } from "@/config/tenants";
+import { findTenantByCredentials } from "@/config/tenants";
 import { resolvePostLoginRedirect } from "@/lib/auth/postLoginRouting";
 import { createSessionToken, isSecureSessionRequest, SESSION_COOKIE } from "@/lib/session";
 
@@ -12,10 +13,12 @@ export async function POST(req: Request) {
     console.log("[login-debug] body=invalid_json");
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
-  const { username, password, workspace } = body;
+  const username = typeof body.username === "string" ? body.username : "";
+  const password = typeof body.password === "string" ? body.password : "";
+  const workspace = body.workspace;
   // eslint-disable-next-line no-console
-  console.log(`[login-debug] username="${username ?? ""}" workspace="${workspace ?? ""}" passwordLen=${password?.length ?? 0}`);
-  if (!username || !password) {
+  console.log(`[login-debug] username="${username}" workspace="${workspace ?? ""}" passwordLen=${password.length}`);
+  if (!username.trim() || !password.trim()) {
     // eslint-disable-next-line no-console
     console.log("[login-debug] missing_credentials");
     return NextResponse.json({ error: "Missing credentials" }, { status: 400 });

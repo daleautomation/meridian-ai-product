@@ -1,11 +1,53 @@
 import {
   getWorkspaceBySlug,
   resolveWorkspaceIdFromAssignment,
+  WORKSPACE_ORDER,
+  WORKSPACES,
   type WorkspaceConfig,
 } from "@/config/workspaces";
 import type { AccessRole, PublicUser, Tenant } from "@/config/tenants";
 
-type Principal = Pick<PublicUser | Tenant, "id" | "accessRole" | "workspaces">;
+type Principal = Pick<PublicUser | Tenant, "accessRole" | "workspaces">;
+
+/** Workspace slugs this principal may enter (admin operators inherit full catalog). */
+export function effectiveWorkspaceIdsForPrincipal(
+  user: Principal,
+): string[] {
+  const assigned = (user.workspaces ?? []).map(resolveWorkspaceIdFromAssignment);
+  if (user.accessRole === "admin_operator") {
+    return [...new Set([...WORKSPACE_ORDER, ...assigned])];
+  }
+  return [...new Set(assigned)];
+}
+
+/** Assigned workspaces the principal can access by role, in stable display order. */
+export function listAccessibleWorkspacesForPrincipal(
+  user: Principal,
+): WorkspaceConfig[] {
+  const allowed = new Set(effectiveWorkspaceIdsForPrincipal(user));
+  const out: WorkspaceConfig[] = [];
+  const seen = new Set<string>();
+
+  for (const slug of WORKSPACE_ORDER) {
+    if (!allowed.has(slug)) continue;
+    const ws = WORKSPACES[slug];
+    if (!ws || seen.has(ws.id)) continue;
+    if (!canRoleAccessWorkspace(user.accessRole, ws)) continue;
+    seen.add(ws.id);
+    out.push(ws);
+  }
+
+  for (const slug of allowed) {
+    if (WORKSPACE_ORDER.includes(slug)) continue;
+    const ws = WORKSPACES[slug];
+    if (!ws || seen.has(ws.id)) continue;
+    if (!canRoleAccessWorkspace(user.accessRole, ws)) continue;
+    seen.add(ws.id);
+    out.push(ws);
+  }
+
+  return out;
+}
 
 export type WorkspaceAccessResult =
   | { ok: true; workspace: WorkspaceConfig }
@@ -21,7 +63,7 @@ export function getWorkspaceAccess(
 ): WorkspaceAccessResult {
   const workspace = getWorkspaceBySlug(workspaceSlug);
   if (!workspace) return { ok: false, status: 404, reason: "unknown_workspace" };
-  const assigned = (user.workspaces ?? []).map(resolveWorkspaceIdFromAssignment);
+  const assigned = effectiveWorkspaceIdsForPrincipal(user);
   if (!assigned.includes(workspace.slug)) {
     return { ok: false, status: 403, reason: "not_assigned" };
   }

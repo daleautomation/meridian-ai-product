@@ -1,3 +1,8 @@
+import {
+  normalizeLoginUsername,
+  passwordsMatch,
+} from "@/lib/auth/credentials";
+
 // Meridian — tenant config (local dev)
 // NOTE: Passwords are plaintext for local development only.
 // Replace with hashed credentials before any non-local deployment.
@@ -135,15 +140,11 @@ export function getTenantById(id: string): Tenant | null {
 
 export function findTenantByCredentials(
   username: string,
-  password: string
+  password: string,
 ): Tenant | null {
-  const t = TENANTS[username.toLowerCase().trim()];
+  const t = TENANTS[normalizeLoginUsername(username)];
   if (!t) return null;
   if (t.loginEnabled === false) return null;
-  if (t.password.length !== password.length) return null;
-  let mismatch = 0;
-  for (let i = 0; i < t.password.length; i++) {
-    mismatch |= t.password.charCodeAt(i) ^ password.charCodeAt(i);
-  }
-  return mismatch === 0 ? t : null;
+  if (!passwordsMatch(t.password, password)) return null;
+  return t;
 }
