@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { DevAuthDebug } from "@/components/auth/DevAuthDebug";
 import { getSession } from "@/lib/auth";
 import {
   postLoginRouteForUser,
@@ -41,6 +42,7 @@ export default async function WorkspaceSelectPage() {
 
   return (
     <main className="workspace-select-shell">
+      <DevAuthDebug page="workspace-select" />
       <section className="workspace-select-card workspace-select-card-wide">
         <p className="workspace-select-eyebrow">Meridian workspace access</p>
         <h1>Choose a workspace</h1>

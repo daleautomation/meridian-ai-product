@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { DevAuthDebug } from "@/components/auth/DevAuthDebug";
 import { WorkspaceLoginForm } from "@/components/auth/WorkspaceLoginForm";
 import { getSession } from "@/lib/auth";
 import { resolvePostLoginRedirect } from "@/lib/auth/postLoginRouting";
@@ -23,6 +24,7 @@ export default async function LoginPage(props: {
 
   return (
     <main className="workspace-login-shell">
+      <DevAuthDebug page="login" />
       <Suspense fallback={<LoginLoading />}>
         <WorkspaceLoginForm initialNext={nextRaw ?? null} />
       </Suspense>

@@ -4814,3 +4814,24 @@ html, body {
 .workspace-select-back:hover {
   color: var(--public-blue);
 }
+
+.dev-auth-debug {
+  max-width: 720px;
+  margin: 0 auto 16px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 2px dashed #c2410c;
+  background: #fff7ed;
+  color: #9a3412;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.dev-auth-debug p {
+  margin: 0 0 6px;
+}
+
+.dev-auth-debug p:last-child {
+  margin-bottom: 0;
+}
