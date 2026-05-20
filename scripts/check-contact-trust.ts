@@ -4,6 +4,7 @@ import { decideLead, decideNormalizedLead } from "../lib/scoring/decision";
 import { detectContactConflicts, classifyContactPathTrust } from "../lib/contacts/trust";
 import { buildTasksFromLeads, rankTasks } from "../lib/calendar/tasks";
 import { scoreLeadTask } from "../lib/calendar/leadScore";
+import { classifyLeadServiceNeeds } from "../lib/services/serviceNeedClassifier";
 import type { CompanySnapshot } from "../lib/state/companySnapshotStore";
 import type { ContactResolution, ContactPath } from "../lib/contacts/types";
 import type { NormalizedLead } from "../lib/leads/normalizedLead";
@@ -186,14 +187,72 @@ function verifiedGoogleResolution(lastVerifiedAt: string): ContactResolution {
   };
   const tasks = buildTasksFromLeads([weakLead, trustedLead], { now, maxLeads: 2 });
   const trustedTask = tasks.find((task) => task.id === "lead-trusted-phone-lead-call");
-  const weakTask = tasks.find((task) => task.id === "lead-weak-contact-lead-call");
+  const weakTask = tasks.find((task) => task.id === "lead-weak-contact-lead-verify-contact");
   assert.ok(trustedTask, "trusted phone lead gets a call task");
   assert.ok(weakTask, "weak contact lead gets verification work");
   assert.equal(trustedTask.phoneAuthority, "dialable", "trusted lead carries dial authority");
   assert.equal(weakTask.phoneAuthority, undefined, "weak contact lead does not carry dial authority");
-  assert.ok(weakTask.title.startsWith("Verify contact:"), "weak contact lead is framed as contact verification");
+  assert.equal(weakTask.category, "contact_verification", "weak contact lead is moved to contact verification lane");
+  assert.ok(weakTask.title.startsWith("Needs contact verification:"), "weak contact lead is framed as contact verification");
   assert.ok(scoreLeadTask(trustedTask, { now }).taskScore > scoreLeadTask(weakTask, { now }).taskScore, "trusted phone outranks weak contact");
   assert.equal(rankTasks([weakTask, trustedTask], now)[0].id, trustedTask.id, "ranked call queue prefers executable contact paths");
+}
+
+{
+  const googleLead: NormalizedLead = {
+    id: "google-phone",
+    workspaceSlug: "labortech",
+    moduleId: "roofing",
+    companyName: "Google Verified Roofer",
+    phone: "(816) 222-2200",
+    source: "google_places",
+    sourceStatus: "connected",
+    lastChecked: nowIso,
+    signals: { hasWebsite: true, reviewCount: 12, rating: 4.3 },
+    crm: {},
+    evidence: [{ label: "Phone found", value: "(816) 222-2200", source: "google_places", confidence: "high" }],
+  };
+  const decision = decideNormalizedLead(googleLead);
+  assert.notEqual(decision.bucket, "Watch", "fresh Google Places phone is callable even without prebuilt contactPaths");
+  const tasks = buildTasksFromLeads([{ ...googleLead, score: decision.score, bucket: "CALL NOW" }], { now, maxLeads: 1 });
+  const callTask = tasks.find((task) => task.id === "lead-google-phone-call");
+  assert.ok(callTask, "Google Places phone enters the call queue");
+  assert.equal(callTask?.phoneAuthority, "dialable", "Google Places phone carries dial authority");
+  assert.equal(callTask?.contactQualityState, "verified_phone", "call task exposes specific verified-phone contact state");
+}
+
+{
+  const services = classifyLeadServiceNeeds({
+    id: "service-coverage",
+    workspaceSlug: "labortech",
+    moduleId: "roofing",
+    companyName: "Coverage Roofer",
+    phone: "(816) 222-2200",
+    website: "https://coverageroofer.example",
+    source: "google_places",
+    sourceStatus: "connected",
+    lastChecked: nowIso,
+    signals: { hasWebsite: true, reviewCount: 12, rating: 4.2 },
+    crm: {},
+    evidence: [],
+  }, "roofing").map((need) => need.serviceId);
+  for (const serviceId of [
+    "seo",
+    "reputation_management",
+    "google_ads",
+    "meta_ads",
+    "media_production",
+    "voice_ai_agent",
+    "chat_ai_agent",
+    "appointment_scheduler",
+    "crm",
+    "email_sms",
+    "social_media_management",
+    "blog_posting",
+    "lead_generation",
+  ]) {
+    assert.ok(services.includes(serviceId), `service coverage includes ${serviceId}`);
+  }
 }
 
 console.log("contact trust checks passed");

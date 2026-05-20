@@ -74,6 +74,8 @@ const RECENT_ACTIVITY_TYPES = new Set(["call", "voicemail"]);
 const RECENT_ACTIVITY_KINDS = new Set(["follow_up_created", "follow_up_completed"]);
 const RECENT_STATUS_VALUES = new Set(["CONTACTED", "CALLED", "VOICEMAIL", "FOLLOW_UP"]);
 const RECENT_OUTCOME_VALUES = new Set(["Called", "Follow Up"]);
+const LABORTECH_LEAD_LIBRARY_PER_MODULE_LIMIT = 150;
+const LABORTECH_MIN_FRESH_SNAPSHOT_LEADS = 100;
 
 export default async function OperatorPage(props: {
   searchParams?: Promise<SearchParams>;
@@ -187,6 +189,15 @@ async function renderOperatorPage({
       `hit=${snap ? "true" : "false"} workspace=${workspace.slug}`,
     );
     if (snap) {
+      const snapLeadCount = typeof (snap.props as { totalPipeline?: unknown }).totalPipeline === "number"
+        ? (snap.props as { totalPipeline: number }).totalPipeline
+        : 0;
+      if (workspace.slug === "labortech" && snapLeadCount > 0 && snapLeadCount < LABORTECH_MIN_FRESH_SNAPSHOT_LEADS) {
+        console.log(
+          `[operator-timing] snapshot_bypass workspace=${workspace.slug} ` +
+          `reason=lead_count_regression totalPipeline=${snapLeadCount}`,
+        );
+      } else {
       // Override the user prop with the *current* session (the snapshot
       // was generated under a different user). Workspace identity is
       // preserved from the snapshot — it must match the requested slug.
@@ -237,6 +248,7 @@ async function renderOperatorPage({
           snapshotHydrationNow={hydrationNow}
         />
       );
+      }
     }
   }
 
@@ -273,7 +285,7 @@ async function renderOperatorPage({
       const result = await cachedLoadWorkspaceLeads({
         workspaceSlug: workspace.slug,
         moduleId: mid,
-        limit: 60,
+        limit: LABORTECH_LEAD_LIBRARY_PER_MODULE_LIMIT,
       });
       return { mid, leads: result.leads, cacheStatus: result.status, storeId: result.diagnostics.storeId };
     }),
@@ -293,7 +305,7 @@ async function renderOperatorPage({
   // logs so the full pipeline is observable end-to-end.
   // eslint-disable-next-line no-console
   console.log(
-    `[field-test-ingestion] perModuleCap=60 modules=${moduleLoadList.length} ` +
+    `[field-test-ingestion] perModuleCap=${LABORTECH_LEAD_LIBRARY_PER_MODULE_LIMIT} modules=${moduleLoadList.length} ` +
     `aggregate=${decided.length} enabledModules=${workspace.enabledModules.join(",")} ` +
     `googleKeyPresent=${!!(process.env.GOOGLE_PLACES_API_KEY || process.env.GOOGLE_API_KEY)} ` +
     `byModule={${decidedByModule.map((g) => `${g.mid}:${g.leads.length}(${g.cacheStatus})`).join(",")}}`,
@@ -732,16 +744,7 @@ async function renderOperatorPage({
       const top = needsByLead[i][0];
       const lead = group.leads[i];
       if (top?.suggestedPitch) {
-        (lead as unknown as {
-          serviceNeed?: {
-            suggestedPitch?: string;
-            needScore?: number;
-            urgency?: string;
-            serviceId?: string;
-            label?: string;
-            reason?: string;
-          };
-        }).serviceNeed = {
+        const topServiceNeed = {
           suggestedPitch: top.suggestedPitch,
           needScore: top.needScore,
           urgency: top.urgency,
@@ -749,9 +752,20 @@ async function renderOperatorPage({
           label: top.label,
           reason: top.reason,
         };
+        (lead as unknown as {
+          serviceNeed?: typeof topServiceNeed;
+        }).serviceNeed = topServiceNeed;
+        const uiLead = uiLeadById.get(lead.id);
+        if (uiLead) {
+          (uiLead as unknown as { serviceNeed?: typeof topServiceNeed }).serviceNeed = topServiceNeed;
+        }
       }
       const strategy = generateSalesStrategy(lead, needsByLead[i]);
       lead.salesStrategy = strategy;
+      const uiLead = uiLeadById.get(lead.id);
+      if (uiLead) {
+        (uiLead as unknown as { salesStrategy?: typeof strategy }).salesStrategy = strategy;
+      }
       verboseOperatorLog(
         `[sales-strategy] lead="${lead.companyName}" close=${strategy.closeProbability} ` +
         `primary="${strategy.primaryAngle?.label ?? "n/a"}"`,

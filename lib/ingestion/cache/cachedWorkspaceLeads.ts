@@ -62,7 +62,7 @@ export async function cachedLoadWorkspaceLeads(
   opts: CachedLoadOptions,
 ): Promise<CachedLoadResult> {
   const { workspaceSlug, moduleId } = opts;
-  const limit = opts.limit ?? 60;
+  const limit = opts.limit ?? 150;
   const ttlMs = opts.ttlMs ?? DEFAULT_INGESTION_TTL_MS;
   const batchId = opts.batchId ?? todayBatchId();
   const store = opts.store ?? getDefaultCacheStore();
@@ -75,19 +75,24 @@ export async function cachedLoadWorkspaceLeads(
   if (!opts.forceRefresh) {
     cachedEntry = await store.get(cacheKey);
     if (cachedEntry && !isExpired(cachedEntry)) {
-      status = "hit";
-      // eslint-disable-next-line no-console
-      console.log(
-        `[ingestion-cache] workspace=${workspaceSlug} module=${moduleId} ` +
-        `batchId=${batchId} status=hit returned=${cachedEntry.leads.length} ` +
-        `store=${store.id}`,
-      );
-      return {
-        leads: cachedEntry.leads,
-        status,
-        cacheKey,
-        diagnostics: { ...cachedEntry.diagnostics, storeId: store.id },
-      };
+      const cachedLimit = cachedEntry.diagnostics?.requestedLimit;
+      if (typeof cachedLimit === "number" && cachedLimit < limit) {
+        status = "stale";
+      } else {
+        status = "hit";
+        // eslint-disable-next-line no-console
+        console.log(
+          `[ingestion-cache] workspace=${workspaceSlug} module=${moduleId} ` +
+          `batchId=${batchId} status=hit returned=${cachedEntry.leads.length} ` +
+          `store=${store.id}`,
+        );
+        return {
+          leads: cachedEntry.leads,
+          status,
+          cacheKey,
+          diagnostics: { ...cachedEntry.diagnostics, storeId: store.id },
+        };
+      }
     }
     if (cachedEntry && isExpired(cachedEntry)) status = "stale";
   } else {

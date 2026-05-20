@@ -15,6 +15,8 @@ import type {
   ModuleId,
   SourceStatus,
 } from "@/lib/leads/normalizedLead";
+import { classifyContactPathTrust } from "@/lib/contacts/trust";
+import type { ContactPath } from "@/lib/contacts/types";
 
 const TEXTSEARCH = "https://maps.googleapis.com/maps/api/place/textsearch/json";
 const DETAILS = "https://maps.googleapis.com/maps/api/place/details/json";
@@ -42,7 +44,7 @@ export type SeedFallbackOptions = {
  * operator workspace is never empty when seed data exists.
  */
 export async function loadFromSeed(opts: SeedFallbackOptions): Promise<NormalizedLead[]> {
-  const limit = Math.max(1, Math.min(50, opts.limit ?? 25));
+  const limit = Math.max(1, opts.limit ?? 25);
   let seed: SeedEntry[];
   try {
     seed = await readSeed(opts.moduleId);
@@ -67,9 +69,6 @@ export async function loadFromSeed(opts: SeedFallbackOptions): Promise<Normalize
     if (s.website) {
       evidence.push({ label: "Website on file", value: s.website, source: "seed", confidence: "medium" });
     }
-    if (s.phone) {
-      evidence.push({ label: "Phone on file", value: s.phone, source: "seed", confidence: "medium" });
-    }
     return {
       id: makeId(s, i),
       workspaceSlug: opts.workspaceSlug,
@@ -77,7 +76,7 @@ export async function loadFromSeed(opts: SeedFallbackOptions): Promise<Normalize
       companyName: s.name,
       location,
       website: s.website || undefined,
-      phone: s.phone || undefined,
+      phone: undefined,
       email: undefined,
       source: "seed",
       sourceStatus: "available",
@@ -123,6 +122,32 @@ type DetailsResponse = {
   result?: PlaceDetails;
   error_message?: string;
 };
+
+function verifiedGooglePhoneFields(
+  phone: string | undefined,
+  checkedAt: string,
+): Pick<NormalizedLead, "contactPaths" | "phoneTrust" | "contactTrust"> {
+  if (!phone) return {};
+  const path: ContactPath = {
+    method: "phone",
+    value: phone,
+    source: "google_places",
+    verified: true,
+    confidence: "high",
+    rank: 1,
+    label: "Google Business Profile phone",
+    lastVerifiedAt: checkedAt,
+  };
+  const trust = classifyContactPathTrust(path, {
+    lastVerifiedAt: checkedAt,
+    conflictStatus: "none",
+  });
+  return {
+    contactPaths: [path],
+    phoneTrust: trust,
+    contactTrust: trust,
+  };
+}
 
 export type IngestOptions = {
   workspaceSlug: string;
@@ -279,12 +304,10 @@ export async function ingestFromGooglePlaces(
   opts: IngestOptions,
 ): Promise<NormalizedLead[]> {
   try {
-  // Field-test ingestion ceiling — matches the per-module cap set in
-  // app/operator/page.tsx. Each unit is one Google Places textSearch
-  // request (one seed entry → one query); the seed-file length per
-  // module is the practical upper bound. 60 × 6 modules = 360 raw
-  // leads max — comfortably above the 120-call Thu→Thu target.
-  const limit = Math.max(1, Math.min(60, opts.limit ?? 5));
+  // Use the requested library size directly; the seed-file length is
+  // the practical upper bound. The call queue can cap downstream, but
+  // ingestion must not silently collapse the Labortech lead library.
+  const limit = Math.max(1, opts.limit ?? 5);
   const key = getKey();
   // eslint-disable-next-line no-console
   console.log(
@@ -302,7 +325,7 @@ export async function ingestFromGooglePlaces(
     try { seed = await readSeed(opts.moduleId); } catch { seed = []; }
     const checkedAt = new Date().toISOString();
     if (seed.length === 0) return [];
-    const slice = seed.slice(0, Math.min(5, seed.length));
+    const slice = seed.slice(0, Math.min(limit, seed.length));
     return slice.map((s, i) => {
       const location = [s.city, s.state].filter(Boolean).join(", ") || undefined;
       return {
@@ -312,15 +335,15 @@ export async function ingestFromGooglePlaces(
         companyName: s.name,
         location,
         website: s.website || undefined,
-        phone: s.phone || undefined,
+        phone: undefined,
         email: undefined,
-        source: "google_places" as const,
+        source: "seed" as const,
         sourceStatus: "available" as const,
         lastChecked: checkedAt,
         signals: { hasWebsite: !!s.website, reviewCount: 12, rating: 4.2 },
         crm: {},
         evidence: [
-          { label: "Seed catalog", value: s.name, source: "google_places" as const, confidence: "medium" as const },
+          { label: "Seed catalog", value: s.name, source: "seed" as const, confidence: "medium" as const },
         ],
       };
     });
@@ -445,6 +468,7 @@ export async function ingestFromGooglePlaces(
         },
         crm: {},
         evidence,
+        ...verifiedGooglePhoneFields(phone, checkedAt),
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "ingest failed";
@@ -465,13 +489,12 @@ export async function ingestFromGooglePlaces(
   // eslint-disable-next-line no-console
   console.log(`[SOURCE CHECK] module=${opts.moduleId} results=${out.length}`);
 
-  // TEMPORARY UI-restoration fallback. If the live API returned zero
-  // usable leads, emit 5 leads from the same seed list using the
-  // EXACT shape ingestFromGooglePlaces normally returns. Same fields,
-  // same source/sourceStatus the adapter already uses. No new types.
+  // If the live API returned zero usable leads, keep the lead universe
+  // visible from seed names/websites only. Seed phone values are not
+  // provider-verified, so they are intentionally not surfaced as callable.
   if (out.length === 0 && seed.length > 0) {
     const fallback: NormalizedLead[] = [];
-    const slice = seed.slice(0, Math.min(5, seed.length));
+    const slice = seed.slice(0, Math.min(limit, seed.length));
     for (let i = 0; i < slice.length; i++) {
       const s = slice[i];
       const location = [s.city, s.state].filter(Boolean).join(", ") || undefined;
@@ -482,15 +505,15 @@ export async function ingestFromGooglePlaces(
         companyName: s.name,
         location,
         website: s.website || undefined,
-        phone: s.phone || undefined,
+        phone: undefined,
         email: undefined,
-        source: "google_places",
+        source: "seed",
         sourceStatus: "available",
         lastChecked: checkedAt,
         signals: { hasWebsite: !!s.website, reviewCount: 12, rating: 4.2 },
         crm: {},
         evidence: [
-          { label: "Seed catalog", value: s.name, source: "google_places", confidence: "medium" },
+          { label: "Seed catalog", value: s.name, source: "seed", confidence: "medium" },
         ],
       });
     }

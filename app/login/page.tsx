@@ -16,10 +16,13 @@ function LoginForm() {
   const [showDemoLogin, setShowDemoLogin] = useState(false);
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const host = window.location.hostname.toLowerCase();
-    const isDev = host === "localhost" || host === "127.0.0.1";
-    const isNgrok = host.includes("ngrok");
-    setShowDemoLogin(isDev || isNgrok);
+    const timer = window.setTimeout(() => {
+      const host = window.location.hostname.toLowerCase();
+      const isDev = host === "localhost" || host === "127.0.0.1";
+      const isNgrok = host.includes("ngrok");
+      setShowDemoLogin(isDev || isNgrok);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   async function onSubmit(e: React.FormEvent) {
@@ -177,8 +180,22 @@ const styles: Record<string, React.CSSProperties> = {
 
 export default function LoginPage() {
   return (
-    <Suspense>
+    <Suspense fallback={<LoginLoadingShell />}>
       <LoginForm />
     </Suspense>
+  );
+}
+
+function LoginLoadingShell() {
+  return (
+    <div style={styles.root} aria-busy="true" aria-live="polite">
+      <div style={styles.card}>
+        <div style={styles.brand}>MERIDIAN</div>
+        <div style={styles.sub}>Preparing your workspace sign-in...</div>
+        <div style={{ height: 12, borderRadius: 999, background: "#E2E8F0", marginTop: 16 }} />
+        <div style={{ height: 44, borderRadius: 8, background: "#EEF2F7", marginTop: 18 }} />
+        <div style={{ height: 44, borderRadius: 8, background: "#DBEAFE", marginTop: 24 }} />
+      </div>
+    </div>
   );
 }

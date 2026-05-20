@@ -3502,7 +3502,13 @@ export function SelectedLeadPanel({
     : phoneDigits.length === 11 && phoneDigits.startsWith("1")
       ? `+1 (${phoneDigits.slice(1,4)}) ${phoneDigits.slice(4,7)}-${phoneDigits.slice(7)}`
       : (phone || null);
+  const rawPanelPhone =
+    selectedLead?.contacts?.primaryPhone
+    ?? selectedLead?.phone
+    ?? task?.phone
+    ?? null;
   const emailTrust = contactTrustItems(selectedLead, task, "email");
+  const phoneTrustDisplay = buildContactTrustDisplay(selectedLead ?? task, "phone", task);
   const recommendationTrust = buildRecommendationTrustDisplay(selectedLead ?? task, "Selected lead priority");
   const opener = scan?.salesAngle?.opener ?? task?.suggestedOpeningLine ?? null;
   const hasPanelEmail = !!(
@@ -3513,13 +3519,51 @@ export function SelectedLeadPanel({
     ?? task?.email
     ?? null
   );
+  const contactStatus = (() => {
+    if (phoneDisplay) {
+      return {
+        label: `Verified phone available · ${phoneDisplay}`,
+        tone: "good",
+        move: "Call today — lead with the opening angle.",
+        disabledCta: "Call Now",
+      };
+    }
+    if (rawPanelPhone) {
+      return {
+        label: "Phone available, needs light verification",
+        tone: "watch",
+        move: "Verify the phone source before dialing.",
+        disabledCta: "Verify phone first",
+      };
+    }
+    if (hasPanelEmail) {
+      return {
+        label: "Email only",
+        tone: "watch",
+        move: "Use email as a fallback while sourcing a verified phone.",
+        disabledCta: "Email fallback",
+      };
+    }
+    if (phoneTrustDisplay.conflict || phoneTrustDisplay.trustLevel === "STALE") {
+      return {
+        label: "Do not call yet",
+        tone: "danger",
+        move: "Resolve contact trust before any outreach.",
+        disabledCta: "Do not call yet",
+      };
+    }
+    return {
+      label: "Needs contact enrichment",
+      tone: "watch",
+      move: "Find a verified phone before outreach.",
+      disabledCta: "Enrich contact",
+    };
+  })();
   const primaryMove = (() => {
     const urgency = scan?.urgency?.label ?? null;
     const isHotUrgency = urgency === "Critical" || urgency === "High";
     if (phoneDigits && isHotUrgency) return "Call now — lead with the opening angle.";
-    if (phoneDigits) return "Call today — lead with the opening angle.";
-    if (hasPanelEmail) return "Verify phone, then use email as fallback.";
-    return "Verify contact before outreach.";
+    return contactStatus.move;
   })();
   const panelActionChips = primaryActionabilityChips(task, recommendationTrust.chips);
   const fit = getLaborTechServiceFit(task);
@@ -3536,11 +3580,8 @@ export function SelectedLeadPanel({
     || (Array.isArray(scan?.evidence) && typeof scan.evidence[0] === "string" ? scan.evidence[0] : null)
     || offerWhyNow
     || null;
-  const contactState = phoneDisplay
-    ? `Call ${phoneDisplay}`
-    : hasPanelEmail
-      ? "Email fallback available"
-      : "Verify contact first";
+  const contactState = contactStatus.label;
+  const disabledCallLabel = contactStatus.disabledCta;
   const panelRef = useRef(null);
   useEffect(() => {
     if (callMode !== "active") return;
@@ -3556,7 +3597,8 @@ export function SelectedLeadPanel({
         blue highlight via the panel boxShadow ladder below when
         callMode === "active". */}
     <aside ref={panelRef} style={{
-      width: "360px",
+      width: "100%",
+      maxWidth: "620px",
       flexShrink: 0,
       padding: "16px 14px",
       paddingBottom: "24px",
@@ -3666,7 +3708,7 @@ export function SelectedLeadPanel({
                 <span style={{
                   fontSize: "11px",
                   fontWeight: 800,
-                  color: phoneDigits ? palette.blue : palette.warning,
+                  color: contactStatus.tone === "danger" ? palette.danger : phoneDigits ? palette.blue : palette.warning,
                   whiteSpace: "nowrap",
                   fontVariantNumeric: "tabular-nums",
                 }}>
@@ -3879,7 +3921,7 @@ export function SelectedLeadPanel({
           <span style={{
             fontSize: "11px",
             fontWeight: 750,
-            color: phoneDigits ? palette.blue : palette.warning,
+            color: contactStatus.tone === "danger" ? palette.danger : phoneDigits ? palette.blue : palette.warning,
             whiteSpace: "nowrap",
             fontVariantNumeric: "tabular-nums",
           }}>
@@ -4039,7 +4081,7 @@ export function SelectedLeadPanel({
               serviceBucketId: task?.laborTechScan?.primaryService ?? null,
             });
           }}
-          aria-label={readOnly ? "Call disabled in demo mode" : telHref ? `Call ${company} now` : "Call unavailable"}
+          aria-label={readOnly ? "Call disabled in demo mode" : telHref ? `Call ${company} now` : disabledCallLabel}
           aria-disabled={readOnly || !telHref}
           title={readOnly ? "Demo mode is read-only; calling is disabled." : undefined}
           onFocus={applyFocusRing}
@@ -4065,7 +4107,7 @@ export function SelectedLeadPanel({
             pointerEvents: "auto",
           }}
         >
-          <span>{readOnly ? "Call disabled in demo" : telHref ? "Call Now" : "Call unavailable"}</span>
+          <span>{readOnly ? "Call disabled in demo" : telHref ? "Call Now" : disabledCallLabel}</span>
           {!readOnly && telHref && phoneDisplay ? (
             <span style={{
               fontSize: "12px",
@@ -5456,7 +5498,7 @@ export default function CalendarCommandCenter({
   // always the next-best lead.
   const callQueue = useMemo(() => {
     return (data ?? [])
-      .filter((t) => t && t.status !== "done")
+      .filter((t) => t && t.status !== "done" && t.phoneAuthority === "dialable" && t.phone && String(t.id ?? "").endsWith("-call"))
       .slice()
       .sort((a, b) => compareLeadTasks(a, b, { now }));
   }, [data, now]);

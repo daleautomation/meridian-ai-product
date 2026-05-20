@@ -150,6 +150,15 @@ function isTrustedSource(source: string | null | undefined): boolean {
   return normalized === "google_places" || normalized === "gbp";
 }
 
+function defaultConfidenceForSource(source: string | null | undefined): string | null {
+  const normalized = String(source ?? "").toLowerCase();
+  if (normalized === "google_places" || normalized === "gbp" || normalized === "yelp" || normalized === "manual") {
+    return "high";
+  }
+  if (normalized === "bbb") return "medium";
+  return null;
+}
+
 function isLowConfidence(value: string | null | undefined): boolean {
   const normalized = String(value ?? "").toLowerCase();
   return normalized === "low" || normalized === "none";
@@ -191,7 +200,8 @@ export function getDialablePhoneDetails(
   const fallbackConfidence =
     phoneValue(lead?.contacts?.confidence)
     ?? phoneValue(lead?.confidenceLabel)
-    ?? phoneValue(lead?.confidence);
+    ?? phoneValue(lead?.confidence)
+    ?? defaultConfidenceForSource(fallbackSource);
   const fallbackPhone = phoneValue(lead?.contacts?.primaryPhone) ?? phoneValue(lead?.phone);
   const fallbackTrust = lead?.contacts?.phoneTrust ?? lead?.contacts?.contactTrust ?? classifyContactPathTrust({
     method: "phone",
