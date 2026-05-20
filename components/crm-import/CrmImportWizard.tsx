@@ -11,9 +11,19 @@ type Step = "upload" | "mapping" | "preview" | "importing" | "done";
 type Props = {
   workspaceId: string;
   workspaceName: string;
+  /** Post-import and back navigation — defaults to relationship-priority desk. */
+  returnPath?: string;
+  backLabel?: string;
+  doneLabel?: string;
 };
 
-export default function CrmImportWizard({ workspaceId, workspaceName }: Props) {
+export default function CrmImportWizard({
+  workspaceId,
+  workspaceName,
+  returnPath = `/operator/relationship-priority?workspace=${workspaceId}`,
+  backLabel = "Back to desk",
+  doneLabel = "Open relationship desk",
+}: Props) {
   const [step, setStep] = useState<Step>("upload");
   const [csvText, setCsvText] = useState("");
   const [sourceLabel, setSourceLabel] = useState("manual_csv");
@@ -117,8 +127,8 @@ export default function CrmImportWizard({ workspaceId, workspaceName }: Props) {
               review duplicates, then import — nothing merges without your review.
             </p>
           </div>
-          <Link href={`/operator/relationship-priority?workspace=${workspaceId}`} style={styles.backLink}>
-            Back to desk
+          <Link href={returnPath} style={styles.backLink}>
+            {backLabel}
           </Link>
         </header>
 
@@ -234,11 +244,8 @@ export default function CrmImportWizard({ workspaceId, workspaceName }: Props) {
             <MetricRow label="Duplicates surfaced" value={String(importResult.duplicates)} />
             <p style={styles.hint}>Rollback ID: {importResult.rollbackSnapshotId}</p>
             <div style={styles.actions}>
-              <Link
-                href={`/operator/relationship-priority?workspace=${workspaceId}`}
-                style={styles.primaryButton}
-              >
-                Open relationship desk
+              <Link href={returnPath} style={styles.primaryButton}>
+                {doneLabel}
               </Link>
               <button type="button" style={styles.secondaryButton} disabled={busy} onClick={runRollback}>
                 Roll back this import

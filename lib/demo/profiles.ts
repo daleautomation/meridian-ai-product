@@ -44,6 +44,13 @@ export const DEMO_PROFILES: Record<string, DemoProfile> = {
     audience: "public",
     description: "Public controlled demo entry",
   },
+  nicole: {
+    slug: "nicole",
+    tenantId: "nicole",
+    workspaceSlug: "nicole-lonergan",
+    audience: "client",
+    description: "Nicole Lonergan personal relationship workspace",
+  },
 };
 
 export function getDemoProfile(slug: string | undefined | null): DemoProfile | null {

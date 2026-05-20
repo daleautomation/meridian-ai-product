@@ -32,6 +32,7 @@ import {
   type WorkspaceConfig,
 } from "../../config/workspaces";
 import { getWorkspaceAccess } from "../../lib/workspaceAccess";
+import { isPersonalWorkspace, workspaceHomePath } from "../../lib/workspaceRouting";
 import { getSourceReadiness } from "../../lib/sources/readiness";
 import { isHunterConfigured } from "../../lib/integrations/hunterConfig";
 import { ALL_TRADE_ENV_VARS } from "../../lib/modules/tradeSources";
@@ -160,11 +161,14 @@ async function renderOperatorPage({
       );
     }
     workspace = access.workspace;
+    if (isPersonalWorkspace(workspace)) {
+      redirect(workspaceHomePath(workspace));
+    }
   }
   if (!workspace) {
     if (userWorkspaces.length === 1) {
       const only = defaultWorkspaceFor(user.workspaces ?? []);
-      if (only) redirect(`/operator?workspace=${only.slug}`);
+      if (only) redirect(workspaceHomePath(only));
     }
     return <WorkspacePicker workspaces={userWorkspaces} userName={user.name ?? user.id} />;
   }
@@ -1391,14 +1395,14 @@ function WorkspacePicker({
           {workspaces.map((ws) => (
             <Link
               key={ws.id}
-              href={`/operator?workspace=${ws.slug}`}
+              href={workspaceHomePath(ws)}
               style={pickerStyles.item}
             >
               <div style={pickerStyles.itemName}>{ws.branding?.displayName ?? ws.name}</div>
               <div style={pickerStyles.itemMeta}>
-                {ws.enabledModules.length} module{ws.enabledModules.length === 1 ? "" : "s"} live
-                {ws.comingSoonModules.length > 0
-                  ? ` · ${ws.comingSoonModules.length} coming soon`
+                {ws.branding?.accentLabel ?? ws.name}
+                {ws.enabledModules.length > 0
+                  ? ` · ${ws.enabledModules.length} module${ws.enabledModules.length === 1 ? "" : "s"} live`
                   : ""}
               </div>
             </Link>

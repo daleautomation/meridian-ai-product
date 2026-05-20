@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { defaultRouteForWorkspaceSlugs } from "@/lib/workspaceRouting";
 
 function LoginForm() {
   const router = useRouter();
@@ -41,9 +42,13 @@ function LoginForm() {
         setLoading(false);
         return;
       }
-      const next = searchParams.get("next") || "/operator";
-      // Only allow internal redirects
-      const safe = next.startsWith("/") && !next.startsWith("//") ? next : "/operator";
+      const data = await res.json().catch(() => ({}));
+      const nextParam = searchParams.get("next");
+      const fallback = defaultRouteForWorkspaceSlugs(data.user?.workspaces ?? []);
+      const safe =
+        nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//")
+          ? nextParam
+          : fallback;
       router.replace(safe);
       router.refresh();
     } catch {
@@ -78,12 +83,20 @@ function LoginForm() {
           {loading ? "Signing in..." : "Sign In"}
         </button>
         {showDemoLogin ? (
-          <a
-            href="/api/auth/demo-login?user=john&workspace=labortech"
-            style={styles.demoBtn}
-          >
-            Demo Login as John
-          </a>
+          <div style={styles.demoLinks}>
+            <a
+              href="/api/auth/demo-login?user=john&workspace=labortech"
+              style={styles.demoBtn}
+            >
+              Demo: John (LaborTech)
+            </a>
+            <a
+              href="/api/auth/demo-login?user=nicole&workspace=nicole-lonergan&surface=personal"
+              style={styles.demoBtn}
+            >
+              Demo: Nicole Lonergan
+            </a>
+          </div>
         ) : null}
       </form>
     </div>
@@ -161,8 +174,12 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     minHeight: "44px",
   },
-  demoBtn: {
+  demoLinks: {
+    display: "grid",
+    gap: "8px",
     marginTop: "12px",
+  },
+  demoBtn: {
     padding: "12px",
     borderRadius: "8px",
     background: "transparent",

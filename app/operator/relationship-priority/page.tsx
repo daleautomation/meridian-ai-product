@@ -9,6 +9,7 @@ import { buildResurfacingBuckets } from "@/lib/relationship-intelligence/resurfa
 import { buildRelationshipPriorityWorkspaceModel } from "@/lib/relationship-priority/workspace";
 import { parseShowcaseConfig } from "@/lib/relationship-priority/showcase";
 import { getWorkspaceAccess } from "@/lib/workspaceAccess";
+import { isPersonalWorkspace, workspaceHomePath } from "@/lib/workspaceRouting";
 import { palette } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
@@ -63,14 +64,16 @@ async function renderRelationshipPriorityPage({
       );
     }
     workspace = access.workspace;
+    if (isPersonalWorkspace(workspace)) {
+      redirect(workspaceHomePath(workspace));
+    }
   }
 
   if (!workspace) {
     if (userWorkspaces.length === 1) {
       const only = defaultWorkspaceFor(user.workspaces ?? []);
       if (only) {
-        if (!only.features.showRelationshipsTab) redirect(`/operator?workspace=${only.slug}`);
-        redirect(`/operator/relationship-priority?workspace=${only.slug}`);
+        redirect(workspaceHomePath(only));
       }
     }
     return <WorkspacePicker workspaces={userWorkspaces} userName={user.name ?? user.id} />;
@@ -106,10 +109,12 @@ function WorkspacePicker({
     <AuthStateShell eyebrow="Choose workspace" title={`Welcome, ${userName}`}>
       <p style={styles.copy}>Open the relationship-priority desk for the workspace you want to run today.</p>
       <div style={styles.choiceGrid}>
-        {workspaces.filter((workspace) => workspace.features.showRelationshipsTab).map((workspace) => (
+        {workspaces
+          .filter((workspace) => workspace.features.showRelationshipsTab && !isPersonalWorkspace(workspace))
+          .map((workspace) => (
           <Link
             key={workspace.slug}
-            href={`/operator/relationship-priority?workspace=${workspace.slug}`}
+            href={workspaceHomePath(workspace)}
             style={styles.choiceCard}
           >
             <strong>{workspace.branding?.displayName ?? workspace.name}</strong>
@@ -137,7 +142,7 @@ function WorkspaceAccessDenied({
         {workspaces.map((workspace) => (
           <Link
             key={workspace.slug}
-            href={`/operator/relationship-priority?workspace=${workspace.slug}`}
+            href={workspaceHomePath(workspace)}
             style={styles.choiceCard}
           >
             <strong>{workspace.branding?.displayName ?? workspace.name}</strong>

@@ -5,6 +5,7 @@ import { makeEvent, writeEvent } from "@/lib/tracking/eventLog";
 import { isDemoAllowedHost, describeDemoAllowlist } from "@/lib/demo/access";
 import { getDemoProfile, type DemoProfile } from "@/lib/demo/profiles";
 import { getWorkspaceAccess } from "@/lib/workspaceAccess";
+import { isPersonalWorkspace, workspaceHomePath } from "@/lib/workspaceRouting";
 
 type DemoSessionInput = {
   req: Request;
@@ -12,7 +13,7 @@ type DemoSessionInput = {
   tenant?: Tenant | null;
   workspaceSlug?: string | null;
   entry: string;
-  destination?: "operator" | "relationship-priority";
+  destination?: "operator" | "relationship-priority" | "personal";
 };
 
 function forwardedHost(req: Request, url: URL): string {
@@ -70,17 +71,27 @@ export async function createDemoSessionResponse(input: DemoSessionInput) {
   }
 
   const destination = input.destination
-    ?? (url.searchParams.get("surface") === "relationship-priority" ? "relationship-priority" : "operator");
-  const resolvedDestination = destination === "relationship-priority" && !access.workspace.features.showRelationshipsTab
-    ? "operator"
-    : destination;
+    ?? (url.searchParams.get("surface") === "personal"
+      ? "personal"
+      : url.searchParams.get("surface") === "relationship-priority"
+        ? "relationship-priority"
+        : "operator");
+  let resolvedDestination = destination;
+  if (destination === "personal" && !isPersonalWorkspace(access.workspace)) {
+    resolvedDestination = access.workspace.features.showRelationshipsTab
+      ? "relationship-priority"
+      : "operator";
+  }
+  if (destination === "relationship-priority" && !access.workspace.features.showRelationshipsTab) {
+    resolvedDestination = isPersonalWorkspace(access.workspace) ? "personal" : "operator";
+  }
+  if (isPersonalWorkspace(access.workspace) && resolvedDestination === "operator") {
+    resolvedDestination = "personal";
+  }
   const isHttps = isSecureSessionRequest(req);
   const proto = isHttps ? "https" : "http";
-  const operatorPath = resolvedDestination === "relationship-priority"
-    ? "/operator/relationship-priority"
-    : "/operator";
   const redirectUrl = new URL(
-    `${operatorPath}?workspace=${encodeURIComponent(access.workspace.slug)}`,
+    workspaceHomePath(access.workspace),
     `${proto}://${fwdHost}`,
   );
   for (const key of ["mode", "showcase", "vertical", "preset"]) {

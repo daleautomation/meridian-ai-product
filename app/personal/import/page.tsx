@@ -11,38 +11,42 @@ type SearchParams = {
   workspace?: string | string[];
 };
 
-export default async function CrmImportPage({
+export default async function PersonalImportPage({
   searchParams,
 }: {
   searchParams?: Promise<SearchParams>;
 }) {
   const user = await getSession();
-  if (!user) redirect("/login");
+  if (!user) redirect("/login?next=/personal/import");
 
   const params = (await searchParams) ?? {};
   const requestedSlug = Array.isArray(params.workspace) ? params.workspace[0] : params.workspace;
-  const workspaces = listWorkspacesForUser(user.workspaces ?? []);
+  const personalWorkspaces = listWorkspacesForUser(user.workspaces ?? []).filter(isPersonalWorkspace);
 
   let workspaceSlug = requestedSlug;
-  if (!workspaceSlug && workspaces.length === 1) {
-    workspaceSlug = workspaces[0].slug;
+  if (!workspaceSlug && personalWorkspaces.length === 1) {
+    workspaceSlug = personalWorkspaces[0].slug;
   }
   if (!workspaceSlug) {
-    const only = workspaces.length === 1 ? workspaces[0] : null;
-    redirect(only ? workspaceHomePath(only) : "/operator/relationship-priority");
+    redirect("/personal");
   }
 
   const access = getWorkspaceAccess(user, workspaceSlug);
-  if (!access.ok) redirect("/operator/relationship-priority");
+  if (!access.ok) redirect("/personal");
 
   const workspace = access.workspace;
-  if (isPersonalWorkspace(workspace)) {
+  if (!isPersonalWorkspace(workspace)) {
     redirect(workspaceImportPath(workspace));
   }
+
+  const home = workspaceHomePath(workspace);
   return (
     <CrmImportWizard
       workspaceId={workspace.slug}
       workspaceName={workspace.branding?.displayName ?? workspace.name}
+      returnPath={home}
+      backLabel="Back to workspace"
+      doneLabel={`Open ${workspace.branding?.displayName ?? "Nicole Lonergan"}'s workspace`}
     />
   );
 }

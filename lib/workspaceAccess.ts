@@ -1,4 +1,8 @@
-import { getWorkspaceBySlug, type WorkspaceConfig } from "@/config/workspaces";
+import {
+  getWorkspaceBySlug,
+  resolveWorkspaceIdFromAssignment,
+  type WorkspaceConfig,
+} from "@/config/workspaces";
 import type { AccessRole, PublicUser, Tenant } from "@/config/tenants";
 
 type Principal = Pick<PublicUser | Tenant, "id" | "accessRole" | "workspaces">;
@@ -17,7 +21,8 @@ export function getWorkspaceAccess(
 ): WorkspaceAccessResult {
   const workspace = getWorkspaceBySlug(workspaceSlug);
   if (!workspace) return { ok: false, status: 404, reason: "unknown_workspace" };
-  if (!(user.workspaces ?? []).includes(workspace.slug)) {
+  const assigned = (user.workspaces ?? []).map(resolveWorkspaceIdFromAssignment);
+  if (!assigned.includes(workspace.slug)) {
     return { ok: false, status: 403, reason: "not_assigned" };
   }
   if (!canRoleAccessWorkspace(user.accessRole, workspace)) {
