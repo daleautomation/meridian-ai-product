@@ -9,6 +9,7 @@ import {
 import { isAdminOperator } from "@/lib/workspaceAccess";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const ADMIN_LINKS = [
   { href: "/admin/prospects", label: "Prospect research", detail: "Internal outreach cohorts" },

@@ -1,15 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  applyAuthNoStoreHeaders,
+  pathRequiresNoStore,
+} from "@/lib/auth/sessionCleanup";
 
 const SESSION_COOKIE = "meridian_session";
 
 // Public paths that do NOT require authentication.
-const PUBLIC_PATHS = new Set(["/", "/login", "/about", "/roofing-intelligence", "/showcase"]);
+const PUBLIC_PATHS = new Set([
+  "/",
+  "/login",
+  "/about",
+  "/roofing-intelligence",
+  "/showcase",
+  // /reset-session is intentionally public so a stale-browser customer
+  // can self-recover without needing valid credentials first.
+  "/reset-session",
+]);
 
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Allow public pages, intake funnels, auth API, AI API, demo entry,
-  // delivered Recovery Briefs, and static assets.
+  // Allow public pages, intake funnels, auth API, outcome capture,
+  // demo entry, delivered Recovery Briefs, and static assets.
   //
   // /brief/* is intentionally public: briefs are founder-delivered artifacts
   // shared via direct link to prospects and customers, and the public
@@ -29,21 +42,25 @@ export function proxy(req: NextRequest) {
     pathname.startsWith("/demo/") ||
     pathname.startsWith("/showcase/") ||
     pathname.startsWith("/brief/") ||
+    pathname.startsWith("/reset-session") ||
     pathname.startsWith("/_next/") ||
     pathname === "/favicon.ico"
   ) {
-    return NextResponse.next();
+    return withAuthCacheGuard(NextResponse.next(), pathname);
   }
 
   const token = req.cookies.get(SESSION_COOKIE)?.value;
   const hasToken = !!token && token.split(".").length === 3;
-  if (hasToken) return NextResponse.next();
+  if (hasToken) return withAuthCacheGuard(NextResponse.next(), pathname);
 
   // API routes must return JSON, never a redirect — the client expects JSON.
   if (pathname.startsWith("/api/")) {
-    return NextResponse.json(
-      { success: false, error: "Unauthorized" },
-      { status: 401 }
+    return withAuthCacheGuard(
+      NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      ),
+      pathname,
     );
   }
 
@@ -56,7 +73,19 @@ export function proxy(req: NextRequest) {
     `[auth-proxy] redirect_to_login path="${pathname}" ` +
     `cookiePresent=${!!token} cookieShape=${hasToken ? "session" : token ? "invalid" : "missing"}`,
   );
-  return NextResponse.redirect(url);
+  return withAuthCacheGuard(NextResponse.redirect(url), pathname);
+}
+
+/**
+ * Apply no-store cache headers to responses for auth-sensitive paths.
+ * Centralizes the rule so a stale Chrome bundle can never linger on
+ * /login, /workspace-select, /reset-session, or any /api/auth/* route.
+ */
+function withAuthCacheGuard(res: NextResponse, pathname: string): NextResponse {
+  if (pathRequiresNoStore(pathname)) {
+    applyAuthNoStoreHeaders(res);
+  }
+  return res;
 }
 
 export const config = {

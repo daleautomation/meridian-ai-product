@@ -4,6 +4,7 @@ import { findTenantByCredentials } from "@/config/tenants";
 import { normalizeLoginUsername } from "@/lib/auth/credentials";
 import { resolvePostLoginRedirect } from "@/lib/auth/postLoginRouting";
 import { createSessionToken, isSecureSessionRequest, SESSION_COOKIE } from "@/lib/session";
+import { applyAuthNoStoreHeaders } from "@/lib/auth/sessionCleanup";
 
 function loginEnabledTenantUsernames(): string[] {
   return Object.values(TENANTS)
@@ -20,7 +21,9 @@ export async function POST(req: Request) {
   } catch {
     // eslint-disable-next-line no-console
     console.log(`[login-debug] host="${host}" body=invalid_json`);
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    return applyAuthNoStoreHeaders(
+      NextResponse.json({ error: "Invalid request" }, { status: 400 }),
+    );
   }
   const username = typeof body.username === "string" ? body.username : "";
   const password = typeof body.password === "string" ? body.password : "";
@@ -36,7 +39,9 @@ export async function POST(req: Request) {
   if (!username.trim() || !password.trim()) {
     // eslint-disable-next-line no-console
     console.log("[login-debug] missing_credentials");
-    return NextResponse.json({ error: "Missing credentials" }, { status: 400 });
+    return applyAuthNoStoreHeaders(
+      NextResponse.json({ error: "Missing credentials" }, { status: 400 }),
+    );
   }
   const tenant = findTenantByCredentials(username, password);
   const tenantExists = normalized in TENANTS;
@@ -46,7 +51,9 @@ export async function POST(req: Request) {
       `workspaces="${tenant?.workspaces.join(",") ?? ""}"`,
   );
   if (!tenant) {
-    return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    return applyAuthNoStoreHeaders(
+      NextResponse.json({ error: "Invalid credentials" }, { status: 401 }),
+    );
   }
   let token: string;
   let maxAge: number;
@@ -59,7 +66,9 @@ export async function POST(req: Request) {
         err instanceof Error ? err.message : String(err)
       }"`,
     );
-    return NextResponse.json({ error: "Authentication is not configured" }, { status: 500 });
+    return applyAuthNoStoreHeaders(
+      NextResponse.json({ error: "Authentication is not configured" }, { status: 500 }),
+    );
   }
   const user = toPublicUser(tenant);
   const redirectTo = resolvePostLoginRedirect(user, body.next ?? null);
@@ -75,5 +84,5 @@ export async function POST(req: Request) {
   });
   // eslint-disable-next-line no-console
   console.log(`[login-debug] cookieSet uid=${tenant.id} secure=${isHttps} fwdProto="${fwdProto}"`);
-  return res;
+  return applyAuthNoStoreHeaders(res);
 }
