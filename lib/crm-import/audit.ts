@@ -11,6 +11,7 @@ import {
   type ContactScoreTransparency,
 } from "@/lib/crm-import/scoreTransparency";
 import { contactHasReachableEmail, contactHasReachablePhone } from "@/lib/crm-import/reachability";
+import { CRM_IMPORT_JOBS_PATH } from "@/lib/crm-import/storageConfig";
 import { getImportJob, listContactsByWorkspace } from "@/lib/crm-import/store";
 import type { CrmContactRecord, CrmImportJob, NormalizedCrmContact } from "@/lib/crm-import/types";
 import { computeRelationshipScore } from "@/lib/relationship-intelligence/scoring";
@@ -256,9 +257,8 @@ function buildGenericProbe(contact: CrmContactRecord): string {
 
 async function resolveAuditJob(opts: CrmImportAuditOptions): Promise<CrmImportJob | null> {
   if (opts.jobId) return getImportJob(opts.jobId);
-  const jobsPath = path.join(process.cwd(), "data", "crmImportJobs.json");
   try {
-    const raw = await readFile(jobsPath, "utf8");
+    const raw = await readFile(CRM_IMPORT_JOBS_PATH, "utf8");
     const parsed = JSON.parse(raw) as { jobs?: CrmImportJob[] };
     const jobs = (parsed.jobs ?? []).filter((j) => j.workspaceId === opts.workspaceId);
     const completed = jobs

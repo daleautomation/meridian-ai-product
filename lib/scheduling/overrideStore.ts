@@ -17,6 +17,11 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import {
+  SCHEDULING_OVERRIDES_DIR,
+  SCHEDULING_OVERRIDES_PATH,
+  SCHEDULING_OVERRIDES_TMP_PATH,
+} from "@/lib/crm-import/storageConfig";
 
 export type ScheduleOverrideAction =
   | "move_today"
@@ -49,20 +54,15 @@ interface OverrideFile {
 
 const FILE_VERSION = 1;
 
-function repoFilePath(): string {
-  return path.join(process.cwd(), "data", "scheduling", "overrides.json");
-}
-
-function tmpFilePath(): string {
-  return process.platform === "win32"
-    ? path.join(process.env.TEMP ?? ".", "meridian-overrides.json")
-    : "/tmp/meridian-overrides.json";
-}
+const OVERRIDE_READ_PATHS = [
+  SCHEDULING_OVERRIDES_PATH,
+  SCHEDULING_OVERRIDES_TMP_PATH,
+] as const;
 
 /** Read overrides. Tries the repo file first (deploy-bundled), falls
  *  back to /tmp (warm-container ephemeral). Never throws. */
-async function readFile(): Promise<OverrideFile> {
-  for (const filePath of [repoFilePath(), tmpFilePath()]) {
+async function readOverrideFile(): Promise<OverrideFile> {
+  for (const filePath of OVERRIDE_READ_PATHS) {
     try {
       const raw = await fs.readFile(filePath, "utf8");
       const parsed = JSON.parse(raw);
@@ -76,24 +76,45 @@ async function readFile(): Promise<OverrideFile> {
   return { version: FILE_VERSION, byWorkspace: {} };
 }
 
+async function writeRepoOverrides(file: OverrideFile): Promise<boolean> {
+  try {
+    await fs.mkdir(SCHEDULING_OVERRIDES_DIR, { recursive: true });
+    await fs.writeFile(
+      SCHEDULING_OVERRIDES_PATH,
+      JSON.stringify(file, null, 2),
+      "utf8",
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function writeTmpOverrides(file: OverrideFile): Promise<boolean> {
+  try {
+    if (process.platform === "win32") {
+      await fs.mkdir(path.dirname(SCHEDULING_OVERRIDES_TMP_PATH), { recursive: true });
+    }
+    await fs.writeFile(
+      SCHEDULING_OVERRIDES_TMP_PATH,
+      JSON.stringify(file, null, 2),
+      "utf8",
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Best-effort write. Tries repo path first; on EROFS / EACCES falls
  *  back to /tmp. Returns true if any write succeeded. */
-async function writeFile(file: OverrideFile): Promise<boolean> {
-  const candidates = [repoFilePath(), tmpFilePath()];
-  for (const filePath of candidates) {
-    try {
-      await fs.mkdir(path.dirname(filePath), { recursive: true });
-      await fs.writeFile(filePath, JSON.stringify(file, null, 2), "utf8");
-      return true;
-    } catch {
-      /* try next candidate */
-    }
-  }
-  return false;
+async function writeOverrideFile(file: OverrideFile): Promise<boolean> {
+  if (await writeRepoOverrides(file)) return true;
+  return writeTmpOverrides(file);
 }
 
 export async function listOverrides(workspaceSlug: string): Promise<ScheduleOverride[]> {
-  const file = await readFile();
+  const file = await readOverrideFile();
   const map = file.byWorkspace[workspaceSlug] ?? {};
   return Object.values(map);
 }
@@ -102,12 +123,12 @@ export async function getOverride(
   workspaceSlug: string,
   leadId: string,
 ): Promise<ScheduleOverride | null> {
-  const file = await readFile();
+  const file = await readOverrideFile();
   return file.byWorkspace[workspaceSlug]?.[leadId] ?? null;
 }
 
 export async function setOverride(override: ScheduleOverride): Promise<boolean> {
-  const file = await readFile();
+  const file = await readOverrideFile();
   if (!file.byWorkspace[override.workspaceSlug]) {
     file.byWorkspace[override.workspaceSlug] = {};
   }
@@ -116,7 +137,7 @@ export async function setOverride(override: ScheduleOverride): Promise<boolean> 
   } else {
     file.byWorkspace[override.workspaceSlug][override.leadId] = override;
   }
-  return writeFile(file);
+  return writeOverrideFile(file);
 }
 
 /** Date helpers — produce ISO YYYY-MM-DD strings in the server's local

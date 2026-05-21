@@ -17,9 +17,18 @@ import { ensureCrmContactsSchema } from "./initCrmContactsSchema";
 import {
   assertDurableCrmStorageConfigured,
   assertWorkspaceSlug,
+  crmContactsFileRoots,
+  crmImportJobDirs,
+  CRM_CONTACTS_LEGACY_PATH,
+  CRM_IMPORT_JOBS_PATH,
+  CRM_IMPORT_ROLLBACK_DIR,
   DURABLE_STORAGE_NOT_CONFIGURED,
+  importJobFilePath,
   isVercelProduction,
+  rollbackSnapshotFilePath,
+  safePathSegment,
   useCrmNeonStorage,
+  workspaceContactsFilePath,
 } from "./storageConfig";
 import type { CrmContactRecord, CrmImportJob } from "./types";
 
@@ -29,11 +38,6 @@ function normalizeContactRecord(contact: CrmContactRecord): CrmContactRecord {
     scoreMetadata: contact.scoreMetadata ?? null,
   };
 }
-
-const DATA_DIR = path.join(process.cwd(), "data");
-const JOBS_PATH = path.join(DATA_DIR, "crmImportJobs.json");
-const LEGACY_CONTACTS_PATH = path.join(DATA_DIR, "crmContacts.json");
-const ROLLBACK_DIR = path.join(DATA_DIR, "crmImportRollbacks");
 
 type JobsFile = { jobs: CrmImportJob[] };
 type ContactsFile = { contacts: CrmContactRecord[] };
@@ -46,54 +50,6 @@ const memoryRollbacks = new Map<
 >();
 
 let persistenceProbe: boolean | null = null;
-
-function contactsRepoRoot(): string {
-  return path.join(DATA_DIR, "crm-contacts");
-}
-
-function contactsTmpRoot(): string {
-  return process.platform === "win32"
-    ? path.join(process.env.TEMP ?? ".", "meridian-crm-contacts")
-    : "/tmp/meridian-crm-contacts";
-}
-
-function contactsRoots(): string[] {
-  const custom = process.env.MERIDIAN_CRM_CONTACTS_DIR?.trim();
-  const roots = [custom, contactsRepoRoot()];
-  if (!isVercelProduction()) {
-    roots.push(contactsTmpRoot());
-  }
-  return [...new Set(roots.filter((r): r is string => Boolean(r)))];
-}
-
-function jobsRepoDir(): string {
-  return path.join(DATA_DIR, "crm-import-jobs");
-}
-
-function jobsTmpDir(): string {
-  return process.platform === "win32"
-    ? path.join(process.env.TEMP ?? ".", "meridian-crm-import-jobs")
-    : "/tmp/meridian-crm-import-jobs";
-}
-
-function jobDirs(): string[] {
-  return [...new Set([jobsRepoDir(), jobsTmpDir()])];
-}
-
-function workspaceContactsPath(root: string, workspaceId: string): string {
-  const safe = workspaceId.replace(/[^a-zA-Z0-9._-]/g, "_");
-  return path.join(root, `${safe}.json`);
-}
-
-function jobFilePath(dir: string, jobId: string): string {
-  const safe = jobId.replace(/[^a-zA-Z0-9._-]/g, "_");
-  return path.join(dir, `${safe}.json`);
-}
-
-function rollbackFilePath(snapshotId: string): string {
-  const safe = snapshotId.replace(/[^a-zA-Z0-9._-]/g, "_");
-  return path.join(ROLLBACK_DIR, `${safe}.json`);
-}
 
 /** Whether imported contacts can be persisted on this host. */
 export async function isCrmImportPersistenceAvailable(): Promise<boolean> {
@@ -116,7 +72,7 @@ export async function isCrmImportPersistenceAvailable(): Promise<boolean> {
     return false;
   }
 
-  for (const root of contactsRoots()) {
+  for (const root of crmContactsFileRoots()) {
     try {
       await fs.mkdir(root, { recursive: true });
       const probe = path.join(root, ".write-probe");
@@ -132,12 +88,15 @@ export async function isCrmImportPersistenceAvailable(): Promise<boolean> {
   return false;
 }
 
-async function atomicWriteJson(filePath: string, data: unknown): Promise<boolean> {
-  const dir = path.dirname(filePath);
-  const tmpName = `.${path.basename(filePath)}.${randomUUID()}.tmp`;
-  const tmp = path.join(dir, tmpName);
+async function atomicWriteJson(
+  parentDir: string,
+  fileName: string,
+  data: unknown,
+): Promise<boolean> {
+  const filePath = path.join(parentDir, fileName);
+  const tmp = path.join(parentDir, `.${fileName}.${randomUUID()}.tmp`);
   try {
-    await fs.mkdir(dir, { recursive: true });
+    await fs.mkdir(parentDir, { recursive: true });
     await fs.writeFile(tmp, JSON.stringify(data, null, 2), "utf8");
     await fs.rename(tmp, filePath);
     return true;
@@ -154,8 +113,8 @@ async function atomicWriteJson(filePath: string, data: unknown): Promise<boolean
 
 async function readWorkspaceContactsFromDisk(workspaceId: string): Promise<CrmContactRecord[]> {
   assertWorkspaceSlug(workspaceId);
-  for (const root of contactsRoots()) {
-    const filePath = workspaceContactsPath(root, workspaceId);
+  for (const root of crmContactsFileRoots()) {
+    const filePath = workspaceContactsFilePath(root, workspaceId);
     const data = await safeReadJson<ContactsFile>(filePath);
     if (data?.contacts?.length) {
       return data.contacts.filter((c) => c.workspaceId === workspaceId);
@@ -163,7 +122,7 @@ async function readWorkspaceContactsFromDisk(workspaceId: string): Promise<CrmCo
     if (data?.contacts) return [];
   }
 
-  const legacy = await safeReadJson<ContactsFile>(LEGACY_CONTACTS_PATH);
+  const legacy = await safeReadJson<ContactsFile>(CRM_CONTACTS_LEGACY_PATH);
   const fromLegacy = (legacy?.contacts ?? []).filter((c) => c.workspaceId === workspaceId);
   if (fromLegacy.length > 0) {
     await writeWorkspaceContactsToFile(workspaceId, fromLegacy);
@@ -177,9 +136,9 @@ async function writeWorkspaceContactsToFile(
 ): Promise<boolean> {
   assertWorkspaceSlug(workspaceId);
   const payload: ContactsFile = { contacts };
-  for (const root of contactsRoots()) {
-    const filePath = workspaceContactsPath(root, workspaceId);
-    if (await atomicWriteJson(filePath, payload)) {
+  const fileName = `${safePathSegment(workspaceId)}.json`;
+  for (const root of crmContactsFileRoots()) {
+    if (await atomicWriteJson(root, fileName, payload)) {
       return true;
     }
   }
@@ -216,20 +175,20 @@ async function writeWorkspaceContacts(
 }
 
 async function readLegacyJobs(): Promise<CrmImportJob[]> {
-  const data = await safeReadJson<JobsFile>(JOBS_PATH);
+  const data = await safeReadJson<JobsFile>(CRM_IMPORT_JOBS_PATH);
   return data?.jobs ?? [];
 }
 
 async function writeLegacyJobs(jobs: CrmImportJob[]): Promise<void> {
-  await safeWriteJson(JOBS_PATH, { jobs });
+  await safeWriteJson(CRM_IMPORT_JOBS_PATH, { jobs });
 }
 
 export async function getImportJob(jobId: string): Promise<CrmImportJob | null> {
   const mem = memoryJobs.get(jobId);
   if (mem?.id === jobId) return mem;
 
-  for (const dir of jobDirs()) {
-    const perJob = await safeReadJson<CrmImportJob>(jobFilePath(dir, jobId));
+  for (const dir of crmImportJobDirs()) {
+    const perJob = await safeReadJson<CrmImportJob>(importJobFilePath(dir, jobId));
     if (perJob?.id === jobId) {
       memoryJobs.set(jobId, perJob);
       return perJob;
@@ -246,10 +205,10 @@ export async function saveImportJob(job: CrmImportJob): Promise<void> {
   memoryJobs.set(job.id, job);
 
   let persisted = false;
-  for (const dir of jobDirs()) {
+  const jobFileName = `${safePathSegment(job.id)}.json`;
+  for (const dir of crmImportJobDirs()) {
     try {
-      await fs.mkdir(dir, { recursive: true });
-      if (await atomicWriteJson(jobFilePath(dir, job.id), job)) {
+      if (await atomicWriteJson(dir, jobFileName, job)) {
         persisted = true;
         break;
       }
@@ -344,8 +303,8 @@ export async function createRollbackSnapshot(workspaceId: string): Promise<strin
 
   if (!useCrmNeonStorage()) {
     try {
-      await fs.mkdir(ROLLBACK_DIR, { recursive: true });
-      const ok = await safeWriteJson(rollbackFilePath(snapshotId), payload);
+      await fs.mkdir(CRM_IMPORT_ROLLBACK_DIR, { recursive: true });
+      const ok = await safeWriteJson(rollbackSnapshotFilePath(snapshotId), payload);
       if (!ok) {
         console.warn("[crm-import] rollback file write failed; snapshot kept in memory:", snapshotId);
       }
@@ -364,7 +323,7 @@ export async function rollbackImport(snapshotId: string): Promise<{ restored: nu
     (useCrmNeonStorage()
       ? null
       : await safeReadJson<{ workspaceId: string; contacts: CrmContactRecord[] }>(
-          rollbackFilePath(snapshotId),
+          rollbackSnapshotFilePath(snapshotId),
         ));
   if (!snapshot) return { restored: 0 };
 

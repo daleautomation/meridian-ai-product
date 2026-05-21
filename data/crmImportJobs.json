@@ -192,8 +192,8 @@
       "workspaceId": "test-ws",
       "sourceLabel": "check",
       "state": "previewing",
-      "createdAt": "2026-05-21T20:20:18.047Z",
-      "updatedAt": "2026-05-21T20:20:18.047Z",
+      "createdAt": "2026-05-21T20:31:58.561Z",
+      "updatedAt": "2026-05-21T20:31:58.561Z",
       "rowCount": 1,
       "importedCount": 0,
       "skippedCount": 0,
@@ -236,7 +236,7 @@
               "source": "crm_import:hubspot",
               "confidence": 55,
               "trustLevel": "weak",
-              "lastVerifiedAt": "2026-05-21T20:20:18.044Z",
+              "lastVerifiedAt": "2026-05-21T20:31:58.558Z",
               "enrichmentProvider": null,
               "conflictState": "none",
               "displayAsTrusted": false
@@ -246,7 +246,7 @@
               "source": "crm_import:hubspot",
               "confidence": 55,
               "trustLevel": "weak",
-              "lastVerifiedAt": "2026-05-21T20:20:18.044Z",
+              "lastVerifiedAt": "2026-05-21T20:31:58.558Z",
               "enrichmentProvider": null,
               "conflictState": "none",
               "displayAsTrusted": false
@@ -256,7 +256,7 @@
               "source": "crm_import:hubspot",
               "confidence": 78,
               "trustLevel": "acceptable",
-              "lastVerifiedAt": "2026-05-21T20:20:18.044Z",
+              "lastVerifiedAt": "2026-05-21T20:31:58.558Z",
               "enrichmentProvider": null,
               "conflictState": "none",
               "displayAsTrusted": false
@@ -266,7 +266,7 @@
               "source": "crm_import:hubspot",
               "confidence": 78,
               "trustLevel": "acceptable",
-              "lastVerifiedAt": "2026-05-21T20:20:18.044Z",
+              "lastVerifiedAt": "2026-05-21T20:31:58.558Z",
               "enrichmentProvider": null,
               "conflictState": "none",
               "displayAsTrusted": false
@@ -286,7 +286,7 @@
               "source": "crm_import:hubspot",
               "confidence": 78,
               "trustLevel": "acceptable",
-              "lastVerifiedAt": "2026-05-21T20:20:18.044Z",
+              "lastVerifiedAt": "2026-05-21T20:31:58.558Z",
               "enrichmentProvider": null,
               "conflictState": "none",
               "displayAsTrusted": false
@@ -318,7 +318,7 @@
               "source": "crm_import:hubspot",
               "confidence": 55,
               "trustLevel": "weak",
-              "lastVerifiedAt": "2026-05-21T20:20:18.044Z",
+              "lastVerifiedAt": "2026-05-21T20:31:58.558Z",
               "enrichmentProvider": null,
               "conflictState": "none",
               "displayAsTrusted": false
@@ -328,7 +328,7 @@
               "source": "crm_import:hubspot",
               "confidence": 55,
               "trustLevel": "weak",
-              "lastVerifiedAt": "2026-05-21T20:20:18.044Z",
+              "lastVerifiedAt": "2026-05-21T20:31:58.558Z",
               "enrichmentProvider": null,
               "conflictState": "none",
               "displayAsTrusted": false
@@ -338,7 +338,7 @@
               "source": "crm_import:hubspot",
               "confidence": 78,
               "trustLevel": "acceptable",
-              "lastVerifiedAt": "2026-05-21T20:20:18.044Z",
+              "lastVerifiedAt": "2026-05-21T20:31:58.558Z",
               "enrichmentProvider": null,
               "conflictState": "none",
               "displayAsTrusted": false
@@ -348,7 +348,7 @@
               "source": "crm_import:hubspot",
               "confidence": 78,
               "trustLevel": "acceptable",
-              "lastVerifiedAt": "2026-05-21T20:20:18.044Z",
+              "lastVerifiedAt": "2026-05-21T20:31:58.558Z",
               "enrichmentProvider": null,
               "conflictState": "none",
               "displayAsTrusted": false
@@ -368,7 +368,7 @@
               "source": "crm_import:hubspot",
               "confidence": 78,
               "trustLevel": "acceptable",
-              "lastVerifiedAt": "2026-05-21T20:20:18.044Z",
+              "lastVerifiedAt": "2026-05-21T20:31:58.558Z",
               "enrichmentProvider": null,
               "conflictState": "none",
               "displayAsTrusted": false
