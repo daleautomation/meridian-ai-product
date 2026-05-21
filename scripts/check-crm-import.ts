@@ -1,5 +1,6 @@
 // Meridian — CRM import + relationship intelligence smoke checks.
 
+import { execSync } from "node:child_process";
 import { computeImportDiagnostics } from "../lib/crm-import/diagnostics";
 import { detectColumnMapping, normalizeCrmRow } from "../lib/crm-import/normalize";
 import { findDedupePairs, verdictFromScore, scoreDuplicatePair } from "../lib/crm-import/dedupe";
@@ -27,6 +28,28 @@ import {
 function assert(condition: boolean, message: string) {
   if (!condition) throw new Error(message);
 }
+
+/** Fail CI if generated CRM contact/job files are tracked (runtime PII). */
+function assertNoTrackedCrmRuntimeData(): void {
+  const paths = [
+    "data/crm-contacts",
+    "data/crm-import-jobs",
+    "data/crmImportJobs.json",
+    "data/crmContacts.json",
+    "data/crmImportRollbacks",
+  ];
+  for (const p of paths) {
+    let tracked = "";
+    try {
+      tracked = execSync(`git ls-files -- ${p}`, { encoding: "utf8" }).trim();
+    } catch {
+      tracked = "";
+    }
+    assert(!tracked, `CRM runtime data must not be git-tracked (${p}): ${tracked}`);
+  }
+}
+
+assertNoTrackedCrmRuntimeData();
 
 function assertTrustDatum(datum: ContactDatumTrust, context: string) {
   assert(isTrustDisplayAligned(datum), `${context}: trust display matches level`);

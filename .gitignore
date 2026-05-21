@@ -52,3 +52,6 @@ data/pipelineJobHistory.json
 !data/snapshots/.gitkeep
 data/crm-contacts/
 data/crm-import-jobs/
+data/crmImportJobs.json
+data/crmContacts.json
+data/crmImportRollbacks/

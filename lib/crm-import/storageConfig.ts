@@ -99,7 +99,12 @@ export function resolveMeridianCrmContactsOverrideDir(): string | null {
   if (!custom) return null;
   if (path.isAbsolute(custom)) return custom;
   const rel = custom.replace(/^(\.\/|\.\.\/)+/, "");
-  return path.join(MERIDIAN_DATA_DIR, rel);
+  const resolved = path.resolve(MERIDIAN_DATA_DIR, rel);
+  const dataRoot = path.resolve(MERIDIAN_DATA_DIR);
+  if (resolved !== dataRoot && !resolved.startsWith(`${dataRoot}${path.sep}`)) {
+    throw new Error(`MERIDIAN_CRM_CONTACTS_DIR must stay under data/: ${custom}`);
+  }
+  return resolved;
 }
 
 /** Repo + optional override roots for reading/writing workspace contact JSON. */
