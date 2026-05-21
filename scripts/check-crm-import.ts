@@ -15,7 +15,10 @@ import type { ContactDatumTrust, CrmContactRecord, CrmImportJob } from "../lib/c
 import {
   __resetCrmImportMemoryForTests,
   getImportJob,
+  isCrmImportPersistenceAvailable,
+  listContactsByWorkspace,
   saveImportJob,
+  upsertContacts,
 } from "../lib/crm-import/store";
 
 function assert(condition: boolean, message: string) {
@@ -141,6 +144,43 @@ assert(noPhoneDiag.highPhoneMissingRate, "100% missing phones triggers warning")
 assert(noPhoneDiag.isEmailFirstExport, "Brookside-style export is email-first");
 assert(noPhoneDiag.emailReachablePct === 100, "Brookside row has email");
 
+async function checkContactsPersistence() {
+  __resetCrmImportMemoryForTests();
+  assert(await isCrmImportPersistenceAvailable(), "CRM persistence must be writable in check env");
+
+  const workspaceId = "nicole-lonergan";
+  const contact: CrmContactRecord = {
+    id: "crm-persist-check-1",
+    workspaceId,
+    importJobId: "job-persist",
+    name: "Persist Check",
+    company: "Brookside",
+    phone: null,
+    email: "persist@example.com",
+    address: null,
+    notes: null,
+    tags: [],
+    lastInteractionAt: null,
+    sourceCrm: "brookside_csv",
+    normalizedPhone: null,
+    normalizedEmail: "persist@example.com",
+    normalizedCompany: "brookside",
+    normalizedName: "persist check",
+    dataTrust: noPhoneRow.dataTrust,
+    relationshipScore: 50,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  const { inserted } = await upsertContacts([contact]);
+  assert(inserted === 1, "one contact inserted");
+
+  __resetCrmImportMemoryForTests();
+  const reloaded = await listContactsByWorkspace(workspaceId);
+  assert(reloaded.length >= 1, "contacts survive memory reset via disk");
+  assert(reloaded.some((c) => c.id === contact.id), "persisted contact id round-trips");
+}
+
 async function checkImportJobStore() {
   __resetCrmImportMemoryForTests();
   const job: CrmImportJob = {
@@ -168,7 +208,7 @@ async function checkImportJobStore() {
   assert(roundTrip?.id === job.id, "import job round-trips via in-memory store");
 }
 
-checkImportJobStore()
+Promise.all([checkContactsPersistence(), checkImportJobStore()])
   .then(() => {
     console.log("crm-import:check passed");
     console.log("Brookside-style headers:", noPhoneHeaders.join(", "));

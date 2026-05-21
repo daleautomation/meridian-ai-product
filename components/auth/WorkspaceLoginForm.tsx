@@ -54,9 +54,9 @@ export function WorkspaceLoginForm({ initialNext }: { initialNext?: string | nul
         return;
       }
       const redirectTo =
-        typeof data.redirectTo === "string" && data.redirectTo.startsWith("/")
+        typeof data.redirectTo === "string" && data.redirectTo.startsWith("/login")
           ? data.redirectTo
-          : "/workspace-select";
+          : "/login";
       setLoading(false);
       router.replace(redirectTo);
       router.refresh();
