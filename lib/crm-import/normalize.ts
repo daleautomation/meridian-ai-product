@@ -12,7 +12,8 @@ import {
 export const COLUMN_ALIASES: Record<CrmImportField, string[]> = {
   name: [
     "name", "full name", "fullname", "contact name", "contact", "first name",
-    "firstname", "last name", "lastname", "person",
+    "firstname", "last name", "lastname", "person", "client name", "lead name",
+    "primary contact", "display name",
   ],
   company: [
     "company", "organization", "org", "account", "account name", "business",
@@ -20,7 +21,9 @@ export const COLUMN_ALIASES: Record<CrmImportField, string[]> = {
   ],
   phone: [
     "phone", "mobile", "cell", "telephone", "work phone", "primary phone",
-    "phone number", "mobile phone",
+    "phone number", "mobile phone", "contact phone", "cell phone", "mobile number",
+    "primary phone number", "phone 1", "phone1", "home phone", "day phone",
+    "evening phone", "main phone", "direct phone",
   ],
   email: [
     "email", "e-mail", "email address", "work email", "primary email",
@@ -37,16 +40,22 @@ export const COLUMN_ALIASES: Record<CrmImportField, string[]> = {
   lastInteraction: [
     "last interaction", "last contact", "last activity", "last touch",
     "last contacted", "last seen", "last modified", "updated at",
+    "last activity date", "last communication", "last touch date",
+    "last contact date", "last email", "last call",
   ],
   sourceCrm: [
     "source", "crm", "source crm", "origin", "import source", "lead source",
   ],
 };
 
+function normalizeHeaderKey(header: string): string {
+  return header.trim().replace(/^\uFEFF/, "").toLowerCase();
+}
+
 export function detectColumnMapping(headers: string[]): ColumnMapping {
   const normalizedHeaders = headers.map((h) => ({
     raw: h,
-    key: h.trim().toLowerCase(),
+    key: normalizeHeaderKey(h),
   }));
   const mapping: ColumnMapping = {};
 
@@ -140,6 +149,10 @@ export function normalizeCrmRow(
   }
 
   const importSource = `crm_import:${sourceCrm}`;
+  const phoneForTrust =
+    normalizedPhone && normalizedPhone.length >= 10
+      ? normalizedPhone
+      : phone.trim() || null;
 
   return {
     rowIndex,
@@ -159,7 +172,7 @@ export function normalizeCrmRow(
     dataTrust: {
       name: buildDatumTrust(name.trim() || null, importSource, { required: true }),
       company: buildDatumTrust(company.trim() || null, importSource, { required: true }),
-      phone: buildDatumTrust(phone.trim() || null, importSource),
+      phone: buildDatumTrust(phoneForTrust, importSource),
       email: buildDatumTrust(normalizedEmail, importSource),
       address: buildDatumTrust(address.trim() || null, importSource),
       lastInteraction: buildDatumTrust(lastInteractionAt, importSource),

@@ -114,6 +114,7 @@ export type CrmImportJob = {
   duplicateCount: number;
   rollbackSnapshotId: string | null;
   error: string | null;
+  headers: string[];
   columnMapping: ColumnMapping;
   previewSample: NormalizedCrmContact[];
   normalizedRows?: NormalizedCrmContact[];
@@ -144,11 +145,27 @@ export type CrmContactRecord = {
   updatedAt: string;
 };
 
+export type ImportDiagnostics = {
+  detectedHeaders: string[];
+  columnMapping: ColumnMapping;
+  mappedPhoneColumns: string[];
+  mappedEmailColumns: string[];
+  unmappedPhoneLikeHeaders: string[];
+  unmappedEmailLikeHeaders: string[];
+  rowsMissingPhone: number;
+  rowsMissingEmail: number;
+  rowsMissingBoth: number;
+  totalRows: number;
+  phoneMissingPct: number;
+  highPhoneMissingRate: boolean;
+};
+
 export type ImportPreviewResult = {
   jobId: string;
   headers: string[];
   suggestedMapping: ColumnMapping;
   rows: NormalizedCrmContact[];
+  diagnostics: ImportDiagnostics;
   validationSummary: {
     valid: number;
     warnings: number;

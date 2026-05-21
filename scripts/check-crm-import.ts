@@ -1,5 +1,6 @@
 // Meridian — CRM import + relationship intelligence smoke checks.
 
+import { computeImportDiagnostics } from "../lib/crm-import/diagnostics";
 import { detectColumnMapping, normalizeCrmRow } from "../lib/crm-import/normalize";
 import { findDedupePairs, verdictFromScore, scoreDuplicatePair } from "../lib/crm-import/dedupe";
 import {
@@ -103,4 +104,36 @@ assert(intel.factors.length >= 6, "factors present");
 const buckets = buildResurfacingBuckets([existing]);
 assert(buckets.length === 6, "six resurfacing buckets");
 
+const diag = computeImportDiagnostics({
+  headers,
+  mapping,
+  rows: [row],
+});
+assert(diag.mappedPhoneColumns.includes("Phone"), "diagnostics lists mapped phone column");
+assert(diag.rowsMissingPhone === 0, "row with phone is not missing phone");
+
+const noPhoneHeaders = ["Client Name", "Company", "E-mail", "Last Activity"];
+const noPhoneMapping = detectColumnMapping(noPhoneHeaders);
+const noPhoneRow = normalizeCrmRow(
+  {
+    "Client Name": "Sam Seller",
+    Company: "Brookside Listing",
+    "E-mail": "sam@example.com",
+    "Last Activity": "2025-11-01",
+  },
+  0,
+  noPhoneMapping,
+  "brookside_csv",
+);
+assert(noPhoneRow.dataTrust.phone.trustLevel === "missing", "unmapped phone column yields missing trust");
+const noPhoneDiag = computeImportDiagnostics({
+  headers: noPhoneHeaders,
+  mapping: noPhoneMapping,
+  rows: [noPhoneRow],
+});
+assert(noPhoneDiag.mappedPhoneColumns.length === 0, "no phone column mapped");
+assert(noPhoneDiag.highPhoneMissingRate, "100% missing phones triggers warning");
+
 console.log("crm-import:check passed");
+console.log("Brookside-style headers:", noPhoneHeaders.join(", "));
+console.log("Mapping:", JSON.stringify(noPhoneMapping));

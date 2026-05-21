@@ -23,6 +23,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, result });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status = message.includes("Import job not found") ? 404 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

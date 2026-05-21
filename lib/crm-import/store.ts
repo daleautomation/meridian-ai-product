@@ -7,19 +7,28 @@ import type { CrmContactRecord, CrmImportJob } from "./types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const JOBS_PATH = path.join(DATA_DIR, "crmImportJobs.json");
+const JOBS_DIR = path.join(DATA_DIR, "crm-import-jobs");
 const CONTACTS_PATH = path.join(DATA_DIR, "crmContacts.json");
 const ROLLBACK_DIR = path.join(DATA_DIR, "crmImportRollbacks");
 
 type JobsFile = { jobs: CrmImportJob[] };
 type ContactsFile = { contacts: CrmContactRecord[] };
 
-async function readJobs(): Promise<CrmImportJob[]> {
+function jobFilePath(jobId: string): string {
+  const safe = jobId.replace(/[^a-zA-Z0-9._-]/g, "_");
+  return path.join(JOBS_DIR, `${safe}.json`);
+}
+
+async function readLegacyJobs(): Promise<CrmImportJob[]> {
   const data = await safeReadJson<JobsFile>(JOBS_PATH);
   return data?.jobs ?? [];
 }
 
-async function writeJobs(jobs: CrmImportJob[]): Promise<void> {
-  await safeWriteJson(JOBS_PATH, { jobs });
+async function writeLegacyJobs(jobs: CrmImportJob[]): Promise<void> {
+  const ok = await safeWriteJson(JOBS_PATH, { jobs });
+  if (!ok) {
+    throw new Error("Failed to persist import job index.");
+  }
 }
 
 async function readContacts(): Promise<CrmContactRecord[]> {
@@ -28,20 +37,32 @@ async function readContacts(): Promise<CrmContactRecord[]> {
 }
 
 async function writeContacts(contacts: CrmContactRecord[]): Promise<void> {
-  await safeWriteJson(CONTACTS_PATH, { contacts });
+  const ok = await safeWriteJson(CONTACTS_PATH, { contacts });
+  if (!ok) {
+    throw new Error("Failed to persist CRM contacts.");
+  }
 }
 
 export async function getImportJob(jobId: string): Promise<CrmImportJob | null> {
-  const jobs = await readJobs();
+  const perJob = await safeReadJson<CrmImportJob>(jobFilePath(jobId));
+  if (perJob?.id === jobId) return perJob;
+
+  const jobs = await readLegacyJobs();
   return jobs.find((j) => j.id === jobId) ?? null;
 }
 
 export async function saveImportJob(job: CrmImportJob): Promise<void> {
-  const jobs = await readJobs();
+  await fs.mkdir(JOBS_DIR, { recursive: true });
+  const ok = await safeWriteJson(jobFilePath(job.id), job);
+  if (!ok) {
+    throw new Error("Failed to persist import job.");
+  }
+
+  const jobs = await readLegacyJobs();
   const index = jobs.findIndex((j) => j.id === job.id);
   if (index >= 0) jobs[index] = job;
   else jobs.push(job);
-  await writeJobs(jobs);
+  await writeLegacyJobs(jobs);
 }
 
 export async function listContactsByWorkspace(workspaceId: string): Promise<CrmContactRecord[]> {
@@ -74,7 +95,14 @@ export async function createRollbackSnapshot(workspaceId: string): Promise<strin
   const snapshotId = `rollback-${workspaceId}-${Date.now()}`;
   const contacts = await listContactsByWorkspace(workspaceId);
   const snapshotPath = path.join(ROLLBACK_DIR, `${snapshotId}.json`);
-  await safeWriteJson(snapshotPath, { workspaceId, contacts, createdAt: new Date().toISOString() });
+  const ok = await safeWriteJson(snapshotPath, {
+    workspaceId,
+    contacts,
+    createdAt: new Date().toISOString(),
+  });
+  if (!ok) {
+    throw new Error("Failed to create rollback snapshot.");
+  }
   return snapshotId;
 }
 

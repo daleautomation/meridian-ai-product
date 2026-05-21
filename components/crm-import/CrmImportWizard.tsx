@@ -1,12 +1,19 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { palette } from "@/lib/theme";
 import { formatTrustChipDisplay } from "@/lib/crm-import/trust";
-import type { ContactDatumTrust, ImportPreviewResult } from "@/lib/crm-import/types";
+import type { ContactDatumTrust, ImportDiagnostics, ImportPreviewResult } from "@/lib/crm-import/types";
 
 type Step = "upload" | "mapping" | "preview" | "importing" | "done";
+
+type ImportDraft = {
+  jobId: string;
+  step: Step;
+  sourceLabel: string;
+  updatedAt: string;
+};
 
 type Props = {
   workspaceId: string;
@@ -16,6 +23,31 @@ type Props = {
   backLabel?: string;
   doneLabel?: string;
 };
+
+function draftStorageKey(workspaceId: string): string {
+  return `crm-import-draft:${workspaceId}`;
+}
+
+function readDraft(workspaceId: string): ImportDraft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(draftStorageKey(workspaceId));
+    if (!raw) return null;
+    return JSON.parse(raw) as ImportDraft;
+  } catch {
+    return null;
+  }
+}
+
+function writeDraft(workspaceId: string, draft: ImportDraft): void {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(draftStorageKey(workspaceId), JSON.stringify(draft));
+}
+
+function clearDraft(workspaceId: string): void {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(draftStorageKey(workspaceId));
+}
 
 export default function CrmImportWizard({
   workspaceId,
@@ -30,6 +62,7 @@ export default function CrmImportWizard({
   const [preview, setPreview] = useState<ImportPreviewResult | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [hydrating, setHydrating] = useState(true);
   const [importResult, setImportResult] = useState<{
     imported: number;
     skipped: number;
@@ -38,15 +71,78 @@ export default function CrmImportWizard({
   } | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const persistDraft = useCallback(
+    (next: Partial<ImportDraft> & { jobId: string }) => {
+      writeDraft(workspaceId, {
+        jobId: next.jobId,
+        step: next.step ?? step,
+        sourceLabel: next.sourceLabel ?? sourceLabel,
+        updatedAt: new Date().toISOString(),
+      });
+    },
+    [workspaceId, step, sourceLabel],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function hydrate() {
+      const draft = readDraft(workspaceId);
+      if (!draft?.jobId) {
+        if (!cancelled) setHydrating(false);
+        return;
+      }
+
+      try {
+        const res = await fetch(
+          `/api/crm-import/status?jobId=${encodeURIComponent(draft.jobId)}&workspaceId=${encodeURIComponent(workspaceId)}`,
+        );
+        const data = await res.json();
+        if (!res.ok || !data.preview) {
+          clearDraft(workspaceId);
+          if (!cancelled) {
+            setError(data.error ?? "Saved import preview expired. Upload your CSV again.");
+            setHydrating(false);
+          }
+          return;
+        }
+
+        if (cancelled) return;
+        setJobId(draft.jobId);
+        setPreview(data.preview);
+        setSourceLabel(draft.sourceLabel || data.job?.sourceLabel || "manual_csv");
+        if (draft.step === "preview" || draft.step === "importing") {
+          setStep("preview");
+        } else if (draft.step === "mapping") {
+          setStep("mapping");
+        }
+      } catch {
+        if (!cancelled) {
+          clearDraft(workspaceId);
+        }
+      } finally {
+        if (!cancelled) setHydrating(false);
+      }
+    }
+
+    hydrate();
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceId]);
+
   const onFile = useCallback((file: File | null) => {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
       setCsvText(String(reader.result ?? ""));
       setStep("mapping");
+      setPreview(null);
+      setJobId(null);
+      clearDraft(workspaceId);
     };
     reader.readAsText(file);
-  }, []);
+  }, [workspaceId]);
 
   async function runPreview() {
     setBusy(true);
@@ -62,6 +158,11 @@ export default function CrmImportWizard({
       setPreview(data.preview);
       setJobId(data.preview.jobId);
       setStep("preview");
+      persistDraft({
+        jobId: data.preview.jobId,
+        step: "preview",
+        sourceLabel,
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -69,24 +170,57 @@ export default function CrmImportWizard({
     }
   }
 
+  async function ensureJobReady(currentJobId: string): Promise<string | null> {
+    const statusRes = await fetch(
+      `/api/crm-import/status?jobId=${encodeURIComponent(currentJobId)}&workspaceId=${encodeURIComponent(workspaceId)}`,
+    );
+    if (statusRes.ok) return currentJobId;
+
+    if (csvText.trim()) {
+      const previewRes = await fetch("/api/crm-import/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workspaceId, sourceLabel, csv: csvText }),
+      });
+      const data = await previewRes.json();
+      if (previewRes.ok && data.preview?.jobId) {
+        setPreview(data.preview);
+        setJobId(data.preview.jobId);
+        persistDraft({ jobId: data.preview.jobId, step: "preview", sourceLabel });
+        return data.preview.jobId;
+      }
+    }
+
+    setError("Import session expired. Upload your CSV and run preview again.");
+    setStep("upload");
+    clearDraft(workspaceId);
+    return null;
+  }
+
   async function runImport() {
     if (!jobId) return;
     setBusy(true);
     setError(null);
     setStep("importing");
+    persistDraft({ jobId, step: "importing", sourceLabel });
     try {
+      const activeJobId = await ensureJobReady(jobId);
+      if (!activeJobId) return;
+
       const res = await fetch("/api/crm-import/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId, skipDuplicateRows: true }),
+        body: JSON.stringify({ jobId: activeJobId, skipDuplicateRows: true }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Import failed");
       setImportResult(data.result);
       setStep("done");
+      clearDraft(workspaceId);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setStep("preview");
+      persistDraft({ jobId, step: "preview", sourceLabel });
     } finally {
       setBusy(false);
     }
@@ -108,11 +242,22 @@ export default function CrmImportWizard({
       setStep("upload");
       setPreview(null);
       setJobId(null);
+      clearDraft(workspaceId);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }
+  }
+
+  if (hydrating) {
+    return (
+      <main style={styles.shell}>
+        <div style={styles.container}>
+          <p style={styles.copy}>Restoring import preview…</p>
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -168,6 +313,7 @@ export default function CrmImportWizard({
 
         {step === "preview" && preview && (
           <section style={styles.grid}>
+            <ImportDiagnosticsPanel diagnostics={preview.diagnostics} />
             <div style={styles.card}>
               <h2 style={styles.cardTitle}>Validation</h2>
               <MetricRow label="Valid rows" value={String(preview.validationSummary.valid)} />
@@ -255,6 +401,76 @@ export default function CrmImportWizard({
         )}
       </div>
     </main>
+  );
+}
+
+function ImportDiagnosticsPanel({ diagnostics }: { diagnostics: ImportDiagnostics }) {
+  const mappingEntries = Object.entries(diagnostics.columnMapping) as [string, string][];
+  return (
+    <div style={{ ...styles.card, gridColumn: "1 / -1" }}>
+      <h2 style={styles.cardTitle}>Import diagnostics</h2>
+      <p style={styles.hint}>
+        Detected CSV headers ({diagnostics.detectedHeaders.length}):{" "}
+        {diagnostics.detectedHeaders.join(", ") || "—"}
+      </p>
+      <div style={styles.diagGrid}>
+        <div>
+          <strong style={styles.diagLabel}>Mapped phone column</strong>
+          <p style={styles.muted}>
+            {diagnostics.mappedPhoneColumns.length > 0
+              ? diagnostics.mappedPhoneColumns.join(", ")
+              : "None — phone trust will show MISSING"}
+          </p>
+        </div>
+        <div>
+          <strong style={styles.diagLabel}>Mapped email column</strong>
+          <p style={styles.muted}>
+            {diagnostics.mappedEmailColumns.length > 0
+              ? diagnostics.mappedEmailColumns.join(", ")
+              : "None"}
+          </p>
+        </div>
+        <div>
+          <strong style={styles.diagLabel}>Field mapping</strong>
+          <p style={styles.muted}>
+            {mappingEntries.length > 0
+              ? mappingEntries.map(([field, col]) => `${field} → ${col}`).join(" · ")
+              : "No columns auto-mapped"}
+          </p>
+        </div>
+      </div>
+      <MetricRow
+        label="Rows missing phone"
+        value={`${diagnostics.rowsMissingPhone} / ${diagnostics.totalRows}`}
+      />
+      <MetricRow
+        label="Rows missing email"
+        value={`${diagnostics.rowsMissingEmail} / ${diagnostics.totalRows}`}
+      />
+      <MetricRow
+        label="Rows missing both"
+        value={`${diagnostics.rowsMissingBoth} / ${diagnostics.totalRows}`}
+      />
+      {diagnostics.unmappedPhoneLikeHeaders.length > 0 ? (
+        <p style={styles.warnBox}>
+          Phone-like columns were not mapped: {diagnostics.unmappedPhoneLikeHeaders.join(", ")}.
+          Rename headers or add aliases if this export uses non-standard labels.
+        </p>
+      ) : null}
+      {diagnostics.highPhoneMissingRate ? (
+        <p style={styles.warnBox}>
+          {diagnostics.phoneMissingPct}% of rows have no usable phone ({diagnostics.rowsMissingPhone} of{" "}
+          {diagnostics.totalRows}). Relationship resurfacing will rely more heavily on email and
+          interaction history. Import is allowed, but call-first resurfacing will be limited.
+        </p>
+      ) : null}
+      {diagnostics.mappedPhoneColumns.length === 0 ? (
+        <p style={styles.warnBox}>
+          No phone column was detected. Phone trust shows MISSING because there is no mapped source —
+          not because data was enriched or guessed.
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -441,6 +657,15 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#B91C1C",
     marginBottom: "16px",
   },
+  warnBox: {
+    marginTop: "10px",
+    padding: "10px 12px",
+    borderRadius: "12px",
+    background: palette.warningBg,
+    color: palette.orange,
+    fontSize: "13px",
+    lineHeight: 1.45,
+  },
   metricRow: {
     display: "flex",
     justifyContent: "space-between",
@@ -449,6 +674,17 @@ const styles: Record<string, React.CSSProperties> = {
   muted: {
     color: palette.textSecondary,
     fontSize: "13px",
+  },
+  diagGrid: {
+    display: "grid",
+    gap: "12px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+    marginBottom: "8px",
+  },
+  diagLabel: {
+    fontSize: "12px",
+    display: "block",
+    marginBottom: "4px",
   },
   tableWrap: {
     overflowX: "auto",

@@ -2,6 +2,7 @@
 
 import { parseCsv } from "@/lib/ingestion/csvParser";
 import { upsertRaw } from "@/lib/state/rawCompaniesStore";
+import { computeImportDiagnostics } from "./diagnostics";
 import { buildMergeRecommendations, dedupeSummary, findDedupePairs } from "./dedupe";
 import { detectColumnMapping, normalizeCrmRows } from "./normalize";
 import {
@@ -24,6 +25,28 @@ import type {
 } from "./types";
 import { computeRelationshipScore } from "@/lib/relationship-intelligence/scoring";
 
+export function buildPreviewFromJob(job: CrmImportJob): ImportPreviewResult {
+  const rows = job.normalizedRows ?? job.previewSample;
+  const validationSummary = validateImportRows(rows, job.dedupePairs);
+  const dedupeSummaryResult = dedupeSummary(job.dedupePairs, rows.length);
+  const diagnostics = computeImportDiagnostics({
+    headers: job.headers,
+    mapping: job.columnMapping,
+    rows,
+  });
+
+  return {
+    jobId: job.id,
+    headers: job.headers,
+    suggestedMapping: job.columnMapping,
+    rows: rows.slice(0, 50),
+    diagnostics,
+    validationSummary,
+    dedupeSummary: dedupeSummaryResult,
+    mergeRecommendations: job.mergeRecommendations,
+  };
+}
+
 export async function createImportPreview(args: {
   workspaceId: string;
   sourceLabel: string;
@@ -40,6 +63,7 @@ export async function createImportPreview(args: {
   const mergeRecommendations = buildMergeRecommendations(dedupePairs);
   const validationSummary = validateImportRows(rows, dedupePairs);
   const summary = dedupeSummary(dedupePairs, rows.length);
+  const diagnostics = computeImportDiagnostics({ headers, mapping, rows });
 
   const jobId = newJobId(args.workspaceId);
   const job: CrmImportJob = {
@@ -55,6 +79,7 @@ export async function createImportPreview(args: {
     duplicateCount: dedupePairs.length,
     rollbackSnapshotId: null,
     error: null,
+    headers,
     columnMapping: mapping,
     previewSample: rows.slice(0, 25),
     normalizedRows: rows,
@@ -66,8 +91,9 @@ export async function createImportPreview(args: {
   return {
     jobId,
     headers,
-    suggestedMapping,
+    suggestedMapping: mapping,
     rows: rows.slice(0, 50),
+    diagnostics,
     validationSummary,
     dedupeSummary: summary,
     mergeRecommendations,
@@ -80,7 +106,14 @@ export async function executeImport(args: {
   alsoUpsertRawCompanies?: boolean;
 }): Promise<ImportExecuteResult> {
   const job = await getImportJob(args.jobId);
-  if (!job) throw new Error("Import job not found.");
+  if (!job) {
+    throw new Error(
+      "Import job not found. Re-run preview from your CSV — the server may have restarted or the job expired.",
+    );
+  }
+  if (!job.normalizedRows?.length && !job.previewSample.length) {
+    throw new Error("Import job has no rows to import. Re-run preview from your CSV.");
+  }
 
   job.state = "importing";
   job.updatedAt = new Date().toISOString();
