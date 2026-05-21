@@ -16,12 +16,17 @@ import {
 import type { ResurfacingBucket } from "@/lib/relationship-intelligence/resurfacing";
 import {
   buildContactScoreTransparency,
+  buildRecommendationExplanation,
   deriveEnrichmentStatus,
+  effectivePriorityScore,
   enrichmentStatusLabel,
   honestSuggestedActionLabel,
   isGenericRecommendation,
+  verificationStatusLabel,
   type ContactScoreTransparency,
+  type DataQualityTier,
   type EnrichmentStatus,
+  type VerificationTier,
 } from "@/lib/crm-import/scoreTransparency";
 import { scoreFromCrmContact } from "@/lib/relationship-intelligence/scoring";
 import { workspaceImportPath } from "@/lib/workspaceRouting";
@@ -59,11 +64,23 @@ export interface PersonalContactCard {
   };
   enrichmentStatus: EnrichmentStatus;
   enrichmentLabel: string;
+  verificationTier: VerificationTier;
+  verificationStatusLabel: string;
+  dataQualityTier: DataQualityTier;
+  dataQualityLabel: string;
   scoreLabel: string;
   scoreExplanation: string;
   scoreProvenance: ContactScoreTransparency["provenance"];
   scoreReasonCodes: string[];
   scoreIsAuthoritative: boolean;
+  recommendationWhy: string;
+  recommendationEvidence: string[];
+  recommendationMissing: string[];
+  phoneActionable: boolean;
+  emailActionable: boolean;
+  phoneDowngraded: boolean;
+  emailDowngraded: boolean;
+  contactMethodNote: string | null;
   nextStepIsTemplate: boolean;
   suggestedActionLabel: string;
 }
@@ -84,6 +101,11 @@ export interface PersonalResurfacingHighlight {
   contactName: string;
   whyNow: string;
   recommendedAction: string;
+  recommendationWhy: string;
+  recommendationEvidence: string[];
+  recommendationMissing: string[];
+  verificationStatusLabel: string;
+  dataQualityLabel: string;
 }
 
 export interface PersonalWorkspaceModel {
@@ -318,6 +340,13 @@ function buildResurfacingHighlights(buckets: ResurfacingBucket[]): PersonalResur
         contactName: contact.name,
         whyNow: contact.whyNow,
         recommendedAction: contact.recommendedAction,
+        recommendationWhy: contact.recommendationWhy,
+        recommendationEvidence: contact.recommendationEvidence,
+        recommendationMissing: contact.recommendationMissing,
+        verificationStatusLabel: verificationStatusLabel(
+          contact.verificationTier as VerificationTier,
+        ),
+        dataQualityLabel: contact.dataQualityLabel,
       });
     }
   }
@@ -325,7 +354,7 @@ function buildResurfacingHighlights(buckets: ResurfacingBucket[]): PersonalResur
 }
 
 function prioritySortScore(contact: CrmContactRecord, phoneLight: boolean): number {
-  const base = contact.relationshipScore ?? scoreFromCrmContact(contact).total;
+  const base = effectivePriorityScore(contact);
   const days = contact.lastInteractionAt
     ? ageDaysFromIso(contact.lastInteractionAt) ?? 0
     : 999;
@@ -396,9 +425,19 @@ function crmContactToCard(
     suggestedAction = "Send a note";
   }
 
-  const nextStep = buildNextStep(contact, suggestedAction, { hasPhone, hasEmail, phoneLight: ctx.phoneLight });
+  const recommendation = buildRecommendationExplanation(contact, transparency, suggestedAction);
+  const methods = transparency.contactMethods;
+  const nextStep = buildNextStep(contact, suggestedAction, {
+    hasPhone,
+    hasEmail,
+    phoneLight: ctx.phoneLight,
+    phoneActionable: methods.phone.actionable,
+    emailActionable: methods.email.actionable,
+  });
   const nextStepIsTemplate = isGenericRecommendation(nextStep)
-    || transparency.enrichmentStatus === "imported_only";
+    || transparency.enrichmentStatus === "imported_only"
+    || transparency.verificationTier === "imported"
+    || transparency.verificationTier === "confidence_low";
 
   const reachabilityNote =
     !hasPhone && hasEmail
@@ -463,11 +502,23 @@ function crmContactToCard(
     },
     enrichmentStatus: transparency.enrichmentStatus,
     enrichmentLabel: enrichmentStatusLabel(transparency.enrichmentStatus),
+    verificationTier: transparency.verificationTier,
+    verificationStatusLabel: transparency.verificationStatusLabel,
+    dataQualityTier: transparency.dataQualityTier,
+    dataQualityLabel: transparency.dataQualityLabel,
     scoreLabel: transparency.scoreLabel,
     scoreExplanation: transparency.explanation,
     scoreProvenance: transparency.provenance,
     scoreReasonCodes: transparency.reasonCodes,
     scoreIsAuthoritative: transparency.isAuthoritative,
+    recommendationWhy: recommendation.why,
+    recommendationEvidence: recommendation.evidence,
+    recommendationMissing: recommendation.missing,
+    phoneActionable: methods.phone.actionable,
+    emailActionable: methods.email.actionable,
+    phoneDowngraded: methods.phone.downgraded,
+    emailDowngraded: methods.email.downgraded,
+    contactMethodNote: methods.phone.reason ?? methods.email.reason,
   };
 }
 
@@ -513,13 +564,25 @@ function buildSignals(
 function buildNextStep(
   contact: CrmContactRecord,
   action: PersonalContactCard["suggestedAction"],
-  reach: { hasPhone: boolean; hasEmail: boolean; phoneLight: boolean },
+  reach: {
+    hasPhone: boolean;
+    hasEmail: boolean;
+    phoneLight: boolean;
+    phoneActionable: boolean;
+    emailActionable: boolean;
+  },
 ): string {
-  if (action === "Reach out" && reach.hasPhone && !reach.phoneLight) {
+  if (action === "Reach out" && reach.hasPhone && !reach.phoneLight && reach.phoneActionable) {
     return `Call or message ${contact.name} at ${contact.phone}.`;
   }
-  if (action === "Send a note" && reach.hasEmail) {
+  if (action === "Reach out" && reach.hasPhone && !reach.phoneActionable) {
+    return `Review phone trust for ${contact.name} before calling — import-only path.`;
+  }
+  if (action === "Send a note" && reach.hasEmail && reach.emailActionable) {
     return `Email ${contact.name} at ${contact.email} — reference your last interaction and one clear next step.`;
+  }
+  if (action === "Send a note" && reach.hasEmail && !reach.emailActionable) {
+    return `Review email trust for ${contact.name} before sending — weak or imported-only path.`;
   }
   if (action === "Follow up") {
     return `Close the loop on your last conversation with ${contact.name}${reach.hasEmail ? ` (${contact.email})` : ""}.`;

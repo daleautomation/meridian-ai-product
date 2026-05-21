@@ -138,7 +138,8 @@ assert(intel.factors.length >= 6, "factors present");
 
 const importMeta = scoreMetadataForImport(intel);
 assert(importMeta?.storedAtImport === true, "import metadata marks storedAtImport");
-assert(importMeta?.provenance === "inferred", "import scores are inferred baseline");
+assert(importMeta?.provenance === "imported", "import scores use imported provenance");
+assert(importMeta?.verificationTier === "imported" || importMeta?.verificationTier === "confidence_low", "import verification tier set");
 
 const scoredContact: CrmContactRecord = {
   ...existing,
@@ -148,11 +149,16 @@ const scoredContact: CrmContactRecord = {
 };
 const persistedScore = scoreFromCrmContact(scoredContact);
 assert(
-  persistedScore.explanation.includes("Baseline import score"),
-  "persisted import score explains baseline provenance",
+  persistedScore.explanation.includes("Baseline import score")
+    || persistedScore.explanation.includes("CRM import"),
+  "persisted import score explains import provenance",
 );
 const transparency = buildContactScoreTransparency(scoredContact);
 assert(!transparency.isAuthoritative, "baseline import transparency is not authoritative");
+assert(transparency.verificationTier === "imported", "import contact tier is imported");
+assert(transparency.dataQualityLabel.includes("Data Quality"), "data quality badge label present");
+assert(transparency.recommendation.why.length > 0, "recommendation explains why");
+assert(transparency.recommendation.evidence.length > 0, "recommendation lists evidence");
 assert(transparency.reasonCodes.includes("BASELINE_IMPORT_SCORE"), "baseline reason code present");
 
 const buckets = buildResurfacingBuckets([existing]);

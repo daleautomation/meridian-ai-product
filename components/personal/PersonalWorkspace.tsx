@@ -108,7 +108,12 @@ export default function PersonalWorkspace({ model }: PersonalWorkspaceProps) {
                   <span style={styles.resurfacingBucket}>{h.bucketLabel}</span>
                 </div>
                 <p style={styles.resurfacingWhy}>{h.whyNow}</p>
+                <div style={styles.trustBadgeRow}>
+                  <span style={styles.verificationBadge}>{h.verificationStatusLabel}</span>
+                  <span style={styles.dataQualityBadge}>{h.dataQualityLabel}</span>
+                </div>
                 <p style={styles.resurfacingAction}>{h.recommendedAction}</p>
+                <p style={styles.resurfacingEvidence}>{h.recommendationWhy}</p>
               </article>
             ))}
           </div>
@@ -258,6 +263,10 @@ function ContactCard({
         </div>
         <span style={styles.actionChip}>{card.suggestedActionLabel}</span>
       </div>
+      <div style={styles.trustBadgeRow}>
+        <span style={styles.verificationBadge}>{card.verificationStatusLabel}</span>
+        <span style={styles.dataQualityBadge}>{card.dataQualityLabel}</span>
+      </div>
       {card.primaryChannel === "email" ? (
         <span style={styles.emailBadge}>{emailPrimaryLabel}</span>
       ) : null}
@@ -289,6 +298,10 @@ function ContactDetailPanel({
         <h2 style={styles.detailTitle}>{card.name}</h2>
         <p style={styles.muted}>{card.company}</p>
         <span style={styles.enrichmentBadge}>{card.enrichmentLabel}</span>
+        <div style={styles.trustBadgeRow}>
+          <span style={styles.verificationBadge}>{card.verificationStatusLabel}</span>
+          <span style={styles.dataQualityBadge}>{card.dataQualityLabel}</span>
+        </div>
         <div style={styles.scoreRow}>
           <span style={styles.strengthPill}>{card.strength}% {copy.strengthLabel}</span>
           <span style={styles.scoreMeta}>{card.scoreLabel}</span>
@@ -302,6 +315,18 @@ function ContactDetailPanel({
         <p style={styles.detailBody}>{card.nextStep}</p>
         {card.nextStepIsTemplate ? (
           <p style={styles.templateNote}>{copy.templateNote}</p>
+        ) : null}
+      </DetailBlock>
+
+      <DetailBlock title="Why this recommendation">
+        <p style={styles.detailBody}>{card.recommendationWhy}</p>
+        {card.recommendationEvidence.map((line) => (
+          <div key={line} style={styles.detailRow}>Evidence: {line}</div>
+        ))}
+        {card.recommendationMissing.length > 0 ? (
+          <div style={styles.warn}>
+            Missing: {card.recommendationMissing.join(" · ")}
+          </div>
         ) : null}
       </DetailBlock>
 
@@ -322,8 +347,23 @@ function ContactDetailPanel({
       </DetailBlock>
 
       <DetailBlock title="Reachability">
-        {card.phone ? <div style={styles.detailRow}>Phone: {card.phone}</div> : null}
-        {card.email ? <div style={styles.detailRow}>Email: {card.email}</div> : null}
+        {card.phone ? (
+          <div style={card.phoneActionable ? styles.detailRow : styles.detailRowDisabled}>
+            Phone: {card.phone}
+            {card.phoneDowngraded ? " (review before call)" : ""}
+            {!card.phoneActionable ? " — not actionable at current trust" : ""}
+          </div>
+        ) : null}
+        {card.email ? (
+          <div style={card.emailActionable ? styles.detailRow : styles.detailRowDisabled}>
+            Email: {card.email}
+            {card.emailDowngraded ? " (review before send)" : ""}
+            {!card.emailActionable ? " — not actionable at current trust" : ""}
+          </div>
+        ) : null}
+        {card.contactMethodNote ? (
+          <div style={styles.info}>{card.contactMethodNote}</div>
+        ) : null}
         {!card.phone && card.email ? (
           <div style={styles.info}>{card.reachabilityNote ?? copy.noPhoneExplanation}</div>
         ) : null}
@@ -791,6 +831,45 @@ const styles: Record<string, CSSProperties> = {
     fontSize: "11px",
     fontWeight: 600,
     color: personalPalette.textMuted,
+  },
+  trustBadgeRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "6px",
+    marginTop: "8px",
+  },
+  verificationBadge: {
+    padding: "3px 8px",
+    borderRadius: "999px",
+    background: personalPalette.accentSoft,
+    color: personalPalette.accent,
+    fontSize: "10px",
+    fontWeight: 700,
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+  },
+  dataQualityBadge: {
+    padding: "3px 8px",
+    borderRadius: "999px",
+    border: `1px solid ${personalPalette.border}`,
+    background: personalPalette.surface,
+    fontSize: "10px",
+    fontWeight: 600,
+    color: personalPalette.textMuted,
+  },
+  resurfacingEvidence: {
+    margin: "6px 0 0",
+    fontSize: "12px",
+    color: personalPalette.textMuted,
+    lineHeight: 1.45,
+  },
+  detailRowDisabled: {
+    fontSize: "13px",
+    lineHeight: 1.5,
+    color: personalPalette.textMuted,
+    opacity: 0.65,
+    textDecoration: "line-through",
+    textDecorationColor: personalPalette.border,
   },
   scoreRow: {
     display: "flex",

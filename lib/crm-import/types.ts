@@ -122,8 +122,12 @@ export type CrmImportJob = {
   mergeRecommendations: MergeRecommendation[];
 };
 
+/** Operator-visible verification tier for CRM contact intelligence. */
+export type VerificationTier = "imported" | "verified" | "enriched" | "confidence_low";
+
 export type ContactScoreMetadata = {
   provenance: "imported" | "inferred" | "enriched" | "default";
+  verificationTier?: VerificationTier;
   reasonCodes: string[];
   sourceFieldsUsed: string[];
   storedAtImport: boolean;

@@ -6,7 +6,10 @@ import { parseCsv } from "@/lib/ingestion/csvParser";
 import { detectColumnMapping, normalizeCrmRows } from "@/lib/crm-import/normalize";
 import {
   buildContactScoreTransparency,
+  buildRecommendationExplanation,
+  contactMethodActionability,
   deriveEnrichmentStatus,
+  effectivePriorityScore,
   isGenericRecommendation,
   type ContactScoreTransparency,
 } from "@/lib/crm-import/scoreTransparency";
@@ -61,11 +64,20 @@ export type CrmImportAuditReport = {
     contactId: string;
     name: string;
     score: number;
+    effectiveScore: number;
     scoreLabel: string;
     reasonCodes: string[];
     provenance: string;
     enrichmentStatus: string;
+    verificationTier: string;
+    dataQualityTier: string;
   }>;
+  auditCounts: {
+    overPrioritized: number;
+    unsupportedRecommendations: number;
+    lowConfidenceContactMethods: number;
+    missingProvenance: number;
+  };
   warnings: CrmImportAuditWarning[];
 };
 
@@ -158,8 +170,12 @@ export async function runCrmImportAudit(opts: CrmImportAuditOptions): Promise<Cr
   let missingEmail = 0;
   let missingPhone = 0;
   let importedFromJobCount = 0;
+  let overPrioritized = 0;
+  let unsupportedRecommendations = 0;
+  let lowConfidenceContactMethods = 0;
+  let missingProvenance = 0;
 
-  const scored: Array<{ contact: CrmContactRecord; transparency: ContactScoreTransparency }> = [];
+  const scored: Array<{ contact: CrmContactRecord; transparency: ContactScoreTransparency; effectiveScore: number }> = [];
 
   for (const contact of contacts) {
     if (contact.importJobId) importedFromJobCount += 1;
@@ -171,7 +187,35 @@ export async function runCrmImportAudit(opts: CrmImportAuditOptions): Promise<Cr
     if (contact.notes?.trim() || contact.tags.length > 0) withNotesOrHistory += 1;
 
     const transparency = buildContactScoreTransparency(contact);
-    scored.push({ contact, transparency });
+    const effectiveScore = effectivePriorityScore(contact);
+    scored.push({ contact, transparency, effectiveScore });
+
+    if (!contact.scoreMetadata?.provenance) {
+      missingProvenance += 1;
+      warnings.push({
+        code: "MISSING_PROVENANCE_METADATA",
+        message: "Contact has no score provenance metadata",
+        contactId: contact.id,
+        contactName: contact.name,
+      });
+    }
+
+    const methods = contactMethodActionability(contact, transparency);
+    if (
+      (contact.phone && !methods.phone.actionable)
+      || (contact.email && !methods.email.actionable)
+    ) {
+      lowConfidenceContactMethods += 1;
+      warnings.push({
+        code: "LOW_CONFIDENCE_CONTACT_METHOD",
+        message: [
+          methods.phone.reason,
+          methods.email.reason,
+        ].filter(Boolean).join(" · ") || "Contact method not actionable at current trust tier",
+        contactId: contact.id,
+        contactName: contact.name,
+      });
+    }
 
     if (deriveEnrichmentStatus(contact) === "needs_review") weakIdentity += 1;
     if (
@@ -180,6 +224,21 @@ export async function runCrmImportAudit(opts: CrmImportAuditOptions): Promise<Cr
       || transparency.reasonCodes.includes("BASELINE_IMPORT_SCORE")
     ) {
       defaultOrBaselineScores += 1;
+    }
+
+    const recommendation = buildRecommendationExplanation(contact, transparency);
+    if (
+      isGenericRecommendation(buildGenericProbe(contact))
+      || transparency.isGenericRecommendation
+      || recommendation.evidence.length <= 1
+    ) {
+      unsupportedRecommendations += 1;
+      warnings.push({
+        code: "UNSUPPORTED_RECOMMENDATION",
+        message: "Recommendation lacks evidence-backed enrichment or uses template copy",
+        contactId: contact.id,
+        contactName: contact.name,
+      });
     }
 
     if (isGenericRecommendation(buildGenericProbe(contact))) {
@@ -192,6 +251,13 @@ export async function runCrmImportAudit(opts: CrmImportAuditOptions): Promise<Cr
     }
 
     if (!transparency.isAuthoritative && transparency.value >= 80) {
+      overPrioritized += 1;
+      warnings.push({
+        code: "OVER_PRIORITIZED_CONTACT",
+        message: `Score ${transparency.value} ranks high but tier is ${transparency.verificationTier} (${transparency.scoreLabel}); effective ${effectiveScore}`,
+        contactId: contact.id,
+        contactName: contact.name,
+      });
       warnings.push({
         code: "POSSIBLY_OVER_SCORED",
         message: `Score ${transparency.value} is high but provenance is ${transparency.provenance} (${transparency.scoreLabel})`,
@@ -201,16 +267,19 @@ export async function runCrmImportAudit(opts: CrmImportAuditOptions): Promise<Cr
     }
   }
 
-  scored.sort((a, b) => b.transparency.value - a.transparency.value);
+  scored.sort((a, b) => b.effectiveScore - a.effectiveScore);
   const topPriority = scored.slice(0, 10).map((entry, i) => ({
     rank: i + 1,
     contactId: entry.contact.id,
     name: entry.contact.name,
     score: entry.transparency.value,
+    effectiveScore: entry.effectiveScore,
     scoreLabel: entry.transparency.scoreLabel,
     reasonCodes: entry.transparency.reasonCodes,
     provenance: entry.transparency.provenance,
     enrichmentStatus: entry.transparency.enrichmentStatus,
+    verificationTier: entry.transparency.verificationTier,
+    dataQualityTier: entry.transparency.dataQualityTier,
   }));
 
   return {
@@ -239,6 +308,12 @@ export async function runCrmImportAudit(opts: CrmImportAuditOptions): Promise<Cr
       companyMismatches,
     },
     topPriority,
+    auditCounts: {
+      overPrioritized,
+      unsupportedRecommendations,
+      lowConfidenceContactMethods,
+      missingProvenance,
+    },
     warnings,
   };
 }
@@ -346,6 +421,10 @@ export function formatCrmImportAuditReport(report: CrmImportAuditReport): string
     `- With notes/tags history: ${report.withNotesOrHistory}`,
     `- Weak identity: ${report.weakIdentity}`,
     `- Baseline/default scores: ${report.defaultOrBaselineScores}`,
+    `- Over-prioritized (import-only high scores): ${report.auditCounts.overPrioritized}`,
+    `- Unsupported recommendations: ${report.auditCounts.unsupportedRecommendations}`,
+    `- Low-confidence contact methods: ${report.auditCounts.lowConfidenceContactMethods}`,
+    `- Missing provenance metadata: ${report.auditCounts.missingProvenance}`,
     `- Missing email: ${report.missingEmail}`,
     `- Missing phone: ${report.missingPhone}`,
     `- Duplicate rows in source: ${report.duplicateRowsInSource}`,
@@ -370,10 +449,11 @@ export function formatCrmImportAuditReport(report: CrmImportAuditReport): string
     lines.push("", "## Dropped / unmapped fields", ...report.droppedFields.map((d) => `- ${d}`));
   }
 
-  lines.push("", "## Top 10 priority (by score)");
+  lines.push("", "## Top 10 priority (trust-adjusted effective score)");
   for (const p of report.topPriority) {
     lines.push(
-      `${p.rank}. ${p.name} — ${p.score} (${p.scoreLabel}) [${p.provenance}, ${p.enrichmentStatus}]`,
+      `${p.rank}. ${p.name} — raw ${p.score}, effective ${p.effectiveScore} (${p.scoreLabel})`,
+      `   [${p.verificationTier}, ${p.dataQualityTier}, ${p.provenance}, ${p.enrichmentStatus}]`,
       `   Reasons: ${p.reasonCodes.join(", ") || "(none)"}`,
     );
   }

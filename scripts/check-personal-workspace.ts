@@ -102,6 +102,23 @@ assert(diag.isEmailFirstExport, "import diagnostics flag email-first export");
 const transparency = buildContactScoreTransparency(contact);
 assert(transparency.scoreLabel.includes("Baseline") || transparency.scoreLabel.includes("import"), "imported score uses honest label");
 assert(!transparency.isAuthoritative, "baseline import score is not authoritative");
+assert(
+  transparency.verificationTier === "imported" || transparency.verificationTier === "confidence_low",
+  "brookside contact tier reflects import or low-confidence identity",
+);
+assert(
+  card.verificationStatusLabel === "Imported" || card.verificationStatusLabel === "Confidence Low",
+  "card exposes verification status badge",
+);
+assert(card.dataQualityLabel.includes("Data Quality"), "card exposes data quality badge");
+assert(card.recommendationWhy.length > 0, "card explains recommendation why");
+assert(card.recommendationEvidence.length > 0, "card lists recommendation evidence");
+assert(!card.phoneActionable, "email-only import has non-actionable phone");
+if (transparency.verificationTier === "confidence_low") {
+  assert(!card.emailActionable, "low-confidence tier disables email action");
+} else {
+  assert(card.emailActionable, "email on file is actionable when trust allows");
+}
 
 const cards = [
   model.priorityContacts[0],

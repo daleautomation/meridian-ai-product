@@ -431,7 +431,19 @@ function TrustPills({
     : card.source.confidence === "medium"
       ? styles.trustPillWatch
       : styles.trustPillMuted;
+  const verificationTone =
+    card.verificationTier === "verified" || card.verificationTier === "enriched"
+      ? styles.trustPillGood
+      : card.verificationTier === "confidence_low"
+        ? styles.trustPillDanger
+        : styles.trustPillWatch;
   const pills = [
+    ...(card.verificationStatusLabel
+      ? [{ label: `Verification: ${card.verificationStatusLabel}`, style: verificationTone }]
+      : []),
+    ...(card.dataQualityLabel
+      ? [{ label: card.dataQualityLabel, style: styles.trustPillMuted }]
+      : []),
     { label: card.source.kind === "relationship-engine" ? "Source: relationship engine" : "Source: demo queue", style: styles.trustPillMuted },
     { label: `Confidence: ${card.source.confidence.toUpperCase()}`, style: confidenceTone },
     { label: card.source.freshnessLabel, style: freshnessTone },
@@ -487,11 +499,35 @@ function RelationshipContextPanel({
       <TrustPills card={card} />
 
       <div style={styles.contextActions}>
-        <ActionButton label="Call" primary={card.recommendedAction === "Call"} />
-        <ActionButton label="Email" primary={card.recommendedAction === "Email"} />
+        <ActionButton
+          label="Call"
+          primary={card.recommendedAction === "Call"}
+          disabled={card.phoneActionable === false}
+          disabledReason={card.contactMethods.find((m) => m.type === "Call")?.disabledReason}
+        />
+        <ActionButton
+          label="Email"
+          primary={card.recommendedAction === "Email"}
+          disabled={card.emailActionable === false}
+          disabledReason={card.contactMethods.find((m) => m.type === "Email")?.disabledReason}
+        />
         <ActionButton label="Follow Up" primary={card.recommendedAction === "Follow Up"} />
         <ActionButton label="Assign" primary={card.recommendedAction === "Assign"} />
       </div>
+
+      {card.recommendationWhy ? (
+        <ContextBlock title="Why this recommendation">
+          <div style={styles.signalRow}>{card.recommendationWhy}</div>
+          {(card.recommendationEvidence ?? []).map((line) => (
+            <div key={line} style={styles.signalRow}>Evidence: {line}</div>
+          ))}
+          {(card.recommendationMissing ?? []).length > 0 ? (
+            <div style={{ ...styles.signalRow, color: palette.warning }}>
+              Missing: {(card.recommendationMissing ?? []).join(" · ")}
+            </div>
+          ) : null}
+        </ContextBlock>
+      ) : null}
 
       <ContextBlock title="Best contact">
         <div style={styles.contactCard}>
@@ -501,8 +537,17 @@ function RelationshipContextPanel({
           </div>
           <div style={styles.contactMethods}>
             {card.contactMethods.map((method) => (
-              <span key={`${method.type}-${method.value}`} style={styles.methodPill}>
+              <span
+                key={`${method.type}-${method.value}`}
+                style={{
+                  ...styles.methodPill,
+                  ...(method.actionable === false ? styles.methodPillDisabled : null),
+                  ...(method.downgraded ? styles.methodPillDowngraded : null),
+                }}
+                title={method.disabledReason ?? undefined}
+              >
                 {method.type}: {method.value}
+                {method.actionable === false ? " (disabled)" : method.downgraded ? " (review)" : ""}
               </span>
             ))}
           </div>
@@ -581,20 +626,28 @@ function ContextBlock({ title, children }: { title: string; children: React.Reac
 function ActionButton({
   label,
   primary,
+  disabled,
+  disabledReason,
 }: {
   label: string;
   primary?: boolean;
+  disabled?: boolean;
+  disabledReason?: string | null;
 }) {
   return (
     <button
       type="button"
+      disabled={disabled}
+      title={disabled ? disabledReason ?? "Not available at current trust tier" : undefined}
       className="relationship-priority-action"
       style={{
         ...styles.actionButton,
-        ...(primary ? styles.actionButtonPrimary : null),
+        ...(primary && !disabled ? styles.actionButtonPrimary : null),
+        ...(disabled ? styles.actionButtonDisabled : null),
       }}
     >
       {label}
+      {disabled ? " (disabled)" : ""}
     </button>
   );
 }
@@ -1315,6 +1368,18 @@ const styles: Record<string, CSSProperties> = {
     padding: "7px 9px",
     fontSize: "12px",
     fontWeight: 720,
+  },
+  methodPillDisabled: {
+    opacity: 0.5,
+    textDecoration: "line-through",
+  },
+  methodPillDowngraded: {
+    borderColor: palette.warning,
+    color: palette.warning,
+  },
+  actionButtonDisabled: {
+    opacity: 0.45,
+    cursor: "not-allowed",
   },
   signalRow: {
     padding: "10px 12px",

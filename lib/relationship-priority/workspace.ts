@@ -13,8 +13,19 @@ import {
   type FreshnessState,
 } from "@/lib/display/trustVisibility";
 import type { ResurfacingBucket } from "@/lib/relationship-intelligence/resurfacing";
+import {
+  buildContactScoreTransparency,
+  buildRecommendationExplanation,
+  effectivePriorityScore,
+  honestSuggestedActionLabel,
+  type DataQualityTier,
+} from "@/lib/crm-import/scoreTransparency";
+import {
+  contactHasReachableEmail,
+  contactHasReachablePhone,
+} from "@/lib/crm-import/reachability";
 import { scoreFromCrmContact } from "@/lib/relationship-intelligence/scoring";
-import type { CrmContactRecord } from "@/lib/crm-import/types";
+import type { CrmContactRecord, VerificationTier } from "@/lib/crm-import/types";
 
 type EngineSummary = RelationshipEngineOperatorSurface["workflows"]["relationshipSummaries"][number];
 type EngineQueueItem = RelationshipEngineOperatorSurface["queues"][number]["items"][number];
@@ -91,10 +102,22 @@ export interface RelationshipPriorityCard {
     type: "Call" | "Email" | "LinkedIn";
     value: string;
     primary?: boolean;
+    actionable?: boolean;
+    downgraded?: boolean;
+    disabledReason?: string | null;
   }>;
   recommendedAction: "Call" | "Email" | "Follow Up" | "Assign" | "Open Context";
   nextStep: string;
   suggestedAngle: string;
+  verificationTier?: VerificationTier;
+  verificationStatusLabel?: string;
+  dataQualityTier?: DataQualityTier;
+  dataQualityLabel?: string;
+  recommendationWhy?: string;
+  recommendationEvidence?: string[];
+  recommendationMissing?: string[];
+  phoneActionable?: boolean;
+  emailActionable?: boolean;
   topSignals: string[];
   relationshipHistory: string[];
   followUpHistory: string[];
@@ -232,53 +255,110 @@ export function buildRelationshipPriorityWorkspaceModel(args: {
 
 function crmContactsToPriorityCards(
   contacts: CrmContactRecord[],
-  generatedAt: string,
+  _generatedAt: string,
 ): RelationshipPriorityCard[] {
   return contacts
     .slice()
-    .sort((a, b) => (b.relationshipScore ?? 0) - (a.relationshipScore ?? 0))
+    .sort(
+      (a, b) =>
+        effectivePriorityScore(b, b.relationshipScore ?? 0)
+        - effectivePriorityScore(a, a.relationshipScore ?? 0),
+    )
     .slice(0, 12)
     .map((contact, index) => {
       const score = scoreFromCrmContact(contact);
+      const transparency = buildContactScoreTransparency(contact);
+      const recommendation = buildRecommendationExplanation(contact, transparency);
+      const methods = transparency.contactMethods;
       const state = freshnessStateFor(ageDaysFromIso(contact.lastInteractionAt ?? contact.updatedAt));
       const trustWarnings = Object.entries(contact.dataTrust)
         .filter(([, datum]) => !datum.displayAsTrusted)
         .map(([field, datum]) => `${field}: ${datum.trustLevel}`);
+
+      const hasReachablePhone = contactHasReachablePhone(contact);
+      const hasReachableEmail = contactHasReachableEmail(contact);
+
+      let recommendedAction: RelationshipPriorityCard["recommendedAction"] = "Open Context";
+      if (hasReachablePhone && methods.phone.actionable) {
+        recommendedAction = "Call";
+      } else if (hasReachableEmail && methods.email.actionable) {
+        recommendedAction = "Email";
+      } else if (hasReachableEmail) {
+        recommendedAction = "Email";
+      }
+
+      const contactMethods: RelationshipPriorityCard["contactMethods"] = [];
+      if (contact.phone) {
+        contactMethods.push({
+          type: "Call",
+          value: contact.phone,
+          primary: hasReachablePhone,
+          actionable: methods.phone.actionable,
+          downgraded: methods.phone.downgraded,
+          disabledReason: methods.phone.reason,
+        });
+      }
+      if (contact.email) {
+        contactMethods.push({
+          type: "Email",
+          value: contact.email,
+          actionable: methods.email.actionable,
+          downgraded: methods.email.downgraded,
+          disabledReason: methods.email.reason,
+        });
+      }
+
+      const stage =
+        transparency.verificationTier === "verified" || transparency.verificationTier === "enriched"
+          ? "Verified intelligence"
+          : transparency.verificationTier === "confidence_low"
+            ? "Needs review"
+            : "Imported contact";
+
       return {
         id: `crm-${contact.id}`,
         relationshipId: contact.id,
         rank: index + 1,
         company: contact.company,
         relationship: contact.sourceCrm ? `From ${contact.sourceCrm}` : "Imported relationship",
-        marketFit: contact.relationshipScore ?? score.total,
+        marketFit: effectivePriorityScore(contact, contact.relationshipScore ?? score.total),
         urgency: index === 0 ? "Now" : index < 3 ? "Today" : "This week",
         importance: index === 0 ? "highest" : index < 3 ? "high" : "medium",
-        stage: "Imported contact",
-        topReasons: [
-          score.explanation,
-          contact.tags[0] ? `Tag: ${contact.tags[0]}` : "No tags on file",
+        stage,
+        topReasons: compact([
+          recommendation.why,
+          contact.tags[0] ? `Tag: ${contact.tags[0]}` : null,
           contact.lastInteractionAt
             ? `Last interaction ${relativeDate(contact.lastInteractionAt)}`
             : "Last interaction unknown",
-        ],
+        ]),
         bestContact: {
           name: contact.name,
           title: contact.company,
         },
-        contactMethods: [
-          ...(contact.phone ? [{ type: "Call" as const, value: contact.phone, primary: true }] : []),
-          ...(contact.email ? [{ type: "Email" as const, value: contact.email }] : []),
-        ],
-        recommendedAction: contact.phone ? "Call" : contact.email ? "Email" : "Open Context",
-        nextStep: contact.phone
-          ? `Call ${contact.name} at ${contact.phone}.`
-          : contact.email
-            ? `Email ${contact.name} with one clear ask.`
-            : `Enrich contact data before outreach.`,
-        suggestedAngle: score.factors[0]?.explanation ?? "Lead with the strongest verified signal.",
-        topSignals: score.missingDataFlags.length > 0
-          ? score.missingDataFlags.slice(0, 3)
-          : ["Imported CRM", "Scored relationship"],
+        contactMethods,
+        recommendedAction,
+        nextStep:
+          recommendedAction === "Call" && methods.phone.actionable
+            ? `Call ${contact.name} at ${contact.phone}.`
+            : recommendedAction === "Call"
+              ? `Review phone trust before calling ${contact.name}.`
+              : recommendedAction === "Email" && methods.email.actionable
+                ? `Email ${contact.name} with one clear ask.`
+                : recommendedAction === "Email"
+                  ? `Review email trust before emailing ${contact.name}.`
+                  : `Enrich or verify contact data before outreach.`,
+        suggestedAngle: recommendation.why,
+        verificationTier: transparency.verificationTier,
+        verificationStatusLabel: transparency.verificationStatusLabel,
+        dataQualityTier: transparency.dataQualityTier,
+        dataQualityLabel: transparency.dataQualityLabel,
+        recommendationWhy: recommendation.why,
+        recommendationEvidence: recommendation.evidence,
+        recommendationMissing: recommendation.missing,
+        phoneActionable: methods.phone.actionable,
+        emailActionable: methods.email.actionable,
+        topSignals: recommendation.evidence.slice(0, 3),
         relationshipHistory: compact([
           contact.notes ? contact.notes.slice(0, 120) : null,
           contact.lastInteractionAt ? `Last touch ${relativeDate(contact.lastInteractionAt)}` : null,
@@ -286,7 +366,7 @@ function crmContactsToPriorityCards(
         followUpHistory: [
           trustWarnings.length > 0
             ? `Trust gaps: ${trustWarnings.join("; ")}`
-            : "Contact fields pass minimum trust for display.",
+            : `${transparency.verificationStatusLabel} — ${transparency.dataQualityLabel}`,
         ],
         optionalContext: {
           deepReport: "Review import provenance and datum trust.",
@@ -300,9 +380,16 @@ function crmContactsToPriorityCards(
           generatedAt: contact.updatedAt,
           freshnessLabel: freshnessLabel(state, ageDaysFromIso(contact.lastInteractionAt ?? contact.updatedAt)),
           freshnessState: state,
-          evidenceCount: score.factors.length,
-          missingDataCount: score.missingDataFlags.length,
-          warnings: trustWarnings,
+          evidenceCount: recommendation.evidence.length,
+          missingDataCount: score.missingDataFlags.length + recommendation.missing.length,
+          warnings: compact([
+            ...trustWarnings,
+            honestSuggestedActionLabel(recommendedAction, transparency) !== recommendedAction
+              ? honestSuggestedActionLabel(recommendedAction, transparency)
+              : null,
+            methods.phone.reason,
+            methods.email.reason,
+          ]),
         },
       };
     });
