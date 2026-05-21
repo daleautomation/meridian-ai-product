@@ -133,6 +133,8 @@ const noPhoneDiag = computeImportDiagnostics({
 });
 assert(noPhoneDiag.mappedPhoneColumns.length === 0, "no phone column mapped");
 assert(noPhoneDiag.highPhoneMissingRate, "100% missing phones triggers warning");
+assert(noPhoneDiag.isEmailFirstExport, "Brookside-style export is email-first");
+assert(noPhoneDiag.emailReachablePct === 100, "Brookside row has email");
 
 console.log("crm-import:check passed");
 console.log("Brookside-style headers:", noPhoneHeaders.join(", "));

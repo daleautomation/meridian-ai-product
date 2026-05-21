@@ -36,6 +36,11 @@ export function computeImportDiagnostics(args: {
   }
 
   const phoneMissingPct = totalRows > 0 ? Math.round((rowsMissingPhone / totalRows) * 100) : 0;
+  const emailReachablePct =
+    totalRows > 0 ? Math.round(((totalRows - rowsMissingEmail) / totalRows) * 100) : 0;
+  const highPhoneMissingRate = phoneMissingPct > 50;
+  const isEmailFirstExport =
+    highPhoneMissingRate && mappedEmailColumns.length > 0 && rowsMissingEmail < totalRows;
 
   return {
     detectedHeaders: headers,
@@ -49,6 +54,8 @@ export function computeImportDiagnostics(args: {
     rowsMissingBoth,
     totalRows,
     phoneMissingPct,
-    highPhoneMissingRate: phoneMissingPct > 50,
+    emailReachablePct,
+    highPhoneMissingRate,
+    isEmailFirstExport,
   };
 }

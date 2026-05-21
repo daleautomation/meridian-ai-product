@@ -62,6 +62,10 @@ export default function PersonalWorkspace({ model }: PersonalWorkspaceProps) {
         })}
       </nav>
 
+      {model.reachability.phoneLight && model.crmContactCount > 0 ? (
+        <p style={styles.reachabilityBanner}>{model.reachability.summary}</p>
+      ) : null}
+
       <section style={styles.dashboard}>
         <div style={styles.heroCard}>
           <div style={styles.heroLabel}>{model.hero.focus}</div>
@@ -72,6 +76,24 @@ export default function PersonalWorkspace({ model }: PersonalWorkspaceProps) {
         <SummaryMetric label="Follow-ups" value={String(model.summary.followUpsDue)} />
         <SummaryMetric label="Avg. strength" value={`${model.summary.averageStrength}%`} />
       </section>
+
+      {model.resurfacingHighlights.length > 0 ? (
+        <section style={styles.resurfacingStrip} aria-label={copy.resurfacingTitle}>
+          <h2 style={styles.resurfacingTitle}>{copy.resurfacingTitle}</h2>
+          <div style={styles.resurfacingList}>
+            {model.resurfacingHighlights.map((h) => (
+              <article key={`${h.bucketId}-${h.contactId}`} style={styles.resurfacingCard}>
+                <div style={styles.resurfacingMeta}>
+                  <strong>{h.contactName}</strong>
+                  <span style={styles.resurfacingBucket}>{h.bucketLabel}</span>
+                </div>
+                <p style={styles.resurfacingWhy}>{h.whyNow}</p>
+                <p style={styles.resurfacingAction}>{h.recommendedAction}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section style={styles.body}>
         <div style={styles.listColumn}>
@@ -88,20 +110,30 @@ export default function PersonalWorkspace({ model }: PersonalWorkspaceProps) {
           </div>
 
           {activeNav === "insights" ? (
-            <InsightsList insights={model.insights} />
+            model.insights.length === 0 ? (
+              <EmptySection
+                message={model.emptyByNav.insights}
+                showImport={model.crmContactCount === 0}
+                importPath={model.importPath}
+                importCta={copy.importCta}
+              />
+            ) : (
+              <InsightsList insights={model.insights} />
+            )
           ) : visibleContacts.length === 0 ? (
-            <div style={styles.empty}>
-              <p>{copy.emptyContacts}</p>
-              <Link href={model.importPath} style={styles.emptyLink}>
-                {copy.importCta}
-              </Link>
-            </div>
+            <EmptySection
+              message={model.emptyByNav[activeNav] ?? copy.emptyContacts}
+              showImport={model.crmContactCount === 0}
+              importPath={model.importPath}
+              importCta={copy.importCta}
+            />
           ) : (
             <div style={styles.cardList}>
               {visibleContacts.map((card, index) => (
                 <ContactCard
                   key={card.id}
                   card={card}
+                  emailPrimaryLabel={copy.emailPrimaryBadge}
                   selected={selected?.id === card.id}
                   prominent={index === 0 && activeNav === "priority"}
                   onSelect={() => setSelectedId(card.id)}
@@ -125,9 +157,32 @@ function contactsForNav(model: PersonalWorkspaceModel, nav: PersonalNavId): Pers
   return model.priorityContacts;
 }
 
+function EmptySection({
+  message,
+  showImport,
+  importPath,
+  importCta,
+}: {
+  message: string;
+  showImport: boolean;
+  importPath: string;
+  importCta: string;
+}) {
+  return (
+    <div style={styles.empty}>
+      <p>{message}</p>
+      {showImport ? (
+        <Link href={importPath} style={styles.emptyLink}>
+          {importCta}
+        </Link>
+      ) : null}
+    </div>
+  );
+}
+
 function InsightsList({ insights }: { insights: PersonalInsightRow[] }) {
   if (insights.length === 0) {
-    return <div style={styles.empty}>Import contacts to generate relationship insights.</div>;
+    return null;
   }
   return (
     <div style={styles.cardList}>
@@ -147,11 +202,13 @@ function InsightsList({ insights }: { insights: PersonalInsightRow[] }) {
 
 function ContactCard({
   card,
+  emailPrimaryLabel,
   selected,
   prominent,
   onSelect,
 }: {
   card: PersonalContactCard;
+  emailPrimaryLabel: string;
   selected: boolean;
   prominent?: boolean;
   onSelect: () => void;
@@ -178,6 +235,9 @@ function ContactCard({
         </div>
         <span style={styles.actionChip}>{card.suggestedAction}</span>
       </div>
+      {card.primaryChannel === "email" ? (
+        <span style={styles.emailBadge}>{emailPrimaryLabel}</span>
+      ) : null}
       {card.reasons.slice(0, 2).map((reason) => (
         <div key={reason} style={styles.reason}>{reason}</div>
       ))}
@@ -219,10 +279,21 @@ function ContactDetailPanel({
       <DetailBlock title="Reachability">
         {card.phone ? <div style={styles.detailRow}>Phone: {card.phone}</div> : null}
         {card.email ? <div style={styles.detailRow}>Email: {card.email}</div> : null}
+        {!card.phone && card.email ? (
+          <div style={styles.info}>{card.reachabilityNote ?? copy.noPhoneExplanation}</div>
+        ) : null}
         {!card.phone && !card.email ? (
           <div style={styles.warn}>Add contact paths before outreach.</div>
         ) : null}
       </DetailBlock>
+
+      {card.activityMemory.length > 0 ? (
+        <DetailBlock title={copy.activityMemoryTitle}>
+          {card.activityMemory.map((line) => (
+            <div key={line} style={styles.detailRow}>{line}</div>
+          ))}
+        </DetailBlock>
+      ) : null}
 
       <DetailBlock title="Signals">
         {card.signals.map((s) => (
@@ -589,6 +660,81 @@ const styles: Record<string, CSSProperties> = {
     background: personalPalette.warningBg,
     padding: "8px 10px",
     borderRadius: "8px",
+  },
+  info: {
+    fontSize: "13px",
+    color: personalPalette.textMuted,
+    background: personalPalette.accentSoft,
+    padding: "8px 10px",
+    borderRadius: "8px",
+    lineHeight: 1.45,
+  },
+  reachabilityBanner: {
+    margin: "0 0 16px",
+    padding: "12px 16px",
+    borderRadius: "12px",
+    border: `1px solid ${personalPalette.accentBorder}`,
+    background: personalPalette.accentSoft,
+    fontSize: "14px",
+    lineHeight: 1.45,
+    color: personalPalette.text,
+  },
+  resurfacingStrip: {
+    marginBottom: "24px",
+  },
+  resurfacingTitle: {
+    margin: "0 0 10px",
+    fontSize: "14px",
+    fontWeight: 600,
+    color: personalPalette.textMuted,
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+  },
+  resurfacingList: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+    gap: "10px",
+  },
+  resurfacingCard: {
+    padding: "12px 14px",
+    borderRadius: "12px",
+    border: `1px solid ${personalPalette.border}`,
+    background: personalPalette.surface,
+  },
+  resurfacingMeta: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "8px",
+    fontSize: "14px",
+    marginBottom: "6px",
+  },
+  resurfacingBucket: {
+    fontSize: "11px",
+    color: personalPalette.accent,
+    fontWeight: 600,
+  },
+  resurfacingWhy: {
+    margin: "0 0 6px",
+    fontSize: "13px",
+    color: personalPalette.textMuted,
+    lineHeight: 1.35,
+  },
+  resurfacingAction: {
+    margin: 0,
+    fontSize: "13px",
+    lineHeight: 1.35,
+  },
+  emailBadge: {
+    display: "inline-block",
+    width: "fit-content",
+    padding: "2px 8px",
+    borderRadius: "999px",
+    background: personalPalette.accentSoft,
+    color: personalPalette.accent,
+    fontSize: "10px",
+    fontWeight: 700,
+    letterSpacing: "0.06em",
+    textTransform: "uppercase",
   },
   detailMeta: {
     display: "flex",

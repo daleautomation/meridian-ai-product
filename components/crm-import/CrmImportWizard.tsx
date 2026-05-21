@@ -457,7 +457,13 @@ function ImportDiagnosticsPanel({ diagnostics }: { diagnostics: ImportDiagnostic
           Rename headers or add aliases if this export uses non-standard labels.
         </p>
       ) : null}
-      {diagnostics.highPhoneMissingRate ? (
+      {diagnostics.isEmailFirstExport ? (
+        <p style={styles.infoBox}>
+          Email-first export detected ({diagnostics.emailReachablePct}% reachable by email,{" "}
+          {diagnostics.phoneMissingPct}% without phone). Your relationship workspace will prioritize
+          follow-ups, dormant recovery, and activity memory — not call queues. Import is fully supported.
+        </p>
+      ) : diagnostics.highPhoneMissingRate ? (
         <p style={styles.warnBox}>
           {diagnostics.phoneMissingPct}% of rows have no usable phone ({diagnostics.rowsMissingPhone} of{" "}
           {diagnostics.totalRows}). Relationship resurfacing will rely more heavily on email and
@@ -663,6 +669,15 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "12px",
     background: palette.warningBg,
     color: palette.orange,
+    fontSize: "13px",
+    lineHeight: 1.45,
+  },
+  infoBox: {
+    marginTop: "10px",
+    padding: "10px 12px",
+    borderRadius: "12px",
+    background: palette.successBg,
+    color: palette.success,
     fontSize: "13px",
     lineHeight: 1.45,
   },

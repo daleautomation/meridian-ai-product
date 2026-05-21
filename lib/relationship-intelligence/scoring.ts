@@ -1,6 +1,10 @@
 // Meridian — relationship intelligence scoring (explainable, no fake urgency).
 
-import type { ContactDatumTrust, NormalizedCrmContact } from "@/lib/crm-import/types";
+import {
+  contactHasReachableEmail,
+  contactHasReachablePhone,
+} from "@/lib/crm-import/reachability";
+import type { ContactDatumTrust, CrmContactRecord, NormalizedCrmContact } from "@/lib/crm-import/types";
 
 export type RelationshipScoreFactor =
   | "recency"
@@ -111,11 +115,17 @@ export function computeRelationshipScore(input: {
     missingDataFlags.push("Missing phone and email");
     strength = 30;
   }
-  factors.push(factor("relationship_strength", "Relationship strength", strength,
-    input.hasPhone && input.hasEmail ? "high" : "medium",
+  const strengthExplanation =
     input.hasPhone && input.hasEmail
       ? "Reachable on phone and email."
-      : "Limited reachability reduces strength."));
+      : input.hasEmail && !input.hasPhone
+        ? "Email on file — relationship strength from history and notes, not phone."
+        : input.hasPhone && !input.hasEmail
+          ? "Phone on file without email — add email when available for continuity."
+          : "Limited reachability reduces strength.";
+  factors.push(factor("relationship_strength", "Relationship strength", strength,
+    input.hasPhone && input.hasEmail ? "high" : "medium",
+    strengthExplanation));
 
   const missingPenalty = Math.min(100,
     trustPenalty(input.dataTrust?.phone)
@@ -172,29 +182,39 @@ function factor(
   return { factor: key, label, score, weight, contribution, explanation, confidence };
 }
 
-export function scoreFromCrmContact(contact: {
-  lastInteractionAt: string | null;
-  tags: string[];
-  phone: string | null;
-  email: string | null;
-  notes: string | null;
-  dataTrust: NormalizedCrmContact["dataTrust"];
-  relationshipScore?: number | null;
-}): RelationshipIntelligenceScore {
+export function scoreFromCrmContact(
+  contact: Pick<
+    CrmContactRecord,
+    | "lastInteractionAt"
+    | "tags"
+    | "phone"
+    | "email"
+    | "normalizedPhone"
+    | "normalizedEmail"
+    | "notes"
+    | "dataTrust"
+    | "relationshipScore"
+  >,
+): RelationshipIntelligenceScore {
   if (typeof contact.relationshipScore === "number") {
+    const hasEmail = contactHasReachableEmail(contact as CrmContactRecord);
+    const hasPhone = contactHasReachablePhone(contact as CrmContactRecord);
+    const channelNote =
+      hasEmail && !hasPhone ? " Email-first contact — score reflects history, not call readiness."
+      : "";
     return {
       total: contact.relationshipScore,
       confidence: "medium",
       factors: [],
-      missingDataFlags: [],
-      explanation: "Score persisted from CRM import.",
+      missingDataFlags: hasEmail && !hasPhone ? ["No phone on file — email is primary channel"] : [],
+      explanation: `Score persisted from CRM import.${channelNote}`,
     };
   }
   return computeRelationshipScore({
     lastInteractionAt: contact.lastInteractionAt,
     tags: contact.tags,
-    hasPhone: Boolean(contact.phone),
-    hasEmail: Boolean(contact.email),
+    hasPhone: contactHasReachablePhone(contact as CrmContactRecord),
+    hasEmail: contactHasReachableEmail(contact as CrmContactRecord),
     notesLength: contact.notes?.length ?? 0,
     dataTrust: contact.dataTrust,
   });

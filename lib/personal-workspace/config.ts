@@ -53,12 +53,27 @@ export const PERSONAL_COPY_DEFAULTS = {
   heroFocus: "Today's focus",
   importCta: "Import contacts",
   emptyContacts: "Import your CRM to see contacts here.",
+  emptyPriority:
+    "After import, your strongest relationships surface here — ranked by score, recency, and follow-up timing.",
+  emptyFollowUps:
+    "Follow-ups appear when a touch is overdue or a promise is still open. Email and last-activity dates count even without phone numbers.",
+  emptyDormant:
+    "Dormant opportunities are high-value relationships that went quiet. They resurface from history and scores, not call volume.",
+  emptyMissing:
+    "Contacts land here when reachability or trust gaps block safe outreach. Email-only relationships stay workable — we never invent phone numbers.",
+  emptyInsights:
+    "Relationship insights explain why each contact matters and what signal drove their score.",
   strengthLabel: "Relationship strength",
   reachOut: "Reach out",
   sendNote: "Send a note",
   followUp: "Follow up",
   reviewContext: "Review context",
   enrichFirst: "Enrich first",
+  noPhoneExplanation:
+    "No phone on file from your CRM export. Phone trust shows MISSING because nothing was mapped or guessed — email and interaction history are your resurfacing paths.",
+  emailPrimaryBadge: "Email-first",
+  activityMemoryTitle: "Activity memory",
+  resurfacingTitle: "Worth resurfacing",
 } as const;
 
 export function personalCopyForWorkspace(branding?: {

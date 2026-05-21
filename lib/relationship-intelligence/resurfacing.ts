@@ -1,5 +1,9 @@
 // Meridian — contact resurfacing engine (intelligent buckets, no silent promotion).
 
+import {
+  contactHasReachableEmail,
+  contactHasReachablePhone,
+} from "@/lib/crm-import/reachability";
 import { scoreFromCrmContact } from "./scoring";
 import type { RelationshipIntelligenceScore } from "./scoring";
 import type { CrmContactRecord } from "@/lib/crm-import/types";
@@ -37,6 +41,18 @@ function daysSince(iso: string | null): number | null {
   return null;
 }
 
+function resurfacingAction(contact: CrmContactRecord, fallback: string): string {
+  const hasPhone = contactHasReachablePhone(contact);
+  const hasEmail = contactHasReachableEmail(contact);
+  if (!hasPhone && !hasEmail) return "Enrich contact paths before outreach.";
+  if (!hasPhone && hasEmail) {
+    return "Send a concise email — no phone on file and none will be invented.";
+  }
+  if (hasPhone && hasEmail) return fallback;
+  if (hasPhone) return fallback;
+  return "Send a concise re-engagement note.";
+}
+
 function trustWarnings(contact: CrmContactRecord): string[] {
   const warnings: string[] = [];
   for (const [field, datum] of Object.entries(contact.dataTrust)) {
@@ -70,11 +86,17 @@ export function buildResurfacingBuckets(contacts: CrmContactRecord[]): Resurfaci
       relationshipScore: score,
     };
 
+    const hasPhone = contactHasReachablePhone(contact);
+    const hasEmail = contactHasReachableEmail(contact);
+
     if (score.total >= 75 && days !== null && days > 60) {
       buckets.forgotten_high_value.push({
         ...base,
         whyNow: `High relationship score (${score.total}) but quiet for ${days} days.`,
-        recommendedAction: "Reopen with a direct, low-friction ask.",
+        recommendedAction: resurfacingAction(
+          contact,
+          "Reopen with a direct, low-friction ask.",
+        ),
       });
     }
 
@@ -82,15 +104,24 @@ export function buildResurfacingBuckets(contacts: CrmContactRecord[]): Resurfaci
       buckets.overdue_follow_ups.push({
         ...base,
         whyNow: `Follow-up window overdue (${days} days since last touch).`,
-        recommendedAction: "Close the loop on the last promise or note.",
+        recommendedAction: resurfacingAction(
+          contact,
+          "Close the loop on the last promise or note.",
+        ),
       });
     }
 
-    if (!contact.phone && !contact.email) {
+    if (!hasPhone && !hasEmail) {
       buckets.incomplete_relationships.push({
         ...base,
         whyNow: "Missing reachability — relationship cannot progress safely.",
         recommendedAction: "Enrich contact paths before outreach.",
+      });
+    } else if (!hasPhone && hasEmail) {
+      buckets.incomplete_relationships.push({
+        ...base,
+        whyNow: "Email on file without phone — enrichment optional; email resurfacing is viable.",
+        recommendedAction: resurfacingAction(contact, "Send a note referencing your last interaction."),
       });
     } else if (warnings.length >= 2) {
       buckets.incomplete_relationships.push({
@@ -104,7 +135,10 @@ export function buildResurfacingBuckets(contacts: CrmContactRecord[]): Resurfaci
       buckets.stale_reengage.push({
         ...base,
         whyNow: `Stale but still viable (${days} days idle).`,
-        recommendedAction: "Send a concise re-engagement note.",
+        recommendedAction: resurfacingAction(
+          contact,
+          "Send a concise re-engagement note.",
+        ),
       });
     }
 
@@ -112,7 +146,10 @@ export function buildResurfacingBuckets(contacts: CrmContactRecord[]): Resurfaci
       buckets.referral_opportunities.push({
         ...base,
         whyNow: "Tagged for referral or partner potential.",
-        recommendedAction: "Ask for one warm introduction.",
+        recommendedAction: resurfacingAction(
+          contact,
+          "Ask for one warm introduction.",
+        ),
       });
     }
 
@@ -121,7 +158,10 @@ export function buildResurfacingBuckets(contacts: CrmContactRecord[]): Resurfaci
       buckets.dormant_high_frequency.push({
         ...base,
         whyNow: dormantFactor.explanation,
-        recommendedAction: "Restart rhythm before the relationship decays further.",
+        recommendedAction: resurfacingAction(
+          contact,
+          "Restart rhythm before the relationship decays further.",
+        ),
       });
     }
   }

@@ -2,6 +2,12 @@ import type { PublicUser } from "@/config/tenants";
 import type { WorkspaceConfig } from "@/config/workspaces";
 import type { CrmContactRecord } from "@/lib/crm-import/types";
 import {
+  computeWorkspaceReachability,
+  contactHasReachableEmail,
+  contactHasReachablePhone,
+  type WorkspaceReachabilityProfile,
+} from "@/lib/crm-import/reachability";
+import {
   ageDaysFromIso,
   freshnessLabel,
   freshnessStateFor,
@@ -11,6 +17,8 @@ import type { ResurfacingBucket } from "@/lib/relationship-intelligence/resurfac
 import { scoreFromCrmContact } from "@/lib/relationship-intelligence/scoring";
 import { workspaceImportPath } from "@/lib/workspaceRouting";
 import { personalCopyForWorkspace, PERSONAL_NAV, type PersonalNavId } from "./config";
+
+export type PersonalPrimaryChannel = "email" | "phone" | "none";
 
 export interface PersonalContactCard {
   id: string;
@@ -25,11 +33,14 @@ export interface PersonalContactCard {
   reasons: string[];
   email: string | null;
   phone: string | null;
+  primaryChannel: PersonalPrimaryChannel;
+  reachabilityNote: string | null;
   suggestedAction: "Reach out" | "Send a note" | "Follow up" | "Review context" | "Enrich first";
   nextStep: string;
   angle: string;
   signals: string[];
   history: string[];
+  activityMemory: string[];
   trustNotes: string[];
   source: {
     freshnessLabel: string;
@@ -48,6 +59,15 @@ export interface PersonalInsightRow {
   strength: number;
 }
 
+export interface PersonalResurfacingHighlight {
+  bucketId: string;
+  bucketLabel: string;
+  contactId: string;
+  contactName: string;
+  whyNow: string;
+  recommendedAction: string;
+}
+
 export interface PersonalWorkspaceModel {
   generatedAt: string;
   workspace: {
@@ -61,6 +81,8 @@ export interface PersonalWorkspaceModel {
     focus: string;
     answer: string;
   };
+  reachability: WorkspaceReachabilityProfile;
+  resurfacingHighlights: PersonalResurfacingHighlight[];
   nav: Array<{ id: PersonalNavId; label: string; count: number }>;
   summary: {
     totalContacts: number;
@@ -79,6 +101,7 @@ export interface PersonalWorkspaceModel {
   importPath: string;
   crmContactCount: number;
   copy: ReturnType<typeof personalCopyForWorkspace>;
+  emptyByNav: Record<PersonalNavId, string>;
 }
 
 const DORMANT_BUCKET_IDS = new Set([
@@ -89,6 +112,13 @@ const DORMANT_BUCKET_IDS = new Set([
 
 const MISSING_BUCKET_IDS = new Set(["incomplete_relationships"]);
 
+const RESURFACING_HIGHLIGHT_BUCKETS = new Set([
+  "overdue_follow_ups",
+  "forgotten_high_value",
+  "stale_reengage",
+  "dormant_high_frequency",
+]);
+
 export function buildPersonalWorkspaceModel(args: {
   workspace: WorkspaceConfig;
   user: PublicUser;
@@ -98,11 +128,14 @@ export function buildPersonalWorkspaceModel(args: {
 }): PersonalWorkspaceModel {
   const { workspace, user, crmContacts, resurfacingBuckets } = args;
   const generatedAt = args.generatedAt ?? new Date().toISOString();
+  const reachability = computeWorkspaceReachability(crmContacts);
+  const copy = personalCopyForWorkspace(workspace.branding);
+  const phoneLight = reachability.phoneLight;
 
   const allContacts = crmContacts
     .slice()
-    .sort((a, b) => (b.relationshipScore ?? 0) - (a.relationshipScore ?? 0))
-    .map((contact, index) => crmContactToCard(contact, index + 1));
+    .sort((a, b) => prioritySortScore(b, phoneLight) - prioritySortScore(a, phoneLight))
+    .map((contact, index) => crmContactToCard(contact, index + 1, { phoneLight, copy }));
 
   const priorityContacts = allContacts.slice(0, 8);
 
@@ -130,12 +163,12 @@ export function buildPersonalWorkspaceModel(args: {
       .filter((b) => MISSING_BUCKET_IDS.has(b.id))
       .flatMap((b) => b.contacts.map((c) => c.contactId)),
   );
-  const missingInformation = allContacts.filter(
-    (card) =>
-      missingIds.has(card.contactId)
-      || card.suggestedAction === "Enrich first"
-      || card.source.missingFields > 0,
-  );
+  const missingInformation = allContacts.filter((card) => {
+    if (missingIds.has(card.contactId)) {
+      return card.primaryChannel === "none" || card.suggestedAction === "Enrich first";
+    }
+    return card.suggestedAction === "Enrich first" && card.primaryChannel === "none";
+  });
 
   const insights: PersonalInsightRow[] = crmContacts.slice(0, 12).map((contact) => {
     const score = scoreFromCrmContact(contact);
@@ -149,10 +182,19 @@ export function buildPersonalWorkspaceModel(args: {
     };
   });
 
+  const resurfacingHighlights = buildResurfacingHighlights(resurfacingBuckets);
+
   const followUpsDue = followUps.length;
   const dormantCount = dormantOpportunities.length;
   const needsEnrichment = missingInformation.length;
-  const copy = personalCopyForWorkspace(workspace.branding);
+
+  const heroAnswer = buildHeroAnswer({
+    priorityContacts,
+    crmContactCount: crmContacts.length,
+    phoneLight,
+    resurfacingHighlights,
+    copy,
+  });
 
   return {
     generatedAt,
@@ -165,12 +207,10 @@ export function buildPersonalWorkspaceModel(args: {
     user: { name: user.name ?? user.id },
     hero: {
       focus: copy.heroFocus,
-      answer: priorityContacts[0]
-        ? `${priorityContacts[0].name} at ${priorityContacts[0].company} — ${priorityContacts[0].reasons[0] ?? "strongest relationship signal right now"}`
-        : crmContacts.length === 0
-          ? "Import contacts to start prioritizing your network."
-          : "Review priority contacts and schedule your next touchpoints.",
+      answer: heroAnswer,
     },
+    reachability,
+    resurfacingHighlights,
     nav: PERSONAL_NAV.map((item) => ({
       id: item.id,
       label: item.label,
@@ -200,7 +240,72 @@ export function buildPersonalWorkspaceModel(args: {
     importPath: workspaceImportPath(workspace),
     crmContactCount: crmContacts.length,
     copy,
+    emptyByNav: {
+      priority: copy.emptyPriority,
+      all: copy.emptyContacts,
+      "follow-ups": copy.emptyFollowUps,
+      insights: copy.emptyInsights,
+      dormant: copy.emptyDormant,
+      missing: copy.emptyMissing,
+    },
   };
+}
+
+function buildHeroAnswer(args: {
+  priorityContacts: PersonalContactCard[];
+  crmContactCount: number;
+  phoneLight: boolean;
+  resurfacingHighlights: PersonalResurfacingHighlight[];
+  copy: ReturnType<typeof personalCopyForWorkspace>;
+}): string {
+  const top = args.priorityContacts[0];
+  if (top) {
+    const channelHint =
+      args.phoneLight && top.primaryChannel === "email"
+        ? " — email-first resurfacing"
+        : "";
+    return `${top.name} at ${top.company} — ${top.reasons[0] ?? "strongest relationship signal right now"}${channelHint}`;
+  }
+  if (args.crmContactCount === 0) {
+    return "Import contacts to start prioritizing your network.";
+  }
+  if (args.resurfacingHighlights[0]) {
+    const h = args.resurfacingHighlights[0];
+    return `${h.contactName}: ${h.whyNow}`;
+  }
+  return "Review priority contacts and schedule your next touchpoints.";
+}
+
+function buildResurfacingHighlights(buckets: ResurfacingBucket[]): PersonalResurfacingHighlight[] {
+  const highlights: PersonalResurfacingHighlight[] = [];
+  for (const bucket of buckets) {
+    if (!RESURFACING_HIGHLIGHT_BUCKETS.has(bucket.id)) continue;
+    for (const contact of bucket.contacts.slice(0, 2)) {
+      highlights.push({
+        bucketId: bucket.id,
+        bucketLabel: bucket.label,
+        contactId: contact.contactId,
+        contactName: contact.name,
+        whyNow: contact.whyNow,
+        recommendedAction: contact.recommendedAction,
+      });
+    }
+  }
+  return highlights.slice(0, 5);
+}
+
+function prioritySortScore(contact: CrmContactRecord, phoneLight: boolean): number {
+  const base = contact.relationshipScore ?? scoreFromCrmContact(contact).total;
+  const days = contact.lastInteractionAt
+    ? ageDaysFromIso(contact.lastInteractionAt) ?? 0
+    : 999;
+  let boost = 0;
+  if (days > 14 && days <= 60) boost += 8;
+  if (days > 60) boost += 5;
+  if (phoneLight && contactHasReachableEmail(contact) && !contactHasReachablePhone(contact)) {
+    boost += 6;
+  }
+  return base + boost;
 }
 
 function navCount(
@@ -223,7 +328,11 @@ function navCount(
   return 0;
 }
 
-function crmContactToCard(contact: CrmContactRecord, rank: number): PersonalContactCard {
+function crmContactToCard(
+  contact: CrmContactRecord,
+  rank: number,
+  ctx: { phoneLight: boolean; copy: ReturnType<typeof personalCopyForWorkspace> },
+): PersonalContactCard {
   const score = scoreFromCrmContact(contact);
   const state = freshnessStateFor(ageDaysFromIso(contact.lastInteractionAt ?? contact.updatedAt));
   const trustWarnings = Object.entries(contact.dataTrust)
@@ -231,10 +340,17 @@ function crmContactToCard(contact: CrmContactRecord, rank: number): PersonalCont
     .map(([field, datum]) => `${field}: ${datum.trustLevel}`);
   const missingFields = score.missingDataFlags.length + trustWarnings.length;
 
+  const hasPhone = contactHasReachablePhone(contact);
+  const hasEmail = contactHasReachableEmail(contact);
+  const primaryChannel: PersonalPrimaryChannel =
+    hasEmail && (!hasPhone || ctx.phoneLight) ? "email"
+    : hasPhone ? "phone"
+    : "none";
+
   let suggestedAction: PersonalContactCard["suggestedAction"] = "Review context";
-  if (!contact.phone && !contact.email) {
+  if (!hasPhone && !hasEmail) {
     suggestedAction = "Enrich first";
-  } else if (missingFields >= 2) {
+  } else if (missingFields >= 2 && !hasEmail) {
     suggestedAction = "Enrich first";
   } else if (score.factors.some((f) => f.factor === "dormant_opportunity_boost" && f.score >= 60)) {
     suggestedAction = "Send a note";
@@ -243,22 +359,20 @@ function crmContactToCard(contact: CrmContactRecord, rank: number): PersonalCont
     && (ageDaysFromIso(contact.lastInteractionAt) ?? 0) > 14
   ) {
     suggestedAction = "Follow up";
-  } else if (contact.phone) {
+  } else if (hasPhone && !ctx.phoneLight) {
     suggestedAction = "Reach out";
-  } else if (contact.email) {
+  } else if (hasEmail) {
     suggestedAction = "Send a note";
   }
 
-  const nextStep =
-    suggestedAction === "Reach out" && contact.phone
-      ? `Call or message ${contact.name} at ${contact.phone}.`
-      : suggestedAction === "Send a note" && contact.email
-        ? `Send ${contact.name} a concise note at ${contact.email}.`
-        : suggestedAction === "Follow up"
-          ? `Close the loop on your last conversation with ${contact.name}.`
-          : suggestedAction === "Enrich first"
-            ? `Add phone or email for ${contact.name} before outreach.`
-            : `Open context for ${contact.name} and confirm your angle.`;
+  const nextStep = buildNextStep(contact, suggestedAction, { hasPhone, hasEmail, phoneLight: ctx.phoneLight });
+
+  const reachabilityNote =
+    !hasPhone && hasEmail
+      ? ctx.copy.noPhoneExplanation
+      : !hasPhone && !hasEmail
+        ? "No phone or email on file — enrich before outreach."
+        : null;
 
   return {
     id: `nicole-${contact.id}`,
@@ -276,19 +390,28 @@ function crmContactToCard(contact: CrmContactRecord, rank: number): PersonalCont
       contact.lastInteractionAt
         ? `Last touch ${relativeDate(contact.lastInteractionAt)}`
         : "No recent interaction on file",
+      primaryChannel === "email" && ctx.phoneLight ? ctx.copy.emailPrimaryBadge : null,
     ]),
     email: contact.email,
-    phone: contact.phone,
+    phone: hasPhone ? contact.phone : null,
+    primaryChannel,
+    reachabilityNote,
     suggestedAction,
     nextStep,
-    angle: score.factors[0]?.explanation ?? "Lead with the clearest verified signal you have.",
+    angle:
+      primaryChannel === "email"
+        ? score.factors[0]?.explanation ?? "Reference your last email or meeting note — keep the ask small."
+        : score.factors[0]?.explanation ?? "Lead with the clearest verified signal you have.",
     signals: score.missingDataFlags.length > 0
       ? score.missingDataFlags.slice(0, 3)
-      : ["Imported CRM", "Relationship scored"],
+      : primaryChannel === "email"
+        ? ["Email on file", "Relationship scored"]
+        : ["Imported CRM", "Relationship scored"],
     history: compact([
       contact.notes ? contact.notes.slice(0, 140) : null,
       contact.lastInteractionAt ? `Last interaction ${relativeDate(contact.lastInteractionAt)}` : null,
     ]),
+    activityMemory: buildActivityMemory(contact),
     trustNotes: trustWarnings.length > 0
       ? trustWarnings
       : ["Contact fields meet minimum trust for display."],
@@ -299,6 +422,50 @@ function crmContactToCard(contact: CrmContactRecord, rank: number): PersonalCont
       missingFields,
     },
   };
+}
+
+function buildNextStep(
+  contact: CrmContactRecord,
+  action: PersonalContactCard["suggestedAction"],
+  reach: { hasPhone: boolean; hasEmail: boolean; phoneLight: boolean },
+): string {
+  if (action === "Reach out" && reach.hasPhone && !reach.phoneLight) {
+    return `Call or message ${contact.name} at ${contact.phone}.`;
+  }
+  if (action === "Send a note" && reach.hasEmail) {
+    return `Email ${contact.name} at ${contact.email} — reference your last interaction and one clear next step.`;
+  }
+  if (action === "Follow up") {
+    return `Close the loop on your last conversation with ${contact.name}${reach.hasEmail ? ` (${contact.email})` : ""}.`;
+  }
+  if (action === "Enrich first") {
+    return reach.hasEmail
+      ? `Optional: add a phone for ${contact.name}. Email is already on file for safe outreach.`
+      : `Add phone or email for ${contact.name} before outreach.`;
+  }
+  return `Open context for ${contact.name} and confirm your angle.`;
+}
+
+function buildActivityMemory(contact: CrmContactRecord): string[] {
+  const lines: string[] = [];
+  if (contact.lastInteractionAt) {
+    lines.push(`Last activity recorded ${relativeDate(contact.lastInteractionAt)}.`);
+  }
+  if (contact.notes?.trim()) {
+    lines.push(contact.notes.trim().length > 200
+      ? `${contact.notes.trim().slice(0, 200)}…`
+      : contact.notes.trim());
+  }
+  if (contact.tags.length > 0) {
+    lines.push(`Tags: ${contact.tags.slice(0, 4).join(", ")}.`);
+  }
+  if (contact.sourceCrm) {
+    lines.push(`Source: ${contact.sourceCrm}.`);
+  }
+  if (lines.length === 0) {
+    lines.push("No activity notes yet — import or add notes to strengthen memory-driven resurfacing.");
+  }
+  return lines;
 }
 
 function relativeDate(value: string): string {

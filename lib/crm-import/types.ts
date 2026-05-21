@@ -157,7 +157,10 @@ export type ImportDiagnostics = {
   rowsMissingBoth: number;
   totalRows: number;
   phoneMissingPct: number;
+  emailReachablePct: number;
   highPhoneMissingRate: boolean;
+  /** Phone-sparse export with usable email — relationship workspace should lean on email + history. */
+  isEmailFirstExport: boolean;
 };
 
 export type ImportPreviewResult = {
