@@ -126,8 +126,9 @@ export interface RelationshipPriorityCard {
     aiAssistant: string;
     relationshipHistory: string;
   };
+  marketFitRaw?: number;
   source: {
-    kind: "relationship-engine" | "demo-generated";
+    kind: "relationship-engine" | "demo-generated" | "crm-import";
     queueKind?: string;
     confidence: string;
     generatedAt: string;
@@ -315,13 +316,17 @@ function crmContactsToPriorityCards(
             ? "Needs review"
             : "Imported contact";
 
+      const marketFitRaw = contact.relationshipScore ?? score.total;
+      const marketFitEffective = effectivePriorityScore(contact, marketFitRaw);
+
       return {
         id: `crm-${contact.id}`,
         relationshipId: contact.id,
         rank: index + 1,
         company: contact.company,
         relationship: contact.sourceCrm ? `From ${contact.sourceCrm}` : "Imported relationship",
-        marketFit: effectivePriorityScore(contact, contact.relationshipScore ?? score.total),
+        marketFit: marketFitEffective,
+        marketFitRaw,
         urgency: index === 0 ? "Now" : index < 3 ? "Today" : "This week",
         importance: index === 0 ? "highest" : index < 3 ? "high" : "medium",
         stage,
@@ -374,7 +379,7 @@ function crmContactsToPriorityCards(
           relationshipHistory: "Timeline from CRM import.",
         },
         source: {
-          kind: "relationship-engine",
+          kind: "crm-import",
           queueKind: "crm_import",
           confidence: score.confidence,
           generatedAt: contact.updatedAt,
@@ -384,6 +389,9 @@ function crmContactsToPriorityCards(
           missingDataCount: score.missingDataFlags.length + recommendation.missing.length,
           warnings: compact([
             ...trustWarnings,
+            !contact.scoreMetadata
+              ? "Legacy contact — score provenance not stored at import"
+              : null,
             honestSuggestedActionLabel(recommendedAction, transparency) !== recommendedAction
               ? honestSuggestedActionLabel(recommendedAction, transparency)
               : null,

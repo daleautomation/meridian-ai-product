@@ -105,8 +105,18 @@ export default function RelationshipPriorityWorkspace({
             <div style={styles.heroLabel}>{model.hero.focus}</div>
             <div style={styles.heroAnswer}>{model.hero.answer}</div>
             <div style={styles.heroActions}>
-              <ActionButton label="Call" primary />
-              <ActionButton label="Email" />
+              <ActionButton
+                label="Call"
+                primary={selected?.recommendedAction === "Call"}
+                disabled={selected?.phoneActionable === false}
+                disabledReason={selected?.contactMethods.find((m) => m.type === "Call")?.disabledReason}
+              />
+              <ActionButton
+                label="Email"
+                primary={selected?.recommendedAction === "Email"}
+                disabled={selected?.emailActionable === false}
+                disabledReason={selected?.contactMethods.find((m) => m.type === "Email")?.disabledReason}
+              />
               <ActionButton label="Follow Up" />
               <ActionButton label="Assign" />
               <ActionButton label="Open Context" />
@@ -377,7 +387,9 @@ function PriorityCard({
         >
           #{card.rank}
         </span>
-        <span style={fitStyle(card.marketFit)}>{card.marketFit}% fit</span>
+        <span style={fitStyle(card.marketFit)} title={scoreFitTitle(card)}>
+          {card.marketFit}% fit{scoreFitSuffix(card)}
+        </span>
         <span style={urgencyStyle(card.urgency)}>{card.urgency}</span>
       </div>
       <TrustPills card={card} compact />
@@ -444,7 +456,14 @@ function TrustPills({
     ...(card.dataQualityLabel
       ? [{ label: card.dataQualityLabel, style: styles.trustPillMuted }]
       : []),
-    { label: card.source.kind === "relationship-engine" ? "Source: relationship engine" : "Source: demo queue", style: styles.trustPillMuted },
+    {
+      label: card.source.kind === "crm-import"
+        ? "Source: CRM import"
+        : card.source.kind === "relationship-engine"
+          ? "Source: relationship engine"
+          : "Source: demo queue",
+      style: styles.trustPillMuted,
+    },
     { label: `Confidence: ${card.source.confidence.toUpperCase()}`, style: confidenceTone },
     { label: card.source.freshnessLabel, style: freshnessTone },
     { label: `Evidence: ${card.source.evidenceCount}`, style: styles.trustPillMuted },
@@ -494,7 +513,9 @@ function RelationshipContextPanel({
           <h2 style={styles.contextTitle}>{card.company}</h2>
           <p style={styles.contextSubtitle}>{card.suggestedAngle}</p>
         </div>
-        <span style={fitStyle(card.marketFit)}>{card.marketFit}%</span>
+        <span style={fitStyle(card.marketFit)} title={scoreFitTitle(card)}>
+          {card.marketFit}%{scoreFitSuffix(card)}
+        </span>
       </div>
       <TrustPills card={card} />
 
@@ -650,6 +671,24 @@ function ActionButton({
       {disabled ? " (disabled)" : ""}
     </button>
   );
+}
+
+function scoreFitSuffix(card: RelationshipPriorityCard): string {
+  if (
+    card.marketFitRaw !== undefined
+    && card.marketFitRaw !== card.marketFit
+    && card.rank <= 3
+  ) {
+    return ` · raw ${card.marketFitRaw}`;
+  }
+  return "";
+}
+
+function scoreFitTitle(card: RelationshipPriorityCard): string | undefined {
+  if (card.marketFitRaw !== undefined && card.marketFitRaw !== card.marketFit) {
+    return `Trust-adjusted priority ${card.marketFit} (raw import score ${card.marketFitRaw})`;
+  }
+  return undefined;
 }
 
 function fitStyle(value: number): CSSProperties {

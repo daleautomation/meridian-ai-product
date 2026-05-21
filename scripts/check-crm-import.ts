@@ -10,7 +10,11 @@ import {
   TRUST_CONFIDENCE,
 } from "../lib/crm-import/trust";
 import { validateImportRows } from "../lib/crm-import/validate";
-import { buildContactScoreTransparency, scoreMetadataForImport } from "../lib/crm-import/scoreTransparency";
+import {
+  buildContactScoreTransparency,
+  effectivePriorityScore,
+  scoreMetadataForImport,
+} from "../lib/crm-import/scoreTransparency";
 import { computeRelationshipScore, scoreFromCrmContact } from "../lib/relationship-intelligence/scoring";
 import { buildResurfacingBuckets } from "../lib/relationship-intelligence/resurfacing";
 import type { ContactDatumTrust, CrmContactRecord, CrmImportJob } from "../lib/crm-import/types";
@@ -161,6 +165,13 @@ assert(transparency.recommendation.why.length > 0, "recommendation explains why"
 assert(transparency.recommendation.evidence.length > 0, "recommendation lists evidence");
 assert(transparency.reasonCodes.includes("BASELINE_IMPORT_SCORE"), "baseline reason code present");
 
+const legacyTransparency = buildContactScoreTransparency({ ...existing, scoreMetadata: null });
+assert(
+  legacyTransparency.reasonCodes.includes("MISSING_PROVENANCE_METADATA"),
+  "legacy contacts without scoreMetadata are flagged in reason codes",
+);
+assert(!legacyTransparency.isAuthoritative, "legacy contacts are not authoritative");
+
 const buckets = buildResurfacingBuckets([existing]);
 assert(buckets.length === 6, "six resurfacing buckets");
 
@@ -203,6 +214,15 @@ async function checkContactsPersistence() {
 
   const workspaceId = "nicole-lonergan";
   const contactId = `crm-persist-check-${useCrmNeonStorage() ? "neon" : "file"}-${Date.now().toString(36)}`;
+  const persistScore = computeRelationshipScore({
+    lastInteractionAt: null,
+    tags: [],
+    hasPhone: false,
+    hasEmail: true,
+    notesLength: 0,
+    dataTrust: noPhoneRow.dataTrust,
+  });
+  const persistMeta = scoreMetadataForImport(persistScore);
   const contact: CrmContactRecord = {
     id: contactId,
     workspaceId,
@@ -221,8 +241,11 @@ async function checkContactsPersistence() {
     normalizedCompany: "brookside",
     normalizedName: "persist check",
     dataTrust: noPhoneRow.dataTrust,
-    relationshipScore: 50,
-    scoreMetadata: null,
+    relationshipScore: persistScore.total,
+    scoreMetadata: {
+      ...persistMeta,
+      sourceFieldsUsed: ["email", "name", "company"],
+    },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -234,6 +257,18 @@ async function checkContactsPersistence() {
   const reloaded = await listContactsByWorkspace(workspaceId);
   assert(reloaded.length >= 1, "contacts survive memory reset via durable store");
   assert(reloaded.some((c) => c.id === contact.id), "persisted contact id round-trips");
+  const roundTrip = reloaded.find((c) => c.id === contact.id);
+  assert(roundTrip?.scoreMetadata?.provenance === "imported", "persisted contact keeps imported provenance");
+  assert(
+    roundTrip?.scoreMetadata?.verificationTier === "imported"
+      || roundTrip?.scoreMetadata?.verificationTier === "confidence_low",
+    "persisted contact keeps verification tier",
+  );
+  assert(
+    effectivePriorityScore(roundTrip!, roundTrip!.relationshipScore ?? 0)
+      <= (roundTrip!.relationshipScore ?? 0),
+    "effective score is trust-adjusted down from raw import score",
+  );
 
   if (useCrmNeonStorage()) {
     const otherWorkspace = await listContactsByWorkspace("labortech");

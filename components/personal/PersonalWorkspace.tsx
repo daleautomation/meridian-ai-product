@@ -253,7 +253,12 @@ function ContactCard({
     >
       <div style={styles.cardTop}>
         <span style={styles.rank}>#{card.rank}</span>
-        <span style={styles.strengthPill}>{card.strength}%</span>
+        <span
+          style={styles.strengthPill}
+          title={strengthTitle(card)}
+        >
+          {card.strength}%{strengthSuffix(card)}
+        </span>
         <span style={styles.timing}>{card.timing}</span>
       </div>
       <div style={styles.cardNameRow}>
@@ -303,7 +308,9 @@ function ContactDetailPanel({
           <span style={styles.dataQualityBadge}>{card.dataQualityLabel}</span>
         </div>
         <div style={styles.scoreRow}>
-          <span style={styles.strengthPill}>{card.strength}% {copy.strengthLabel}</span>
+          <span style={styles.strengthPill} title={strengthTitle(card)}>
+            {card.strength}%{strengthSuffix(card)} {copy.strengthLabel}
+          </span>
           <span style={styles.scoreMeta}>{card.scoreLabel}</span>
         </div>
         {!card.scoreIsAuthoritative ? (
@@ -400,6 +407,20 @@ function ContactDetailPanel({
       </div>
     </aside>
   );
+}
+
+function strengthSuffix(card: PersonalContactCard): string {
+  if (card.strengthRaw !== card.strength && card.rank <= 3) {
+    return ` · raw ${card.strengthRaw}`;
+  }
+  return "";
+}
+
+function strengthTitle(card: PersonalContactCard): string | undefined {
+  if (card.strengthRaw !== card.strength) {
+    return `Trust-adjusted priority ${card.strength} (raw import score ${card.strengthRaw})`;
+  }
+  return undefined;
 }
 
 function DetailBlock({ title, children }: { title: string; children: React.ReactNode }) {

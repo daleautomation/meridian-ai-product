@@ -42,6 +42,7 @@ export interface PersonalContactCard {
   company: string;
   relationshipLabel: string;
   strength: number;
+  strengthRaw: number;
   timing: "Soon" | "This week" | "When ready";
   stage: string;
   reasons: string[];
@@ -462,7 +463,8 @@ function crmContactToCard(
     name: contact.name,
     company: contact.company,
     relationshipLabel: contact.sourceCrm ? `From ${contact.sourceCrm}` : "Imported contact",
-    strength: transparency.value,
+    strength: effectivePriorityScore(contact, transparency.value),
+    strengthRaw: transparency.value,
     timing: rank === 1 ? "Soon" : rank <= 3 ? "This week" : "When ready",
     stage,
     reasons: compact([
@@ -489,11 +491,18 @@ function crmContactToCard(
       contact.lastInteractionAt ? `Last interaction ${relativeDate(contact.lastInteractionAt)}` : null,
     ]),
     activityMemory: buildActivityMemory(contact),
-    trustNotes: trustWarnings.length > 0
-      ? trustWarnings
-      : transparency.enrichmentStatus === "imported_only"
-        ? ["Imported fields only — not enriched or verified."]
-        : ["Contact fields meet minimum trust for display."],
+    trustNotes: compact([
+      !contact.scoreMetadata ? "Legacy contact — score provenance not stored at import." : null,
+      ...trustWarnings,
+      trustWarnings.length === 0 && transparency.enrichmentStatus === "imported_only"
+        ? "Imported fields only — not enriched or verified."
+        : null,
+      trustWarnings.length === 0
+        && transparency.enrichmentStatus !== "imported_only"
+        && contact.scoreMetadata
+        ? "Contact fields meet minimum trust for display."
+        : null,
+    ]),
     source: {
       freshnessLabel: freshnessLabel(state, ageDaysFromIso(contact.lastInteractionAt ?? contact.updatedAt)),
       freshnessState: state,

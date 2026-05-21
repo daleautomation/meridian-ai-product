@@ -174,6 +174,13 @@ export async function runCrmImportAudit(opts: CrmImportAuditOptions): Promise<Cr
   let unsupportedRecommendations = 0;
   let lowConfidenceContactMethods = 0;
   let missingProvenance = 0;
+  let genericRecommendations = 0;
+
+  const missingProvenanceSamples: string[] = [];
+  const lowConfidenceMethodSamples: string[] = [];
+  const overPrioritizedSamples: string[] = [];
+  const unsupportedSamples: string[] = [];
+  const genericSamples: string[] = [];
 
   const scored: Array<{ contact: CrmContactRecord; transparency: ContactScoreTransparency; effectiveScore: number }> = [];
 
@@ -192,12 +199,9 @@ export async function runCrmImportAudit(opts: CrmImportAuditOptions): Promise<Cr
 
     if (!contact.scoreMetadata?.provenance) {
       missingProvenance += 1;
-      warnings.push({
-        code: "MISSING_PROVENANCE_METADATA",
-        message: "Contact has no score provenance metadata",
-        contactId: contact.id,
-        contactName: contact.name,
-      });
+      if (missingProvenanceSamples.length < 3) {
+        missingProvenanceSamples.push(contact.name);
+      }
     }
 
     const methods = contactMethodActionability(contact, transparency);
@@ -206,15 +210,13 @@ export async function runCrmImportAudit(opts: CrmImportAuditOptions): Promise<Cr
       || (contact.email && !methods.email.actionable)
     ) {
       lowConfidenceContactMethods += 1;
-      warnings.push({
-        code: "LOW_CONFIDENCE_CONTACT_METHOD",
-        message: [
+      if (lowConfidenceMethodSamples.length < 3) {
+        const detail = [
           methods.phone.reason,
           methods.email.reason,
-        ].filter(Boolean).join(" · ") || "Contact method not actionable at current trust tier",
-        contactId: contact.id,
-        contactName: contact.name,
-      });
+        ].filter(Boolean).join(" · ") || "Contact method not actionable at current trust tier";
+        lowConfidenceMethodSamples.push(`${contact.name}: ${detail}`);
+      }
     }
 
     if (deriveEnrichmentStatus(contact) === "needs_review") weakIdentity += 1;
@@ -227,44 +229,58 @@ export async function runCrmImportAudit(opts: CrmImportAuditOptions): Promise<Cr
     }
 
     const recommendation = buildRecommendationExplanation(contact, transparency);
+    const genericCopy = isGenericRecommendation(buildGenericProbe(contact));
+    if (genericCopy) {
+      genericRecommendations += 1;
+      if (genericSamples.length < 3) genericSamples.push(contact.name);
+    }
     if (
-      isGenericRecommendation(buildGenericProbe(contact))
-      || transparency.isGenericRecommendation
-      || recommendation.evidence.length <= 1
+      (genericCopy || transparency.isGenericRecommendation)
+      && !transparency.isAuthoritative
     ) {
       unsupportedRecommendations += 1;
-      warnings.push({
-        code: "UNSUPPORTED_RECOMMENDATION",
-        message: "Recommendation lacks evidence-backed enrichment or uses template copy",
-        contactId: contact.id,
-        contactName: contact.name,
-      });
-    }
-
-    if (isGenericRecommendation(buildGenericProbe(contact))) {
-      warnings.push({
-        code: "GENERIC_RECOMMENDATION",
-        message: "Follow-up copy is template-based, not evidence-backed enrichment",
-        contactId: contact.id,
-        contactName: contact.name,
-      });
+      if (unsupportedSamples.length < 3) unsupportedSamples.push(contact.name);
     }
 
     if (!transparency.isAuthoritative && transparency.value >= 80) {
       overPrioritized += 1;
-      warnings.push({
-        code: "OVER_PRIORITIZED_CONTACT",
-        message: `Score ${transparency.value} ranks high but tier is ${transparency.verificationTier} (${transparency.scoreLabel}); effective ${effectiveScore}`,
-        contactId: contact.id,
-        contactName: contact.name,
-      });
-      warnings.push({
-        code: "POSSIBLY_OVER_SCORED",
-        message: `Score ${transparency.value} is high but provenance is ${transparency.provenance} (${transparency.scoreLabel})`,
-        contactId: contact.id,
-        contactName: contact.name,
-      });
+      if (overPrioritizedSamples.length < 3) {
+        overPrioritizedSamples.push(
+          `${contact.name} (raw ${transparency.value}, effective ${effectiveScore}, ${transparency.verificationTier})`,
+        );
+      }
     }
+  }
+
+  if (missingProvenance > 0) {
+    warnings.push({
+      code: "MISSING_PROVENANCE_METADATA",
+      message: `${missingProvenance} contact(s) lack stored score provenance — re-import or backfill metadata. Examples: ${missingProvenanceSamples.join(", ") || "n/a"}`,
+    });
+  }
+  if (lowConfidenceContactMethods > 0) {
+    warnings.push({
+      code: "LOW_CONFIDENCE_CONTACT_METHOD",
+      message: `${lowConfidenceContactMethods} contact(s) have phone/email blocked at current trust tier. ${lowConfidenceMethodSamples.join(" · ")}`,
+    });
+  }
+  if (unsupportedRecommendations > 0) {
+    warnings.push({
+      code: "UNSUPPORTED_RECOMMENDATION",
+      message: `${unsupportedRecommendations} contact(s) use template or non-authoritative recommendation copy. Examples: ${unsupportedSamples.join(", ") || "n/a"}`,
+    });
+  }
+  if (genericRecommendations > 0) {
+    warnings.push({
+      code: "GENERIC_RECOMMENDATION",
+      message: `${genericRecommendations} contact(s) still surface generic follow-up templates. Examples: ${genericSamples.join(", ") || "n/a"}`,
+    });
+  }
+  if (overPrioritized > 0) {
+    warnings.push({
+      code: "OVER_PRIORITIZED_CONTACT",
+      message: `${overPrioritized} import-only contact(s) score ≥80 before trust adjustment. Examples: ${overPrioritizedSamples.join("; ") || "n/a"}`,
+    });
   }
 
   scored.sort((a, b) => b.effectiveScore - a.effectiveScore);
