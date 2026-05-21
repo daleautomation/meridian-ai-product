@@ -75,6 +75,24 @@ check("nicole routes to personal workspace", () => {
   );
 });
 
+check("nicole workspace home is reachable from portal continue", () => {
+  const t = findTenantByCredentials("nicole", "brookside");
+  assert.ok(t);
+  const user = toPublicUser(t);
+  const cards = workspaceSelectCardsForUser(user);
+  assert.equal(cards.length, 1);
+  assert.equal(cards[0].href, "/personal?workspace=nicole-lonergan");
+});
+
+check("john workspace home is reachable from portal continue", () => {
+  const t = findTenantByCredentials("john", "labortech");
+  assert.ok(t);
+  const user = toPublicUser(t);
+  const cards = workspaceSelectCardsForUser(user);
+  assert.equal(cards.length, 1);
+  assert.equal(cards[0].href, "/operator?workspace=labortech");
+});
+
 check("nicole cannot access LaborTech", () => {
   const t = findTenantByCredentials("nicole", "brookside");
   assert.ok(t);

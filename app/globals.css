@@ -4815,6 +4815,28 @@ html, body {
   color: var(--public-blue);
 }
 
+.workspace-login-portal-footer {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--public-border);
+}
+
+.workspace-login-continue-single {
+  margin-top: 20px;
+}
+
+.workspace-login-continue-primary {
+  display: inline-flex;
+  width: 100%;
+  justify-content: center;
+  text-decoration: none;
+  margin-top: 4px;
+}
+
+.workspace-login-next-banner {
+  margin: 16px 0 8px;
+}
+
 .dev-auth-debug {
   max-width: 720px;
   margin: 0 auto 16px;

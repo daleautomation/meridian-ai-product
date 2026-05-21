@@ -49,16 +49,31 @@ async function main() {
     assert.ok(res.ok, `GET /login failed with ${res.status}`);
   });
 
-  await check("nicole / brookside returns 200 and personal redirect", async () => {
+  await check("nicole / brookside returns 200 and client portal redirect", async () => {
     const { res, body } = await postLogin("nicole", "brookside");
     assert.equal(res.status, 200, JSON.stringify(body));
-    assert.equal(body.redirectTo, "/personal?workspace=nicole-lonergan");
+    assert.equal(body.redirectTo, "/login");
   });
 
-  await check("dylan / Meridian returns 200 and workspace-select redirect", async () => {
+  await check("signed-in GET /login shows portal (no auto-redirect to workspace)", async () => {
+    const { res } = await postLogin("nicole", "brookside");
+    assert.equal(res.status, 200);
+    const cookie = cookieHeader(res.headers.get("set-cookie"));
+    assert.ok(cookie, "missing session cookie");
+    const page = await fetch(`${BASE_URL}/login`, { headers: { Cookie: cookie } });
+    assert.equal(page.status, 200);
+    const html = await page.text();
+    assert.match(html, /Signed in/i);
+    assert.match(html, /Nicole Lonergan/i);
+    assert.match(html, /Continue to Nicole Lonergan Workspace/i);
+    assert.match(html, /Sign out/i);
+    assert.doesNotMatch(html, /http-equiv="refresh"/i);
+  });
+
+  await check("dylan / Meridian returns 200 and client portal redirect", async () => {
     const { res, body } = await postLogin("dylan", "Meridian");
     assert.equal(res.status, 200, JSON.stringify(body));
-    assert.equal(body.redirectTo, "/workspace-select");
+    assert.equal(body.redirectTo, "/login");
   });
 
   await check("dylan workspace-select HTML includes Brookside / Nicole", async () => {
@@ -84,10 +99,10 @@ async function main() {
     assert.doesNotMatch(page.html, /advisor-demo/);
   });
 
-  await check("john / labortech returns operator redirect", async () => {
+  await check("john / labortech returns client portal redirect", async () => {
     const { res, body } = await postLogin("john", "labortech");
     assert.equal(res.status, 200, JSON.stringify(body));
-    assert.equal(body.redirectTo, "/operator?workspace=labortech");
+    assert.equal(body.redirectTo, "/login");
   });
 }
 

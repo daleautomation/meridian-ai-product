@@ -1,10 +1,9 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { DevAuthDebug } from "@/components/auth/DevAuthDebug";
+import { SignedInLoginPortal } from "@/components/auth/SignedInLoginPortal";
 import { WorkspaceLoginForm } from "@/components/auth/WorkspaceLoginForm";
 import { getSession } from "@/lib/auth";
-import { resolvePostLoginRedirect } from "@/lib/auth/postLoginRouting";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -14,7 +13,7 @@ export const revalidate = 0;
  * stale customer browser by checking the page's <head> without
  * exposing any debug UI. The token rotates per cache-fix rollout.
  */
-const AUTH_BUILD_MARKER = "brookside-login-fix";
+const AUTH_BUILD_MARKER = "client-portal-login-v2";
 
 export const metadata: Metadata = {
   title: "Sign in · Meridian",
@@ -36,17 +35,17 @@ export default async function LoginPage(props: {
   const params = (await props.searchParams) ?? {};
   const nextRaw = Array.isArray(params.next) ? params.next[0] : params.next;
 
-  if (user) {
-    redirect(resolvePostLoginRedirect(user, nextRaw ?? null));
-  }
-
   return (
     <main className="workspace-login-shell">
-      {/* meridian-auth-build=brookside-login-fix */}
+      {/* meridian-auth-build=client-portal-login-v2 */}
       <DevAuthDebug page="login" />
-      <Suspense fallback={<LoginLoading />}>
-        <WorkspaceLoginForm initialNext={nextRaw ?? null} />
-      </Suspense>
+      {user ? (
+        <SignedInLoginPortal user={user} requestedNext={nextRaw ?? null} />
+      ) : (
+        <Suspense fallback={<LoginLoading />}>
+          <WorkspaceLoginForm initialNext={nextRaw ?? null} />
+        </Suspense>
+      )}
     </main>
   );
 }
