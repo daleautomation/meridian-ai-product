@@ -1,22 +1,39 @@
 // Meridian CRM import — persistence for jobs, contacts, and rollback snapshots.
 //
-// Contacts are stored per workspace (data/crm-contacts/<workspace>.json) with
-// atomic writes. On read-only deploy trees (Vercel), writes fall through to
-// /tmp/meridian-crm-contacts — durable across warm requests, not cold starts.
-// Import execute fails loudly when no writable store is available.
+// Imported contacts are durable in Neon/Postgres when DATABASE_URL or POSTGRES_URL
+// is set. Local development without a database uses per-workspace JSON under
+// data/crm-contacts/. On Vercel without Postgres, contact import fails loudly.
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { safeReadJson, safeWriteJson } from "@/lib/utils/fsSafeWrite";
+import {
+  listContactsNeon,
+  replaceWorkspaceContactsNeon,
+  upsertContactsNeon,
+} from "./crmContactsNeonAdapter";
+import { ensureCrmContactsSchema } from "./initCrmContactsSchema";
+import {
+  assertDurableCrmStorageConfigured,
+  assertWorkspaceSlug,
+  DURABLE_STORAGE_NOT_CONFIGURED,
+  isVercelProduction,
+  useCrmNeonStorage,
+} from "./storageConfig";
 import type { CrmContactRecord, CrmImportJob } from "./types";
+
+function normalizeContactRecord(contact: CrmContactRecord): CrmContactRecord {
+  return {
+    ...contact,
+    scoreMetadata: contact.scoreMetadata ?? null,
+  };
+}
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const JOBS_PATH = path.join(DATA_DIR, "crmImportJobs.json");
 const LEGACY_CONTACTS_PATH = path.join(DATA_DIR, "crmContacts.json");
 const ROLLBACK_DIR = path.join(DATA_DIR, "crmImportRollbacks");
-
-const WORKSPACE_SLUG_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 
 type JobsFile = { jobs: CrmImportJob[] };
 type ContactsFile = { contacts: CrmContactRecord[] };
@@ -30,12 +47,6 @@ const memoryRollbacks = new Map<
 
 let persistenceProbe: boolean | null = null;
 
-function assertWorkspaceSlug(workspaceId: string): void {
-  if (!WORKSPACE_SLUG_RE.test(workspaceId)) {
-    throw new Error(`crm-import: invalid workspace slug "${workspaceId}"`);
-  }
-}
-
 function contactsRepoRoot(): string {
   return path.join(DATA_DIR, "crm-contacts");
 }
@@ -48,10 +59,11 @@ function contactsTmpRoot(): string {
 
 function contactsRoots(): string[] {
   const custom = process.env.MERIDIAN_CRM_CONTACTS_DIR?.trim();
-  const roots = [custom, contactsRepoRoot(), contactsTmpRoot()].filter(
-    (r): r is string => Boolean(r),
-  );
-  return [...new Set(roots)];
+  const roots = [custom, contactsRepoRoot()];
+  if (!isVercelProduction()) {
+    roots.push(contactsTmpRoot());
+  }
+  return [...new Set(roots.filter((r): r is string => Boolean(r)))];
 }
 
 function jobsRepoDir(): string {
@@ -83,9 +95,27 @@ function rollbackFilePath(snapshotId: string): string {
   return path.join(ROLLBACK_DIR, `${safe}.json`);
 }
 
-/** Whether at least one contacts directory is writable on this host. */
+/** Whether imported contacts can be persisted on this host. */
 export async function isCrmImportPersistenceAvailable(): Promise<boolean> {
   if (persistenceProbe !== null) return persistenceProbe;
+
+  if (useCrmNeonStorage()) {
+    try {
+      await ensureCrmContactsSchema();
+      persistenceProbe = true;
+      return true;
+    } catch (e) {
+      console.error("[crm-import] Neon CRM schema unavailable:", e);
+      persistenceProbe = false;
+      return false;
+    }
+  }
+
+  if (isVercelProduction()) {
+    persistenceProbe = false;
+    return false;
+  }
+
   for (const root of contactsRoots()) {
     try {
       await fs.mkdir(root, { recursive: true });
@@ -136,17 +166,16 @@ async function readWorkspaceContactsFromDisk(workspaceId: string): Promise<CrmCo
   const legacy = await safeReadJson<ContactsFile>(LEGACY_CONTACTS_PATH);
   const fromLegacy = (legacy?.contacts ?? []).filter((c) => c.workspaceId === workspaceId);
   if (fromLegacy.length > 0) {
-    await writeWorkspaceContacts(workspaceId, fromLegacy);
+    await writeWorkspaceContactsToFile(workspaceId, fromLegacy);
   }
   return fromLegacy;
 }
 
-async function writeWorkspaceContacts(
+async function writeWorkspaceContactsToFile(
   workspaceId: string,
   contacts: CrmContactRecord[],
 ): Promise<boolean> {
   assertWorkspaceSlug(workspaceId);
-  memoryContactsByWorkspace.set(workspaceId, contacts);
   const payload: ContactsFile = { contacts };
   for (const root of contactsRoots()) {
     const filePath = workspaceContactsPath(root, workspaceId);
@@ -160,9 +189,30 @@ async function writeWorkspaceContacts(
 async function readWorkspaceContacts(workspaceId: string): Promise<CrmContactRecord[]> {
   const cached = memoryContactsByWorkspace.get(workspaceId);
   if (cached) return cached;
-  const disk = await readWorkspaceContactsFromDisk(workspaceId);
-  memoryContactsByWorkspace.set(workspaceId, disk);
-  return disk;
+
+  const records = (
+    useCrmNeonStorage()
+      ? await listContactsNeon(workspaceId)
+      : await readWorkspaceContactsFromDisk(workspaceId)
+  ).map(normalizeContactRecord);
+
+  memoryContactsByWorkspace.set(workspaceId, records);
+  return records;
+}
+
+async function writeWorkspaceContacts(
+  workspaceId: string,
+  contacts: CrmContactRecord[],
+): Promise<boolean> {
+  memoryContactsByWorkspace.set(workspaceId, contacts);
+
+  if (useCrmNeonStorage()) {
+    await ensureCrmContactsSchema();
+    await replaceWorkspaceContactsNeon(workspaceId, contacts);
+    return true;
+  }
+
+  return writeWorkspaceContactsToFile(workspaceId, contacts);
 }
 
 async function readLegacyJobs(): Promise<CrmImportJob[]> {
@@ -228,12 +278,26 @@ export async function listContactsByWorkspace(workspaceId: string): Promise<CrmC
 export async function upsertContacts(records: CrmContactRecord[]): Promise<{ inserted: number; updated: number }> {
   if (records.length === 0) return { inserted: 0, updated: 0 };
 
+  assertDurableCrmStorageConfigured();
+
   const canPersist = await isCrmImportPersistenceAvailable();
   if (!canPersist) {
-    throw new Error(
-      "CRM contacts cannot be saved on this server (no writable storage). " +
-        "Import was not completed — configure MERIDIAN_CRM_CONTACTS_DIR or deploy with a writable data path.",
-    );
+    const message = isVercelProduction()
+      ? DURABLE_STORAGE_NOT_CONFIGURED
+      : "CRM contacts cannot be saved on this server (no writable storage). " +
+        "Import was not completed — configure DATABASE_URL/POSTGRES_URL or MERIDIAN_CRM_CONTACTS_DIR.";
+    throw new Error(message);
+  }
+
+  if (useCrmNeonStorage()) {
+    await ensureCrmContactsSchema();
+    const result = await upsertContactsNeon(records);
+    const workspaceIds = [...new Set(records.map((r) => r.workspaceId))];
+    for (const workspaceId of workspaceIds) {
+      memoryContactsByWorkspace.delete(workspaceId);
+      await readWorkspaceContacts(workspaceId);
+    }
+    return result;
   }
 
   const workspaceIds = [...new Set(records.map((r) => r.workspaceId))];
@@ -278,14 +342,16 @@ export async function createRollbackSnapshot(workspaceId: string): Promise<strin
   };
   memoryRollbacks.set(snapshotId, payload);
 
-  try {
-    await fs.mkdir(ROLLBACK_DIR, { recursive: true });
-    const ok = await safeWriteJson(rollbackFilePath(snapshotId), payload);
-    if (!ok) {
-      console.warn("[crm-import] rollback file write failed; snapshot kept in memory:", snapshotId);
+  if (!useCrmNeonStorage()) {
+    try {
+      await fs.mkdir(ROLLBACK_DIR, { recursive: true });
+      const ok = await safeWriteJson(rollbackFilePath(snapshotId), payload);
+      if (!ok) {
+        console.warn("[crm-import] rollback file write failed; snapshot kept in memory:", snapshotId);
+      }
+    } catch (e) {
+      console.error("[crm-import] rollback file persist skipped:", snapshotId, e);
     }
-  } catch (e) {
-    console.error("[crm-import] rollback file persist skipped:", snapshotId, e);
   }
 
   return snapshotId;
@@ -295,12 +361,31 @@ export async function rollbackImport(snapshotId: string): Promise<{ restored: nu
   const mem = memoryRollbacks.get(snapshotId);
   const snapshot =
     mem ??
-    (await safeReadJson<{ workspaceId: string; contacts: CrmContactRecord[] }>(
-      rollbackFilePath(snapshotId),
-    ));
+    (useCrmNeonStorage()
+      ? null
+      : await safeReadJson<{ workspaceId: string; contacts: CrmContactRecord[] }>(
+          rollbackFilePath(snapshotId),
+        ));
   if (!snapshot) return { restored: 0 };
 
-  const ok = await writeWorkspaceContacts(snapshot.workspaceId, snapshot.contacts);
+  assertDurableCrmStorageConfigured();
+  const canPersist = await isCrmImportPersistenceAvailable();
+  if (!canPersist) {
+    throw new Error(
+      isVercelProduction()
+        ? DURABLE_STORAGE_NOT_CONFIGURED
+        : `Could not restore contacts for workspace "${snapshot.workspaceId}" — storage is not writable.`,
+    );
+  }
+
+  const ok = useCrmNeonStorage()
+    ? await (async () => {
+        await replaceWorkspaceContactsNeon(snapshot.workspaceId, snapshot.contacts);
+        memoryContactsByWorkspace.set(snapshot.workspaceId, snapshot.contacts);
+        return true;
+      })()
+    : await writeWorkspaceContacts(snapshot.workspaceId, snapshot.contacts);
+
   if (!ok) {
     throw new Error(
       `Could not restore contacts for workspace "${snapshot.workspaceId}" — storage is not writable.`,

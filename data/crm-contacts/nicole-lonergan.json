@@ -1,0 +1,340 @@
+{
+  "contacts": [
+    {
+      "id": "crm-persist-check-1",
+      "workspaceId": "nicole-lonergan",
+      "importJobId": "job-persist",
+      "name": "Persist Check",
+      "company": "Brookside",
+      "phone": null,
+      "email": "persist@example.com",
+      "address": null,
+      "notes": null,
+      "tags": [],
+      "lastInteractionAt": null,
+      "sourceCrm": "brookside_csv",
+      "normalizedPhone": null,
+      "normalizedEmail": "persist@example.com",
+      "normalizedCompany": "brookside",
+      "normalizedName": "persist check",
+      "dataTrust": {
+        "name": {
+          "value": "Sam Seller",
+          "source": "crm_import:brookside_csv",
+          "confidence": 55,
+          "trustLevel": "weak",
+          "lastVerifiedAt": "2026-05-21T17:05:21.052Z",
+          "enrichmentProvider": null,
+          "conflictState": "none",
+          "displayAsTrusted": false
+        },
+        "company": {
+          "value": "Brookside Listing",
+          "source": "crm_import:brookside_csv",
+          "confidence": 55,
+          "trustLevel": "weak",
+          "lastVerifiedAt": "2026-05-21T17:05:21.052Z",
+          "enrichmentProvider": null,
+          "conflictState": "none",
+          "displayAsTrusted": false
+        },
+        "phone": {
+          "value": null,
+          "source": "crm_import:brookside_csv",
+          "confidence": 0,
+          "trustLevel": "missing",
+          "lastVerifiedAt": null,
+          "enrichmentProvider": null,
+          "conflictState": "none",
+          "displayAsTrusted": false
+        },
+        "email": {
+          "value": "sam@example.com",
+          "source": "crm_import:brookside_csv",
+          "confidence": 78,
+          "trustLevel": "acceptable",
+          "lastVerifiedAt": "2026-05-21T17:05:21.052Z",
+          "enrichmentProvider": null,
+          "conflictState": "none",
+          "displayAsTrusted": false
+        },
+        "address": {
+          "value": null,
+          "source": "crm_import:brookside_csv",
+          "confidence": 0,
+          "trustLevel": "missing",
+          "lastVerifiedAt": null,
+          "enrichmentProvider": null,
+          "conflictState": "none",
+          "displayAsTrusted": false
+        },
+        "lastInteraction": {
+          "value": "2025-11-01T00:00:00.000Z",
+          "source": "crm_import:brookside_csv",
+          "confidence": 78,
+          "trustLevel": "acceptable",
+          "lastVerifiedAt": "2026-05-21T17:05:21.052Z",
+          "enrichmentProvider": null,
+          "conflictState": "none",
+          "displayAsTrusted": false
+        }
+      },
+      "relationshipScore": 50,
+      "createdAt": "2026-05-21T17:05:21.055Z",
+      "updatedAt": "2026-05-21T17:05:21.055Z",
+      "scoreMetadata": null
+    },
+    {
+      "id": "crm-persist-check-file-mpfw9f2t",
+      "workspaceId": "nicole-lonergan",
+      "importJobId": "job-persist",
+      "name": "Persist Check",
+      "company": "Brookside",
+      "phone": null,
+      "email": "persist@example.com",
+      "address": null,
+      "notes": null,
+      "tags": [],
+      "lastInteractionAt": null,
+      "sourceCrm": "brookside_csv",
+      "normalizedPhone": null,
+      "normalizedEmail": "persist@example.com",
+      "normalizedCompany": "brookside",
+      "normalizedName": "persist check",
+      "dataTrust": {
+        "name": {
+          "value": "Sam Seller",
+          "source": "crm_import:brookside_csv",
+          "confidence": 55,
+          "trustLevel": "weak",
+          "lastVerifiedAt": "2026-05-21T19:39:08.305Z",
+          "enrichmentProvider": null,
+          "conflictState": "none",
+          "displayAsTrusted": false
+        },
+        "company": {
+          "value": "Brookside Listing",
+          "source": "crm_import:brookside_csv",
+          "confidence": 55,
+          "trustLevel": "weak",
+          "lastVerifiedAt": "2026-05-21T19:39:08.305Z",
+          "enrichmentProvider": null,
+          "conflictState": "none",
+          "displayAsTrusted": false
+        },
+        "phone": {
+          "value": null,
+          "source": "crm_import:brookside_csv",
+          "confidence": 0,
+          "trustLevel": "missing",
+          "lastVerifiedAt": null,
+          "enrichmentProvider": null,
+          "conflictState": "none",
+          "displayAsTrusted": false
+        },
+        "email": {
+          "value": "sam@example.com",
+          "source": "crm_import:brookside_csv",
+          "confidence": 78,
+          "trustLevel": "acceptable",
+          "lastVerifiedAt": "2026-05-21T19:39:08.305Z",
+          "enrichmentProvider": null,
+          "conflictState": "none",
+          "displayAsTrusted": false
+        },
+        "address": {
+          "value": null,
+          "source": "crm_import:brookside_csv",
+          "confidence": 0,
+          "trustLevel": "missing",
+          "lastVerifiedAt": null,
+          "enrichmentProvider": null,
+          "conflictState": "none",
+          "displayAsTrusted": false
+        },
+        "lastInteraction": {
+          "value": "2025-11-01T00:00:00.000Z",
+          "source": "crm_import:brookside_csv",
+          "confidence": 78,
+          "trustLevel": "acceptable",
+          "lastVerifiedAt": "2026-05-21T19:39:08.305Z",
+          "enrichmentProvider": null,
+          "conflictState": "none",
+          "displayAsTrusted": false
+        }
+      },
+      "relationshipScore": 50,
+      "createdAt": "2026-05-21T19:39:08.309Z",
+      "updatedAt": "2026-05-21T19:39:08.309Z",
+      "scoreMetadata": null
+    },
+    {
+      "id": "crm-persist-check-file-mpfwkp2d",
+      "workspaceId": "nicole-lonergan",
+      "importJobId": "job-persist",
+      "name": "Persist Check",
+      "company": "Brookside",
+      "phone": null,
+      "email": "persist@example.com",
+      "address": null,
+      "notes": null,
+      "tags": [],
+      "lastInteractionAt": null,
+      "sourceCrm": "brookside_csv",
+      "normalizedPhone": null,
+      "normalizedEmail": "persist@example.com",
+      "normalizedCompany": "brookside",
+      "normalizedName": "persist check",
+      "dataTrust": {
+        "name": {
+          "value": "Sam Seller",
+          "source": "crm_import:brookside_csv",
+          "confidence": 55,
+          "trustLevel": "weak",
+          "lastVerifiedAt": "2026-05-21T19:47:54.466Z",
+          "enrichmentProvider": null,
+          "conflictState": "none",
+          "displayAsTrusted": false
+        },
+        "company": {
+          "value": "Brookside Listing",
+          "source": "crm_import:brookside_csv",
+          "confidence": 55,
+          "trustLevel": "weak",
+          "lastVerifiedAt": "2026-05-21T19:47:54.466Z",
+          "enrichmentProvider": null,
+          "conflictState": "none",
+          "displayAsTrusted": false
+        },
+        "phone": {
+          "value": null,
+          "source": "crm_import:brookside_csv",
+          "confidence": 0,
+          "trustLevel": "missing",
+          "lastVerifiedAt": null,
+          "enrichmentProvider": null,
+          "conflictState": "none",
+          "displayAsTrusted": false
+        },
+        "email": {
+          "value": "sam@example.com",
+          "source": "crm_import:brookside_csv",
+          "confidence": 78,
+          "trustLevel": "acceptable",
+          "lastVerifiedAt": "2026-05-21T19:47:54.466Z",
+          "enrichmentProvider": null,
+          "conflictState": "none",
+          "displayAsTrusted": false
+        },
+        "address": {
+          "value": null,
+          "source": "crm_import:brookside_csv",
+          "confidence": 0,
+          "trustLevel": "missing",
+          "lastVerifiedAt": null,
+          "enrichmentProvider": null,
+          "conflictState": "none",
+          "displayAsTrusted": false
+        },
+        "lastInteraction": {
+          "value": "2025-11-01T00:00:00.000Z",
+          "source": "crm_import:brookside_csv",
+          "confidence": 78,
+          "trustLevel": "acceptable",
+          "lastVerifiedAt": "2026-05-21T19:47:54.466Z",
+          "enrichmentProvider": null,
+          "conflictState": "none",
+          "displayAsTrusted": false
+        }
+      },
+      "relationshipScore": 50,
+      "createdAt": "2026-05-21T19:47:54.469Z",
+      "updatedAt": "2026-05-21T19:47:54.469Z",
+      "scoreMetadata": null
+    },
+    {
+      "id": "crm-persist-check-file-mpfxqcqp",
+      "workspaceId": "nicole-lonergan",
+      "importJobId": "job-persist",
+      "name": "Persist Check",
+      "company": "Brookside",
+      "phone": null,
+      "email": "persist@example.com",
+      "address": null,
+      "notes": null,
+      "tags": [],
+      "lastInteractionAt": null,
+      "sourceCrm": "brookside_csv",
+      "normalizedPhone": null,
+      "normalizedEmail": "persist@example.com",
+      "normalizedCompany": "brookside",
+      "normalizedName": "persist check",
+      "dataTrust": {
+        "name": {
+          "value": "Sam Seller",
+          "source": "crm_import:brookside_csv",
+          "confidence": 55,
+          "trustLevel": "weak",
+          "lastVerifiedAt": "2026-05-21T20:20:18.046Z",
+          "enrichmentProvider": null,
+          "conflictState": "none",
+          "displayAsTrusted": false
+        },
+        "company": {
+          "value": "Brookside Listing",
+          "source": "crm_import:brookside_csv",
+          "confidence": 55,
+          "trustLevel": "weak",
+          "lastVerifiedAt": "2026-05-21T20:20:18.046Z",
+          "enrichmentProvider": null,
+          "conflictState": "none",
+          "displayAsTrusted": false
+        },
+        "phone": {
+          "value": null,
+          "source": "crm_import:brookside_csv",
+          "confidence": 0,
+          "trustLevel": "missing",
+          "lastVerifiedAt": null,
+          "enrichmentProvider": null,
+          "conflictState": "none",
+          "displayAsTrusted": false
+        },
+        "email": {
+          "value": "sam@example.com",
+          "source": "crm_import:brookside_csv",
+          "confidence": 78,
+          "trustLevel": "acceptable",
+          "lastVerifiedAt": "2026-05-21T20:20:18.046Z",
+          "enrichmentProvider": null,
+          "conflictState": "none",
+          "displayAsTrusted": false
+        },
+        "address": {
+          "value": null,
+          "source": "crm_import:brookside_csv",
+          "confidence": 0,
+          "trustLevel": "missing",
+          "lastVerifiedAt": null,
+          "enrichmentProvider": null,
+          "conflictState": "none",
+          "displayAsTrusted": false
+        },
+        "lastInteraction": {
+          "value": "2025-11-01T00:00:00.000Z",
+          "source": "crm_import:brookside_csv",
+          "confidence": 78,
+          "trustLevel": "acceptable",
+          "lastVerifiedAt": "2026-05-21T20:20:18.046Z",
+          "enrichmentProvider": null,
+          "conflictState": "none",
+          "displayAsTrusted": false
+        }
+      },
+      "relationshipScore": 50,
+      "scoreMetadata": null,
+      "createdAt": "2026-05-21T20:20:18.049Z",
+      "updatedAt": "2026-05-21T20:20:18.049Z"
+    }
+  ]
+}

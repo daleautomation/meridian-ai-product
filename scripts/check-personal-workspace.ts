@@ -6,6 +6,13 @@ import { computeWorkspaceReachability } from "../lib/crm-import/reachability";
 import type { CrmContactRecord } from "../lib/crm-import/types";
 import { buildResurfacingBuckets } from "../lib/relationship-intelligence/resurfacing";
 import { TENANTS, toPublicUser } from "../config/tenants";
+import { buildContactScoreTransparency } from "../lib/crm-import/scoreTransparency";
+import {
+  isContactCardProminent,
+  isContactCardSelected,
+  resolveSelectedContact,
+  syncSelectedId,
+} from "../lib/personal-workspace/selection";
 import { buildPersonalWorkspaceModel } from "../lib/personal-workspace/workspace";
 import type { WorkspaceConfig } from "../config/workspaces";
 
@@ -46,6 +53,14 @@ const contact: CrmContactRecord = {
   normalizedName: row.normalizedName,
   dataTrust: row.dataTrust,
   relationshipScore: 72,
+  scoreMetadata: {
+    provenance: "inferred",
+    reasonCodes: ["BASELINE_IMPORT_SCORE"],
+    sourceFieldsUsed: ["email", "lastInteractionAt", "notes"],
+    storedAtImport: true,
+    confidence: "medium",
+    computedAt: new Date().toISOString(),
+  },
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 };
@@ -83,5 +98,24 @@ const diag = computeImportDiagnostics({
   rows: [row],
 });
 assert(diag.isEmailFirstExport, "import diagnostics flag email-first export");
+
+const transparency = buildContactScoreTransparency(contact);
+assert(transparency.scoreLabel.includes("Baseline") || transparency.scoreLabel.includes("import"), "imported score uses honest label");
+assert(!transparency.isAuthoritative, "baseline import score is not authoritative");
+
+const cards = [
+  model.priorityContacts[0],
+  model.allContacts[0],
+].filter(Boolean);
+assert(cards.length >= 1, "cards for selection test");
+const first = cards[0]!;
+const second = model.allContacts[1] ?? { ...first, id: `${first.id}-alt` };
+const list = [first, second];
+assert(isContactCardSelected(first.id, first.id), "selected id matches card");
+assert(!isContactCardSelected(second.id, first.id), "other card not selected");
+assert(isContactCardProminent(0, "priority", first.id, first.id), "first priority card prominent when selected");
+assert(!isContactCardProminent(0, "priority", first.id, second.id), "first card not prominent when second selected");
+assert(resolveSelectedContact(list, second.id)?.id === second.id, "resolve returns clicked card");
+assert(syncSelectedId(list, "missing-id") === first.id, "sync resets to first visible");
 
 console.log("personal-workspace:check passed");

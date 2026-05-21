@@ -9,9 +9,12 @@ import {
   TRUST_CONFIDENCE,
 } from "../lib/crm-import/trust";
 import { validateImportRows } from "../lib/crm-import/validate";
-import { computeRelationshipScore } from "../lib/relationship-intelligence/scoring";
+import { buildContactScoreTransparency, scoreMetadataForImport } from "../lib/crm-import/scoreTransparency";
+import { computeRelationshipScore, scoreFromCrmContact } from "../lib/relationship-intelligence/scoring";
 import { buildResurfacingBuckets } from "../lib/relationship-intelligence/resurfacing";
 import type { ContactDatumTrust, CrmContactRecord, CrmImportJob } from "../lib/crm-import/types";
+import { __resetCrmSchemaReadyForTests } from "../lib/crm-import/initCrmContactsSchema";
+import { useCrmNeonStorage } from "../lib/crm-import/storageConfig";
 import {
   __resetCrmImportMemoryForTests,
   getImportJob,
@@ -85,6 +88,7 @@ const existing: CrmContactRecord = {
   normalizedName: "jane doe",
   dataTrust: row.dataTrust,
   relationshipScore: 70,
+  scoreMetadata: null,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 };
@@ -108,6 +112,25 @@ const intel = computeRelationshipScore({
 });
 assert(intel.total >= 0 && intel.total <= 100, "score in range");
 assert(intel.factors.length >= 6, "factors present");
+
+const importMeta = scoreMetadataForImport(intel);
+assert(importMeta?.storedAtImport === true, "import metadata marks storedAtImport");
+assert(importMeta?.provenance === "inferred", "import scores are inferred baseline");
+
+const scoredContact: CrmContactRecord = {
+  ...existing,
+  importJobId: "job-1",
+  relationshipScore: intel.total,
+  scoreMetadata: importMeta,
+};
+const persistedScore = scoreFromCrmContact(scoredContact);
+assert(
+  persistedScore.explanation.includes("Baseline import score"),
+  "persisted import score explains baseline provenance",
+);
+const transparency = buildContactScoreTransparency(scoredContact);
+assert(!transparency.isAuthoritative, "baseline import transparency is not authoritative");
+assert(transparency.reasonCodes.includes("BASELINE_IMPORT_SCORE"), "baseline reason code present");
 
 const buckets = buildResurfacingBuckets([existing]);
 assert(buckets.length === 6, "six resurfacing buckets");
@@ -146,11 +169,13 @@ assert(noPhoneDiag.emailReachablePct === 100, "Brookside row has email");
 
 async function checkContactsPersistence() {
   __resetCrmImportMemoryForTests();
+  __resetCrmSchemaReadyForTests();
   assert(await isCrmImportPersistenceAvailable(), "CRM persistence must be writable in check env");
 
   const workspaceId = "nicole-lonergan";
+  const contactId = `crm-persist-check-${useCrmNeonStorage() ? "neon" : "file"}-${Date.now().toString(36)}`;
   const contact: CrmContactRecord = {
-    id: "crm-persist-check-1",
+    id: contactId,
     workspaceId,
     importJobId: "job-persist",
     name: "Persist Check",
@@ -168,6 +193,7 @@ async function checkContactsPersistence() {
     normalizedName: "persist check",
     dataTrust: noPhoneRow.dataTrust,
     relationshipScore: 50,
+    scoreMetadata: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -177,8 +203,16 @@ async function checkContactsPersistence() {
 
   __resetCrmImportMemoryForTests();
   const reloaded = await listContactsByWorkspace(workspaceId);
-  assert(reloaded.length >= 1, "contacts survive memory reset via disk");
+  assert(reloaded.length >= 1, "contacts survive memory reset via durable store");
   assert(reloaded.some((c) => c.id === contact.id), "persisted contact id round-trips");
+
+  if (useCrmNeonStorage()) {
+    const otherWorkspace = await listContactsByWorkspace("labortech");
+    assert(
+      !otherWorkspace.some((c) => c.id === contact.id),
+      "nicole contact must not appear in labortech workspace",
+    );
+  }
 }
 
 async function checkImportJobStore() {

@@ -1,8 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { PERSONAL_NAV, personalPalette, type PersonalNavId } from "@/lib/personal-workspace/config";
+import {
+  isContactCardProminent,
+  isContactCardSelected,
+  resolveSelectedContact,
+  syncSelectedId,
+} from "@/lib/personal-workspace/selection";
 import type { PersonalContactCard, PersonalInsightRow, PersonalWorkspaceModel } from "@/lib/personal-workspace/workspace";
 
 interface PersonalWorkspaceProps {
@@ -16,8 +22,14 @@ export default function PersonalWorkspace({ model }: PersonalWorkspaceProps) {
   const sectionMeta = PERSONAL_NAV.find((n) => n.id === activeNav);
 
   const visibleContacts = useMemo(() => contactsForNav(model, activeNav), [model, activeNav]);
+
+  useEffect(() => {
+    const synced = syncSelectedId(visibleContacts, selectedId);
+    if (synced !== selectedId) setSelectedId(synced);
+  }, [visibleContacts, selectedId]);
+
   const selected = useMemo(
-    () => visibleContacts.find((c) => c.id === selectedId) ?? visibleContacts[0] ?? null,
+    () => resolveSelectedContact(visibleContacts, selectedId),
     [visibleContacts, selectedId],
   );
 
@@ -49,7 +61,11 @@ export default function PersonalWorkspace({ model }: PersonalWorkspaceProps) {
             <button
               key={item.id}
               type="button"
-              onClick={() => setActiveNav(item.id)}
+              onClick={() => {
+                setActiveNav(item.id);
+                const nextList = contactsForNav(model, item.id);
+                setSelectedId(syncSelectedId(nextList, selectedId));
+              }}
               style={{
                 ...styles.navButton,
                 ...(active ? styles.navButtonActive : null),
@@ -74,7 +90,11 @@ export default function PersonalWorkspace({ model }: PersonalWorkspaceProps) {
         <SummaryMetric label="Contacts" value={String(model.summary.totalContacts)} />
         <SummaryMetric label="Priority" value={String(model.summary.priorityCount)} />
         <SummaryMetric label="Follow-ups" value={String(model.summary.followUpsDue)} />
-        <SummaryMetric label="Avg. strength" value={`${model.summary.averageStrength}%`} />
+        <SummaryMetric
+          label="Avg. strength"
+          value={`${model.summary.averageStrength}%`}
+          hint={model.crmContactCount > 0 ? "Baseline import scores" : undefined}
+        />
       </section>
 
       {model.resurfacingHighlights.length > 0 ? (
@@ -134,8 +154,8 @@ export default function PersonalWorkspace({ model }: PersonalWorkspaceProps) {
                   key={card.id}
                   card={card}
                   emailPrimaryLabel={copy.emailPrimaryBadge}
-                  selected={selected?.id === card.id}
-                  prominent={index === 0 && activeNav === "priority"}
+                  selected={isContactCardSelected(card.id, selectedId)}
+                  prominent={isContactCardProminent(index, activeNav, card.id, selectedId)}
                   onSelect={() => setSelectedId(card.id)}
                 />
               ))}
@@ -143,7 +163,10 @@ export default function PersonalWorkspace({ model }: PersonalWorkspaceProps) {
           )}
         </div>
 
-        <ContactDetailPanel card={selected} copy={copy} />
+        <ContactDetailPanel
+          card={activeNav === "insights" ? null : selected}
+          copy={copy}
+        />
       </section>
     </main>
   );
@@ -233,7 +256,7 @@ function ContactCard({
           <h3 style={styles.cardName}>{card.name}</h3>
           <div style={styles.muted}>{card.company}</div>
         </div>
-        <span style={styles.actionChip}>{card.suggestedAction}</span>
+        <span style={styles.actionChip}>{card.suggestedActionLabel}</span>
       </div>
       {card.primaryChannel === "email" ? (
         <span style={styles.emailBadge}>{emailPrimaryLabel}</span>
@@ -265,15 +288,37 @@ function ContactDetailPanel({
       <div style={styles.detailHeader}>
         <h2 style={styles.detailTitle}>{card.name}</h2>
         <p style={styles.muted}>{card.company}</p>
-        <span style={styles.strengthPill}>{card.strength}% {copy.strengthLabel}</span>
+        <span style={styles.enrichmentBadge}>{card.enrichmentLabel}</span>
+        <div style={styles.scoreRow}>
+          <span style={styles.strengthPill}>{card.strength}% {copy.strengthLabel}</span>
+          <span style={styles.scoreMeta}>{card.scoreLabel}</span>
+        </div>
+        {!card.scoreIsAuthoritative ? (
+          <p style={styles.scoreDisclaimer}>{card.scoreExplanation}</p>
+        ) : null}
       </div>
 
-      <DetailBlock title="Suggested next step">
+      <DetailBlock title={card.nextStepIsTemplate ? "Suggested follow-up template" : "Suggested next step"}>
         <p style={styles.detailBody}>{card.nextStep}</p>
+        {card.nextStepIsTemplate ? (
+          <p style={styles.templateNote}>{copy.templateNote}</p>
+        ) : null}
       </DetailBlock>
 
       <DetailBlock title="Angle">
         <p style={styles.detailBody}>{card.angle}</p>
+      </DetailBlock>
+
+      <DetailBlock title="Scoring basis">
+        <div style={styles.detailRow}>Provenance: {card.scoreProvenance}</div>
+        {card.scoreReasonCodes.length > 0 ? (
+          <div style={styles.detailRow}>
+            Reasons: {card.scoreReasonCodes.join(", ")}
+          </div>
+        ) : (
+          <div style={styles.detailRow}>No reason codes recorded</div>
+        )}
+        <div style={styles.detailRow}>Confidence: {card.source.confidence}</div>
       </DetailBlock>
 
       <DetailBlock title="Reachability">
@@ -326,11 +371,12 @@ function DetailBlock({ title, children }: { title: string; children: React.React
   );
 }
 
-function SummaryMetric({ label, value }: { label: string; value: string }) {
+function SummaryMetric({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div style={styles.metric}>
       <div style={styles.metricValue}>{value}</div>
       <div style={styles.metricLabel}>{label}</div>
+      {hint ? <div style={styles.metricHint}>{hint}</div> : null}
     </div>
   );
 }
@@ -735,6 +781,44 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 700,
     letterSpacing: "0.06em",
     textTransform: "uppercase",
+  },
+  enrichmentBadge: {
+    display: "inline-block",
+    marginTop: "8px",
+    padding: "4px 10px",
+    borderRadius: "999px",
+    background: personalPalette.surfaceMuted,
+    fontSize: "11px",
+    fontWeight: 600,
+    color: personalPalette.textMuted,
+  },
+  scoreRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: "8px",
+    marginTop: "10px",
+  },
+  scoreMeta: {
+    fontSize: "12px",
+    color: personalPalette.textMuted,
+  },
+  scoreDisclaimer: {
+    margin: "8px 0 0",
+    fontSize: "12px",
+    lineHeight: 1.4,
+    color: personalPalette.warning,
+  },
+  templateNote: {
+    margin: "8px 0 0",
+    fontSize: "12px",
+    color: personalPalette.textMuted,
+    fontStyle: "italic",
+  },
+  metricHint: {
+    marginTop: "4px",
+    fontSize: "10px",
+    color: personalPalette.textMuted,
   },
   detailMeta: {
     display: "flex",

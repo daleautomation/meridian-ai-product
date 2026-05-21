@@ -14,6 +14,15 @@ import {
   type FreshnessState,
 } from "@/lib/display/trustVisibility";
 import type { ResurfacingBucket } from "@/lib/relationship-intelligence/resurfacing";
+import {
+  buildContactScoreTransparency,
+  deriveEnrichmentStatus,
+  enrichmentStatusLabel,
+  honestSuggestedActionLabel,
+  isGenericRecommendation,
+  type ContactScoreTransparency,
+  type EnrichmentStatus,
+} from "@/lib/crm-import/scoreTransparency";
 import { scoreFromCrmContact } from "@/lib/relationship-intelligence/scoring";
 import { workspaceImportPath } from "@/lib/workspaceRouting";
 import { personalCopyForWorkspace, PERSONAL_NAV, type PersonalNavId } from "./config";
@@ -48,6 +57,15 @@ export interface PersonalContactCard {
     confidence: string;
     missingFields: number;
   };
+  enrichmentStatus: EnrichmentStatus;
+  enrichmentLabel: string;
+  scoreLabel: string;
+  scoreExplanation: string;
+  scoreProvenance: ContactScoreTransparency["provenance"];
+  scoreReasonCodes: string[];
+  scoreIsAuthoritative: boolean;
+  nextStepIsTemplate: boolean;
+  suggestedActionLabel: string;
 }
 
 export interface PersonalInsightRow {
@@ -135,7 +153,9 @@ export function buildPersonalWorkspaceModel(args: {
   const allContacts = crmContacts
     .slice()
     .sort((a, b) => prioritySortScore(b, phoneLight) - prioritySortScore(a, phoneLight))
-    .map((contact, index) => crmContactToCard(contact, index + 1, { phoneLight, copy }));
+    .map((contact, index) =>
+      crmContactToCard(contact, index + 1, { phoneLight, copy, workspaceSlug: workspace.slug }),
+    );
 
   const priorityContacts = allContacts.slice(0, 8);
 
@@ -171,14 +191,14 @@ export function buildPersonalWorkspaceModel(args: {
   });
 
   const insights: PersonalInsightRow[] = crmContacts.slice(0, 12).map((contact) => {
-    const score = scoreFromCrmContact(contact);
+    const transparency = buildContactScoreTransparency(contact);
     return {
       id: `insight-${contact.id}`,
       contactId: contact.id,
       name: contact.name,
       company: contact.company,
-      insight: score.explanation,
-      strength: contact.relationshipScore ?? score.total,
+      insight: transparency.explanation,
+      strength: transparency.value,
     };
   });
 
@@ -188,12 +208,17 @@ export function buildPersonalWorkspaceModel(args: {
   const dormantCount = dormantOpportunities.length;
   const needsEnrichment = missingInformation.length;
 
+  const importedOnlyCount = crmContacts.filter(
+    (c) => deriveEnrichmentStatus(c) === "imported_only",
+  ).length;
+
   const heroAnswer = buildHeroAnswer({
     priorityContacts,
     crmContactCount: crmContacts.length,
     phoneLight,
     resurfacingHighlights,
     copy,
+    importedOnlyCount,
   });
 
   return {
@@ -257,6 +282,7 @@ function buildHeroAnswer(args: {
   phoneLight: boolean;
   resurfacingHighlights: PersonalResurfacingHighlight[];
   copy: ReturnType<typeof personalCopyForWorkspace>;
+  importedOnlyCount: number;
 }): string {
   const top = args.priorityContacts[0];
   if (top) {
@@ -264,7 +290,11 @@ function buildHeroAnswer(args: {
       args.phoneLight && top.primaryChannel === "email"
         ? " — email-first resurfacing"
         : "";
-    return `${top.name} at ${top.company} — ${top.reasons[0] ?? "strongest relationship signal right now"}${channelHint}`;
+    const enrichmentHint =
+      args.importedOnlyCount === args.crmContactCount && args.crmContactCount > 0
+        ? " (baseline import scores — not enriched yet)"
+        : "";
+    return `${top.name} at ${top.company} — ${top.scoreLabel}${channelHint}${enrichmentHint}`;
   }
   if (args.crmContactCount === 0) {
     return "Import contacts to start prioritizing your network.";
@@ -331,9 +361,10 @@ function navCount(
 function crmContactToCard(
   contact: CrmContactRecord,
   rank: number,
-  ctx: { phoneLight: boolean; copy: ReturnType<typeof personalCopyForWorkspace> },
+  ctx: { phoneLight: boolean; copy: ReturnType<typeof personalCopyForWorkspace>; workspaceSlug: string },
 ): PersonalContactCard {
   const score = scoreFromCrmContact(contact);
+  const transparency = buildContactScoreTransparency(contact);
   const state = freshnessStateFor(ageDaysFromIso(contact.lastInteractionAt ?? contact.updatedAt));
   const trustWarnings = Object.entries(contact.dataTrust)
     .filter(([, datum]) => !datum.displayAsTrusted)
@@ -366,6 +397,8 @@ function crmContactToCard(
   }
 
   const nextStep = buildNextStep(contact, suggestedAction, { hasPhone, hasEmail, phoneLight: ctx.phoneLight });
+  const nextStepIsTemplate = isGenericRecommendation(nextStep)
+    || transparency.enrichmentStatus === "imported_only";
 
   const reachabilityNote =
     !hasPhone && hasEmail
@@ -374,18 +407,28 @@ function crmContactToCard(
         ? "No phone or email on file — enrich before outreach."
         : null;
 
+  const stage =
+    transparency.enrichmentStatus === "enriched" || transparency.enrichmentStatus === "verified"
+      ? score.confidence === "high" ? "Strong signal" : "Needs review"
+      : transparency.enrichmentStatus === "imported_only"
+        ? "Imported only"
+        : transparency.enrichmentStatus === "needs_review"
+          ? "Needs review"
+          : "Baseline import";
+
   return {
-    id: `nicole-${contact.id}`,
+    id: `${ctx.workspaceSlug}-${contact.id}`,
     contactId: contact.id,
     rank,
     name: contact.name,
     company: contact.company,
     relationshipLabel: contact.sourceCrm ? `From ${contact.sourceCrm}` : "Imported contact",
-    strength: contact.relationshipScore ?? score.total,
+    strength: transparency.value,
     timing: rank === 1 ? "Soon" : rank <= 3 ? "This week" : "When ready",
-    stage: score.confidence === "high" ? "Strong signal" : "Needs review",
+    stage,
     reasons: compact([
-      score.explanation,
+      transparency.scoreLabel,
+      transparency.explanation,
       contact.tags[0] ? `Tagged: ${contact.tags[0]}` : null,
       contact.lastInteractionAt
         ? `Last touch ${relativeDate(contact.lastInteractionAt)}`
@@ -397,16 +440,11 @@ function crmContactToCard(
     primaryChannel,
     reachabilityNote,
     suggestedAction,
+    suggestedActionLabel: honestSuggestedActionLabel(suggestedAction, transparency),
     nextStep,
-    angle:
-      primaryChannel === "email"
-        ? score.factors[0]?.explanation ?? "Reference your last email or meeting note — keep the ask small."
-        : score.factors[0]?.explanation ?? "Lead with the clearest verified signal you have.",
-    signals: score.missingDataFlags.length > 0
-      ? score.missingDataFlags.slice(0, 3)
-      : primaryChannel === "email"
-        ? ["Email on file", "Relationship scored"]
-        : ["Imported CRM", "Relationship scored"],
+    nextStepIsTemplate,
+    angle: buildAngle(contact, primaryChannel, transparency, score),
+    signals: buildSignals(contact, primaryChannel, transparency, score),
     history: compact([
       contact.notes ? contact.notes.slice(0, 140) : null,
       contact.lastInteractionAt ? `Last interaction ${relativeDate(contact.lastInteractionAt)}` : null,
@@ -414,14 +452,62 @@ function crmContactToCard(
     activityMemory: buildActivityMemory(contact),
     trustNotes: trustWarnings.length > 0
       ? trustWarnings
-      : ["Contact fields meet minimum trust for display."],
+      : transparency.enrichmentStatus === "imported_only"
+        ? ["Imported fields only — not enriched or verified."]
+        : ["Contact fields meet minimum trust for display."],
     source: {
       freshnessLabel: freshnessLabel(state, ageDaysFromIso(contact.lastInteractionAt ?? contact.updatedAt)),
       freshnessState: state,
-      confidence: score.confidence,
+      confidence: transparency.confidence,
       missingFields,
     },
+    enrichmentStatus: transparency.enrichmentStatus,
+    enrichmentLabel: enrichmentStatusLabel(transparency.enrichmentStatus),
+    scoreLabel: transparency.scoreLabel,
+    scoreExplanation: transparency.explanation,
+    scoreProvenance: transparency.provenance,
+    scoreReasonCodes: transparency.reasonCodes,
+    scoreIsAuthoritative: transparency.isAuthoritative,
   };
+}
+
+function buildAngle(
+  contact: CrmContactRecord,
+  primaryChannel: PersonalPrimaryChannel,
+  transparency: ContactScoreTransparency,
+  score: ReturnType<typeof scoreFromCrmContact>,
+): string {
+  if (transparency.enrichmentStatus === "imported_only") {
+    if (contact.notes?.trim()) {
+      return `From import notes: ${contact.notes.trim().slice(0, 120)}${contact.notes.length > 120 ? "…" : ""}`;
+    }
+    return "No enrichment yet — use imported notes and last activity only.";
+  }
+  if (primaryChannel === "email") {
+    return score.factors[0]?.explanation ?? "Reference your last email or meeting note — keep the ask small.";
+  }
+  return score.factors[0]?.explanation ?? "Lead with the clearest verified signal you have.";
+}
+
+function buildSignals(
+  contact: CrmContactRecord,
+  primaryChannel: PersonalPrimaryChannel,
+  transparency: ContactScoreTransparency,
+  score: ReturnType<typeof scoreFromCrmContact>,
+): string[] {
+  if (score.missingDataFlags.length > 0) {
+    return score.missingDataFlags.slice(0, 3);
+  }
+  if (transparency.enrichmentStatus === "imported_only") {
+    return compact([
+      contact.sourceCrm ? `Imported from ${contact.sourceCrm}` : "Imported from CRM",
+      primaryChannel === "email" ? "Email on file" : null,
+      "Not enriched yet",
+    ]);
+  }
+  return primaryChannel === "email"
+    ? ["Email on file", "Baseline import score"]
+    : ["Imported CRM", "Baseline import score"];
 }
 
 function buildNextStep(

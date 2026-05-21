@@ -16,6 +16,8 @@
     "operational-events:command-translation": "tsx scripts/check-operational-command-to-event-translation.ts",
     "contact-trust:check": "tsx scripts/check-contact-trust.ts",
     "crm-import:check": "tsx scripts/check-crm-import.ts",
+    "crm-import:audit": "tsx scripts/crm-import-audit.ts",
+    "crm:schema:init": "tsx scripts/init-crm-contacts-schema.ts",
     "personal-workspace:check": "tsx scripts/check-personal-workspace.ts",
     "auth:check": "tsx scripts/check-workspace-auth.ts",
     "auth:live": "tsx scripts/check-live-auth.ts"

@@ -122,6 +122,15 @@ export type CrmImportJob = {
   mergeRecommendations: MergeRecommendation[];
 };
 
+export type ContactScoreMetadata = {
+  provenance: "imported" | "inferred" | "enriched" | "default";
+  reasonCodes: string[];
+  sourceFieldsUsed: string[];
+  storedAtImport: boolean;
+  confidence: "high" | "medium" | "low" | "unknown";
+  computedAt: string;
+};
+
 export type CrmContactRecord = {
   id: string;
   workspaceId: string;
@@ -141,6 +150,7 @@ export type CrmContactRecord = {
   normalizedName: string | null;
   dataTrust: NormalizedCrmContact["dataTrust"];
   relationshipScore: number | null;
+  scoreMetadata: ContactScoreMetadata | null;
   createdAt: string;
   updatedAt: string;
 };

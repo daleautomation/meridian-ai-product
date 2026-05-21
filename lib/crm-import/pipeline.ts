@@ -23,6 +23,7 @@ import type {
   ImportPreviewResult,
   NormalizedCrmContact,
 } from "./types";
+import { scoreMetadataForImport } from "@/lib/crm-import/scoreTransparency";
 import { computeRelationshipScore } from "@/lib/relationship-intelligence/scoring";
 
 export function buildPreviewFromJob(job: CrmImportJob): ImportPreviewResult {
@@ -167,6 +168,18 @@ export async function executeImport(args: {
         normalizedName: row.normalizedName,
         dataTrust: row.dataTrust,
         relationshipScore: score.total,
+        scoreMetadata: {
+          ...scoreMetadataForImport(score),
+          sourceFieldsUsed: [
+            ...(row.lastInteractionAt ? ["lastInteractionAt"] : []),
+            ...(row.tags.length > 0 ? ["tags"] : []),
+            ...(row.notes?.trim() ? ["notes"] : []),
+            ...(row.normalizedPhone ? ["phone"] : []),
+            ...(row.normalizedEmail ? ["email"] : []),
+            ...(row.company?.trim() ? ["company"] : []),
+            ...(row.name?.trim() ? ["name"] : []),
+          ],
+        },
         createdAt: now,
         updatedAt: now,
       };
