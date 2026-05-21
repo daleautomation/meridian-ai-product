@@ -3,8 +3,15 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { palette } from "@/lib/theme";
+import { fetchApiJson } from "@/lib/crm-import/fetchJson";
 import { formatTrustChipDisplay } from "@/lib/crm-import/trust";
-import type { ContactDatumTrust, ImportDiagnostics, ImportPreviewResult } from "@/lib/crm-import/types";
+import type {
+  ContactDatumTrust,
+  CrmImportJob,
+  ImportDiagnostics,
+  ImportExecuteResult,
+  ImportPreviewResult,
+} from "@/lib/crm-import/types";
 
 type Step = "upload" | "mapping" | "preview" | "importing" | "done";
 
@@ -94,14 +101,17 @@ export default function CrmImportWizard({
       }
 
       try {
-        const res = await fetch(
+        const status = await fetchApiJson<{ preview?: ImportPreviewResult; job?: CrmImportJob }>(
           `/api/crm-import/status?jobId=${encodeURIComponent(draft.jobId)}&workspaceId=${encodeURIComponent(workspaceId)}`,
         );
-        const data = await res.json();
-        if (!res.ok || !data.preview) {
+        if (!status.ok || !status.data.preview) {
           clearDraft(workspaceId);
           if (!cancelled) {
-            setError(data.error ?? "Saved import preview expired. Upload your CSV again.");
+            setError(
+              status.ok
+                ? "Saved import preview expired. Upload your CSV again."
+                : status.error,
+            );
             setHydrating(false);
           }
           return;
@@ -109,16 +119,17 @@ export default function CrmImportWizard({
 
         if (cancelled) return;
         setJobId(draft.jobId);
-        setPreview(data.preview);
-        setSourceLabel(draft.sourceLabel || data.job?.sourceLabel || "manual_csv");
+        setPreview(status.data.preview);
+        setSourceLabel(draft.sourceLabel || status.data.job?.sourceLabel || "manual_csv");
         if (draft.step === "preview" || draft.step === "importing") {
           setStep("preview");
         } else if (draft.step === "mapping") {
           setStep("mapping");
         }
-      } catch {
+      } catch (err) {
         if (!cancelled) {
           clearDraft(workspaceId);
+          setError(err instanceof Error ? err.message : "Could not restore saved import preview.");
         }
       } finally {
         if (!cancelled) setHydrating(false);
@@ -148,18 +159,17 @@ export default function CrmImportWizard({
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/crm-import/preview", {
+      const result = await fetchApiJson<{ preview: ImportPreviewResult }>("/api/crm-import/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ workspaceId, sourceLabel, csv: csvText }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Preview failed");
-      setPreview(data.preview);
-      setJobId(data.preview.jobId);
+      if (!result.ok) throw new Error(result.error);
+      setPreview(result.data.preview);
+      setJobId(result.data.preview.jobId);
       setStep("preview");
       persistDraft({
-        jobId: data.preview.jobId,
+        jobId: result.data.preview.jobId,
         step: "preview",
         sourceLabel,
       });
@@ -171,23 +181,25 @@ export default function CrmImportWizard({
   }
 
   async function ensureJobReady(currentJobId: string): Promise<string | null> {
-    const statusRes = await fetch(
+    const status = await fetchApiJson<{ preview?: ImportPreviewResult }>(
       `/api/crm-import/status?jobId=${encodeURIComponent(currentJobId)}&workspaceId=${encodeURIComponent(workspaceId)}`,
     );
-    if (statusRes.ok) return currentJobId;
+    if (status.ok && status.data.preview) return currentJobId;
 
     if (csvText.trim()) {
-      const previewRes = await fetch("/api/crm-import/preview", {
+      const preview = await fetchApiJson<{ preview: ImportPreviewResult }>("/api/crm-import/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ workspaceId, sourceLabel, csv: csvText }),
       });
-      const data = await previewRes.json();
-      if (previewRes.ok && data.preview?.jobId) {
-        setPreview(data.preview);
-        setJobId(data.preview.jobId);
-        persistDraft({ jobId: data.preview.jobId, step: "preview", sourceLabel });
-        return data.preview.jobId;
+      if (preview.ok && preview.data.preview?.jobId) {
+        setPreview(preview.data.preview);
+        setJobId(preview.data.preview.jobId);
+        persistDraft({ jobId: preview.data.preview.jobId, step: "preview", sourceLabel });
+        return preview.data.preview.jobId;
+      }
+      if (!preview.ok) {
+        setError(preview.error);
       }
     }
 
@@ -207,14 +219,13 @@ export default function CrmImportWizard({
       const activeJobId = await ensureJobReady(jobId);
       if (!activeJobId) return;
 
-      const res = await fetch("/api/crm-import/execute", {
+      const executed = await fetchApiJson<{ result: ImportExecuteResult }>("/api/crm-import/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jobId: activeJobId, skipDuplicateRows: true }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Import failed");
-      setImportResult(data.result);
+      if (!executed.ok) throw new Error(executed.error);
+      setImportResult(executed.data.result);
       setStep("done");
       clearDraft(workspaceId);
     } catch (e) {
@@ -231,13 +242,15 @@ export default function CrmImportWizard({
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/crm-import/rollback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Rollback failed");
+      const rolledBack = await fetchApiJson<{ result: { restored: number; state: string } }>(
+        "/api/crm-import/rollback",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jobId }),
+        },
+      );
+      if (!rolledBack.ok) throw new Error(rolledBack.error);
       setImportResult(null);
       setStep("upload");
       setPreview(null);

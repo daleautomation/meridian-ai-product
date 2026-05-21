@@ -1,24 +1,24 @@
-import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { errorMessage, jsonError, jsonOk, parseRequestJson } from "@/lib/crm-import/apiJson";
 import { rollbackImportJob } from "@/lib/crm-import/pipeline";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const user = await getSession();
-  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-
-  const body = await req.json().catch(() => null);
-  const jobId = String(body?.jobId ?? "").trim();
-  if (!jobId) {
-    return NextResponse.json({ error: "jobId is required" }, { status: 400 });
-  }
-
   try {
+    const user = await getSession();
+    if (!user) return jsonError("unauthorized", 401);
+
+    const body = await parseRequestJson(req);
+    const jobId = String(body?.jobId ?? "").trim();
+    if (!jobId) {
+      return jsonError("jobId is required", 400);
+    }
+
     const result = await rollbackImportJob(jobId);
-    return NextResponse.json({ ok: true, result });
+    return jsonOk({ result });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[crm-import/rollback]", err);
+    return jsonError(errorMessage(err), 500);
   }
 }

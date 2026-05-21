@@ -11,7 +11,12 @@ import {
 import { validateImportRows } from "../lib/crm-import/validate";
 import { computeRelationshipScore } from "../lib/relationship-intelligence/scoring";
 import { buildResurfacingBuckets } from "../lib/relationship-intelligence/resurfacing";
-import type { ContactDatumTrust, CrmContactRecord } from "../lib/crm-import/types";
+import type { ContactDatumTrust, CrmContactRecord, CrmImportJob } from "../lib/crm-import/types";
+import {
+  __resetCrmImportMemoryForTests,
+  getImportJob,
+  saveImportJob,
+} from "../lib/crm-import/store";
 
 function assert(condition: boolean, message: string) {
   if (!condition) throw new Error(message);
@@ -136,6 +141,40 @@ assert(noPhoneDiag.highPhoneMissingRate, "100% missing phones triggers warning")
 assert(noPhoneDiag.isEmailFirstExport, "Brookside-style export is email-first");
 assert(noPhoneDiag.emailReachablePct === 100, "Brookside row has email");
 
-console.log("crm-import:check passed");
-console.log("Brookside-style headers:", noPhoneHeaders.join(", "));
-console.log("Mapping:", JSON.stringify(noPhoneMapping));
+async function checkImportJobStore() {
+  __resetCrmImportMemoryForTests();
+  const job: CrmImportJob = {
+    id: "import-test-ws-abc",
+    workspaceId: "test-ws",
+    sourceLabel: "check",
+    state: "previewing",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    rowCount: 1,
+    importedCount: 0,
+    skippedCount: 0,
+    duplicateCount: 0,
+    rollbackSnapshotId: null,
+    error: null,
+    headers,
+    columnMapping: mapping,
+    previewSample: [row],
+    normalizedRows: [row],
+    dedupePairs: [],
+    mergeRecommendations: [],
+  };
+  await saveImportJob(job);
+  const roundTrip = await getImportJob(job.id);
+  assert(roundTrip?.id === job.id, "import job round-trips via in-memory store");
+}
+
+checkImportJobStore()
+  .then(() => {
+    console.log("crm-import:check passed");
+    console.log("Brookside-style headers:", noPhoneHeaders.join(", "));
+    console.log("Mapping:", JSON.stringify(noPhoneMapping));
+  })
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
