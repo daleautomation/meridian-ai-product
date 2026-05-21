@@ -5,6 +5,7 @@ import { detectColumnMapping, normalizeCrmRow } from "../lib/crm-import/normaliz
 import { computeWorkspaceReachability } from "../lib/crm-import/reachability";
 import type { CrmContactRecord } from "../lib/crm-import/types";
 import { buildResurfacingBuckets } from "../lib/relationship-intelligence/resurfacing";
+import { TENANTS, toPublicUser } from "../config/tenants";
 import { buildPersonalWorkspaceModel } from "../lib/personal-workspace/workspace";
 import type { WorkspaceConfig } from "../config/workspaces";
 
@@ -62,7 +63,7 @@ const model = buildPersonalWorkspaceModel({
     access: { readOnlyByDefault: false },
     branding: { displayName: "Nicole Lonergan Workspace", companyName: "Brookside Real Estate" },
   } as WorkspaceConfig,
-  user: { id: "nicole", name: "Nicole", workspaces: ["nicole-lonergan"] },
+  user: toPublicUser(TENANTS.nicole),
   crmContacts: [contact],
   resurfacingBuckets: buckets,
 });
