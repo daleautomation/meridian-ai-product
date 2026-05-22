@@ -29,7 +29,11 @@
 
 - [ ] File created at `config/signals/nicole-lonergan.ts`.
 - [ ] Default-exports a `WorkspaceSignalConfig` with `slug: "nicole-lonergan"`.
-- [ ] Includes every name listed in the task description, no more, no fewer.
+- [ ] Declares exactly these signal names — no more, no fewer:
+      `seller_probability`, `nod_filing`, `mortgage_release`, `permit_pulled`,
+      `neighborhood_comparable_sale`, `prior_client_recency`,
+      `crm_interest_signal`, `stale_relationship`, `investor_indicator`,
+      `repeat_client_probability`, `verified_email`, `verified_phone`.
 - [ ] Every signal has a tier reference (HIGH / MED / WEAK) matching
       [`SIGNAL_TRUST_RULES.md`](./SIGNAL_TRUST_RULES.md) §3.1.
 - [ ] Every weight is an integer 0–100.
@@ -37,7 +41,7 @@
 - [ ] No BANNED source referenced.
 - [ ] An inline comment near each weight cites why that weight reflects
       residential-brokerage operator priorities.
-- [ ] `last_touch_age` is declared as an inverse-time ramp per §5 of the
+- [ ] `stale_relationship` is declared as an inverse-time ramp per §5 of the
       trust rules; ramp function is also declared in this file.
 
 ## T3 — LaborTech (roofing only) signal config
@@ -46,11 +50,17 @@
 - [ ] Default-exports a `WorkspaceSignalConfig` with `slug: "labortech"`.
 - [ ] Roofing-only. No `hvac`, `plumbing`, `painting`, `electrical`, or
       `carpentry` field present.
+- [ ] Declares exactly these signal names — no more, no fewer:
+      `permit_pulled`, `storm_event`, `active_google_ads`, `weak_google_rating`,
+      `high_review_count`, `website_quality_gap`, `missing_ssl`, `missing_schema`,
+      `missing_google_business_profile`, `recent_business_filing`,
+      `license_recently_issued`, `stale_operator_touch`, `verified_phone`,
+      `verified_email`, `service_area_match`.
 - [ ] Every signal name has a §3.1 tier reference.
 - [ ] Every weight 0–100. Every `halfLifeDays` > 0 and ≤ 1825.
-- [ ] `paid_ad_presence` weight ≤ `permit_pulled` weight. (Permits are
+- [ ] `active_google_ads` weight ≤ `permit_pulled` weight. (Permits are
       ground truth; ads are inferred intent.)
-- [ ] `last_touch_age` declared as inverse-time ramp.
+- [ ] `stale_operator_touch` declared as inverse-time ramp.
 
 ## T4 — Decay function
 
