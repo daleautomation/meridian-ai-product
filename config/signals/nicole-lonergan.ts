@@ -34,6 +34,32 @@ export type BrooksideSignalDefinition = SignalDefinition & {
 
 const BROOKSIDE_SIGNALS: readonly BrooksideSignalDefinition[] = [
   {
+    name: "long_term_owner",
+    category: "public_record",
+    source: "county_recorder:king_wa",
+    sourceTier: "HIGH",
+    defaultWeight: 94, // Seller-timing: extended tenure on title from recorder start date.
+    defaultHalfLifeDays: 365,
+    allowedSourceTiers: ["HIGH"],
+    explanationTemplate:
+      "Recorded ownership began on {observedAt}; {recordId} documents {ownershipDurationYears} years on title.",
+    evidenceLabel: "Long-term ownership",
+    confidenceFloor: "HIGH",
+  },
+  {
+    name: "ownership_duration",
+    category: "public_record",
+    source: "county_recorder:king_wa",
+    sourceTier: "HIGH",
+    defaultWeight: 93, // Seller-timing: verified years-on-title from county recorder.
+    defaultHalfLifeDays: 365,
+    allowedSourceTiers: ["HIGH"],
+    explanationTemplate:
+      "Ownership duration derived from recorder start date on {observedAt} (parcel {recordId}).",
+    evidenceLabel: "Ownership duration",
+    confidenceFloor: "HIGH",
+  },
+  {
     name: "seller_probability",
     category: "public_record",
     source: "county_recorder:king_wa",
@@ -60,17 +86,69 @@ const BROOKSIDE_SIGNALS: readonly BrooksideSignalDefinition[] = [
     confidenceFloor: "HIGH",
   },
   {
+    name: "property_turnover_alignment",
+    category: "public_record",
+    source: "county_recorder:king_wa",
+    sourceTier: "HIGH",
+    defaultWeight: 89, // Seller-timing: tenure or assessed-value context aligned with turnover patterns.
+    defaultHalfLifeDays: 180,
+    allowedSourceTiers: ["HIGH", "MED"],
+    explanationTemplate:
+      "Property turnover context recorded on {observedAt} (instrument {recordId}).",
+    evidenceLabel: "Property turnover context",
+    confidenceFloor: "HIGH",
+  },
+  {
+    name: "refinancing_signal",
+    category: "mortgage",
+    source: "county_recorder:king_wa",
+    sourceTier: "HIGH",
+    defaultWeight: 88, // Seller-timing: recorded mortgage satisfaction or release on the parcel.
+    defaultHalfLifeDays: 90,
+    allowedSourceTiers: ["HIGH"],
+    explanationTemplate:
+      "Mortgage satisfaction or release recorded on {observedAt} (instrument {recordId}).",
+    evidenceLabel: "Refinancing / release filing",
+    confidenceFloor: "HIGH",
+  },
+  {
     name: "mortgage_release",
     category: "mortgage",
     source: "county_recorder:king_wa",
     sourceTier: "HIGH",
-    defaultWeight: 88, // Release can signal payoff and a potential move or sale.
+    defaultWeight: 86, // Release can signal payoff and a potential move or sale.
     defaultHalfLifeDays: 90,
     allowedSourceTiers: ["HIGH"],
     explanationTemplate:
       "Mortgage satisfaction or release recorded on {observedAt} (instrument {recordId}).",
     evidenceLabel: "Mortgage release",
     confidenceFloor: "HIGH",
+  },
+  {
+    name: "permit_activity",
+    category: "permit",
+    source: "permit:shovels",
+    sourceTier: "HIGH",
+    defaultWeight: 85, // Seller-timing: building permit tied to the normalized parcel address.
+    defaultHalfLifeDays: 90,
+    allowedSourceTiers: ["HIGH"],
+    explanationTemplate:
+      "Building permit issued for this address on {observedAt} (permit {recordId}).",
+    evidenceLabel: "Permit activity",
+    confidenceFloor: "HIGH",
+  },
+  {
+    name: "neighborhood_velocity_alignment",
+    category: "public_record",
+    source: "county_recorder:king_wa",
+    sourceTier: "MED",
+    defaultWeight: 83, // Seller-timing: nearby parcel transfer velocity in a fixed lookback window.
+    defaultHalfLifeDays: 180,
+    allowedSourceTiers: ["MED", "HIGH"],
+    explanationTemplate:
+      "Neighborhood parcel transfer activity documented on {observedAt} (record {recordId}).",
+    evidenceLabel: "Neighborhood transfer velocity",
+    confidenceFloor: "MED",
   },
   {
     name: "permit_pulled",

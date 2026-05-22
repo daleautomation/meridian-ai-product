@@ -25,9 +25,15 @@ const BANNED_PHRASES = [
 ] as const;
 
 const BROOKSIDE_REQUIRED_SIGNALS = [
+  "long_term_owner",
+  "ownership_duration",
   "seller_probability",
   "nod_filing",
+  "property_turnover_alignment",
+  "refinancing_signal",
   "mortgage_release",
+  "permit_activity",
+  "neighborhood_velocity_alignment",
   "permit_pulled",
   "neighborhood_comparable_sale",
   "prior_client_recency",
@@ -79,6 +85,7 @@ const WORKSPACES: readonly {
     config: brooksideConfig,
     requiredSignals: BROOKSIDE_REQUIRED_SIGNALS,
     requiredRamp: "stale_relationship",
+    weightOrdering: { lower: "crm_interest_signal", upper: "long_term_owner" },
   },
   {
     label: "labortech",
@@ -279,6 +286,7 @@ function main(): void {
     "LaborTech required signal set",
     "LaborTech active_google_ads weight <= permit_pulled",
     "Brookside stale_relationship ramp",
+    "Brookside long_term_owner weight > crm_interest_signal",
     "LaborTech stale_operator_touch ramp",
   ];
 

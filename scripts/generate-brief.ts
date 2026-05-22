@@ -20,9 +20,15 @@ import {
   buildSuggestedOpener,
   formatContactPath,
   renderRecoveryBriefHtml,
+  type FounderReviewSummary,
   type RecoveryBrief,
   type RecoveryBriefItem,
 } from "../lib/recovery/brief";
+import { adaptWiseAgentRows, isWiseAgentExport } from "../lib/recovery/wiseAgentRowAdapter";
+import {
+  buildPropertyEnrichmentSignals,
+  parsePropertyEnrichmentFromRow,
+} from "../lib/enrichment/brookside";
 
 type CsvRow = Record<string, string>;
 
@@ -61,6 +67,14 @@ function get(row: CsvRow, ...names: string[]): string | undefined {
     if (value) return value;
   }
   return undefined;
+}
+
+/** CRM provenance label from export metadata (e.g. wise_agent), never invented. */
+function crmSourceFromRow(row: CsvRow): string {
+  const raw = get(row, "sourceCrm", "source crm", "source") ?? "hubspot";
+  const norm = raw.trim().toLowerCase().replace(/\s+/g, "_");
+  if (norm.startsWith("crm:")) return norm;
+  return `crm:${norm}`;
 }
 
 function parseNumber(value: string | undefined): number | undefined {
@@ -267,6 +281,7 @@ function buildRecoverySignalsFromRow(input: {
   hasWebsite?: boolean;
 }): RecoverySignal[] {
   const signals: RecoverySignal[] = [];
+  const crmSource = crmSourceFromRow(input.row);
   const staleName =
     input.config.slug === "labortech" ? "stale_operator_touch" : "stale_relationship";
 
@@ -282,7 +297,7 @@ function buildRecoverySignalsFromRow(input: {
       `crm-touch:${input.leadKey}`,
       touchIso,
       {
-        source: "crm:hubspot",
+        source: crmSource,
         recordId: `last-touch:${input.leadKey}`,
         explanation: `Last meaningful touch recorded on ${touchIso}.`,
       },
@@ -303,7 +318,7 @@ function buildRecoverySignalsFromRow(input: {
       input.crmLastAction?.trim() || `interest:${input.leadKey}`,
       crmObserved,
       {
-        source: "crm:hubspot",
+        source: crmSource,
         recordId: input.crmLastAction?.trim() || `interest:${input.leadKey}`,
       },
     );
@@ -321,6 +336,7 @@ function buildRecoverySignalsFromRow(input: {
       input.leadKey,
       `closing:${input.leadKey}`,
       priorClientAt,
+      { source: crmSource },
     );
     if (prior) signals.push(prior);
   }
@@ -333,7 +349,7 @@ function buildRecoverySignalsFromRow(input: {
       input.leadKey,
       `phone:${input.leadKey}`,
       phoneAt,
-      { source: "crm:hubspot" },
+      { source: crmSource },
     );
     if (phone) signals.push(phone);
   }
@@ -410,6 +426,25 @@ function buildRecoverySignalsFromRow(input: {
   }
 
   appendExplicitRowSignals(signals, input.row, input.config, input.leadKey, input.nowIso);
+
+  if (input.config.slug === "nicole-lonergan") {
+    const staleTouch =
+      toIso8601(input.lastContactedAt, input.nowIso) ??
+      toIso8601(input.lastActivityAt, input.nowIso);
+    const enrichment = parsePropertyEnrichmentFromRow(input.row, {
+      staleRelationshipObservedAt: staleTouch,
+    });
+    if (enrichment) {
+      signals.push(
+        ...buildPropertyEnrichmentSignals({
+          enrichment,
+          config: input.config,
+          leadKey: input.leadKey,
+          nowIso: input.nowIso,
+        }),
+      );
+    }
+  }
 
   return signals;
 }
@@ -637,13 +672,57 @@ async function buildLead(row: CsvRow, index: number, nowIso: string, config: Wor
   };
 }
 
+function buildFounderReview(
+  items: RecoveryBriefItem[],
+  inputRows: number,
+  wiseAgent: boolean,
+): FounderReviewSummary {
+  const weakOnlyCount = items.filter((i) => i.weakOnly).length;
+  const withHeadline = items.filter((i) => i.headlineSignal).length;
+  const publicRecordSignals = items.filter((i) =>
+    i.signalContributions.some((c) =>
+      /county_recorder|permit:|mls:|shovels/.test(c.source),
+    ),
+  ).length;
+
+  return {
+    worked: [
+      wiseAgent
+        ? "Wise Agent export mapped to brief fields (name, email, phone, notes, last contact, categories) without inventing public-record signals."
+        : "CSV rows consumed with existing column aliases.",
+      `${items.length} ranked cards emitted with score, weakOnly, headlineSignal, and signalContributions for disclosure.`,
+      `${withHeadline} card(s) have a non-null headline signal from CRM or relationship data on file.`,
+    ],
+    failed: [
+      publicRecordSignals === 0
+        ? "No county recorder, permit, or MLS signals — export has no enriched public-record layer."
+        : `${publicRecordSignals} public-record signal(s) present (verify provenance before sharing).`,
+      weakOnlyCount > items.length / 2
+        ? `${weakOnlyCount} of ${items.length} top cards are weak-only — brief will read as CRM-staleness heavy, not seller-intent heavy.`
+        : `${weakOnlyCount} weak-only card(s) in the top cohort.`,
+    ],
+    missingData: [
+      "Seller probability, NOD, mortgage release, and permit signals require county/MLS enrichment not present in Wise Agent.",
+      "Home street is often blank — location may be city/state only.",
+      "Contact Status values like \"New\" do not map to qualified CRM interest; Buyer/Seller tags still emit crm_interest_signal — not seller_probability.",
+    ],
+    beforeNicoleSees: [
+      "Attach verified public-record enrichment per property address, or label the brief as CRM-only.",
+      "Founder review every weak-only card; do not present weak headlines as seller intent.",
+      inputRows > items.length
+        ? `Review ${inputRows - items.length} contacts below the top cut — many may be recently active or skipped.`
+        : "Confirm top-card contact paths (email/phone) are the ones Nicole should use.",
+    ],
+  };
+}
+
 async function main() {
   const args = readArgs();
   const customer = args.get("customer");
   const csvPath = args.get("csv");
   const week = args.get("week") ?? isoWeek(new Date());
   const outputRoot = args.get("out") ?? "data/recovery-briefs";
-  const top = parseNumber(args.get("top")) ?? 12;
+  const top = parseNumber(args.get("top")) ?? 20;
 
   if (!customer || !csvPath) {
     throw new Error(
@@ -652,7 +731,10 @@ async function main() {
   }
 
   const absoluteCsv = path.resolve(csvPath);
-  const rows = parseCsv(await fs.readFile(absoluteCsv, "utf8"));
+  const rawRows = parseCsv(await fs.readFile(absoluteCsv, "utf8"));
+  const headers = rawRows[0] ? Object.keys(rawRows[0]) : [];
+  const wiseAgent = isWiseAgentExport(headers);
+  const rows = adaptWiseAgentRows(rawRows, headers);
   const nowIso = resolveNowIso(args, week);
   const config = resolveWorkspaceConfig(
     customer,
@@ -693,6 +775,9 @@ async function main() {
     .slice(0, top)
     .map((item, index) => ({ ...item, rank: index + 1 }));
 
+  const weakOnlyCount = opportunities.filter((item) => item.weakOnly).length;
+  const founderReview = buildFounderReview(opportunities, rows.length, wiseAgent);
+
   const brief: RecoveryBrief = {
     customer,
     week,
@@ -702,6 +787,8 @@ async function main() {
       inputRows: rows.length,
       opportunities: opportunities.length,
       recoveryCandidates: opportunities.filter((item) => item.staleness.staleCategory === "Recovery candidate").length,
+      weakOnlyCount,
+      founderReview,
     },
     opportunities,
   };

@@ -32,6 +32,13 @@ export type RecoveryBriefItem = {
 /** Verbatim label for WEAK-only cards per SIGNAL_TRUST_RULES.md §3 and §6. */
 export const WEAK_SIGNAL_JUDGMENT_LABEL = "Weak signal — judgment call";
 
+export type FounderReviewSummary = {
+  worked: string[];
+  failed: string[];
+  missingData: string[];
+  beforeNicoleSees: string[];
+};
+
 export type RecoveryBrief = {
   customer: string;
   week: string;
@@ -41,6 +48,8 @@ export type RecoveryBrief = {
     inputRows: number;
     opportunities: number;
     recoveryCandidates: number;
+    weakOnlyCount?: number;
+    founderReview?: FounderReviewSummary;
   };
   opportunities: RecoveryBriefItem[];
 };
