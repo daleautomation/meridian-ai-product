@@ -23,6 +23,8 @@
     "signals:check": "tsx scripts/check-workspace-signals.ts",
     "property-enrichment:check": "tsx scripts/check-property-enrichment.ts",
     "public-records:check": "tsx scripts/check-public-record-ingest.ts",
+    "targeted-enrichment:check": "tsx scripts/check-targeted-enrichment.ts",
+    "targeted-enrichment:run": "tsx scripts/run-targeted-enrichment.ts",
     "auth:check": "tsx scripts/check-workspace-auth.ts",
     "auth:live": "tsx scripts/check-live-auth.ts",
     "brief:determinism": "tsx scripts/check-brief-determinism.ts",
