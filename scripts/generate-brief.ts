@@ -29,6 +29,13 @@ import {
   buildPropertyEnrichmentSignals,
   parsePropertyEnrichmentFromRow,
 } from "../lib/enrichment/brookside";
+import {
+  buildParcelIndex,
+  combineEnrichmentWithPublicRecord,
+  lookupMatch,
+  parsePublicRecordCsv,
+  type ParcelIndex,
+} from "../lib/enrichment/public-records";
 
 type CsvRow = Record<string, string>;
 
@@ -279,6 +286,8 @@ function buildRecoverySignalsFromRow(input: {
   rating?: number;
   websiteWeak?: boolean;
   hasWebsite?: boolean;
+  /** Optional county/assessor index; matched records merge into row enrichment. */
+  publicRecordIndex?: ParcelIndex | null;
 }): RecoverySignal[] {
   const signals: RecoverySignal[] = [];
   const crmSource = crmSourceFromRow(input.row);
@@ -431,9 +440,25 @@ function buildRecoverySignalsFromRow(input: {
     const staleTouch =
       toIso8601(input.lastContactedAt, input.nowIso) ??
       toIso8601(input.lastActivityAt, input.nowIso);
-    const enrichment = parsePropertyEnrichmentFromRow(input.row, {
+    const baseEnrichment = parsePropertyEnrichmentFromRow(input.row, {
       staleRelationshipObservedAt: staleTouch,
     });
+
+    // Optional county/assessor enrichment. Matched records merge into the
+    // row-derived input via combineEnrichmentWithPublicRecord — they never
+    // override CRM-derived ownership unless recorder-backed.
+    let enrichment = baseEnrichment;
+    if (input.publicRecordIndex) {
+      const rowParcel =
+        get(input.row, "parcelId", "parcel id", "propertyParcelId") ?? null;
+      const propertyKey = baseEnrichment?.property.propertyKey ?? null;
+      const match = lookupMatch(input.publicRecordIndex, {
+        parcelId: rowParcel,
+        propertyKey,
+      });
+      enrichment = combineEnrichmentWithPublicRecord(baseEnrichment, match);
+    }
+
     if (enrichment) {
       signals.push(
         ...buildPropertyEnrichmentSignals({
@@ -519,7 +544,13 @@ function attachSignalEvaluation(
   };
 }
 
-async function buildLead(row: CsvRow, index: number, nowIso: string, config: WorkspaceSignalConfig): Promise<BuiltLead> {
+async function buildLead(
+  row: CsvRow,
+  index: number,
+  nowIso: string,
+  config: WorkspaceSignalConfig,
+  publicRecordIndex: ParcelIndex | null = null,
+): Promise<BuiltLead> {
   const companyName = get(row, "companyName", "company", "company name") ?? `Company ${index + 1}`;
   const contactName = get(row, "contactName", "contact", "contact name") ?? null;
   const city = get(row, "city");
@@ -630,6 +661,7 @@ async function buildLead(row: CsvRow, index: number, nowIso: string, config: Wor
     rating: lead.signals.rating,
     websiteWeak: lead.signals.websiteWeak,
     hasWebsite: lead.signals.hasWebsite,
+    publicRecordIndex,
   });
 
   const whyNowInput: WhyNowInput = {
@@ -742,7 +774,23 @@ async function main() {
     args,
   );
 
-  const built = await Promise.all(rows.map((row, index) => buildLead(row, index, nowIso, config)));
+  // Optional county/assessor enrichment file. When supplied, rows in the
+  // brief gain recorder-backed ownership / parcel facts via deterministic
+  // address + parcelId matching. Absent → behavior unchanged.
+  const publicRecordsPath = args.get("public-records");
+  let publicRecordIndex: ParcelIndex | null = null;
+  if (publicRecordsPath) {
+    const absolutePr = path.resolve(publicRecordsPath);
+    const ingest = parsePublicRecordCsv(await fs.readFile(absolutePr, "utf8"));
+    publicRecordIndex = buildParcelIndex(ingest.records);
+    console.log(
+      `Public-record ingest: ${ingest.records.length} admitted, ${ingest.rejections.length} rejected, sources=[${ingest.sourceNames.join(",")}]`,
+    );
+  }
+
+  const built = await Promise.all(
+    rows.map((row, index) => buildLead(row, index, nowIso, config, publicRecordIndex)),
+  );
   const signalsByLead: Record<string, readonly RecoverySignal[]> = {};
   for (const lead of built) {
     signalsByLead[lead.item.leadKey] = lead.signals;
