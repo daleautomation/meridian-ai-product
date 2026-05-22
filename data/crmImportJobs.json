@@ -186,6 +186,200 @@
       ],
       "dedupePairs": [],
       "mergeRecommendations": []
+    },
+    {
+      "id": "import-test-ws-abc",
+      "workspaceId": "test-ws",
+      "sourceLabel": "check",
+      "state": "previewing",
+      "createdAt": "2026-05-22T18:45:33.983Z",
+      "updatedAt": "2026-05-22T18:45:33.983Z",
+      "rowCount": 1,
+      "importedCount": 0,
+      "skippedCount": 0,
+      "duplicateCount": 0,
+      "rollbackSnapshotId": null,
+      "error": null,
+      "headers": [
+        "Full Name",
+        "Account Name",
+        "Phone",
+        "Email",
+        "Last Contact"
+      ],
+      "columnMapping": {
+        "name": "Full Name",
+        "company": "Account Name",
+        "phone": "Phone",
+        "email": "Email",
+        "lastInteraction": "Last Contact"
+      },
+      "previewSample": [
+        {
+          "rowIndex": 0,
+          "name": "Jane Doe",
+          "company": "Acme Roofing",
+          "phone": "(816) 555-1234",
+          "email": "jane@acmeroofing.com",
+          "address": null,
+          "notes": null,
+          "tags": [],
+          "lastInteractionAt": "2026-01-15T00:00:00.000Z",
+          "sourceCrm": "hubspot",
+          "normalizedPhone": "8165551234",
+          "normalizedEmail": "jane@acmeroofing.com",
+          "normalizedCompany": "acme roofing",
+          "normalizedName": "jane doe",
+          "dataTrust": {
+            "name": {
+              "value": "Jane Doe",
+              "source": "crm_import:hubspot",
+              "confidence": 55,
+              "trustLevel": "weak",
+              "lastVerifiedAt": "2026-05-22T18:45:33.981Z",
+              "enrichmentProvider": null,
+              "conflictState": "none",
+              "displayAsTrusted": false
+            },
+            "company": {
+              "value": "Acme Roofing",
+              "source": "crm_import:hubspot",
+              "confidence": 55,
+              "trustLevel": "weak",
+              "lastVerifiedAt": "2026-05-22T18:45:33.981Z",
+              "enrichmentProvider": null,
+              "conflictState": "none",
+              "displayAsTrusted": false
+            },
+            "phone": {
+              "value": "8165551234",
+              "source": "crm_import:hubspot",
+              "confidence": 78,
+              "trustLevel": "acceptable",
+              "lastVerifiedAt": "2026-05-22T18:45:33.981Z",
+              "enrichmentProvider": null,
+              "conflictState": "none",
+              "displayAsTrusted": false
+            },
+            "email": {
+              "value": "jane@acmeroofing.com",
+              "source": "crm_import:hubspot",
+              "confidence": 78,
+              "trustLevel": "acceptable",
+              "lastVerifiedAt": "2026-05-22T18:45:33.981Z",
+              "enrichmentProvider": null,
+              "conflictState": "none",
+              "displayAsTrusted": false
+            },
+            "address": {
+              "value": null,
+              "source": "crm_import:hubspot",
+              "confidence": 0,
+              "trustLevel": "missing",
+              "lastVerifiedAt": null,
+              "enrichmentProvider": null,
+              "conflictState": "none",
+              "displayAsTrusted": false
+            },
+            "lastInteraction": {
+              "value": "2026-01-15T00:00:00.000Z",
+              "source": "crm_import:hubspot",
+              "confidence": 78,
+              "trustLevel": "acceptable",
+              "lastVerifiedAt": "2026-05-22T18:45:33.981Z",
+              "enrichmentProvider": null,
+              "conflictState": "none",
+              "displayAsTrusted": false
+            }
+          },
+          "validationErrors": [],
+          "validationWarnings": []
+        }
+      ],
+      "normalizedRows": [
+        {
+          "rowIndex": 0,
+          "name": "Jane Doe",
+          "company": "Acme Roofing",
+          "phone": "(816) 555-1234",
+          "email": "jane@acmeroofing.com",
+          "address": null,
+          "notes": null,
+          "tags": [],
+          "lastInteractionAt": "2026-01-15T00:00:00.000Z",
+          "sourceCrm": "hubspot",
+          "normalizedPhone": "8165551234",
+          "normalizedEmail": "jane@acmeroofing.com",
+          "normalizedCompany": "acme roofing",
+          "normalizedName": "jane doe",
+          "dataTrust": {
+            "name": {
+              "value": "Jane Doe",
+              "source": "crm_import:hubspot",
+              "confidence": 55,
+              "trustLevel": "weak",
+              "lastVerifiedAt": "2026-05-22T18:45:33.981Z",
+              "enrichmentProvider": null,
+              "conflictState": "none",
+              "displayAsTrusted": false
+            },
+            "company": {
+              "value": "Acme Roofing",
+              "source": "crm_import:hubspot",
+              "confidence": 55,
+              "trustLevel": "weak",
+              "lastVerifiedAt": "2026-05-22T18:45:33.981Z",
+              "enrichmentProvider": null,
+              "conflictState": "none",
+              "displayAsTrusted": false
+            },
+            "phone": {
+              "value": "8165551234",
+              "source": "crm_import:hubspot",
+              "confidence": 78,
+              "trustLevel": "acceptable",
+              "lastVerifiedAt": "2026-05-22T18:45:33.981Z",
+              "enrichmentProvider": null,
+              "conflictState": "none",
+              "displayAsTrusted": false
+            },
+            "email": {
+              "value": "jane@acmeroofing.com",
+              "source": "crm_import:hubspot",
+              "confidence": 78,
+              "trustLevel": "acceptable",
+              "lastVerifiedAt": "2026-05-22T18:45:33.981Z",
+              "enrichmentProvider": null,
+              "conflictState": "none",
+              "displayAsTrusted": false
+            },
+            "address": {
+              "value": null,
+              "source": "crm_import:hubspot",
+              "confidence": 0,
+              "trustLevel": "missing",
+              "lastVerifiedAt": null,
+              "enrichmentProvider": null,
+              "conflictState": "none",
+              "displayAsTrusted": false
+            },
+            "lastInteraction": {
+              "value": "2026-01-15T00:00:00.000Z",
+              "source": "crm_import:hubspot",
+              "confidence": 78,
+              "trustLevel": "acceptable",
+              "lastVerifiedAt": "2026-05-22T18:45:33.981Z",
+              "enrichmentProvider": null,
+              "conflictState": "none",
+              "displayAsTrusted": false
+            }
+          },
+          "validationErrors": [],
+          "validationWarnings": []
+        }
+      ],
+      "dedupePairs": [],
+      "mergeRecommendations": []
     }
   ]
 }

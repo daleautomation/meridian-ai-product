@@ -1,9 +1,15 @@
 import type { ContactPath } from "@/lib/contacts/types";
 import type { LeadDecision } from "@/lib/scoring/decision";
 import type { StalenessResult } from "@/lib/recovery/staleness";
+import type {
+  ScoreBreakdown,
+  SignalContribution,
+} from "@/lib/recovery/signals/types";
 
 export type RecoveryBriefItem = {
   rank: number;
+  /** Stable key aligned with brief continuity (`companyKey` on company name). */
+  leadKey: string;
   companyName: string;
   contactName: string | null;
   location: string | null;
@@ -13,8 +19,24 @@ export type RecoveryBriefItem = {
   verifiedContactPath: string;
   suggestedOpener: string;
   priorityContext: string;
+  /** Decay-weighted signal total from the evaluator at `scoreBreakdown.evaluatedAt`. */
+  score: number;
+  weakOnly: boolean;
+  headlineSignal: string | null;
+  signalContributions: SignalContribution[];
+  scoreBreakdown?: ScoreBreakdown;
   recoveryScore: number;
   decision: Pick<LeadDecision, "bucket" | "score" | "primaryOpportunity">;
+};
+
+/** Verbatim label for WEAK-only cards per SIGNAL_TRUST_RULES.md §3 and §6. */
+export const WEAK_SIGNAL_JUDGMENT_LABEL = "Weak signal — judgment call";
+
+export type FounderReviewSummary = {
+  worked: string[];
+  failed: string[];
+  missingData: string[];
+  beforeNicoleSees: string[];
 };
 
 export type RecoveryBrief = {
@@ -26,6 +48,8 @@ export type RecoveryBrief = {
     inputRows: number;
     opportunities: number;
     recoveryCandidates: number;
+    weakOnlyCount?: number;
+    founderReview?: FounderReviewSummary;
   };
   opportunities: RecoveryBriefItem[];
 };

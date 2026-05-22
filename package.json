@@ -17,6 +17,9 @@
     "contact-trust:check": "tsx scripts/check-contact-trust.ts",
     "crm-import:check": "tsx scripts/check-crm-import.ts",
     "personal-workspace:check": "tsx scripts/check-personal-workspace.ts",
+    "brief:determinism": "tsx scripts/check-brief-determinism.ts",
+    "signals:check": "tsx scripts/check-workspace-signals.ts",
+    "property-enrichment:check": "tsx scripts/check-property-enrichment.ts",
     "auth:check": "tsx scripts/check-workspace-auth.ts",
     "auth:live": "tsx scripts/check-live-auth.ts"
   },
