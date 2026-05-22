@@ -50,3 +50,8 @@ data/usage-events.jsonl
 data/pipelineJobHistory.json
 !data/recovery-briefs/.gitkeep
 !data/snapshots/.gitkeep
+
+data/crm-contacts/
+data/crm-import-jobs/
+data/crmImportRollbacks/
+
