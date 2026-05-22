@@ -21,7 +21,8 @@
     "personal-workspace:check": "tsx scripts/check-personal-workspace.ts",
     "auth:check": "tsx scripts/check-workspace-auth.ts",
     "auth:live": "tsx scripts/check-live-auth.ts",
-    "brief:determinism": "tsx scripts/check-brief-determinism.ts"
+    "brief:determinism": "tsx scripts/check-brief-determinism.ts",
+    "signals:check": "tsx scripts/check-workspace-signals.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
