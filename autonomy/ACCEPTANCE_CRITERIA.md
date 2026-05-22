@@ -80,8 +80,8 @@
 - [ ] Pure functions. No I/O.
 - [ ] Ignores any signal whose `confidence === "BANNED"` (defensive — should
       not exist).
-- [ ] Sets `weakOnly: true` on the returned card when the top contributing
-      signal has confidence WEAK.
+- [ ] `weakOnly` is true only when no usable HIGH or MED signals contribute
+      at `nowIso`.
 - [ ] Drops signals whose `evidenceUrl` is null **and** whose
       `(source, recordId)` pair is not present in §3.1 of the trust rules.
 - [ ] Returns at most 20 cards per workspace; may return fewer.
