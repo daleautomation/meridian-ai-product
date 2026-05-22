@@ -20,7 +20,8 @@
     "crm:schema:init": "tsx scripts/init-crm-contacts-schema.ts",
     "personal-workspace:check": "tsx scripts/check-personal-workspace.ts",
     "auth:check": "tsx scripts/check-workspace-auth.ts",
-    "auth:live": "tsx scripts/check-live-auth.ts"
+    "auth:live": "tsx scripts/check-live-auth.ts",
+    "brief:determinism": "tsx scripts/check-brief-determinism.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
