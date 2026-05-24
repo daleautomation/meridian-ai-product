@@ -27,6 +27,7 @@
     "targeted-enrichment:run": "tsx scripts/run-targeted-enrichment.ts",
     "king-county:check": "tsx scripts/check-king-county-records.ts",
     "king-county:join": "tsx scripts/join-king-county-records.ts",
+    "king-county:inspect": "tsx scripts/inspect-king-county-headers.ts",
     "auth:check": "tsx scripts/check-workspace-auth.ts",
     "auth:live": "tsx scripts/check-live-auth.ts",
     "brief:determinism": "tsx scripts/check-brief-determinism.ts",

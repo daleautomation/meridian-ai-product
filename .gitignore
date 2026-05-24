@@ -55,3 +55,15 @@ data/crm-import-jobs/
 data/crmImportJobs.json
 data/crmContacts.json
 data/crmImportRollbacks/
+
+# Raw county exports. Directory scaffolding stays in git via .gitkeep;
+# any real data file (CSV / XLSX / Parquet / JSON) is intentionally
+# local-only so real property data never ships to the remote.
+data/raw/**/*.csv
+data/raw/**/*.tsv
+data/raw/**/*.xlsx
+data/raw/**/*.xls
+data/raw/**/*.parquet
+data/raw/**/*.json
+data/raw/**/*.gz
+data/raw/**/*.zip
