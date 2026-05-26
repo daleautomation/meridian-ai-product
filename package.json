@@ -30,9 +30,7 @@
     "king-county:join": "tsx scripts/join-king-county-records.ts",
     "king-county:inspect": "tsx scripts/inspect-king-county-headers.ts",
     "auth:check": "tsx scripts/check-workspace-auth.ts",
-    "auth:live": "tsx scripts/check-live-auth.ts",
-    "brief:determinism": "tsx scripts/check-brief-determinism.ts",
-    "signals:check": "tsx scripts/check-workspace-signals.ts"
+    "auth:live": "tsx scripts/check-live-auth.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
@@ -46,6 +44,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
     "tailwindcss": "^4",
