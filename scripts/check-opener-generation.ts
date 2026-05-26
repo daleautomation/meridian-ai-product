@@ -230,7 +230,119 @@ const FIXTURES: FixtureCase[] = [
     expectedSource: "fallback:no_context",
     expectedTrust: "WEAK",
   },
+  {
+    label: "enrichment:hunter_role — high-confidence company + role",
+    input: makeInput({
+      hunter: {
+        status: "found",
+        confidence: 88,
+        company: "Acme Brokerage",
+        role: "Managing Broker",
+        fetchedAt: "2026-05-26T12:00:00.000Z",
+      },
+    }),
+    expectedSource: "enrichment:hunter_role",
+    expectedTrust: "MED",
+    evidenceMustInclude: "Hunter",
+  },
+  {
+    label: "enrichment:hunter_role — sub-threshold confidence defers",
+    input: makeInput({
+      tags: ["Buyer"],
+      hunter: {
+        status: "found",
+        confidence: 60, // below floor — must NOT cite Hunter
+        company: "Acme Brokerage",
+        role: "Agent",
+        fetchedAt: "2026-05-26T12:00:00.000Z",
+      },
+    }),
+    expectedSource: "tag:past_buyer",
+    expectedTrust: "MED",
+    evidenceMustInclude: "Buyer",
+  },
+  {
+    label: "enrichment:hunter_role — status=not_found defers",
+    input: makeInput({
+      tags: ["Buyer"],
+      hunter: {
+        status: "not_found",
+        confidence: null,
+        fetchedAt: "2026-05-26T12:00:00.000Z",
+      },
+    }),
+    expectedSource: "tag:past_buyer",
+    expectedTrust: "MED",
+  },
+  {
+    label: "enrichment:hunter_role — empty company+role defers",
+    input: makeInput({
+      tags: ["Buyer"],
+      hunter: {
+        status: "found",
+        confidence: 95,
+        fetchedAt: "2026-05-26T12:00:00.000Z",
+      },
+    }),
+    expectedSource: "tag:past_buyer",
+    expectedTrust: "MED",
+  },
+  {
+    label: "notes always outrank Hunter — CRM truth wins",
+    input: makeInput({
+      notes: "Mid-conversation about a kitchen renovation last spring.",
+      hunter: {
+        status: "found",
+        confidence: 95,
+        company: "Acme Brokerage",
+        role: "CEO",
+        fetchedAt: "2026-05-26T12:00:00.000Z",
+      },
+    }),
+    expectedSource: "notes:renovation",
+    expectedTrust: "HIGH",
+  },
 ];
+
+function runHunterProvenanceChecks(): void {
+  // Hunter-cited openers MUST carry confidence (%) and a fetch date.
+  // This is the rule that prevents "Hunter says X" claims drifting
+  // into AI-style certainty.
+  const result = buildSuggestedOpener(
+    {
+      name: "Greg Smith",
+      notes: null,
+      tags: [],
+      lastInteractionAt: null,
+      sourceCrm: "wise_agent",
+      hunter: {
+        status: "found",
+        confidence: 88,
+        company: "Acme Brokerage",
+        role: "Managing Broker",
+        fetchedAt: "2026-05-26T12:00:00.000Z",
+      },
+    },
+    { now: FIXED_NOW },
+  );
+  if (result.openerSource !== "enrichment:hunter_role") {
+    fail(`hunter provenance: wrong source ${result.openerSource}`);
+    return;
+  }
+  if (!/\b88%\b|\b88\s*%/i.test(result.opener)) {
+    fail(`hunter provenance: opener missing percent → "${result.opener}"`);
+  }
+  if (!result.opener.includes("2026-05-26")) {
+    fail(`hunter provenance: opener missing date → "${result.opener}"`);
+  }
+  if (!/\bHunter\b/.test(result.opener)) {
+    fail(`hunter provenance: opener missing "Hunter" attribution`);
+  }
+  if (!/\bHunter\b/.test(result.supportingEvidence)) {
+    fail(`hunter provenance: evidence missing "Hunter" attribution`);
+  }
+  assertCleanLanguage(result, "hunter provenance");
+}
 
 function runFixtures(): void {
   for (const fixture of FIXTURES) {
@@ -369,6 +481,7 @@ async function runLiveAudit(): Promise<void> {
 
 async function main(): Promise<void> {
   runFixtures();
+  runHunterProvenanceChecks();
   runDeterminism();
   await runLiveAudit();
 

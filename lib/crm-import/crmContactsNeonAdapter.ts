@@ -44,7 +44,7 @@ export function contactToRow(record: CrmContactRecord) {
     normalizedCompany: record.normalizedCompany,
     normalizedName: record.normalizedName,
   };
-  const sourceMetadata = {
+  const sourceMetadata: Record<string, unknown> = {
     importJobId: record.importJobId,
     sourceCrm: record.sourceCrm,
     tags: record.tags,
@@ -53,6 +53,11 @@ export function contactToRow(record: CrmContactRecord) {
     relationshipScore: record.relationshipScore,
     scoreMetadata: record.scoreMetadata,
   };
+  // Additive enrichment block. Always nested under `enrichment` so a
+  // future provider doesn't pollute the top level.
+  if (record.enrichment) {
+    sourceMetadata.enrichment = record.enrichment;
+  }
   return {
     workspaceId: record.workspaceId,
     contactId: record.id,
@@ -97,6 +102,10 @@ export function rowToContact(row: ContactRow): CrmContactRecord {
     ),
     createdAt: iso(row.created_at),
     updatedAt: iso(row.updated_at),
+    enrichment: jsonObject<CrmContactRecord["enrichment"]>(
+      sourceMetadata.enrichment,
+      undefined,
+    ),
   };
 }
 
@@ -110,6 +119,38 @@ export async function listContactsNeon(workspaceId: string): Promise<CrmContactR
     order by updated_at desc
   `) as ContactRow[];
   return rows.map(rowToContact);
+}
+
+/**
+ * Merge a single contact's `source_metadata.enrichment` key in place.
+ * Never touches normalized / trust / any other source_metadata field.
+ * Returns true if a row was updated, false if no such (workspace, contact_id)
+ * row exists.
+ *
+ * Pure additive write — the existing source_metadata is preserved.
+ * Other concurrent writes that don't touch `enrichment` cannot lose data.
+ */
+export async function applyContactEnrichmentNeon(
+  workspaceId: string,
+  contactId: string,
+  enrichment: NonNullable<CrmContactRecord["enrichment"]>,
+): Promise<boolean> {
+  assertWorkspaceSlug(workspaceId);
+  const sql = getCrmSql();
+  const result = (await sql`
+    update crm_contacts
+       set source_metadata = jsonb_set(
+             coalesce(source_metadata, '{}'::jsonb),
+             '{enrichment}',
+             coalesce(source_metadata->'enrichment', '{}'::jsonb) || ${JSON.stringify(enrichment)}::jsonb,
+             true
+           ),
+           updated_at = now()
+     where workspace_id = ${workspaceId}
+       and contact_id = ${contactId}
+    returning contact_id
+  `) as Array<{ contact_id: string }>;
+  return result.length > 0;
 }
 
 export async function upsertContactsNeon(

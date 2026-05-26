@@ -217,6 +217,40 @@ async function main(): Promise<void> {
       console.log(`    ${k.padEnd(28)} ${n}`);
     }
   }
+
+  // ── Hunter coverage detail ─────────────────────────────────────────
+  const hunterCounts = { found: 0, not_found: 0, skipped: 0, error: 0, missing: 0 };
+  const hunterHighConfidence: Array<{ id: string; conf: number; date: string }> = [];
+  const hunterMissingProvenance: string[] = [];
+  for (const c of visible) {
+    const h = c.enrichment?.hunter;
+    if (!h) {
+      hunterCounts.missing += 1;
+      continue;
+    }
+    if (h.status === "found") hunterCounts.found += 1;
+    else if (h.status === "not_found") hunterCounts.not_found += 1;
+    else if (h.status === "skipped") hunterCounts.skipped += 1;
+    else hunterCounts.error += 1;
+    if (h.status === "found") {
+      if (!h.source || !h.fetchedAt || typeof h.confidence !== "number") {
+        hunterMissingProvenance.push(c.id);
+      } else if (h.confidence >= 75) {
+        hunterHighConfidence.push({ id: c.id, conf: h.confidence, date: h.fetchedAt.slice(0, 10) });
+      }
+    }
+  }
+  console.log("");
+  console.log("--- Hunter enrichment coverage (visible contacts) ---");
+  console.log(`  found:           ${hunterCounts.found}`);
+  console.log(`  not_found:       ${hunterCounts.not_found}`);
+  console.log(`  skipped:         ${hunterCounts.skipped}`);
+  console.log(`  error:           ${hunterCounts.error}`);
+  console.log(`  no enrichment:   ${hunterCounts.missing}`);
+  console.log(`  ≥75% confidence: ${hunterHighConfidence.length}  (eligible to surface in openers)`);
+  if (hunterMissingProvenance.length > 0) {
+    console.log(`  ⚠ rows with status=found but missing provenance: ${hunterMissingProvenance.length}`);
+  }
   console.log("");
   console.log("--- email domain mix (top 10, visible contacts) ---");
   for (const [d, n] of [...emailDomains.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10)) {
@@ -267,7 +301,15 @@ async function main(): Promise<void> {
     console.log(`    opener source:    ${p.openerSource}`);
     console.log(`    opener evidence:  ${p.supportingEvidence}`);
     console.log(`    trust level:      ${p.trustLevel}`);
-    console.log(`    external enrich:  ${externallyEnriched.length === 0 ? "none — CRM import only" : externallyEnriched.join(", ")}`);
+    const hunter = c.enrichment?.hunter;
+    const hunterStr = hunter
+      ? `Hunter ${hunter.status}` +
+        (typeof hunter.confidence === "number" ? ` ${hunter.confidence}%` : "") +
+        (hunter.role ? ` · role=${hunter.role}` : "") +
+        (hunter.company ? ` · company=${hunter.company}` : "") +
+        (hunter.fetchedAt ? ` · ${hunter.fetchedAt.slice(0, 10)}` : "")
+      : "none — CRM import only";
+    console.log(`    external enrich:  ${hunterStr}`);
     console.log(`    last touch:       ${p.lastTouchSummary}`);
     if (warnings.length > 0) {
       for (const w of warnings) console.log(`    ⚠ ${w}`);

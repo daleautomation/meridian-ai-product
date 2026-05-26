@@ -44,6 +44,9 @@ export type OpenerSource =
   | "tag:first_time_buyer"
   // history-derived (MED)
   | "last_close:date"
+  // verified external enrichment (MED) — only fires when provenance,
+  // confidence ≥ 75, and at least company or role are present.
+  | "enrichment:hunter_role"
   // stale-only (WEAK)
   | "stale_relationship:months"
   | "stale_relationship:years"
@@ -68,7 +71,21 @@ export interface OpenerInput {
   tags: readonly string[];
   lastInteractionAt: string | null;
   sourceCrm: string | null;
+  /** Optional external enrichment captured via a verified provider.
+   *  The extractor only uses this when status === "found", confidence
+   *  ≥ HUNTER_OPENER_CONFIDENCE_FLOOR, and either company or role is set. */
+  hunter?: {
+    status: "found" | "not_found" | "skipped" | "error";
+    confidence: number | null;
+    company?: string;
+    role?: string;
+    fetchedAt: string;
+  } | null;
 }
+
+/** Minimum Hunter score that allows an opener to cite Hunter data.
+ *  Anything below this is stored but never surfaced to the operator. */
+export const HUNTER_OPENER_CONFIDENCE_FLOOR = 75;
 
 export interface OpenerOptions {
   now?: Date;
@@ -385,6 +402,67 @@ function staleOpener(months: number, name: string): SuggestedOpener {
   };
 }
 
+// ── Hunter-enrichment extractor ────────────────────────────────────
+
+function formatHunterDate(iso: string): string {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return iso;
+  const d = new Date(t);
+  const yyyy = d.getUTCFullYear();
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/**
+ * Build an opener that cites Hunter enrichment when (a) the call
+ * returned, (b) confidence meets the floor, and (c) at least one of
+ * company / role is set. Every claim is qualified with the Hunter
+ * confidence and fetch date so an operator can verify it.
+ *
+ * Returns `null` to defer to the rest of the extractor chain.
+ */
+function extractHunterRole(input: OpenerInput): SuggestedOpener | null {
+  const h = input.hunter;
+  if (!h) return null;
+  if (h.status !== "found") return null;
+  if (typeof h.confidence !== "number" || h.confidence < HUNTER_OPENER_CONFIDENCE_FLOOR) {
+    return null;
+  }
+  if (!h.company && !h.role) return null;
+
+  const dateStr = formatHunterDate(h.fetchedAt);
+  const confStr = `${Math.round(h.confidence)}%`;
+
+  // Construct calm operator-facing language. No buzzwords, no
+  // certainty inflation. The phrasing carries source + confidence +
+  // date inline so the claim cannot drift into "Meridian says…".
+  let opener: string;
+  if (h.company && h.role) {
+    opener = `Hunter places ${firstName(input.name)} at ${h.company} as ${h.role} (${confStr} confidence, ${dateStr}). Worth opening with that, then confirming.`;
+  } else if (h.company) {
+    opener = `Hunter places ${firstName(input.name)} at ${h.company} (${confStr} confidence, ${dateStr}). Worth opening with that, then confirming.`;
+  } else {
+    opener = `Hunter notes ${firstName(input.name)}'s role as ${h.role} (${confStr} confidence, ${dateStr}). Worth opening with that, then confirming.`;
+  }
+
+  const evidenceParts = [
+    `Hunter ${dateStr}`,
+    `${confStr} confidence`,
+    h.company ? `company: ${h.company}` : null,
+    h.role ? `role: ${h.role}` : null,
+  ].filter(Boolean);
+  const supportingEvidence = clipEvidence(evidenceParts.join(" · "));
+
+  return {
+    opener,
+    openerSource: "enrichment:hunter_role",
+    supportingEvidence,
+    trustLevel: "MED",
+    isSpecific: true,
+  };
+}
+
 // ── Main builder ───────────────────────────────────────────────────
 
 /**
@@ -419,7 +497,13 @@ export function buildSuggestedOpener(
     }
   }
 
-  // 2. Tag-based openers. Past-buyer / past-seller / repeat carry the
+  // 2. Hunter-enrichment opener. Only fires when the provider returned,
+  //    confidence ≥ HUNTER_OPENER_CONFIDENCE_FLOOR, and at least one of
+  //    company / role is set. Otherwise defer to tag chain.
+  const hunterOpener = extractHunterRole(input);
+  if (hunterOpener) return hunterOpener;
+
+  // 3. Tag-based openers. Past-buyer / past-seller / repeat carry the
   //    last-close year when available.
   const tags = input.tags ?? [];
   const closeYear = yearOf(input.lastInteractionAt);
@@ -567,6 +651,7 @@ export function buildSuggestedOpenerFromContact(
   contact: CrmContactRecord,
   options: OpenerOptions = {},
 ): SuggestedOpener {
+  const h = contact.enrichment?.hunter;
   return buildSuggestedOpener(
     {
       name: contact.name,
@@ -574,6 +659,15 @@ export function buildSuggestedOpenerFromContact(
       tags: contact.tags,
       lastInteractionAt: contact.lastInteractionAt,
       sourceCrm: contact.sourceCrm,
+      hunter: h
+        ? {
+            status: h.status,
+            confidence: h.confidence,
+            company: h.company,
+            role: h.role,
+            fetchedAt: h.fetchedAt,
+          }
+        : null,
     },
     options,
   );

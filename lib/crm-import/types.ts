@@ -157,6 +157,36 @@ export type CrmContactRecord = {
   scoreMetadata: ContactScoreMetadata | null;
   createdAt: string;
   updatedAt: string;
+  /**
+   * Optional external enrichment captured AFTER the CRM import.
+   * Additive only — never overwrites name / tags / notes / lastInteractionAt.
+   * Every nested provider entry MUST carry source, fetchedAt, and a
+   * confidence score so audit tooling can prove provenance.
+   */
+  enrichment?: ContactEnrichment;
+};
+
+export type HunterEnrichmentStatus = "found" | "not_found" | "skipped" | "error";
+
+export type HunterEnrichmentEntry = {
+  /** Always "hunter" today; reserved field for future providers. */
+  source: "hunter";
+  /** When the Hunter call returned this result. ISO-8601. */
+  fetchedAt: string;
+  /** Hunter's 0–100 email-finder score for the (domain, name) match. */
+  confidence: number | null;
+  status: HunterEnrichmentStatus;
+  /** Reason for non-"found" statuses (e.g. "personal_domain", "no_match"). */
+  reason?: string;
+  /** Returned by Hunter Email Finder when available. */
+  company?: string;
+  role?: string;
+  /** Optional Hunter-supplied source URL (where Hunter observed the email). */
+  sourceUrl?: string;
+};
+
+export type ContactEnrichment = {
+  hunter?: HunterEnrichmentEntry;
 };
 
 export type ImportDiagnostics = {
