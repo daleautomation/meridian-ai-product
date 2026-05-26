@@ -28,6 +28,7 @@
     "enrich:nicole:hunter:dry": "tsx scripts/enrich-nicole-hunter.ts",
     "enrich:nicole:hunter": "tsx scripts/enrich-nicole-hunter.ts --write",
     "audit:nicole:sources": "tsx scripts/audit-nicole-data-sources.ts",
+    "hunter:check": "tsx scripts/check-hunter-config.ts",
     "brief:determinism": "tsx scripts/check-brief-determinism.ts",
     "signals:check": "tsx scripts/check-workspace-signals.ts",
     "property-enrichment:check": "tsx scripts/check-property-enrichment.ts",
