@@ -67,3 +67,13 @@ data/raw/**/*.parquet
 data/raw/**/*.json
 data/raw/**/*.gz
 data/raw/**/*.zip
+.vercel
+.env*.local
+
+# --- Workspace runtime state (local-only) ----------------------------------
+# Per-customer weekly snapshots written by scripts/generate-weekly-state.ts.
+# These belong on the founder's machine + production filesystem, not git.
+data/weekly-state/
+# Append-only outcome capture history. Per-customer JSON, durable, never
+# committed (production reads/writes its own copy on disk).
+data/outcomes/
