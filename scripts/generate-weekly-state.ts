@@ -108,11 +108,16 @@ async function main(): Promise<void> {
   const outcomes = await readCustomerOutcomes(args.customer);
   const contactsById = new Map(contacts.map((c) => [c.id, c]));
 
+  // Pass the full rank-ordered contact list so the rule engine has
+  // room to skip excluded contacts (meeting_booked, closed_*,
+  // wrong_contact, deferred follow_up_later) and backfill from
+  // further down the list. buildWeeklyState applies the outcome rules
+  // and then slices to its WEEKLY_PRIORITY_LIMIT.
   const state = buildWeeklyState({
     workspaceSlug: args.customer,
     workspaceDisplayName: workspace.branding?.displayName ?? workspace.name,
     workspaceUrl: buildWorkspaceUrl(args.customer),
-    priorityCards: model.priorityContacts,
+    priorityCards: model.allContacts,
     contactsById,
     outcomes,
     resurfacingHighlight: pickResurfaceHighlight(resurfacingBuckets),

@@ -503,6 +503,12 @@ function PriorityRow({
         </div>
       </button>
 
+      {priority.outcomeReason ? (
+        <div style={styles.reasonRow}>
+          <span style={styles.reasonText}>{priority.outcomeReason}</span>
+        </div>
+      ) : null}
+
       {isCompleted ? (
         <div style={styles.reinforcementRow}>
           <span style={styles.reinforcementText}>{REINFORCEMENT_TEXT}</span>
@@ -682,6 +688,11 @@ const styles: Record<string, CSSProperties> = {
     fontSize: 12,
     color: "#5b6a52",
     fontStyle: "italic",
+  },
+  reasonRow: { marginTop: 2 },
+  reasonText: {
+    fontSize: 12,
+    color: "#6e5b30",
   },
   failedRow: { marginTop: 4 },
   failedText: { fontSize: 12, color: "#8a3a3a" },

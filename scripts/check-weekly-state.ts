@@ -26,6 +26,7 @@ import { buildPersonalWorkspaceModel } from "@/lib/personal-workspace/workspace"
 import {
   applyOutcomesOverlay,
   buildWeeklyState,
+  evaluateOutcomeInfluence,
   isoWeekId,
   resolveWeeklyMode,
   type BuildWeeklyStateInput,
@@ -260,6 +261,318 @@ function runOverlayChecks(): void {
   }
 }
 
+// ── Outcome-aware ranking rules ───────────────────────────────────
+
+function makeContact(id: string, name: string): CrmContactRecord {
+  return {
+    id,
+    workspaceId: "syn",
+    name,
+    company: "Acme",
+    phone: null,
+    email: `${id}@example.com`,
+    address: null,
+    notes: "Mid-conversation about a kitchen renovation last spring.",
+    tags: ["Buyer"],
+    lastInteractionAt: "2024-08-01T00:00:00.000Z",
+    sourceCrm: "test",
+  } as unknown as CrmContactRecord;
+}
+
+function makeCard(id: string, name: string, rank: number): PersonalContactCard {
+  return {
+    id: `card-${id}`,
+    contactId: id,
+    rank,
+    name,
+    company: "Acme",
+    strength: 60,
+    strengthRaw: 60,
+    primaryChannel: "email",
+  } as unknown as PersonalContactCard;
+}
+
+function multiContactInput(
+  ids: readonly string[],
+  outcomes: readonly RelationshipOutcome[] = [],
+): BuildWeeklyStateInput {
+  const contacts = ids.map((id, idx) => makeContact(id, `Person ${idx + 1}`));
+  const cards = ids.map((id, idx) => makeCard(id, `Person ${idx + 1}`, idx + 1));
+  return {
+    workspaceSlug: "syn",
+    workspaceDisplayName: "Synthetic",
+    workspaceUrl: "https://www.meridianai.work/personal?workspace=syn",
+    priorityCards: cards,
+    contactsById: new Map(contacts.map((c) => [c.id, c])),
+    outcomes,
+    resurfacingHighlight: null,
+    now: FIXED_NOW,
+  };
+}
+
+function outcomeAt(
+  leadKey: string,
+  outcome: RelationshipOutcome["outcome"],
+  ageDays: number,
+  extras: Partial<RelationshipOutcome> = {},
+): RelationshipOutcome {
+  return {
+    id: `o-${leadKey}-${outcome}`,
+    leadKey,
+    recordedAt: new Date(FIXED_NOW.getTime() - ageDays * 24 * 60 * 60 * 1000).toISOString(),
+    outcome,
+    source: "operator_console",
+    ...extras,
+  };
+}
+
+function runRuleEngineUnitChecks(): void {
+  // 1. No outcome → no influence, not excluded.
+  {
+    const d = evaluateOutcomeInfluence([], "c-1", FIXED_NOW);
+    if (d.excluded || d.influence !== null || d.reason !== null) {
+      fail(`rule:no-outcome → expected pass-through, got ${JSON.stringify(d)}`);
+    }
+  }
+  // 2. meeting_booked → excluded.
+  {
+    const d = evaluateOutcomeInfluence(
+      [outcomeAt("c-1", "meeting_booked", 2)],
+      "c-1",
+      FIXED_NOW,
+    );
+    if (!d.excluded) fail("rule:meeting_booked must exclude");
+  }
+  // 3. closed_won / closed_lost → excluded.
+  {
+    const dWon = evaluateOutcomeInfluence(
+      [outcomeAt("c-1", "closed_won", 9)],
+      "c-1",
+      FIXED_NOW,
+    );
+    const dLost = evaluateOutcomeInfluence(
+      [outcomeAt("c-1", "closed_lost", 9)],
+      "c-1",
+      FIXED_NOW,
+    );
+    if (!dWon.excluded || !dLost.excluded) fail("rule:closed_won/closed_lost must exclude");
+  }
+  // 4. wrong_contact / not_worth_pursuing → excluded.
+  {
+    const dWrong = evaluateOutcomeInfluence(
+      [outcomeAt("c-1", "wrong_contact", 1)],
+      "c-1",
+      FIXED_NOW,
+    );
+    const dDnp = evaluateOutcomeInfluence(
+      [outcomeAt("c-1", "not_worth_pursuing", 1)],
+      "c-1",
+      FIXED_NOW,
+    );
+    if (!dWrong.excluded || !dDnp.excluded) {
+      fail("rule:wrong_contact/not_worth_pursuing must exclude");
+    }
+  }
+  // 5. follow_up_later with future nextReviewAt → deferred, excluded.
+  {
+    const future = new Date(FIXED_NOW.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString();
+    const d = evaluateOutcomeInfluence(
+      [outcomeAt("c-1", "follow_up_later", 2, { nextReviewAt: future })],
+      "c-1",
+      FIXED_NOW,
+    );
+    if (!d.excluded || d.influence !== "deferred") {
+      fail(`rule:follow_up_later future → expected deferred+excluded, got ${JSON.stringify(d)}`);
+    }
+    if (!d.reason || !d.reason.startsWith("Deferred until ")) {
+      fail(`rule:follow_up_later future → reason missing/wrong: ${d.reason}`);
+    }
+  }
+  // 6. follow_up_later with past nextReviewAt within 14 days → resurfaced.
+  {
+    const past = new Date(FIXED_NOW.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString();
+    const d = evaluateOutcomeInfluence(
+      [outcomeAt("c-1", "follow_up_later", 10, { nextReviewAt: past })],
+      "c-1",
+      FIXED_NOW,
+    );
+    if (d.excluded || d.influence !== "resurfaced") {
+      fail(`rule:follow_up_later past → expected resurfaced, got ${JSON.stringify(d)}`);
+    }
+  }
+  // 7. follow_up_later with no nextReviewAt → no influence (eligible).
+  {
+    const d = evaluateOutcomeInfluence(
+      [outcomeAt("c-1", "follow_up_later", 2)],
+      "c-1",
+      FIXED_NOW,
+    );
+    if (d.excluded || d.influence !== null) {
+      fail(`rule:follow_up_later no-date → expected pass-through, got ${JSON.stringify(d)}`);
+    }
+  }
+  // 8. no_response within 7 days → deprioritized.
+  {
+    const d = evaluateOutcomeInfluence(
+      [outcomeAt("c-1", "no_response", 3)],
+      "c-1",
+      FIXED_NOW,
+    );
+    if (d.excluded || d.influence !== "deprioritized") {
+      fail(`rule:no_response 3d → expected deprioritized, got ${JSON.stringify(d)}`);
+    }
+    if (!d.reason || !/Deprioritized after no answer/.test(d.reason)) {
+      fail(`rule:no_response reason missing/wrong: ${d.reason}`);
+    }
+  }
+  // 9. no_response older than 7 days → no current effect.
+  {
+    const d = evaluateOutcomeInfluence(
+      [outcomeAt("c-1", "no_response", 14)],
+      "c-1",
+      FIXED_NOW,
+    );
+    if (d.excluded || d.influence !== null) {
+      fail(`rule:no_response 14d → expected pass-through, got ${JSON.stringify(d)}`);
+    }
+  }
+  // 10. contacted → neutral, not excluded.
+  {
+    const d = evaluateOutcomeInfluence(
+      [outcomeAt("c-1", "contacted", 2)],
+      "c-1",
+      FIXED_NOW,
+    );
+    if (d.excluded || d.influence !== null) {
+      fail(`rule:contacted → expected pass-through, got ${JSON.stringify(d)}`);
+    }
+  }
+  // 11. Multiple outcomes — latest one wins (append-only history).
+  {
+    const d = evaluateOutcomeInfluence(
+      [
+        outcomeAt("c-1", "no_response", 5),
+        outcomeAt("c-1", "meeting_booked", 1),
+      ],
+      "c-1",
+      FIXED_NOW,
+    );
+    if (!d.excluded) {
+      fail("rule:latest-wins — meeting_booked (newer) should override no_response (older)");
+    }
+  }
+  // 12. Deterministic — identical input → identical decision.
+  {
+    const outcomes = [outcomeAt("c-1", "no_response", 3)];
+    const a = evaluateOutcomeInfluence(outcomes, "c-1", FIXED_NOW);
+    const b = evaluateOutcomeInfluence(outcomes, "c-1", FIXED_NOW);
+    if (JSON.stringify(a) !== JSON.stringify(b)) {
+      fail("rule:determinism — identical input produced different decisions");
+    }
+  }
+}
+
+function runRankingIntegrationChecks(): void {
+  // Setup: 4 candidate contacts, each with a different outcome.
+  // Verify the slice ordering + reason text.
+  const outcomes: RelationshipOutcome[] = [
+    outcomeAt("c-2", "no_response", 3), // should be deprioritized → bottom
+    outcomeAt("c-3", "meeting_booked", 1), // should be excluded
+    outcomeAt("c-4", "wrong_contact", 1), // should be excluded
+  ];
+  const input = multiContactInput(["c-1", "c-2", "c-3", "c-4", "c-5"], outcomes);
+  const state = buildWeeklyState(input);
+
+  const ids = state.priorities.map((p) => p.contactId);
+  // Excluded contacts must NOT appear.
+  if (ids.includes("c-3") || ids.includes("c-4")) {
+    fail(`ranking: excluded contacts leaked into priorities: ${ids.join(", ")}`);
+  }
+  // c-1 + c-5 (no outcomes) should appear before c-2 (deprioritized).
+  const idxOfDeprio = ids.indexOf("c-2");
+  const idxOfClean1 = ids.indexOf("c-1");
+  const idxOfClean5 = ids.indexOf("c-5");
+  if (idxOfDeprio === -1 || idxOfClean1 === -1 || idxOfClean5 === -1) {
+    fail(`ranking: expected all of c-1, c-2, c-5 in slice; got ${ids.join(", ")}`);
+  } else if (idxOfDeprio < idxOfClean1 || idxOfDeprio < idxOfClean5) {
+    fail(
+      `ranking: deprioritized c-2 must follow non-deprioritized contacts (got order ${ids.join(", ")})`,
+    );
+  }
+
+  // Reason must be present on deprioritized priority and absent on others.
+  const c2 = state.priorities.find((p) => p.contactId === "c-2");
+  if (!c2 || c2.outcomeInfluence !== "deprioritized" || !c2.outcomeReason) {
+    fail(`ranking: c-2 should carry deprioritized influence + reason; got ${JSON.stringify(c2)}`);
+  }
+  const c1 = state.priorities.find((p) => p.contactId === "c-1");
+  if (c1 && c1.outcomeReason !== null) {
+    fail(`ranking: c-1 has no outcomes → outcomeReason must be null; got "${c1.outcomeReason}"`);
+  }
+
+  // Determinism: rerun must produce identical state.
+  const stateRepeat = buildWeeklyState(input);
+  if (JSON.stringify(state) !== JSON.stringify(stateRepeat)) {
+    fail("ranking: outcome-aware buildWeeklyState is not deterministic across calls");
+  }
+
+  // Banned-phrase scan on every reason text emitted.
+  for (const p of state.priorities) {
+    if (p.outcomeReason) assertCleanText(p.outcomeReason, `priority#${p.rank} outcomeReason`);
+  }
+}
+
+function runDeferUntilCheck(): void {
+  const future = new Date(FIXED_NOW.getTime() + 10 * 24 * 60 * 60 * 1000).toISOString();
+  const past = new Date(FIXED_NOW.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString();
+  const outcomes: RelationshipOutcome[] = [
+    outcomeAt("c-2", "follow_up_later", 5, { nextReviewAt: future }),
+    outcomeAt("c-3", "follow_up_later", 5, { nextReviewAt: past }),
+  ];
+  const input = multiContactInput(["c-1", "c-2", "c-3"], outcomes);
+  const state = buildWeeklyState(input);
+  const ids = state.priorities.map((p) => p.contactId);
+  if (ids.includes("c-2")) {
+    fail("defer: c-2 (future nextReviewAt) must be excluded from priorities");
+  }
+  if (!ids.includes("c-3")) {
+    fail("defer: c-3 (past nextReviewAt within 14 days) must be eligible again");
+  }
+  const c3 = state.priorities.find((p) => p.contactId === "c-3");
+  if (!c3 || c3.outcomeInfluence !== "resurfaced" || !c3.outcomeReason) {
+    fail(`defer: c-3 must carry resurfaced influence + reason; got ${JSON.stringify(c3)}`);
+  }
+}
+
+function runHistoryPreservationCheck(): void {
+  // closed_won is excluded from priorities BUT must still appear in
+  // the outcome history (lastOperatorOutcome surfaces via applyOverlay
+  // on any priority that's still rendered). The override here:
+  // even though c-1 is excluded, the rollup still counts the outcome.
+  const outcomes: RelationshipOutcome[] = [
+    outcomeAt("c-1", "closed_won", 2),
+    outcomeAt("c-2", "contacted", 1),
+  ];
+  const input = multiContactInput(["c-1", "c-2"], outcomes);
+  const state = buildWeeklyState(input);
+  if (state.outcomeRollup.outcomesCaptured !== 2) {
+    fail(
+      `history: rollup must count closed_won in the 7-day window; got ${state.outcomeRollup.outcomesCaptured}`,
+    );
+  }
+  // c-1 is excluded; only c-2 should render.
+  const ids = state.priorities.map((p) => p.contactId);
+  if (ids.includes("c-1")) fail("history: closed_won contact must not render as a priority");
+  if (!ids.includes("c-2")) fail("history: contacted contact must still render as a priority");
+}
+
+function runRuleEngineChecks(): void {
+  runRuleEngineUnitChecks();
+  runRankingIntegrationChecks();
+  runDeferUntilCheck();
+  runHistoryPreservationCheck();
+}
+
 /**
  * Panel-side copy lives in the React component, not the snapshot.
  * Validate the literal strings here so they participate in the same
@@ -453,6 +766,7 @@ async function main(): Promise<void> {
   runDeterminismCheck();
   runOutcomeDrivenInsightCheck();
   runOverlayChecks();
+  runRuleEngineChecks();
   runPanelCopyScan();
   runBannedPhraseScan(coldState);
   await runLiveAudit();
@@ -475,6 +789,17 @@ async function main(): Promise<void> {
       "applyOutcomesOverlay tracks followUpsDeferred independently",
       "applyOutcomesOverlay does not mutate the base snapshot",
       "applyOutcomesOverlay is deterministic across calls",
+      "rule:meeting_booked excludes from priorities",
+      "rule:closed_won / closed_lost / wrong_contact / not_worth_pursuing all exclude",
+      "rule:follow_up_later defers until nextReviewAt, resurfaces afterward",
+      "rule:no_response within 7 days deprioritizes (never suppresses)",
+      "rule:contacted is neutral (no ranking effect)",
+      "rule: latest outcome wins, identical input → identical decision",
+      "ranking: deprioritized priorities follow non-deprioritized in slice order",
+      "ranking: outcome-aware buildWeeklyState is deterministic across calls",
+      "ranking: outcomeReason text passes banned-phrase scan",
+      "defer: future nextReviewAt excludes; past within 14 days surfaces with resurfaced reason",
+      "history: excluded contacts remain visible in the weekly rollup count",
       "panel copy (reinforcement, empty states, action labels) passes banned-phrase scan",
       "no banned phrases in any opener / evidence / insight / email",
       "Nicole live audit: shape valid, every priority cites evidence",
