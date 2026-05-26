@@ -10,6 +10,7 @@ import {
   syncSelectedId,
 } from "@/lib/personal-workspace/selection";
 import type { PersonalContactCard, PersonalInsightRow, PersonalWorkspaceModel } from "@/lib/personal-workspace/workspace";
+import WeeklyBriefingPanel from "./WeeklyBriefingPanel";
 
 interface PersonalWorkspaceProps {
   model: PersonalWorkspaceModel;
@@ -80,6 +81,17 @@ export default function PersonalWorkspace({ model }: PersonalWorkspaceProps) {
 
       {model.reachability.phoneLight && model.crmContactCount > 0 ? (
         <p style={styles.reachabilityBanner}>{model.reachability.summary}</p>
+      ) : null}
+
+      {model.weeklyState && model.weeklyMode ? (
+        <WeeklyBriefingPanel
+          state={model.weeklyState}
+          mode={model.weeklyMode}
+          onSelectContact={(cardId) => {
+            setActiveNav("priority");
+            setSelectedId(cardId);
+          }}
+        />
       ) : null}
 
       <section style={styles.dashboard}>

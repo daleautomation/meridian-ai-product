@@ -23,6 +23,8 @@
     "crm:schema:init": "tsx scripts/init-crm-contacts-schema.ts",
     "personal-workspace:check": "tsx scripts/check-personal-workspace.ts",
     "check-opener-generation": "tsx scripts/check-opener-generation.ts",
+    "check-weekly-state": "tsx scripts/check-weekly-state.ts",
+    "weekly-state:generate": "tsx scripts/generate-weekly-state.ts",
     "brief:determinism": "tsx scripts/check-brief-determinism.ts",
     "signals:check": "tsx scripts/check-workspace-signals.ts",
     "property-enrichment:check": "tsx scripts/check-property-enrichment.ts",

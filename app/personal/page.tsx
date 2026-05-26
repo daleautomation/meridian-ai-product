@@ -9,6 +9,8 @@ import {
 } from "@/lib/crm-import/store";
 import { buildResurfacingBuckets } from "@/lib/relationship-intelligence/resurfacing";
 import { buildPersonalWorkspaceModel } from "@/lib/personal-workspace/workspace";
+import { resolveWeeklyMode } from "@/lib/personal-workspace/weeklyState";
+import { loadWeeklyStateFromDisk } from "@/lib/personal-workspace/weeklyStateLoader";
 import { getWorkspaceAccess } from "@/lib/workspaceAccess";
 import {
   defaultWorkspaceFor,
@@ -160,11 +162,16 @@ export default async function PersonalWorkspacePage(props: {
       `dbHost=${personalFingerprint.dbHost ?? "(none)"}`,
   );
   const resurfacingBuckets = buildResurfacingBuckets(rawCrmContacts);
+  const renderNow = new Date();
+  const weeklyState = await loadWeeklyStateFromDisk(workspace.slug, renderNow);
+  const weeklyMode = weeklyState ? resolveWeeklyMode(renderNow) : null;
   const model = buildPersonalWorkspaceModel({
     workspace,
     user,
     crmContacts: rawCrmContacts,
     resurfacingBuckets,
+    weeklyState,
+    weeklyMode,
   });
   // eslint-disable-next-line no-console
   console.log(

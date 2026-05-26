@@ -32,6 +32,7 @@ import { scoreFromCrmContact } from "@/lib/relationship-intelligence/scoring";
 import { workspaceImportPath } from "@/lib/workspaceRouting";
 import { personalCopyForWorkspace, PERSONAL_NAV, type PersonalNavId } from "./config";
 import { buildSuggestedOpenerFromContact, type SuggestedOpener } from "./openerBuilder";
+import type { WeeklyMode, WeeklyState } from "./weeklyState";
 
 export type PersonalPrimaryChannel = "email" | "phone" | "none";
 
@@ -144,6 +145,14 @@ export interface PersonalWorkspaceModel {
   crmContactCount: number;
   copy: ReturnType<typeof personalCopyForWorkspace>;
   emptyByNav: Record<PersonalNavId, string>;
+  /** Optional Monday snapshot. Present when a generator has written
+   *  `data/weekly-state/<slug>/<weekId>.json` for this workspace and
+   *  the page loaded it. Absent means the workspace falls back to its
+   *  live-computed view (no panel rendered). */
+  weeklyState?: WeeklyState | null;
+  /** Display mode for the briefing panel; derived deterministically
+   *  from `now` at page render time. */
+  weeklyMode?: WeeklyMode | null;
 }
 
 const DORMANT_BUCKET_IDS = new Set([
@@ -167,6 +176,8 @@ export function buildPersonalWorkspaceModel(args: {
   crmContacts: CrmContactRecord[];
   resurfacingBuckets: ResurfacingBucket[];
   generatedAt?: string;
+  weeklyState?: WeeklyState | null;
+  weeklyMode?: WeeklyMode | null;
 }): PersonalWorkspaceModel {
   const { workspace, user, crmContacts, resurfacingBuckets } = args;
   const generatedAt = args.generatedAt ?? new Date().toISOString();
@@ -297,6 +308,8 @@ export function buildPersonalWorkspaceModel(args: {
       dormant: copy.emptyDormant,
       missing: copy.emptyMissing,
     },
+    weeklyState: args.weeklyState ?? null,
+    weeklyMode: args.weeklyMode ?? null,
   };
 }
 
