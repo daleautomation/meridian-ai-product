@@ -24,6 +24,10 @@ import {
 import { personalPalette } from "@/lib/personal-workspace/config";
 
 export const dynamic = "force-dynamic";
+// Belt-and-suspenders on top of force-dynamic so no intermediate cache
+// layer can serve a stale "0 contacts" view of /personal after an import.
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 type SearchParams = {
   workspace?: string | string[];
@@ -132,20 +136,37 @@ export default async function PersonalWorkspacePage(props: {
   }
   // Diagnostic — surface the exact workspaceId / count / storage path
   // each render takes. Lets an operator confirm /personal is reading
-  // from the same backend the import wrote to.
+  // from the same backend the import wrote to. If `rawCrmContacts`
+  // here is > 0 but the model's `totalContacts` is 0, the model
+  // filtered every contact out (defect should be in
+  // buildPersonalWorkspaceModel). If `rawCrmContacts` is 0 but the
+  // import response said inserted=N, the read path is hitting a
+  // different store than the write — operator must reconcile
+  // DATABASE_URL across environments.
   const personalStorage = describeContactStorageMode();
+  const rawCrmContacts = crmContacts;
   // eslint-disable-next-line no-console
   console.log(
-    `[personal/page] render workspaceId=${workspace.slug} contactCount=${crmContacts.length} ` +
+    `[personal/page] read workspaceId=${workspace.slug} ` +
+      `rawCrmContacts.length=${rawCrmContacts.length} ` +
       `storageMode=${personalStorage.mode} durable=${personalStorage.durable}`,
   );
-  const resurfacingBuckets = buildResurfacingBuckets(crmContacts);
+  const resurfacingBuckets = buildResurfacingBuckets(rawCrmContacts);
   const model = buildPersonalWorkspaceModel({
     workspace,
     user,
-    crmContacts,
+    crmContacts: rawCrmContacts,
     resurfacingBuckets,
   });
+  // eslint-disable-next-line no-console
+  console.log(
+    `[personal/page] model workspaceId=${workspace.slug} ` +
+      `totalContacts=${model.summary.totalContacts} ` +
+      `priorityCount=${model.summary.priorityCount} ` +
+      `followUpsDue=${model.summary.followUpsDue} ` +
+      `dormantCount=${model.summary.dormantCount} ` +
+      `needsEnrichment=${model.summary.needsEnrichment}`,
+  );
 
   return <PersonalWorkspace model={model} />;
 }
