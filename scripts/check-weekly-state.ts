@@ -19,6 +19,10 @@
  */
 
 import { getWorkspaceBySlug } from "@/config/workspaces";
+import {
+  filterOutInternalDiagnosticContacts,
+  isInternalDiagnosticContact,
+} from "@/lib/crm-import/internalContactFilter";
 import { describeContactStorageMode, listContactsByWorkspace } from "@/lib/crm-import/store";
 import { readCustomerOutcomes } from "@/lib/recovery/outcomes/persistence";
 import { buildResurfacingBuckets } from "@/lib/relationship-intelligence/resurfacing";
@@ -573,6 +577,51 @@ function runRuleEngineChecks(): void {
   runHistoryPreservationCheck();
 }
 
+// ── Internal-diagnostic-contact filter ───────────────────────────
+
+function runInternalContactFilterChecks(): void {
+  const matchersThatMustHide: Array<Partial<CrmContactRecord>> = [
+    { id: "crm-persist-check-1", name: "Persist Check", email: "persist@example.com" },
+    { id: "crm-persist-check-file-mpfw9f2t", name: "Persist Check" },
+    { id: "real-id", name: "Random Person", email: "persist@example.com" },
+    { id: "real-id", name: "Persist Check" },
+    { id: "real-id", name: "Random Person", email: "sample@example.com" },
+    { id: "real-id", name: "Random Person", normalizedEmail: "test@example.com" },
+    { id: "real-id", name: "Random Person", sourceCrm: "test" },
+  ];
+  for (const m of matchersThatMustHide) {
+    const fake = { ...m } as unknown as CrmContactRecord;
+    if (!isInternalDiagnosticContact(fake)) {
+      fail(`filter: expected internal=true for ${JSON.stringify(m)}`);
+    }
+  }
+
+  const realPeopleThatMustSurvive: Array<Partial<CrmContactRecord>> = [
+    { id: "real-1", name: "Persistence Pierre", email: "p.pierre@gmail.com" },
+    { id: "wiseagent-123", name: "Leah B.", email: "leah@example.org" },
+    { id: "wiseagent-456", name: "Brendan Walsh", sourceCrm: "wise_agent" },
+    { id: "wiseagent-789", name: "Sample Person", email: "real@example.org" }, // name=Sample is fine, only email/exact name matches
+    { id: "wiseagent-999", name: "Test Family", sourceCrm: "wise_agent" }, // name contains 'test' word, not exact
+  ];
+  for (const r of realPeopleThatMustSurvive) {
+    const fake = { ...r } as unknown as CrmContactRecord;
+    if (isInternalDiagnosticContact(fake)) {
+      fail(`filter: expected internal=false (would hide a real contact) for ${JSON.stringify(r)}`);
+    }
+  }
+
+  // filterOutInternalDiagnosticContacts preserves input order for survivors.
+  const list = [
+    { id: "real-1", name: "Real A" },
+    { id: "crm-persist-check-1", name: "Persist Check" },
+    { id: "real-2", name: "Real B" },
+  ].map((c) => c as unknown as CrmContactRecord);
+  const survivors = filterOutInternalDiagnosticContacts(list);
+  if (survivors.length !== 2 || survivors[0].id !== "real-1" || survivors[1].id !== "real-2") {
+    fail(`filter: filterOutInternalDiagnosticContacts did not preserve order or drop the right row`);
+  }
+}
+
 /**
  * Panel-side copy lives in the React component, not the snapshot.
  * Validate the literal strings here so they participate in the same
@@ -719,6 +768,24 @@ async function runLiveAudit(): Promise<void> {
     if (!["HIGH", "MED", "WEAK"].includes(p.trustLevel)) {
       fail(`Nicole priority#${p.rank}: bad trust level ${p.trustLevel}`);
     }
+    // Hard rule: no internal diagnostic contact may ever appear in
+    // Nicole's weekly priorities. Cross-check by both id prefix and
+    // the canonical predicate over a synthesized record.
+    if (p.contactId.toLowerCase().startsWith("crm-persist-check")) {
+      fail(`Nicole priority#${p.rank}: internal persist-check contact (${p.contactId}) leaked into priorities`);
+    }
+    const synthesized = { id: p.contactId, name: p.name } as unknown as CrmContactRecord;
+    if (isInternalDiagnosticContact(synthesized)) {
+      fail(`Nicole priority#${p.rank}: internal diagnostic contact reached priorities (${p.contactId} / ${p.name})`);
+    }
+  }
+  // Bonus: rank-1 must carry real evidence, never the fallback:no_context source.
+  const top = state.priorities[0];
+  if (top && top.openerSource === "fallback:no_context") {
+    fail(
+      `Nicole priority#1: fallback:no_context — first priority must reference real CRM evidence ` +
+        `(got "${top.name}" / ${top.contactId})`,
+    );
   }
   if (!state.activationEmail.subject.trim()) fail("Nicole: empty activation email subject");
   if (!state.activationEmail.body.includes(state.weekId)) {
@@ -767,6 +834,7 @@ async function main(): Promise<void> {
   runOutcomeDrivenInsightCheck();
   runOverlayChecks();
   runRuleEngineChecks();
+  runInternalContactFilterChecks();
   runPanelCopyScan();
   runBannedPhraseScan(coldState);
   await runLiveAudit();
@@ -800,6 +868,10 @@ async function main(): Promise<void> {
       "ranking: outcomeReason text passes banned-phrase scan",
       "defer: future nextReviewAt excludes; past within 14 days surfaces with resurfaced reason",
       "history: excluded contacts remain visible in the weekly rollup count",
+      "filter: internal diagnostic contacts (persist-check, sample/test/persist@example.com, sourceCrm=test) hidden",
+      "filter: real contacts with adjacent names/emails not hidden by accident",
+      "live: no internal diagnostic contact ever reaches Nicole's priorities",
+      "live: rank-1 must cite real CRM evidence (never fallback:no_context)",
       "panel copy (reinforcement, empty states, action labels) passes banned-phrase scan",
       "no banned phrases in any opener / evidence / insight / email",
       "Nicole live audit: shape valid, every priority cites evidence",

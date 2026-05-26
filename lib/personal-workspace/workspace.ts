@@ -1,6 +1,7 @@
 import type { PublicUser } from "@/config/tenants";
 import type { WorkspaceConfig } from "@/config/workspaces";
 import type { CrmContactRecord } from "@/lib/crm-import/types";
+import { filterOutInternalDiagnosticContacts } from "@/lib/crm-import/internalContactFilter";
 import {
   computeWorkspaceReachability,
   contactHasReachableEmail,
@@ -179,7 +180,12 @@ export function buildPersonalWorkspaceModel(args: {
   weeklyState?: WeeklyState | null;
   weeklyMode?: WeeklyMode | null;
 }): PersonalWorkspaceModel {
-  const { workspace, user, crmContacts, resurfacingBuckets } = args;
+  const { workspace, user, resurfacingBuckets } = args;
+  // Drop internal diagnostic rows (persist-check / sample@example.com
+  // / sourceCrm=test) so they never appear on a customer-visible
+  // priority surface. Production data is not deleted — they remain in
+  // the DB for forensic purposes — they are simply invisible here.
+  const crmContacts = filterOutInternalDiagnosticContacts(args.crmContacts);
   const generatedAt = args.generatedAt ?? new Date().toISOString();
   const reachability = computeWorkspaceReachability(crmContacts);
   const copy = personalCopyForWorkspace(workspace.branding);
