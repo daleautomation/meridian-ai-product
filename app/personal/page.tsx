@@ -2,7 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PersonalWorkspace } from "@/components/personal";
 import { getSession } from "@/lib/auth";
-import { ContactStorageUnavailableError, listContactsByWorkspace } from "@/lib/crm-import/store";
+import {
+  ContactStorageUnavailableError,
+  describeContactStorageMode,
+  listContactsByWorkspace,
+} from "@/lib/crm-import/store";
 import { buildResurfacingBuckets } from "@/lib/relationship-intelligence/resurfacing";
 import { buildPersonalWorkspaceModel } from "@/lib/personal-workspace/workspace";
 import { getWorkspaceAccess } from "@/lib/workspaceAccess";
@@ -126,6 +130,15 @@ export default async function PersonalWorkspacePage(props: {
     }
     throw err;
   }
+  // Diagnostic — surface the exact workspaceId / count / storage path
+  // each render takes. Lets an operator confirm /personal is reading
+  // from the same backend the import wrote to.
+  const personalStorage = describeContactStorageMode();
+  // eslint-disable-next-line no-console
+  console.log(
+    `[personal/page] render workspaceId=${workspace.slug} contactCount=${crmContacts.length} ` +
+      `storageMode=${personalStorage.mode} durable=${personalStorage.durable}`,
+  );
   const resurfacingBuckets = buildResurfacingBuckets(crmContacts);
   const model = buildPersonalWorkspaceModel({
     workspace,

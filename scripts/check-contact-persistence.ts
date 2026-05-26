@@ -48,6 +48,17 @@ async function withSandbox<T>(fn: (ctx: TestContext) => Promise<T>): Promise<T> 
   const previous = process.env.MERIDIAN_CRM_CONTACTS_DIR;
   process.env.MERIDIAN_CRM_CONTACTS_DIR = dirName;
 
+  // Critical: this is the LOCAL-FILE round-trip test. If the caller's
+  // env carries DATABASE_URL / POSTGRES_URL (common when an operator
+  // runs `dotenv -e .env.local`), the store would happily route writes
+  // to Neon and pollute the real `crm_contacts` table with
+  // `persist-check-a` rows. Force the local file path for the duration
+  // of this test by unsetting both URLs.
+  const previousDatabaseUrl = process.env.DATABASE_URL;
+  const previousPostgresUrl = process.env.POSTGRES_URL;
+  delete process.env.DATABASE_URL;
+  delete process.env.POSTGRES_URL;
+
   try {
     return await fn({
       sandboxDir: absolute,
@@ -57,6 +68,8 @@ async function withSandbox<T>(fn: (ctx: TestContext) => Promise<T>): Promise<T> 
   } finally {
     if (previous === undefined) delete process.env.MERIDIAN_CRM_CONTACTS_DIR;
     else process.env.MERIDIAN_CRM_CONTACTS_DIR = previous;
+    if (previousDatabaseUrl !== undefined) process.env.DATABASE_URL = previousDatabaseUrl;
+    if (previousPostgresUrl !== undefined) process.env.POSTGRES_URL = previousPostgresUrl;
     await fs.rm(absolute, { recursive: true, force: true });
   }
 }
