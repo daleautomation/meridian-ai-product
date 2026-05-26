@@ -22,6 +22,7 @@
     "nicole-contacts:migrate-from-file": "tsx scripts/migrate-nicole-contacts-to-neon.ts",
     "crm:schema:init": "tsx scripts/init-crm-contacts-schema.ts",
     "personal-workspace:check": "tsx scripts/check-personal-workspace.ts",
+    "check-opener-generation": "tsx scripts/check-opener-generation.ts",
     "brief:determinism": "tsx scripts/check-brief-determinism.ts",
     "signals:check": "tsx scripts/check-workspace-signals.ts",
     "property-enrichment:check": "tsx scripts/check-property-enrichment.ts",

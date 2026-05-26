@@ -31,6 +31,7 @@ import {
 import { scoreFromCrmContact } from "@/lib/relationship-intelligence/scoring";
 import { workspaceImportPath } from "@/lib/workspaceRouting";
 import { personalCopyForWorkspace, PERSONAL_NAV, type PersonalNavId } from "./config";
+import { buildSuggestedOpenerFromContact, type SuggestedOpener } from "./openerBuilder";
 
 export type PersonalPrimaryChannel = "email" | "phone" | "none";
 
@@ -428,17 +429,25 @@ function crmContactToCard(
 
   const recommendation = buildRecommendationExplanation(contact, transparency, suggestedAction);
   const methods = transparency.contactMethods;
-  const nextStep = buildNextStep(contact, suggestedAction, {
+  // Deterministic opener — quotes the actual CRM evidence (notes / tag /
+  // last-close date). When a specific extractor fires (HIGH / MED trust),
+  // its line replaces the generic "Email X at Y — reference your last
+  // interaction" template. Honest fallback only when the CRM has no
+  // material.
+  const suggestedOpener: SuggestedOpener = buildSuggestedOpenerFromContact(contact);
+  const fallbackNextStep = buildNextStep(contact, suggestedAction, {
     hasPhone,
     hasEmail,
     phoneLight: ctx.phoneLight,
     phoneActionable: methods.phone.actionable,
     emailActionable: methods.email.actionable,
   });
-  const nextStepIsTemplate = isGenericRecommendation(nextStep)
-    || transparency.enrichmentStatus === "imported_only"
-    || transparency.verificationTier === "imported"
-    || transparency.verificationTier === "confidence_low";
+  const nextStep = suggestedOpener.isSpecific ? suggestedOpener.opener : fallbackNextStep;
+  const nextStepIsTemplate = !suggestedOpener.isSpecific
+    && (isGenericRecommendation(nextStep)
+      || transparency.enrichmentStatus === "imported_only"
+      || transparency.verificationTier === "imported"
+      || transparency.verificationTier === "confidence_low");
 
   const reachabilityNote =
     !hasPhone && hasEmail
@@ -469,7 +478,9 @@ function crmContactToCard(
     stage,
     reasons: compact([
       transparency.scoreLabel,
-      transparency.explanation,
+      // Promote the opener evidence to the top reason when it's specific —
+      // operator sees the exact CRM fragment that justified the next step.
+      suggestedOpener.isSpecific ? suggestedOpener.supportingEvidence : transparency.explanation,
       contact.tags[0] ? `Tagged: ${contact.tags[0]}` : null,
       contact.lastInteractionAt
         ? `Last touch ${relativeDate(contact.lastInteractionAt)}`
