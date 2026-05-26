@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PersonalWorkspace } from "@/components/personal";
 import { getSession } from "@/lib/auth";
-import { listContactsByWorkspace } from "@/lib/crm-import/store";
+import { ContactStorageUnavailableError, listContactsByWorkspace } from "@/lib/crm-import/store";
 import { buildResurfacingBuckets } from "@/lib/relationship-intelligence/resurfacing";
 import { buildPersonalWorkspaceModel } from "@/lib/personal-workspace/workspace";
 import { getWorkspaceAccess } from "@/lib/workspaceAccess";
@@ -106,7 +106,26 @@ export default async function PersonalWorkspacePage(props: {
     );
   }
 
-  const crmContacts = await listContactsByWorkspace(workspace.slug);
+  let crmContacts;
+  try {
+    crmContacts = await listContactsByWorkspace(workspace.slug);
+  } catch (err) {
+    if (err instanceof ContactStorageUnavailableError) {
+      return (
+        <PersonalAuthShell
+          title="Contact storage not configured"
+          copy={
+            `Imports for "${workspace.branding?.displayName ?? workspace.name}" cannot be loaded ` +
+            `because durable storage is not configured for this deployment. ` +
+            `Set DATABASE_URL or POSTGRES_URL in the production environment, redeploy, ` +
+            `and re-run the contact import. This page intentionally refuses to render ` +
+            `as "0 contacts" when previously-imported data may still exist elsewhere.`
+          }
+        />
+      );
+    }
+    throw err;
+  }
   const resurfacingBuckets = buildResurfacingBuckets(crmContacts);
   const model = buildPersonalWorkspaceModel({
     workspace,

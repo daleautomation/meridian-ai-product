@@ -17,6 +17,7 @@
     "contact-trust:check": "tsx scripts/check-contact-trust.ts",
     "crm-import:check": "tsx scripts/check-crm-import.ts",
     "crm-import:audit": "tsx scripts/crm-import-audit.ts",
+    "contact-persistence:check": "tsx scripts/check-contact-persistence.ts",
     "crm:schema:init": "tsx scripts/init-crm-contacts-schema.ts",
     "personal-workspace:check": "tsx scripts/check-personal-workspace.ts",
     "brief:determinism": "tsx scripts/check-brief-determinism.ts",

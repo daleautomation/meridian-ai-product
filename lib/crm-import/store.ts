@@ -32,6 +32,52 @@ import {
 } from "./storageConfig";
 import type { CrmContactRecord, CrmImportJob } from "./types";
 
+/**
+ * Thrown when a contact READ is attempted in a deployment that has no
+ * durable storage configured (Vercel/serverless without
+ * DATABASE_URL/POSTGRES_URL).
+ *
+ * Original bug: this case silently returned [] and a customer workspace
+ * looked like it had 0 contacts when in fact storage simply wasn't
+ * wired. Callers (`app/personal/page.tsx`, `app/operator/relationship-priority/page.tsx`)
+ * catch this error and surface an explicit "storage not configured"
+ * state instead of an empty list.
+ */
+export class ContactStorageUnavailableError extends Error {
+  readonly code = "no_durable_storage_in_production";
+  readonly workspaceId: string;
+  constructor(workspaceId: string, detail: string) {
+    super(detail);
+    this.name = "ContactStorageUnavailableError";
+    this.workspaceId = workspaceId;
+  }
+}
+
+export type ContactStorageMode = "neon" | "file" | "none";
+
+/** Describe the storage backend currently in use. Pure read. */
+export function describeContactStorageMode(): {
+  mode: ContactStorageMode;
+  durable: boolean;
+  detail: string;
+} {
+  if (useCrmNeonStorage()) {
+    return { mode: "neon", durable: true, detail: "DATABASE_URL/POSTGRES_URL configured" };
+  }
+  if (isVercelProduction()) {
+    return {
+      mode: "none",
+      durable: false,
+      detail: "Vercel production without DATABASE_URL — contact reads/writes will fail loud",
+    };
+  }
+  return {
+    mode: "file",
+    durable: false,
+    detail: `local file storage under ${crmContactsFileRoots().join(", ")}`,
+  };
+}
+
 function normalizeContactRecord(contact: CrmContactRecord): CrmContactRecord {
   return {
     ...contact,
@@ -149,14 +195,30 @@ async function readWorkspaceContacts(workspaceId: string): Promise<CrmContactRec
   const cached = memoryContactsByWorkspace.get(workspaceId);
   if (cached) return cached;
 
-  const records = (
-    useCrmNeonStorage()
-      ? await listContactsNeon(workspaceId)
-      : await readWorkspaceContactsFromDisk(workspaceId)
-  ).map(normalizeContactRecord);
+  if (useCrmNeonStorage()) {
+    const rows = (await listContactsNeon(workspaceId)).map(normalizeContactRecord);
+    memoryContactsByWorkspace.set(workspaceId, rows);
+    return rows;
+  }
 
-  memoryContactsByWorkspace.set(workspaceId, records);
-  return records;
+  // No Neon. In a Vercel-style production environment this is a
+  // misconfiguration: the read MUST surface that fact rather than
+  // pretend there are 0 contacts. The file roots that follow can never
+  // be durable in serverless (deploy bundle is read-only; /tmp is
+  // ephemeral) so we refuse to silently return [].
+  if (isVercelProduction()) {
+    const detail =
+      `Contact storage is not configured for workspace "${workspaceId}". ` +
+      `DATABASE_URL or POSTGRES_URL must be set for durable contact persistence in production. ` +
+      `Until configured, imported contacts cannot be read back across cold starts.`;
+    // eslint-disable-next-line no-console
+    console.error(`[crm-import] ${detail}`);
+    throw new ContactStorageUnavailableError(workspaceId, detail);
+  }
+
+  const rows = (await readWorkspaceContactsFromDisk(workspaceId)).map(normalizeContactRecord);
+  memoryContactsByWorkspace.set(workspaceId, rows);
+  return rows;
 }
 
 async function writeWorkspaceContacts(
@@ -232,6 +294,37 @@ export async function saveImportJob(job: CrmImportJob): Promise<void> {
 
 export async function listContactsByWorkspace(workspaceId: string): Promise<CrmContactRecord[]> {
   return readWorkspaceContacts(workspaceId);
+}
+
+/**
+ * Diagnostic: storage-mode + per-workspace contact count for a set of
+ * workspaces. Reads through the same path the personal/operator pages
+ * use, so a count returned here matches what the workspace renders.
+ *
+ * Returns one report per workspace; each report carries an `error`
+ * field when storage is unavailable so an operator can tell "0
+ * contacts" from "storage misconfigured".
+ */
+export async function getWorkspaceContactCounts(workspaceIds: readonly string[]): Promise<{
+  storage: ReturnType<typeof describeContactStorageMode>;
+  workspaces: Array<{
+    workspaceId: string;
+    count: number | null;
+    error: string | null;
+  }>;
+}> {
+  const storage = describeContactStorageMode();
+  const workspaces: Array<{ workspaceId: string; count: number | null; error: string | null }> = [];
+  for (const id of workspaceIds) {
+    try {
+      const list = await readWorkspaceContacts(id);
+      workspaces.push({ workspaceId: id, count: list.length, error: null });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      workspaces.push({ workspaceId: id, count: null, error: message });
+    }
+  }
+  return { storage, workspaces };
 }
 
 export async function upsertContacts(records: CrmContactRecord[]): Promise<{ inserted: number; updated: number }> {
