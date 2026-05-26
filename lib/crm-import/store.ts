@@ -192,14 +192,29 @@ async function writeWorkspaceContactsToFile(
 }
 
 async function readWorkspaceContacts(workspaceId: string): Promise<CrmContactRecord[]> {
+  // ── Neon path: always read fresh ─────────────────────────────────
+  // The in-memory cache cannot be kept consistent across function
+  // instances on serverless (Vercel), or across the dev-server and a
+  // separate npm-script process. A previous read that landed an empty
+  // workspace caches `[]` indefinitely; after a later import to the
+  // same Neon DB, the cache hides every row.
+  //
+  // Live root cause of "Nicole shows 0 after Imported: 98":
+  //   • An earlier /personal render cached `[]` for nicole-lonergan
+  //     while Neon was empty.
+  //   • The import wrote 98 rows to Neon.
+  //   • Re-rendering /personal hit the stale cache and returned 0.
+  //
+  // Fix: skip the cache for the durable backend; Neon HTTP reads are
+  // fast enough that pure correctness wins. The cache stays for the
+  // local file path below, where one process owns the file and an
+  // upsert in the same process correctly invalidates the cache.
+  if (useCrmNeonStorage()) {
+    return (await listContactsNeon(workspaceId)).map(normalizeContactRecord);
+  }
+
   const cached = memoryContactsByWorkspace.get(workspaceId);
   if (cached) return cached;
-
-  if (useCrmNeonStorage()) {
-    const rows = (await listContactsNeon(workspaceId)).map(normalizeContactRecord);
-    memoryContactsByWorkspace.set(workspaceId, rows);
-    return rows;
-  }
 
   // No Neon. In a Vercel-style production environment this is a
   // misconfiguration: the read MUST surface that fact rather than
@@ -344,11 +359,8 @@ export async function upsertContacts(records: CrmContactRecord[]): Promise<{ ins
   if (useCrmNeonStorage()) {
     await ensureCrmContactsSchema();
     const result = await upsertContactsNeon(records);
-    const workspaceIds = [...new Set(records.map((r) => r.workspaceId))];
-    for (const workspaceId of workspaceIds) {
-      memoryContactsByWorkspace.delete(workspaceId);
-      await readWorkspaceContacts(workspaceId);
-    }
+    // No cache to invalidate on the Neon path — readWorkspaceContacts
+    // always reads through to Neon for durable storage.
     return result;
   }
 
@@ -433,7 +445,7 @@ export async function rollbackImport(snapshotId: string): Promise<{ restored: nu
   const ok = useCrmNeonStorage()
     ? await (async () => {
         await replaceWorkspaceContactsNeon(snapshot.workspaceId, snapshot.contacts);
-        memoryContactsByWorkspace.set(snapshot.workspaceId, snapshot.contacts);
+        // No cache to update — Neon path bypasses memoryContactsByWorkspace.
         return true;
       })()
     : await writeWorkspaceContacts(snapshot.workspaceId, snapshot.contacts);

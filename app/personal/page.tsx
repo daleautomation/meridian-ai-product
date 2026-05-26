@@ -22,6 +22,10 @@ import {
   workspaceHomePath,
 } from "@/lib/workspaceRouting";
 import { personalPalette } from "@/lib/personal-workspace/config";
+import {
+  describeRuntimeFingerprint,
+  logRuntimeBannerOnce,
+} from "@/lib/diagnostics/runtimeFingerprint";
 
 export const dynamic = "force-dynamic";
 // Belt-and-suspenders on top of force-dynamic so no intermediate cache
@@ -36,6 +40,7 @@ type SearchParams = {
 export default async function PersonalWorkspacePage(props: {
   searchParams?: Promise<SearchParams>;
 }) {
+  logRuntimeBannerOnce();
   const user = await getSession();
   if (!user) redirect("/login?next=/personal");
 
@@ -144,12 +149,15 @@ export default async function PersonalWorkspacePage(props: {
   // different store than the write — operator must reconcile
   // DATABASE_URL across environments.
   const personalStorage = describeContactStorageMode();
+  const personalFingerprint = describeRuntimeFingerprint();
   const rawCrmContacts = crmContacts;
   // eslint-disable-next-line no-console
   console.log(
     `[personal/page] read workspaceId=${workspace.slug} ` +
       `rawCrmContacts.length=${rawCrmContacts.length} ` +
-      `storageMode=${personalStorage.mode} durable=${personalStorage.durable}`,
+      `storageMode=${personalStorage.mode} durable=${personalStorage.durable} ` +
+      `commit=${personalFingerprint.commitShort} branch=${personalFingerprint.branch} ` +
+      `dbHost=${personalFingerprint.dbHost ?? "(none)"}`,
   );
   const resurfacingBuckets = buildResurfacingBuckets(rawCrmContacts);
   const model = buildPersonalWorkspaceModel({
@@ -165,7 +173,9 @@ export default async function PersonalWorkspacePage(props: {
       `priorityCount=${model.summary.priorityCount} ` +
       `followUpsDue=${model.summary.followUpsDue} ` +
       `dormantCount=${model.summary.dormantCount} ` +
-      `needsEnrichment=${model.summary.needsEnrichment}`,
+      `needsEnrichment=${model.summary.needsEnrichment} ` +
+      `commit=${personalFingerprint.commitShort} ` +
+      `dbHost=${personalFingerprint.dbHost ?? "(none)"}`,
   );
 
   return <PersonalWorkspace model={model} />;

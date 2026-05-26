@@ -6,10 +6,17 @@ import {
   getImportJob,
   getWorkspaceContactCounts,
 } from "@/lib/crm-import/store";
+import {
+  describeRuntimeFingerprint,
+  logRuntimeBannerOnce,
+} from "@/lib/diagnostics/runtimeFingerprint";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 export async function POST(req: Request) {
+  logRuntimeBannerOnce();
   try {
     const user = await getSession();
     if (!user) return jsonError("unauthorized", 401);
@@ -33,6 +40,7 @@ export async function POST(req: Request) {
     // different stores — the smoking gun the operator needs to see in
     // function logs.
     const storage = describeContactStorageMode();
+    const fingerprint = describeRuntimeFingerprint();
     const job = await getImportJob(jobId).catch(() => null);
     const workspaceId = job?.workspaceId ?? "";
     let contactCountAfterImport: number | null = null;
@@ -50,7 +58,9 @@ export async function POST(req: Request) {
         `inserted=${result.imported} skipped=${result.skipped} duplicates=${result.duplicates} ` +
         `contactCountAfterImport=${contactCountAfterImport ?? "(error)"} ` +
         `readBackError=${readBackError ?? "none"} ` +
-        `storageMode=${storage.mode} durable=${storage.durable}`,
+        `storageMode=${storage.mode} durable=${storage.durable} ` +
+        `commit=${fingerprint.commitShort} branch=${fingerprint.branch} ` +
+        `dbHost=${fingerprint.dbHost ?? "(none)"}`,
     );
 
     return jsonOk({
@@ -61,6 +71,7 @@ export async function POST(req: Request) {
       },
       contactCountAfterImport,
       readBackError,
+      fingerprint,
     });
   } catch (err) {
     console.error("[crm-import/execute]", err);

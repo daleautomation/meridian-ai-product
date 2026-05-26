@@ -19,6 +19,7 @@
     "crm-import:audit": "tsx scripts/crm-import-audit.ts",
     "contact-persistence:check": "tsx scripts/check-contact-persistence.ts",
     "nicole-contacts:check": "tsx scripts/check-nicole-contacts-neon.ts",
+    "nicole-contacts:migrate-from-file": "tsx scripts/migrate-nicole-contacts-to-neon.ts",
     "crm:schema:init": "tsx scripts/init-crm-contacts-schema.ts",
     "personal-workspace:check": "tsx scripts/check-personal-workspace.ts",
     "brief:determinism": "tsx scripts/check-brief-determinism.ts",
