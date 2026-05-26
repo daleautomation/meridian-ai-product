@@ -1,16 +1,55 @@
 "use client";
 
-import { type CSSProperties } from "react";
+import { useCallback, useMemo, useState, type CSSProperties } from "react";
 import type {
   WeeklyMode,
   WeeklyPriority,
   WeeklyState,
 } from "@/lib/personal-workspace/weeklyState";
 
+// ── Outcome action definitions ──────────────────────────────────────
+// Order matters — these are the buttons shown on every priority row.
+// Each maps 1:1 to a canonical OutcomeType. No new outcome types
+// invented here; the API rejects anything outside the closed set in
+// lib/recovery/outcomes/types.ts.
+
+interface OutcomeAction {
+  outcome:
+    | "contacted"
+    | "no_response"
+    | "meeting_booked"
+    | "follow_up_later"
+    | "wrong_contact";
+  label: string;
+}
+
+const OUTCOME_ACTIONS: readonly OutcomeAction[] = [
+  { outcome: "contacted", label: "Sent" },
+  { outcome: "no_response", label: "No answer" },
+  { outcome: "meeting_booked", label: "Meeting booked" },
+  { outcome: "follow_up_later", label: "Follow up later" },
+  { outcome: "wrong_contact", label: "Wrong contact" },
+];
+
+// Calm post-capture line. Static. Same string every time. No hype.
+const REINFORCEMENT_TEXT = "Saved to continuity memory.";
+
+// Honest empty-state lines. Operator-grade tone, no productivity guilt.
+const EMPTY_ROLLUP_MONDAY = "Your priorities are still untouched this week.";
+const EMPTY_REMAINING_MIDWEEK =
+  "Every priority has at least one captured outcome. Next week opens Monday.";
+const EMPTY_FRIDAY = "No outcomes were captured this week.";
+
+// ── Local optimistic-capture state shape ───────────────────────────
+
+interface OptimisticOutcome {
+  outcome: OutcomeAction["outcome"];
+  recordedAt: string;
+}
+
 interface WeeklyBriefingPanelProps {
   state: WeeklyState;
   mode: WeeklyMode;
-  /** Called when an operator clicks a priority row — selects that contact. */
   onSelectContact?: (cardId: string) => void;
 }
 
@@ -19,38 +58,205 @@ export default function WeeklyBriefingPanel({
   mode,
   onSelectContact,
 }: WeeklyBriefingPanelProps) {
-  if (mode === "monday") return <MondayPanel state={state} onSelectContact={onSelectContact} />;
-  if (mode === "midweek") return <MidweekPanel state={state} onSelectContact={onSelectContact} />;
-  return <FridayPanel state={state} />;
+  // Map of contactId → optimistic outcome captured this session. Layered
+  // on top of `state.priorities[i].lastOperatorOutcome` which is the
+  // durable server-side overlay from the outcome store.
+  const [optimistic, setOptimistic] = useState<Map<string, OptimisticOutcome>>(
+    () => new Map(),
+  );
+  // contactIds we tried to POST but the server rejected; surfaced inline.
+  const [failed, setFailed] = useState<Map<string, string>>(() => new Map());
+
+  // Effective outcomes view used by every render branch — optimistic
+  // overrides server when present (server is authoritative on refresh).
+  const effectivePriorities = useMemo<EnrichedPriority[]>(() => {
+    return state.priorities.map((p) => {
+      const optimisticEntry = optimistic.get(p.contactId);
+      if (optimisticEntry) {
+        return {
+          ...p,
+          lastOperatorOutcome: {
+            outcome: optimisticEntry.outcome,
+            recordedAt: optimisticEntry.recordedAt,
+            ageDays: 0,
+          },
+          capturedThisSession: true,
+        };
+      }
+      return { ...p, capturedThisSession: false };
+    });
+  }, [state.priorities, optimistic]);
+
+  // Local rollup view = server rollup + optimistic deltas this session.
+  // We only increment the counter — the server rollup carries the
+  // pre-session counts already, and a duplicate capture would write a
+  // new outcome row (the store is append-only).
+  const effectiveRollup = useMemo(() => {
+    const base = state.outcomeRollup;
+    // Coalesce any rollup field a pre-overlay snapshot might be
+    // missing (snapshot schema is additive — old files may pre-date
+    // followUpsDeferred). Never let NaN reach the UI.
+    let outcomesCaptured = base.outcomesCaptured ?? 0;
+    let meetingsBooked = base.meetingsBooked ?? 0;
+    let followUpsDeferred = base.followUpsDeferred ?? 0;
+    let deprioritized = base.deprioritized ?? 0;
+    for (const entry of optimistic.values()) {
+      outcomesCaptured += 1;
+      if (entry.outcome === "meeting_booked") meetingsBooked += 1;
+      if (entry.outcome === "follow_up_later") followUpsDeferred += 1;
+      if (entry.outcome === "no_response" || entry.outcome === "wrong_contact") {
+        deprioritized += 1;
+      }
+    }
+    return { outcomesCaptured, meetingsBooked, followUpsDeferred, deprioritized };
+  }, [state.outcomeRollup, optimistic]);
+
+  const captureOutcome = useCallback(
+    async (priority: WeeklyPriority, action: OutcomeAction) => {
+      const recordedAt = new Date().toISOString();
+      // Optimistically mark captured BEFORE the network call.
+      setOptimistic((prev) => {
+        const next = new Map(prev);
+        next.set(priority.contactId, { outcome: action.outcome, recordedAt });
+        return next;
+      });
+      setFailed((prev) => {
+        if (!prev.has(priority.contactId)) return prev;
+        const next = new Map(prev);
+        next.delete(priority.contactId);
+        return next;
+      });
+      try {
+        const res = await fetch("/api/outcomes/record", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            customer: state.workspaceSlug,
+            leadKey: priority.contactId,
+            outcome: action.outcome,
+            source: "operator_console",
+          }),
+        });
+        if (!res.ok) {
+          let message = `HTTP ${res.status}`;
+          try {
+            const j = (await res.json()) as { error?: string };
+            if (j.error) message = j.error;
+          } catch {
+            // ignore body parse failure
+          }
+          throw new Error(message);
+        }
+      } catch (err) {
+        // Roll back the optimistic state on failure and surface the
+        // error inline. Never hide failures.
+        setOptimistic((prev) => {
+          if (!prev.has(priority.contactId)) return prev;
+          const next = new Map(prev);
+          next.delete(priority.contactId);
+          return next;
+        });
+        const message = err instanceof Error ? err.message : "Capture failed.";
+        setFailed((prev) => {
+          const next = new Map(prev);
+          next.set(priority.contactId, message);
+          return next;
+        });
+      }
+    },
+    [state.workspaceSlug],
+  );
+
+  if (mode === "monday") {
+    return (
+      <MondayPanel
+        state={state}
+        priorities={effectivePriorities}
+        rollup={effectiveRollup}
+        failed={failed}
+        captureOutcome={captureOutcome}
+        onSelectContact={onSelectContact}
+      />
+    );
+  }
+  if (mode === "midweek") {
+    return (
+      <MidweekPanel
+        state={state}
+        priorities={effectivePriorities}
+        rollup={effectiveRollup}
+        failed={failed}
+        captureOutcome={captureOutcome}
+        onSelectContact={onSelectContact}
+      />
+    );
+  }
+  return <FridayPanel state={state} priorities={effectivePriorities} rollup={effectiveRollup} />;
 }
+
+// ── Sub-component types ────────────────────────────────────────────
+
+type EnrichedPriority = WeeklyPriority & { capturedThisSession: boolean };
+type EffectiveRollup = {
+  outcomesCaptured: number;
+  meetingsBooked: number;
+  followUpsDeferred: number;
+  deprioritized: number;
+};
 
 // ── Monday ──────────────────────────────────────────────────────────
 
 function MondayPanel({
   state,
+  priorities,
+  rollup,
+  failed,
+  captureOutcome,
   onSelectContact,
 }: {
   state: WeeklyState;
+  priorities: EnrichedPriority[];
+  rollup: EffectiveRollup;
+  failed: Map<string, string>;
+  captureOutcome: (p: WeeklyPriority, a: OutcomeAction) => Promise<void>;
   onSelectContact?: (cardId: string) => void;
 }) {
+  const active = priorities.filter((p) => p.lastOperatorOutcome === null);
+  const completed = priorities.filter((p) => p.lastOperatorOutcome !== null);
   return (
     <section style={styles.mondayShell} aria-label="Weekly briefing">
       <header style={styles.mondayHeader}>
         <div style={styles.weekLabel}>Week of {state.weekId}</div>
         <h2 style={styles.mondayTitle}>Your workspace is ready</h2>
         <p style={styles.mondaySubtitle}>
-          {state.priorities.length} priority relationship
-          {state.priorities.length === 1 ? "" : "s"} queued for this week. Every line below
+          {priorities.length} priority relationship
+          {priorities.length === 1 ? "" : "s"} queued for this week. Every line below
           cites the CRM material that justified it.
         </p>
       </header>
 
       <div style={styles.mondayBody}>
         <ol style={styles.priorityList}>
-          {state.priorities.map((priority) => (
+          {active.map((priority) => (
             <PriorityRow
               key={priority.cardId}
               priority={priority}
+              failedMessage={failed.get(priority.contactId) ?? null}
+              captureOutcome={captureOutcome}
+              onSelectContact={onSelectContact}
+            />
+          ))}
+          {completed.length > 0 ? (
+            <li style={styles.capturedDivider}>
+              <span>Captured this week ({completed.length})</span>
+            </li>
+          ) : null}
+          {completed.map((priority) => (
+            <PriorityRow
+              key={priority.cardId}
+              priority={priority}
+              failedMessage={failed.get(priority.contactId) ?? null}
+              captureOutcome={captureOutcome}
               onSelectContact={onSelectContact}
             />
           ))}
@@ -78,20 +284,28 @@ function MondayPanel({
 
           <article style={styles.rollupCard}>
             <div style={styles.calloutLabel}>This week</div>
-            <ul style={styles.rollupList}>
-              <li style={styles.rollupRow}>
-                <span style={styles.rollupNumber}>{state.outcomeRollup.outcomesCaptured}</span>
-                <span style={styles.rollupName}>outcomes captured</span>
-              </li>
-              <li style={styles.rollupRow}>
-                <span style={styles.rollupNumber}>{state.outcomeRollup.meetingsBooked}</span>
-                <span style={styles.rollupName}>meetings booked</span>
-              </li>
-              <li style={styles.rollupRow}>
-                <span style={styles.rollupNumber}>{state.outcomeRollup.deprioritized}</span>
-                <span style={styles.rollupName}>deprioritized</span>
-              </li>
-            </ul>
+            {rollup.outcomesCaptured === 0 ? (
+              <p style={styles.rollupEmpty}>{EMPTY_ROLLUP_MONDAY}</p>
+            ) : (
+              <ul style={styles.rollupList}>
+                <li style={styles.rollupRow}>
+                  <span style={styles.rollupNumber}>{rollup.outcomesCaptured}</span>
+                  <span style={styles.rollupName}>outcomes captured</span>
+                </li>
+                <li style={styles.rollupRow}>
+                  <span style={styles.rollupNumber}>{rollup.meetingsBooked}</span>
+                  <span style={styles.rollupName}>meetings booked</span>
+                </li>
+                <li style={styles.rollupRow}>
+                  <span style={styles.rollupNumber}>{rollup.followUpsDeferred}</span>
+                  <span style={styles.rollupName}>follow-ups deferred</span>
+                </li>
+                <li style={styles.rollupRow}>
+                  <span style={styles.rollupNumber}>{rollup.deprioritized}</span>
+                  <span style={styles.rollupName}>deprioritized</span>
+                </li>
+              </ul>
+            )}
           </article>
         </aside>
       </div>
@@ -103,55 +317,60 @@ function MondayPanel({
 
 function MidweekPanel({
   state,
+  priorities,
+  rollup,
+  failed,
+  captureOutcome,
   onSelectContact,
 }: {
   state: WeeklyState;
+  priorities: EnrichedPriority[];
+  rollup: EffectiveRollup;
+  failed: Map<string, string>;
+  captureOutcome: (p: WeeklyPriority, a: OutcomeAction) => Promise<void>;
   onSelectContact?: (cardId: string) => void;
 }) {
-  const remainingCount = state.priorities.filter((p) => !p.lastOperatorOutcome).length;
+  const remaining = priorities.filter((p) => p.lastOperatorOutcome === null);
   return (
     <section style={styles.midweekShell} aria-label="Week in progress">
       <div style={styles.midweekRow}>
         <div style={styles.midweekLabelCol}>
           <div style={styles.midweekKicker}>Week in progress · {state.weekId}</div>
           <div style={styles.midweekHeadline}>
-            {remainingCount} of {state.priorities.length} priorities still open
+            {remaining.length} of {priorities.length} priorities still open
           </div>
         </div>
         <div style={styles.midweekStats}>
           <span style={styles.midweekStat}>
-            <strong>{state.outcomeRollup.outcomesCaptured}</strong> outcomes
+            <strong>{rollup.outcomesCaptured}</strong> outcomes
           </span>
           <span style={styles.midweekStat}>
-            <strong>{state.outcomeRollup.meetingsBooked}</strong> meetings
+            <strong>{rollup.meetingsBooked}</strong> meetings
           </span>
           <span style={styles.midweekStat}>
-            <strong>{state.outcomeRollup.deprioritized}</strong> deprioritized
+            <strong>{rollup.followUpsDeferred}</strong> deferred
+          </span>
+          <span style={styles.midweekStat}>
+            <strong>{rollup.deprioritized}</strong> deprioritized
           </span>
         </div>
       </div>
-      {remainingCount > 0 ? (
+      {remaining.length > 0 ? (
         <ul style={styles.midweekRemainingList}>
-          {state.priorities
-            .filter((p) => !p.lastOperatorOutcome)
-            .map((priority) => (
-              <li key={priority.cardId} style={styles.midweekRemainingItem}>
-                <button
-                  type="button"
-                  onClick={() => onSelectContact?.(priority.cardId)}
-                  style={styles.midweekRemainingButton}
-                >
-                  <span style={styles.midweekRemainingRank}>{priority.rank}</span>
-                  <span style={styles.midweekRemainingName}>{priority.name}</span>
-                  <span style={styles.midweekRemainingHint}>{priority.lastTouchSummary}</span>
-                </button>
-              </li>
-            ))}
+          {remaining.map((priority) => (
+            <li key={priority.cardId} style={styles.midweekRemainingItem}>
+              <PriorityRow
+                priority={priority}
+                failedMessage={failed.get(priority.contactId) ?? null}
+                captureOutcome={captureOutcome}
+                onSelectContact={onSelectContact}
+                density="compact"
+              />
+            </li>
+          ))}
         </ul>
       ) : (
-        <p style={styles.midweekClearText}>
-          Every priority has at least one captured outcome. Next week opens Monday.
-        </p>
+        <p style={styles.midweekClearText}>{EMPTY_REMAINING_MIDWEEK}</p>
       )}
     </section>
   );
@@ -159,9 +378,17 @@ function MidweekPanel({
 
 // ── Friday ──────────────────────────────────────────────────────────
 
-function FridayPanel({ state }: { state: WeeklyState }) {
-  const completedCount = state.priorities.filter((p) => p.lastOperatorOutcome).length;
-  const followUpLater = state.priorities.filter(
+function FridayPanel({
+  state,
+  priorities,
+  rollup,
+}: {
+  state: WeeklyState;
+  priorities: EnrichedPriority[];
+  rollup: EffectiveRollup;
+}) {
+  const touched = priorities.filter((p) => p.lastOperatorOutcome !== null);
+  const returningNext = priorities.filter(
     (p) => p.lastOperatorOutcome?.outcome === "follow_up_later",
   );
   return (
@@ -169,27 +396,32 @@ function FridayPanel({ state }: { state: WeeklyState }) {
       <header style={styles.fridayHeader}>
         <div style={styles.weekLabel}>Week summary · {state.weekId}</div>
         <h2 style={styles.fridayTitle}>
-          You captured {state.outcomeRollup.outcomesCaptured} outcome
-          {state.outcomeRollup.outcomesCaptured === 1 ? "" : "s"} this week.
+          {rollup.outcomesCaptured === 0
+            ? EMPTY_FRIDAY
+            : `You captured ${rollup.outcomesCaptured} outcome${rollup.outcomesCaptured === 1 ? "" : "s"} this week.`}
         </h2>
       </header>
       <div style={styles.fridayBody}>
         <article style={styles.fridayCard}>
           <div style={styles.calloutLabel}>Priorities touched</div>
           <p style={styles.fridayCardBody}>
-            {completedCount} of {state.priorities.length} priority relationships received at
+            {touched.length} of {priorities.length} priority relationships received at
             least one outcome this week.
           </p>
         </article>
         <article style={styles.fridayCard}>
           <div style={styles.calloutLabel}>Meetings booked</div>
-          <p style={styles.fridayCardBody}>{state.outcomeRollup.meetingsBooked}</p>
+          <p style={styles.fridayCardBody}>{rollup.meetingsBooked}</p>
         </article>
-        {followUpLater.length > 0 ? (
+        <article style={styles.fridayCard}>
+          <div style={styles.calloutLabel}>Follow-ups deferred</div>
+          <p style={styles.fridayCardBody}>{rollup.followUpsDeferred}</p>
+        </article>
+        {returningNext.length > 0 ? (
           <article style={styles.fridayCard}>
             <div style={styles.calloutLabel}>Returning next week</div>
             <ul style={styles.returningList}>
-              {followUpLater.map((p) => (
+              {returningNext.map((p) => (
                 <li key={p.cardId} style={styles.returningRow}>
                   {p.name}
                 </li>
@@ -206,14 +438,20 @@ function FridayPanel({ state }: { state: WeeklyState }) {
   );
 }
 
-// ── Priority row ────────────────────────────────────────────────────
+// ── Priority row (now stateful: outcome buttons + completed state) ─
 
 function PriorityRow({
   priority,
+  failedMessage,
+  captureOutcome,
   onSelectContact,
+  density = "default",
 }: {
-  priority: WeeklyPriority;
+  priority: EnrichedPriority;
+  failedMessage: string | null;
+  captureOutcome: (p: WeeklyPriority, a: OutcomeAction) => Promise<void>;
   onSelectContact?: (cardId: string) => void;
+  density?: "default" | "compact";
 }) {
   const trustColor =
     priority.trustLevel === "HIGH"
@@ -221,8 +459,14 @@ function PriorityRow({
       : priority.trustLevel === "MED"
         ? styles.trustMed
         : styles.trustWeak;
+  const isCompleted = priority.lastOperatorOutcome !== null;
+  const rowStyle: CSSProperties = {
+    ...styles.priorityRow,
+    ...(isCompleted ? styles.priorityRowCompleted : null),
+    ...(density === "compact" ? styles.priorityRowCompact : null),
+  };
   return (
-    <li style={styles.priorityRow}>
+    <article style={rowStyle}>
       <button
         type="button"
         onClick={() => onSelectContact?.(priority.cardId)}
@@ -236,10 +480,16 @@ function PriorityRow({
           ) : null}
           <span style={{ ...styles.trustChip, ...trustColor }}>{priority.trustLevel}</span>
         </div>
-        <p style={styles.priorityOpener}>{priority.suggestedOpener}</p>
+        {density === "default" ? (
+          <p style={styles.priorityOpener}>{priority.suggestedOpener}</p>
+        ) : null}
         <div style={styles.priorityMeta}>
-          <span style={styles.priorityMetaItem}>{priority.supportingEvidence}</span>
-          <span style={styles.priorityMetaDot}>·</span>
+          {density === "default" ? (
+            <>
+              <span style={styles.priorityMetaItem}>{priority.supportingEvidence}</span>
+              <span style={styles.priorityMetaDot}>·</span>
+            </>
+          ) : null}
           <span style={styles.priorityMetaItem}>{priority.lastTouchSummary}</span>
           {priority.lastOperatorOutcome ? (
             <>
@@ -252,7 +502,32 @@ function PriorityRow({
           ) : null}
         </div>
       </button>
-    </li>
+
+      {isCompleted ? (
+        <div style={styles.reinforcementRow}>
+          <span style={styles.reinforcementText}>{REINFORCEMENT_TEXT}</span>
+        </div>
+      ) : (
+        <div style={styles.actionsRow} role="group" aria-label={`Capture outcome for ${priority.name}`}>
+          {OUTCOME_ACTIONS.map((action) => (
+            <button
+              key={action.outcome}
+              type="button"
+              onClick={() => void captureOutcome(priority, action)}
+              style={styles.actionButton}
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {failedMessage ? (
+        <div style={styles.failedRow}>
+          <span style={styles.failedText}>Capture failed: {failedMessage}</span>
+        </div>
+      ) : null}
+    </article>
   );
 }
 
@@ -268,9 +543,7 @@ const styles: Record<string, CSSProperties> = {
     border: "1px solid #e8e3d8",
     boxShadow: "0 1px 0 rgba(0,0,0,0.02)",
   },
-  mondayHeader: {
-    marginBottom: 20,
-  },
+  mondayHeader: { marginBottom: 20 },
   weekLabel: {
     fontSize: 12,
     letterSpacing: "0.08em",
@@ -308,15 +581,28 @@ const styles: Record<string, CSSProperties> = {
   },
   priorityRow: {
     listStyle: "none",
+    background: "#ffffff",
+    borderRadius: 12,
+    border: "1px solid #ece8de",
+    padding: "12px 14px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+  },
+  priorityRowCompleted: {
+    background: "#f4f3ee",
+    opacity: 0.78,
+  },
+  priorityRowCompact: {
+    padding: "10px 12px",
   },
   priorityButton: {
     display: "block",
     width: "100%",
     textAlign: "left",
-    padding: "14px 16px",
-    borderRadius: 12,
-    background: "#ffffff",
-    border: "1px solid #ece8de",
+    padding: 0,
+    background: "transparent",
+    border: 0,
     cursor: "pointer",
   },
   priorityHeader: {
@@ -373,6 +659,41 @@ const styles: Record<string, CSSProperties> = {
     padding: "2px 7px",
     borderRadius: 6,
     color: "#5b5346",
+  },
+  actionsRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 4,
+  },
+  actionButton: {
+    fontSize: 12,
+    padding: "5px 10px",
+    borderRadius: 7,
+    background: "#ffffff",
+    border: "1px solid #d9d3c4",
+    color: "#3a352c",
+    cursor: "pointer",
+  },
+  reinforcementRow: {
+    marginTop: 4,
+  },
+  reinforcementText: {
+    fontSize: 12,
+    color: "#5b6a52",
+    fontStyle: "italic",
+  },
+  failedRow: { marginTop: 4 },
+  failedText: { fontSize: 12, color: "#8a3a3a" },
+  capturedDivider: {
+    listStyle: "none",
+    fontSize: 11,
+    letterSpacing: "0.06em",
+    textTransform: "uppercase",
+    color: "#8c7e63",
+    padding: "12px 0 2px",
+    borderTop: "1px dashed #d9d3c4",
+    margin: "6px 0 0",
   },
 
   // Sidebar
@@ -457,6 +778,12 @@ const styles: Record<string, CSSProperties> = {
     fontSize: 12,
     color: "#5b5346",
   },
+  rollupEmpty: {
+    margin: 0,
+    fontSize: 13,
+    lineHeight: 1.5,
+    color: "#5b5346",
+  },
 
   // Midweek
   midweekShell: {
@@ -502,37 +829,9 @@ const styles: Record<string, CSSProperties> = {
     margin: "12px 0 0",
     display: "flex",
     flexDirection: "column",
-    gap: 4,
+    gap: 6,
   },
   midweekRemainingItem: {},
-  midweekRemainingButton: {
-    display: "flex",
-    width: "100%",
-    alignItems: "baseline",
-    gap: 10,
-    padding: "8px 10px",
-    borderRadius: 8,
-    background: "transparent",
-    border: "1px solid transparent",
-    textAlign: "left",
-    cursor: "pointer",
-  },
-  midweekRemainingRank: {
-    minWidth: 18,
-    fontSize: 11,
-    color: "#8c7e63",
-    fontWeight: 600,
-  },
-  midweekRemainingName: {
-    fontSize: 13,
-    color: "#23211c",
-    fontWeight: 500,
-  },
-  midweekRemainingHint: {
-    fontSize: 11,
-    color: "#7a6f5a",
-    marginLeft: "auto",
-  },
   midweekClearText: {
     margin: "10px 0 0",
     fontSize: 13,
@@ -547,9 +846,7 @@ const styles: Record<string, CSSProperties> = {
     background: "#f5f7f4",
     border: "1px solid #d9e3d7",
   },
-  fridayHeader: {
-    marginBottom: 14,
-  },
+  fridayHeader: { marginBottom: 14 },
   fridayTitle: {
     fontSize: 20,
     fontWeight: 600,

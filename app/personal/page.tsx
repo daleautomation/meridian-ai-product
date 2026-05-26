@@ -9,8 +9,9 @@ import {
 } from "@/lib/crm-import/store";
 import { buildResurfacingBuckets } from "@/lib/relationship-intelligence/resurfacing";
 import { buildPersonalWorkspaceModel } from "@/lib/personal-workspace/workspace";
-import { resolveWeeklyMode } from "@/lib/personal-workspace/weeklyState";
+import { applyOutcomesOverlay, resolveWeeklyMode } from "@/lib/personal-workspace/weeklyState";
 import { loadWeeklyStateFromDisk } from "@/lib/personal-workspace/weeklyStateLoader";
+import { readCustomerOutcomes } from "@/lib/recovery/outcomes/persistence";
 import { getWorkspaceAccess } from "@/lib/workspaceAccess";
 import {
   defaultWorkspaceFor,
@@ -163,7 +164,17 @@ export default async function PersonalWorkspacePage(props: {
   );
   const resurfacingBuckets = buildResurfacingBuckets(rawCrmContacts);
   const renderNow = new Date();
-  const weeklyState = await loadWeeklyStateFromDisk(workspace.slug, renderNow);
+  const rawWeeklyState = await loadWeeklyStateFromDisk(workspace.slug, renderNow);
+  // Layer fresh durable outcomes on top of the immutable snapshot so a
+  // refresh shows whatever the operator has captured since 7am Monday
+  // — without ever mutating the snapshot file itself.
+  const weeklyState = rawWeeklyState
+    ? applyOutcomesOverlay(
+        rawWeeklyState,
+        await readCustomerOutcomes(workspace.slug),
+        renderNow,
+      )
+    : null;
   const weeklyMode = weeklyState ? resolveWeeklyMode(renderNow) : null;
   const model = buildPersonalWorkspaceModel({
     workspace,

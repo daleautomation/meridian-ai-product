@@ -58,6 +58,7 @@ export interface WeeklyOutcomeRollup {
   outcomesCaptured: number;
   meetingsBooked: number;
   deprioritized: number;
+  followUpsDeferred: number;
   windowStart: string;
   windowEnd: string;
 }
@@ -239,11 +240,13 @@ function buildOutcomeRollup(
   let outcomesCaptured = 0;
   let meetingsBooked = 0;
   let deprioritized = 0;
+  let followUpsDeferred = 0;
   for (const outcome of outcomes) {
     const t = Date.parse(outcome.recordedAt);
     if (!Number.isFinite(t) || t < windowStart || t > windowEnd) continue;
     outcomesCaptured += 1;
     if (outcome.outcome === "meeting_booked") meetingsBooked += 1;
+    if (outcome.outcome === "follow_up_later") followUpsDeferred += 1;
     if (
       outcome.outcome === "no_response" ||
       outcome.outcome === "not_worth_pursuing" ||
@@ -256,6 +259,7 @@ function buildOutcomeRollup(
     outcomesCaptured,
     meetingsBooked,
     deprioritized,
+    followUpsDeferred,
     windowStart: new Date(windowStart).toISOString(),
     windowEnd: new Date(windowEnd).toISOString(),
   };
@@ -385,5 +389,42 @@ export function buildWeeklyState(input: BuildWeeklyStateInput): WeeklyState {
     continuityInsight,
     outcomeRollup,
     activationEmail,
+  };
+}
+
+// ── Overlay ────────────────────────────────────────────────────────
+
+/**
+ * Re-derive `lastOperatorOutcome` per priority and the weekly rollup
+ * from the durable outcome store. The snapshot itself is frozen for
+ * the week; this overlay layers fresh outcomes on top each time the
+ * page renders, so a refresh persists captured state without ever
+ * rewriting the snapshot file.
+ *
+ * Pure. Deterministic for any (state, outcomes, now) triple.
+ */
+export function applyOutcomesOverlay(
+  state: WeeklyState,
+  outcomes: readonly RelationshipOutcome[],
+  now: Date,
+): WeeklyState {
+  const updatedPriorities = state.priorities.map((priority) => {
+    const latest = pickLastOperatorOutcome(outcomes, priority.contactId, now);
+    if (
+      (latest === null && priority.lastOperatorOutcome === null) ||
+      (latest !== null &&
+        priority.lastOperatorOutcome !== null &&
+        latest.outcome === priority.lastOperatorOutcome.outcome &&
+        latest.recordedAt === priority.lastOperatorOutcome.recordedAt)
+    ) {
+      return priority;
+    }
+    return { ...priority, lastOperatorOutcome: latest };
+  });
+
+  return {
+    ...state,
+    priorities: updatedPriorities,
+    outcomeRollup: buildOutcomeRollup(outcomes, now),
   };
 }

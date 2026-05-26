@@ -24,6 +24,7 @@ import { readCustomerOutcomes } from "@/lib/recovery/outcomes/persistence";
 import { buildResurfacingBuckets } from "@/lib/relationship-intelligence/resurfacing";
 import { buildPersonalWorkspaceModel } from "@/lib/personal-workspace/workspace";
 import {
+  applyOutcomesOverlay,
   buildWeeklyState,
   isoWeekId,
   resolveWeeklyMode,
@@ -43,6 +44,7 @@ function fail(message: string): void {
 }
 
 // Banned in any generated text. These keep the surface operator-grade.
+// Includes productivity-guilt phrases (no "still have N!", no "overdue").
 const BANNED_PHRASES = [
   /perfect time/i,
   /great opportunity/i,
@@ -55,6 +57,10 @@ const BANNED_PHRASES = [
   /\bsynergy\b/i,
   /act now/i,
   /don't miss/i,
+  /\boverdue\b/i,
+  /\bstreak\b/i,
+  /\bcrush(?:ed|ing)?\b/i,
+  /you[''']?ve fallen behind/i,
 ] as const;
 
 function assertCleanText(text: string, where: string): void {
@@ -179,6 +185,104 @@ function runDeterminismCheck(): void {
   const b = buildWeeklyState(makeSyntheticInput());
   if (JSON.stringify(a) !== JSON.stringify(b)) {
     fail("determinism: two identical inputs produced different snapshots");
+  }
+}
+
+function runOverlayChecks(): void {
+  const baseState = buildWeeklyState(makeSyntheticInput());
+  if (baseState.priorities[0].lastOperatorOutcome !== null) {
+    fail("overlay: pre-overlay priority should have null lastOperatorOutcome");
+  }
+  if (baseState.outcomeRollup.outcomesCaptured !== 0) {
+    fail("overlay: pre-overlay rollup should be zero");
+  }
+  if (baseState.outcomeRollup.followUpsDeferred !== 0) {
+    fail("overlay: rollup should include followUpsDeferred=0 initially");
+  }
+
+  // Apply a meeting_booked outcome.
+  const recentBooking: RelationshipOutcome[] = [
+    {
+      id: "o-m",
+      leadKey: "syn-1",
+      recordedAt: new Date(FIXED_NOW.getTime() - 60 * 1000).toISOString(),
+      outcome: "meeting_booked",
+      source: "operator_console",
+    },
+  ];
+  const overlaid = applyOutcomesOverlay(baseState, recentBooking, FIXED_NOW);
+  if (overlaid.priorities[0].lastOperatorOutcome?.outcome !== "meeting_booked") {
+    fail("overlay: meeting_booked outcome did not propagate to priority");
+  }
+  if (overlaid.outcomeRollup.outcomesCaptured !== 1) {
+    fail(`overlay: rollup outcomesCaptured expected 1, got ${overlaid.outcomeRollup.outcomesCaptured}`);
+  }
+  if (overlaid.outcomeRollup.meetingsBooked !== 1) {
+    fail(`overlay: rollup meetingsBooked expected 1, got ${overlaid.outcomeRollup.meetingsBooked}`);
+  }
+
+  // Apply a follow_up_later outcome — second pass — to confirm the
+  // rollup tracks deferred follow-ups independently and the snapshot
+  // is not mutated (immutability via spread).
+  const withDeferred = applyOutcomesOverlay(
+    baseState,
+    [
+      {
+        id: "o-f",
+        leadKey: "syn-1",
+        recordedAt: new Date(FIXED_NOW.getTime() - 2 * 60 * 1000).toISOString(),
+        outcome: "follow_up_later",
+        source: "operator_console",
+      },
+    ],
+    FIXED_NOW,
+  );
+  if (withDeferred.outcomeRollup.followUpsDeferred !== 1) {
+    fail(
+      `overlay: rollup followUpsDeferred expected 1, got ${withDeferred.outcomeRollup.followUpsDeferred}`,
+    );
+  }
+  if (baseState.priorities[0].lastOperatorOutcome !== null) {
+    fail("overlay: base state was mutated — must remain immutable");
+  }
+
+  // Determinism: identical overlay inputs → byte-identical results.
+  const repeat = applyOutcomesOverlay(baseState, recentBooking, FIXED_NOW);
+  if (JSON.stringify(overlaid) !== JSON.stringify(repeat)) {
+    fail("overlay: not deterministic between two calls");
+  }
+
+  // No-op overlay: empty outcomes leaves priorities alone but still
+  // returns a fresh rollup (zeroed within the 7-day window).
+  const noop = applyOutcomesOverlay(baseState, [], FIXED_NOW);
+  if (noop.priorities[0].lastOperatorOutcome !== null) {
+    fail("overlay: empty outcomes should not invent a lastOperatorOutcome");
+  }
+}
+
+/**
+ * Panel-side copy lives in the React component, not the snapshot.
+ * Validate the literal strings here so they participate in the same
+ * banned-phrase scan as everything the snapshot emits.
+ */
+const PANEL_COPY_STRINGS: readonly string[] = [
+  "Saved to continuity memory.",
+  "Your priorities are still untouched this week.",
+  "Every priority has at least one captured outcome. Next week opens Monday.",
+  "No outcomes were captured this week.",
+  "Your next workspace opens Monday morning.",
+  "Your workspace is ready",
+  // Outcome action labels — operator-grade, no productivity guilt.
+  "Sent",
+  "No answer",
+  "Meeting booked",
+  "Follow up later",
+  "Wrong contact",
+];
+
+function runPanelCopyScan(): void {
+  for (const line of PANEL_COPY_STRINGS) {
+    assertCleanText(line, `panel copy "${line.slice(0, 40)}"`);
   }
 }
 
@@ -348,6 +452,8 @@ async function main(): Promise<void> {
   const coldState = runColdStartCheck();
   runDeterminismCheck();
   runOutcomeDrivenInsightCheck();
+  runOverlayChecks();
+  runPanelCopyScan();
   runBannedPhraseScan(coldState);
   await runLiveAudit();
 
@@ -365,6 +471,11 @@ async function main(): Promise<void> {
       "honest cold-start insight when no outcomes captured",
       "outcome-driven insight cites the right contact",
       "snapshot is deterministic (same input → same output)",
+      "applyOutcomesOverlay layers outcomes onto priorities + rollup",
+      "applyOutcomesOverlay tracks followUpsDeferred independently",
+      "applyOutcomesOverlay does not mutate the base snapshot",
+      "applyOutcomesOverlay is deterministic across calls",
+      "panel copy (reinforcement, empty states, action labels) passes banned-phrase scan",
       "no banned phrases in any opener / evidence / insight / email",
       "Nicole live audit: shape valid, every priority cites evidence",
       "Nicole live audit: snapshot deterministic across calls",
