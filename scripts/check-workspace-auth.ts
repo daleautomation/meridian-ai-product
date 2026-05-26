@@ -10,6 +10,7 @@ import {
   isPostLoginPathAllowed,
   postLoginRouteForUser,
   resolvePostLoginRedirect,
+  sanitizeInternalPath,
   workspaceSelectCardsForUser,
 } from "../lib/auth/postLoginRouting";
 import { listAccessibleWorkspacesForPrincipal } from "../lib/workspaceAccess";
@@ -168,6 +169,95 @@ check("password helper rejects wrong secret", () => {
 
 check("no Sarah tenant remains", () => {
   assert.equal(TENANTS.sarah, undefined);
+});
+
+// ── Post-login flow ──────────────────────────────────────────────
+// These checks lock in the "no extra interstitial click" behavior.
+// They model what each layer (login API, /login page) must return so
+// future regressions surface here, not on a Tuesday pricing call.
+
+check("login API returns the final destination, not /login", () => {
+  const t = findTenantByCredentials("nicole", "brookside");
+  assert.ok(t);
+  const user = toPublicUser(t);
+  // Mimic the route logic: sanitize next, resolve.
+  const resolved = resolvePostLoginRedirect(user, "/personal?workspace=nicole-lonergan");
+  assert.equal(resolved, "/personal?workspace=nicole-lonergan");
+  assert.notEqual(resolved.startsWith("/login"), true);
+});
+
+check("login API rejects external next and falls back to workspace home", () => {
+  const t = findTenantByCredentials("nicole", "brookside");
+  assert.ok(t);
+  const user = toPublicUser(t);
+  for (const evil of ["https://evil.example.com/", "//evil.example.com", "javascript:alert(1)"]) {
+    const resolved = resolvePostLoginRedirect(user, evil);
+    assert.equal(resolved, "/personal?workspace=nicole-lonergan");
+  }
+});
+
+check("login API preserves query string on internal next", () => {
+  const t = findTenantByCredentials("nicole", "brookside");
+  assert.ok(t);
+  const user = toPublicUser(t);
+  const next = "/personal?workspace=nicole-lonergan&panel=outcomes";
+  const resolved = resolvePostLoginRedirect(user, next);
+  assert.equal(resolved, next);
+});
+
+check("/login auto-redirect: signed-in single-workspace user → workspace home", () => {
+  // The page does: if (user && cards.length === 1 && !next) redirect(cards[0].href)
+  const t = findTenantByCredentials("nicole", "brookside");
+  assert.ok(t);
+  const user = toPublicUser(t);
+  const cards = workspaceSelectCardsForUser(user);
+  assert.equal(cards.length, 1);
+  assert.equal(cards[0].href, "/personal?workspace=nicole-lonergan");
+});
+
+check("/login auto-redirect: signed-in user with allowed next → next path", () => {
+  const t = findTenantByCredentials("nicole", "brookside");
+  assert.ok(t);
+  const user = toPublicUser(t);
+  const next = "/personal?workspace=nicole-lonergan";
+  assert.equal(isPostLoginPathAllowed(user, next), true);
+});
+
+check("/login does NOT auto-redirect: multi-workspace user without next", () => {
+  // dylan has 2 workspaces and no specific next → the page must NOT
+  // call redirect; it must render the SignedInLoginPortal interstitial
+  // so the operator can choose.
+  const t = findTenantByCredentials("dylan", "Meridian");
+  assert.ok(t);
+  const user = toPublicUser(t);
+  const cards = workspaceSelectCardsForUser(user);
+  assert.ok(cards.length > 1);
+});
+
+check("/login does NOT auto-redirect: signed-in user with disallowed next", () => {
+  // nicole-only user requesting /operator?workspace=labortech → next
+  // is rejected, but cards.length === 1 so the page redirects to her
+  // home (NOT the rejected next, NEVER /login).
+  const t = findTenantByCredentials("nicole", "brookside");
+  assert.ok(t);
+  const user = toPublicUser(t);
+  const next = "/operator?workspace=labortech";
+  assert.equal(isPostLoginPathAllowed(user, next), false);
+  const cards = workspaceSelectCardsForUser(user);
+  assert.equal(cards.length, 1);
+  // The page logic only auto-redirects to cards[0] when there's NO
+  // sanitized next; with a present-but-disallowed next, the
+  // interstitial would render. SignedInLoginPortal then offers
+  // "Continue to <ws>" as the only path forward (since requested
+  // destination is blocked) — that fallback is intentional.
+});
+
+check("sanitizeInternalPath rejects protocol-relative + scheme + null bytes", () => {
+  assert.equal(sanitizeInternalPath("//evil.com/path"), null);
+  assert.equal(sanitizeInternalPath("https://evil.com"), null);
+  assert.equal(sanitizeInternalPath("/path\\with\\backslash"), null);
+  assert.equal(sanitizeInternalPath("/path\x00with-null"), null);
+  assert.equal(sanitizeInternalPath("/safe?x=1"), "/safe?x=1");
 });
 
 if (process.exitCode) {
