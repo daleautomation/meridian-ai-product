@@ -1,5 +1,18 @@
 # Commercial Readiness Verdict
 
+> **⚠ SUPERSEDED (2026-05-27).** This document's recommendation that
+> LaborTech is the v1 customer was based on data-quality theory and
+> overlooked operational signal (John resisted sharing the CRM, which
+> is a Product 2 procurement-cycle signal, not a logistics hiccup).
+> The corrected strategic frame is in
+> [`docs/product-bifurcation-correction.md`](./product-bifurcation-correction.md).
+> Meridian is two products; v1 is the **CRM Intelligence Layer** with
+> Nicole-pattern customers, not LaborTech-pattern teams. Use the
+> bifurcation doc as the current source of truth; this doc is retained
+> for historical context only.
+
+---
+
 > Brutally honest assessment of whether Meridian can carry the first
 > retained paying operator next week. Grounded in the actual code +
 > data state as of commit `8c735ad` and the audits run in Sprints 1–3.

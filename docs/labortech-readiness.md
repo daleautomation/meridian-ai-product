@@ -1,5 +1,21 @@
 # LaborTech Operational Readiness Audit
 
+> **⚠ STRATEGIC FRAME CORRECTED (2026-05-27).** This document's
+> recommendation to flip `labortech.kind` from `"labortech"` to
+> `"personal"` has been **reversed**. LaborTech is now correctly
+> understood as Product 2 (Operational Lead Execution System), a
+> different category from the CRM Intelligence Layer that Nicole
+> validates. Keeping `kind: "labortech"` is the right call — it
+> signals LaborTech belongs on the Product 2 surface, which is
+> deferred. See
+> [`docs/product-bifurcation-correction.md`](./product-bifurcation-correction.md).
+> The audit findings below (residential biases in code, vertical-
+> neutral paths, hardcoded copy locations) remain factually correct
+> and useful for whenever Product 2 work begins — but the **action
+> recommendations are superseded**.
+
+---
+
 > Audit of the platform's residential biases that may block or degrade
 > LaborTech's first paid Monday delivery. Grounded in the actual code
 > state as of commit `8c735ad`.
