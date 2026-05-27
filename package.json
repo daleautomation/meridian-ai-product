@@ -33,6 +33,7 @@
     "property:audit": "tsx scripts/audit-nicole-data-sources.ts",
     "crm:audit": "tsx scripts/crm-audit.ts",
     "check-crm-integrity": "tsx scripts/check-crm-integrity.ts",
+    "env:audit": "tsx scripts/env-audit.ts",
     "brief:determinism": "tsx scripts/check-brief-determinism.ts",
     "check-brief-determinism": "tsx scripts/check-brief-determinism.ts",
     "signals:check": "tsx scripts/check-workspace-signals.ts",
