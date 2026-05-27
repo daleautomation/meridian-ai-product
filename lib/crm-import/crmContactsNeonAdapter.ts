@@ -180,6 +180,43 @@ export async function listContactsNeon(workspaceId: string): Promise<CrmContactR
 }
 
 /**
+ * Merge a single contact's `source_metadata.enrichment.opportunity`
+ * entry. Touches only that nested key — leaves enrichment.hunter,
+ * enrichment.propertyIntelligence, source_metadata.repairs, and every
+ * other key byte-identical.
+ *
+ * Constitution §1: opportunity scoring is a T6 derived layer; it
+ *   never silently overrides T1–T3 CRM truth.
+ * Constitution §2: the OpportunitySignal type makes source +
+ *   fetchedAt non-optional, so a malformed entry cannot be written.
+ *
+ * Returns true when a row was updated, false when no such
+ * (workspace, contact_id) exists.
+ */
+export async function applyContactOpportunityNeon(
+  workspaceId: string,
+  contactId: string,
+  entry: import("@/lib/enrichment/opportunity/types").OpportunitySignal,
+): Promise<boolean> {
+  assertWorkspaceSlug(workspaceId);
+  const sql = getCrmSql();
+  const result = (await sql`
+    update crm_contacts
+       set source_metadata = jsonb_set(
+             coalesce(source_metadata, '{}'::jsonb),
+             '{enrichment,opportunity}',
+             ${JSON.stringify(entry)}::jsonb,
+             true
+           ),
+           updated_at = now()
+     where workspace_id = ${workspaceId}
+       and contact_id = ${contactId}
+    returning contact_id
+  `) as Array<{ contact_id: string }>;
+  return result.length > 0;
+}
+
+/**
  * Append a founder-led repair to a contact's `source_metadata.repairs`
  * array. Pure additive. The original `normalized.<field>` JSONB is
  * NEVER overwritten — repairs layer on top and the read path

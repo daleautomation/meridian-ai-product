@@ -40,6 +40,21 @@ export type WorkspaceConfig = {
     accentLabel?: string;
     companyName?: string;
   };
+  /**
+   * Operator-declared business preferences that influence transparent
+   * scoring weights. Currently read by:
+   *   - lib/enrichment/opportunity/scoreOpportunity.ts → applies the
+   *     `operator_preference_seller_bias` factor when sellerBias > 0
+   *     and the contact is classified as prior_seller.
+   * Workspaces that don't declare preferences default to 0 (factor
+   *  never applies).
+   */
+  preferences?: {
+    /** Weight contribution (in score points) added to prior_seller
+     *  contacts. 0 or absent = no bias. Default 15 for Brookside-style
+     *  residential agents who prefer seller-side opportunities. */
+    sellerBias?: number;
+  };
 };
 
 export const WORKSPACES: Record<string, WorkspaceConfig> = {
@@ -108,6 +123,12 @@ export const WORKSPACES: Record<string, WorkspaceConfig> = {
       displayName: "Nicole Lonergan Workspace",
       accentLabel: "Personal relationship workspace",
       companyName: "Brookside Real Estate",
+    },
+    // Brookside-style residential agents prefer seller-side
+    // opportunities; the opportunity scoring model surfaces this as a
+    // named, transparent factor (operator_preference_seller_bias).
+    preferences: {
+      sellerBias: 15,
     },
   },
 };

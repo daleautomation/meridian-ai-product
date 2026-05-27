@@ -303,6 +303,13 @@ export interface PropertyIntelligenceEntry {
 export type ContactEnrichment = {
   hunter?: HunterEnrichmentEntry;
   propertyIntelligence?: PropertyIntelligenceEntry;
+  /** Opportunity scoring output from lib/enrichment/opportunity/.
+   *  Stored under source_metadata.enrichment.opportunity via the
+   *  applyContactOpportunityNeon writer. The shape is the
+   *  OpportunitySignal type from lib/enrichment/opportunity/types.ts;
+   *  we declare a structural alias here to avoid pulling the
+   *  opportunity layer into the crm-import type-graph circularly. */
+  opportunity?: import("@/lib/enrichment/opportunity/types").OpportunitySignal;
 };
 
 // ── Founder-led CRM rehabilitation (append-only repair log) ────────

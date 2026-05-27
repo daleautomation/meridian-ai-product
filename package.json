@@ -37,6 +37,7 @@
     "list:weak": "tsx scripts/list-weak-contacts.ts",
     "repair:contacts": "tsx scripts/repair-contacts.ts",
     "check-listing-pipeline": "tsx scripts/check-listing-pipeline.ts",
+    "check-opportunity-scoring": "tsx scripts/check-opportunity-scoring.ts",
     "brief:determinism": "tsx scripts/check-brief-determinism.ts",
     "check-brief-determinism": "tsx scripts/check-brief-determinism.ts",
     "signals:check": "tsx scripts/check-workspace-signals.ts",
