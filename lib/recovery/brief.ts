@@ -5,6 +5,13 @@ import type {
   ScoreBreakdown,
   SignalContribution,
 } from "@/lib/recovery/signals/types";
+import {
+  buildSuggestedOpener as buildDeterministicOpener,
+  type OpenerInput,
+  type OpenerSource,
+  type OpenerTrust,
+  type SuggestedOpener,
+} from "@/lib/personal-workspace/openerBuilder";
 
 export type RecoveryBriefItem = {
   rank: number;
@@ -18,6 +25,14 @@ export type RecoveryBriefItem = {
   whyNow: string;
   verifiedContactPath: string;
   suggestedOpener: string;
+  /** Which deterministic extractor produced the opener (or "custom" when
+   *  the operator supplied one via the CSV `suggestedOpener` column). */
+  openerSource: OpenerSource;
+  /** Verbatim CRM/operator-derived fragment that justified the opener.
+   *  Always present so the brief never claims un-cited intelligence. */
+  supportingEvidence: string;
+  /** HIGH / MED / WEAK per the Intelligence System Constitution §4. */
+  openerTrust: OpenerTrust;
   priorityContext: string;
   /** Decay-weighted signal total from the evaluator at `scoreBreakdown.evaluatedAt`. */
   score: number;
@@ -62,11 +77,64 @@ export function formatContactPath(path: ContactPath | undefined): string {
   return `${path.value} — ${label}`;
 }
 
-export function buildSuggestedOpener(companyName: string, contactName: string | null, whyNow: string): string {
-  const firstName = contactName?.trim().split(/\s+/)[0];
-  const greeting = firstName ? `Hi ${firstName},` : "Hi,";
-  const context = whyNow.replace(/^Last note:\s*/i, "I still have this note: ");
-  return `${greeting} I was reviewing open follow-ups for ${companyName} and this one looked worth closing the loop on. ${context} Worth a quick revisit this week?`;
+// ── Brief opener — deterministic, voice-unified with the workspace ──
+//
+// Governed by docs/INTELLIGENCE_SYSTEM_CONSTITUTION.md:
+//   §7 Safe Operator Language — calm, source-cited, confirmation-framed.
+//   §6.5 Banned phrases — no "AI suggests", no "perfect time", etc.
+//
+// The brief used to render templated salesy prose (greeting + "I was
+// reviewing open follow-ups..."). That broke voice consistency with
+// /personal, which uses the deterministic extractor chain. This
+// function delegates to the same extractor chain so brief and
+// workspace produce identical opener text for identical input.
+//
+// An operator-supplied custom opener (CSV `suggestedOpener` column) is
+// the highest tier of trust — operator-authored T1 content — and wins
+// over any extractor.
+
+export interface BriefOpenerInput {
+  contactName: string | null;
+  companyName: string;
+  lastInteractionAt: string | null;
+  /** Operator-supplied per-row override from the CSV. When present
+   *  and non-empty, this wins. */
+  customOpener?: string | null;
+}
+
+export interface BriefOpenerOptions {
+  now?: Date;
+}
+
+/**
+ * Produce a structured opener for a Recovery Brief item. Pure,
+ * deterministic, same input → same output. Cites provenance.
+ */
+export function buildBriefOpener(
+  input: BriefOpenerInput,
+  options: BriefOpenerOptions = {},
+): SuggestedOpener {
+  const custom = input.customOpener?.trim();
+  if (custom && custom.length > 0) {
+    // Operator-authored override. Treated as T1 (operator-entered)
+    // content under the constitution §1 hierarchy. Highest trust.
+    return {
+      opener: custom,
+      openerSource: "notes:plain_quote",
+      supportingEvidence: "operator-supplied opener (CSV row)",
+      trustLevel: "HIGH",
+      isSpecific: true,
+    };
+  }
+  const workspaceInput: OpenerInput = {
+    name: input.contactName ?? `the contact at ${input.companyName}`,
+    notes: null,
+    tags: [],
+    lastInteractionAt: input.lastInteractionAt,
+    sourceCrm: "recovery_brief",
+    hunter: null,
+  };
+  return buildDeterministicOpener(workspaceInput, options);
 }
 
 function escapeHtml(value: string | number | null | undefined): string {
@@ -100,6 +168,7 @@ export function renderRecoveryBriefHtml(brief: RecoveryBrief): string {
             <section>
               <h3>Suggested opener</h3>
               <p>${escapeHtml(item.suggestedOpener)}</p>
+              <p class="opener-provenance">${escapeHtml(item.supportingEvidence)} · ${escapeHtml(item.openerTrust)} trust · ${escapeHtml(item.openerSource)}</p>
             </section>
             <section>
               <h3>Priority read</h3>

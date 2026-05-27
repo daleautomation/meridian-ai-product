@@ -518,6 +518,129 @@ function verifyWorkspaceConfigs(): void {
   }
 }
 
+// ── Brief opener determinism + voice unification ───────────────────
+//
+// Asserts the brief's suggested opener is produced by the same
+// deterministic extractor chain the workspace uses. Catches three
+// classes of regression:
+//   1. A future commit accidentally re-templates the opener
+//      (returns "Hi <name>, I was reviewing open follow-ups…").
+//   2. A new banned phrase ("AI suggests", "perfect time", "leverage")
+//      lands in an opener variant.
+//   3. The opener becomes non-deterministic (Date.now() leaked,
+//      Math.random() introduced).
+
+const BRIEF_BANNED_PHRASES = [
+  /perfect time/i,
+  /great opportunity/i,
+  /\bleverage\b/i,
+  /personalize/i,
+  /AI[-\s]?(?:powered|driven|suggests|recommends|believes)/i,
+  /likely to (?:close|sell|buy)/i,
+  /act now/i,
+  /don't miss/i,
+  /\boverdue\b/i,
+  // Legacy templated salesy phrasing that this commit fixes — the
+  // exact strings that used to appear in the old buildSuggestedOpener.
+  /I was reviewing open follow-ups/i,
+  /worth a quick revisit/i,
+] as const;
+
+function verifyBriefOpener(): void {
+  // Import inside the function so the script's existing T7 evaluation
+  // path doesn't pull the workspace opener builder unless we need it.
+  // (Top-level imports would still work; this is documentation.)
+
+  const { buildBriefOpener } = require("@/lib/recovery/brief") as typeof import("@/lib/recovery/brief");
+  const fixedNow = new Date("2026-05-26T12:00:00.000Z");
+
+  type Fixture = {
+    label: string;
+    input: Parameters<typeof buildBriefOpener>[0];
+    expectSourcePrefix?: string;
+    expectTrust?: "HIGH" | "MED" | "WEAK";
+  };
+
+  const fixtures: Fixture[] = [
+    {
+      label: "operator custom opener wins",
+      input: {
+        contactName: "John Smith",
+        companyName: "Acme Roofing",
+        lastInteractionAt: "2025-02-01T00:00:00.000Z",
+        customOpener: "We discussed the warehouse roof — circling back as promised.",
+      },
+      expectSourcePrefix: "notes:plain_quote",
+      expectTrust: "HIGH",
+    },
+    {
+      label: "last_close path (last touch 8 months ago)",
+      input: {
+        contactName: "John Smith",
+        companyName: "Acme Roofing",
+        lastInteractionAt: "2025-09-26T00:00:00.000Z",
+      },
+      expectSourcePrefix: "last_close",
+      expectTrust: "MED",
+    },
+    {
+      label: "no contact name + no last touch → no_context fallback",
+      input: {
+        contactName: null,
+        companyName: "Acme Roofing",
+        lastInteractionAt: null,
+      },
+      expectSourcePrefix: "fallback:no_context",
+      expectTrust: "WEAK",
+    },
+    {
+      label: "stale years path (4 years ago)",
+      input: {
+        contactName: "Jane Doe",
+        companyName: "Beta Co",
+        lastInteractionAt: "2022-05-01T00:00:00.000Z",
+      },
+      expectSourcePrefix: "stale_relationship:years",
+      expectTrust: "WEAK",
+    },
+  ];
+
+  for (const fx of fixtures) {
+    const a = buildBriefOpener(fx.input, { now: fixedNow });
+    const b = buildBriefOpener(fx.input, { now: fixedNow });
+    if (JSON.stringify(a) !== JSON.stringify(b)) {
+      failures.push(`brief opener determinism failed: ${fx.label}`);
+      continue;
+    }
+    if (fx.expectSourcePrefix && !a.openerSource.startsWith(fx.expectSourcePrefix)) {
+      failures.push(
+        `brief opener source mismatch (${fx.label}): expected prefix ${fx.expectSourcePrefix}, got ${a.openerSource}`,
+      );
+    }
+    if (fx.expectTrust && a.trustLevel !== fx.expectTrust) {
+      failures.push(
+        `brief opener trust mismatch (${fx.label}): expected ${fx.expectTrust}, got ${a.trustLevel}`,
+      );
+    }
+    if (!a.opener.trim()) {
+      failures.push(`brief opener empty (${fx.label})`);
+    }
+    if (!a.supportingEvidence.trim()) {
+      failures.push(`brief opener evidence empty (${fx.label})`);
+    }
+    for (const re of BRIEF_BANNED_PHRASES) {
+      if (re.test(a.opener)) {
+        failures.push(`brief opener banned phrase /${re.source}/ in ${fx.label}: "${a.opener}"`);
+      }
+      if (re.test(a.supportingEvidence)) {
+        failures.push(
+          `brief evidence banned phrase /${re.source}/ in ${fx.label}: "${a.supportingEvidence}"`,
+        );
+      }
+    }
+  }
+}
+
 function main(): void {
   verifyWorkspaceConfigs();
 
@@ -538,6 +661,13 @@ function main(): void {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     failures.push(`rankLeads: ${message}`);
+  }
+
+  try {
+    verifyBriefOpener();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    failures.push(`brief opener: ${message}`);
   }
 
   if (failures.length > 0) {
@@ -564,6 +694,11 @@ function main(): void {
       "MED headline gating (HIGH required)",
       "WEAK signals never headline",
       "future-dated signals excluded consistently",
+      "brief opener delegates to the deterministic workspace builder",
+      "brief opener is byte-identical across repeated calls",
+      "brief opener source + trust + evidence are always populated",
+      "brief opener carries no banned phrases (incl. legacy templated prose)",
+      "operator-supplied customOpener wins (T1 content per constitution §1)",
     ],
   });
 }

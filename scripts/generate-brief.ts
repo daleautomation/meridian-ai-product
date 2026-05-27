@@ -17,7 +17,7 @@ import type {
   WorkspaceSignalConfig,
 } from "../lib/recovery/signals/types";
 import {
-  buildSuggestedOpener,
+  buildBriefOpener,
   formatContactPath,
   renderRecoveryBriefHtml,
   type FounderReviewSummary,
@@ -522,6 +522,20 @@ function attachSignalEvaluation(
     headlineSignal: ranked.headlineSignal,
   });
 
+  // Voice-unified opener: same deterministic extractor chain the
+  // /personal workspace runs. Operator-supplied customOpener (CSV
+  // `suggestedOpener` column) is treated as T1 content per
+  // INTELLIGENCE_SYSTEM_CONSTITUTION §1 and wins inside buildBriefOpener.
+  const briefOpener = buildBriefOpener(
+    {
+      contactName: built.item.contactName,
+      companyName: built.item.companyName,
+      lastInteractionAt: built.item.staleness.lastTouchAt,
+      customOpener: built.customOpener,
+    },
+    { now: new Date(nowIso) },
+  );
+
   return {
     ...built.item,
     whyNow,
@@ -538,9 +552,10 @@ function attachSignalEvaluation(
       priorityNote: built.priorityNote,
       weakOnly: ranked.weakOnly,
     }),
-    suggestedOpener:
-      built.customOpener ??
-      buildSuggestedOpener(built.item.companyName, built.item.contactName, whyNow),
+    suggestedOpener: briefOpener.opener,
+    openerSource: briefOpener.openerSource,
+    supportingEvidence: briefOpener.supportingEvidence,
+    openerTrust: briefOpener.trustLevel,
   };
 }
 
@@ -693,7 +708,13 @@ async function buildLead(
       relationshipFreshness: staleness.staleCategory,
       staleness,
       verifiedContactPath,
+      // Opener fields are populated by attachSignalEvaluation below.
+      // Seeded with empty defaults that satisfy the type; the writer
+      // path always overwrites them before any consumer sees them.
       suggestedOpener: "",
+      openerSource: "fallback:no_context",
+      supportingEvidence: "",
+      openerTrust: "WEAK",
       recoveryScore,
       decision: {
         bucket: decision.bucket,

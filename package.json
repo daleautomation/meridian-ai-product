@@ -32,6 +32,7 @@
     "property:check": "tsx scripts/check-property-normalization.ts",
     "property:audit": "tsx scripts/audit-nicole-data-sources.ts",
     "brief:determinism": "tsx scripts/check-brief-determinism.ts",
+    "check-brief-determinism": "tsx scripts/check-brief-determinism.ts",
     "signals:check": "tsx scripts/check-workspace-signals.ts",
     "property-enrichment:check": "tsx scripts/check-property-enrichment.ts",
     "public-records:check": "tsx scripts/check-public-record-ingest.ts",
