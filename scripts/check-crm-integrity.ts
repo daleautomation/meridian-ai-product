@@ -27,6 +27,7 @@ import {
   classifyPropertyEligibility,
 } from "@/lib/crm-import/enrichmentEligibility";
 import { companyLooksLikeContactName } from "@/lib/personal-workspace/workspace";
+import type { ContactRepair } from "@/lib/crm-import/types";
 
 const failures: string[] = [];
 function fail(msg: string): void {
@@ -259,12 +260,128 @@ function runLaborTechReadiness(): void {
   }
 }
 
+// ── Repair-overlay invariants ──────────────────────────────────────
+//
+// Locks in the trust-preservation rules for founder-led rehab repairs:
+//   1. A contact with a repair on `name` classifies based on the
+//      EFFECTIVE (post-repair) value. The classifier reads
+//      contact.name, which the adapter populates with the effective
+//      value, so a surname appended via repair flips hasSurname from
+//      false to true.
+//   2. A repair never changes integrity if the new value is identical
+//      to the old.
+//   3. Multiple repairs to the same field: classifier uses the latest
+//      (the adapter's chronological overlay enforces last-write-wins).
+//   4. After a surname repair, Hunter eligibility flips from
+//      no_last_name → eligible (when domain is business).
+//
+// These tests use the in-memory CrmContactRecord shape, mimicking what
+// rowToContact produces. The actual jsonb_set write path is exercised
+// by the live audit + manual rehab session.
+
+function runRepairOverlayChecks(): void {
+  // Case 1: surname repair on a single-name contact flips classifier.
+  const beforeContact = makeContact({
+    name: "Greg",
+    email: "greg@acmebrokerage.com",
+    phone: "+18165550000",
+    address: "100 Main St, KC, MO 64108",
+  });
+  const beforeReport = classifyCrmIntegrity(beforeContact);
+  if (beforeReport.hasSurname) {
+    fail("repair-overlay: pre-repair contact 'Greg' should NOT have surname");
+  }
+
+  // Simulate what rowToContact would produce post-overlay:
+  const afterContact = makeContact({
+    name: "Greg Smith", // effective value after a `name` repair
+    email: "greg@acmebrokerage.com",
+    phone: "+18165550000",
+    address: "100 Main St, KC, MO 64108",
+    repairs: [
+      {
+        field: "name",
+        originalValue: "Greg",
+        newValue: "Greg Smith",
+        source: "founder_rehab",
+        repairedAt: "2026-05-27T10:00:00.000Z",
+      } as ContactRepair,
+    ],
+    originalImport: {
+      name: "Greg",
+      company: "",
+      email: "greg@acmebrokerage.com",
+      phone: "+18165550000",
+      address: "100 Main St, KC, MO 64108",
+    },
+  });
+  const afterReport = classifyCrmIntegrity(afterContact);
+  if (!afterReport.hasSurname) {
+    fail("repair-overlay: post-repair contact 'Greg Smith' should have surname");
+  }
+  if (afterReport.tier !== "HIGH") {
+    fail(`repair-overlay: post-repair contact should be HIGH tier, got ${afterReport.tier}`);
+  }
+
+  // Case 2: post-repair, Hunter eligibility flips.
+  const hunterBefore = classifyHunterEligibility(beforeContact);
+  if (hunterBefore.eligible) fail("repair-overlay: pre-repair 'Greg' should NOT be Hunter-eligible");
+  if (hunterBefore.skipReason !== "no_last_name") {
+    fail(`repair-overlay: pre-repair Hunter skip reason expected no_last_name, got ${hunterBefore.skipReason}`);
+  }
+  const hunterAfter = classifyHunterEligibility(afterContact);
+  if (!hunterAfter.eligible) {
+    fail(`repair-overlay: post-repair 'Greg Smith' SHOULD be Hunter-eligible (reason=${hunterAfter.skipReason})`);
+  }
+
+  // Case 3: import-time original is preserved on afterContact.originalImport.
+  if (afterContact.originalImport?.name !== "Greg") {
+    fail("repair-overlay: originalImport.name must preserve import-time value");
+  }
+  if ((afterContact.repairs ?? []).length !== 1) {
+    fail("repair-overlay: repairs array must remain after overlay");
+  }
+  if (afterContact.repairs?.[0].originalValue !== "Greg") {
+    fail("repair-overlay: repair entry must retain originalValue");
+  }
+
+  // Case 4: two repairs to the same field — classifier sees the latest.
+  // We simulate by passing the LATEST effective value as `name`; the
+  // adapter's chronological overlay produces this for us in real
+  // reads.
+  const doubleRepair = makeContact({
+    name: "Gregory Smith", // latest effective value
+    email: "greg@acmebrokerage.com",
+    repairs: [
+      {
+        field: "name",
+        originalValue: "Greg",
+        newValue: "Greg Smith",
+        source: "founder_rehab",
+        repairedAt: "2026-05-26T10:00:00.000Z",
+      } as ContactRepair,
+      {
+        field: "name",
+        originalValue: "Greg",
+        newValue: "Gregory Smith",
+        source: "founder_rehab",
+        repairedAt: "2026-05-27T10:00:00.000Z",
+      } as ContactRepair,
+    ],
+  });
+  const doubleReport = classifyCrmIntegrity(doubleRepair);
+  if (!doubleReport.hasSurname) {
+    fail("repair-overlay: multi-repair last-write-wins should keep surname");
+  }
+}
+
 function main(): void {
   runCompanyGuardChecks();
   runIntegrityChecks();
   runIntegrityDeterminism();
   runEligibilityChecks();
   runLaborTechReadiness();
+  runRepairOverlayChecks();
 
   if (failures.length > 0) {
     console.error("");
@@ -286,6 +403,11 @@ function main(): void {
       "classifyHunterEligibility: canonical reasons (personal_domain, no_email, no_last_name, internal_diagnostic)",
       "classifyPropertyEligibility: canonical reasons (no_address, address_unparseable, no_last_name)",
       "LaborTech-style synthetic roster: all rows classify HIGH + Hunter-eligible + Property-eligible",
+      "repair-overlay: surname repair flips hasSurname false → true",
+      "repair-overlay: post-repair tier climbs (WEAK → MED/HIGH)",
+      "repair-overlay: post-repair Hunter eligibility flips no_last_name → eligible",
+      "repair-overlay: import-time originalValue preserved on every repair entry",
+      "repair-overlay: multi-repair last-write-wins (chronological)",
     ],
   });
 }

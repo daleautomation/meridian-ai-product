@@ -168,6 +168,30 @@ async function main(): Promise<void> {
   console.log(`  blank name                   ${String(blankNames).padStart(4)}   ${tkOk(blankNames)}`);
   console.log("");
 
+  console.log("Repairs applied (founder-led rehab sessions)");
+  const repairFieldCounts = new Map<string, number>();
+  let contactsWithRepairs = 0;
+  for (const c of visible) {
+    if (c.repairs && c.repairs.length > 0) {
+      contactsWithRepairs += 1;
+      for (const r of c.repairs) {
+        repairFieldCounts.set(r.field, (repairFieldCounts.get(r.field) ?? 0) + 1);
+      }
+    }
+  }
+  if (contactsWithRepairs === 0) {
+    console.log("  No repairs applied yet. Workspace data is import-fresh.");
+  } else {
+    console.log(`  contacts repaired:           ${contactsWithRepairs} / ${integrity.visible}`);
+    for (const [field, n] of [...repairFieldCounts.entries()].sort((a, b) => b[1] - a[1])) {
+      console.log(`    ${field.padEnd(28)} ${n}`);
+    }
+    console.log("");
+    console.log("  Import-time originals preserved in source_metadata.repairs[].originalValue.");
+    console.log("  Effective values shown above reflect chronological overlay.");
+  }
+  console.log("");
+
   console.log("Duplicate entities");
   console.log(`  same normalized email        ${dups.byNormalizedEmail}`);
   console.log(`  same normalized name         ${dups.byNormalizedName}`);

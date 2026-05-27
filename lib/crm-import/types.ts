@@ -164,6 +164,28 @@ export type CrmContactRecord = {
    * confidence score so audit tooling can prove provenance.
    */
   enrichment?: ContactEnrichment;
+  /**
+   * Append-only operator/founder-confirmed corrections. Field values
+   * (name, company, email, phone, address) on this record reflect the
+   * EFFECTIVE value after repairs are applied; the import-time
+   * originals stay in `originalImport` below. Never silently
+   * overwritten.
+   */
+  repairs?: ContactRepair[];
+  /**
+   * Verbatim import-time values for the repairable fields. Populated
+   * by the adapter on every read whenever `repairs` is non-empty, so
+   * any caller can see the original CRM truth without consulting the
+   * full JSONB. When `repairs` is empty/absent, this field is
+   * `undefined` and the record's main fields ARE the originals.
+   */
+  originalImport?: {
+    name?: string;
+    company?: string;
+    email?: string | null;
+    phone?: string | null;
+    address?: string | null;
+  };
 };
 
 export type HunterEnrichmentStatus = "found" | "not_found" | "skipped" | "error";
@@ -282,6 +304,44 @@ export type ContactEnrichment = {
   hunter?: HunterEnrichmentEntry;
   propertyIntelligence?: PropertyIntelligenceEntry;
 };
+
+// ── Founder-led CRM rehabilitation (append-only repair log) ────────
+//
+// Repairs are operator/founder-confirmed corrections to specific CRM
+// fields that were missing or malformed at import time. The original
+// imported value is ALWAYS preserved in `normalized.*` JSONB. Repairs
+// are layered as an append-only array under `source_metadata.repairs`;
+// the adapter overlays them at read time so every downstream consumer
+// sees effective values without losing audit history.
+//
+// Governed by docs/INTELLIGENCE_SYSTEM_CONSTITUTION.md:
+//   §1 Source-of-Truth Hierarchy — repairs are T1 operator-entered
+//       content. They sit between T1 notes and T3 imported tags.
+//   §2 Provenance Requirements — every repair carries originalValue,
+//       newValue, source, repairedAt. Never anonymous.
+//   §5 Deterministic Signal Rules — overlay merge order is chronological;
+//       same input → same effective values.
+
+export type ContactRepairField = "name" | "company" | "email" | "phone" | "address";
+
+export type ContactRepairSource = "founder_rehab" | "operator_self";
+
+export interface ContactRepair {
+  field: ContactRepairField;
+  /** Verbatim value from `normalized.<field>` at import time. Always
+   *  the import-time truth, even across multiple repairs to the same
+   *  field. */
+  originalValue: string | null;
+  newValue: string;
+  source: ContactRepairSource;
+  repairedAt: string; // ISO-8601 UTC
+  /** Operator/founder id (e.g. session.id). Optional, never required
+   *  for the writer to succeed; auditor uses it when present. */
+  operator?: string;
+  /** Optional free-text context, e.g. "confirmed via phone call".
+   *  Never AI-generated. */
+  note?: string;
+}
 
 export type ImportDiagnostics = {
   detectedHeaders: string[];
