@@ -30,6 +30,7 @@ import {
   applyContactEnrichmentNeon,
   listContactsNeon,
 } from "@/lib/crm-import/crmContactsNeonAdapter";
+import { classifyHunterEligibility } from "@/lib/crm-import/enrichmentEligibility";
 import { filterOutInternalDiagnosticContacts } from "@/lib/crm-import/internalContactFilter";
 import { getHunterApiKey } from "@/lib/integrations/hunterConfig";
 import type {
@@ -259,37 +260,28 @@ async function processContact(
     return existing as HunterEnrichmentEntry;
   }
 
-  const email = (contact.email ?? contact.normalizedEmail ?? "").trim();
-  if (!email) {
+  // Shared eligibility gate. Single source of truth for all enrichment
+  // scripts — mirrors classifyHunterEligibility() in lib/crm-import/
+  // enrichmentEligibility.ts. Canonical reason vocabulary stays
+  // consistent across audit + write paths.
+  const eligibility = classifyHunterEligibility(contact);
+  if (!eligibility.eligible) {
     return {
       source: "hunter",
       status: "skipped",
-      reason: "no_email",
+      reason: eligibility.detail
+        ? `${eligibility.skipReason}:${eligibility.detail}`
+        : (eligibility.skipReason ?? "ineligible"),
       fetchedAt: now.toISOString(),
       confidence: null,
     };
   }
-  const domain = emailDomain(email);
-  if (!domain) {
-    return {
-      source: "hunter",
-      status: "skipped",
-      reason: "malformed_email",
-      fetchedAt: now.toISOString(),
-      confidence: null,
-    };
-  }
-  if (PERSONAL_DOMAINS.has(domain)) {
-    return {
-      source: "hunter",
-      status: "skipped",
-      reason: "personal_domain",
-      fetchedAt: now.toISOString(),
-      confidence: null,
-    };
-  }
+
+  // Recompute name split for the API call. Eligibility already
+  // guaranteed first + last are present.
   const name = splitName(contact.name);
   if (!name || !name.first) {
+    // Belt-and-suspenders — shared eligibility should have caught this.
     return {
       source: "hunter",
       status: "skipped",
@@ -319,7 +311,9 @@ async function processContact(
     };
   }
 
-  const result = await callHunterEmailFinder(domain, name, apiKey);
+  // Eligibility already proved we have a usable business-domain email.
+  const callDomain = emailDomain((contact.email ?? contact.normalizedEmail ?? "").trim()) ?? "";
+  const result = await callHunterEmailFinder(callDomain, name, apiKey);
   return {
     source: "hunter",
     status: result.status,

@@ -156,6 +156,28 @@ export interface PersonalWorkspaceModel {
   weeklyMode?: WeeklyMode | null;
 }
 
+/**
+ * True when the stored `company` is just the contact's name (or first
+ * name) — the legacy normalize.ts bug where an absent company column
+ * was silently filled in with the contact's own name. The normalizer
+ * is now fixed at the source; this is the render-layer guard for the
+ * residual ~130 corrupted rows already in Neon. Cheap to keep around
+ * permanently as defense-in-depth.
+ *
+ * Pure. Same input → same output.
+ */
+export function companyLooksLikeContactName(
+  company: string | null | undefined,
+  contactName: string | null | undefined,
+): boolean {
+  const c = (company ?? "").trim().toLowerCase();
+  const n = (contactName ?? "").trim().toLowerCase();
+  if (!c || !n) return false;
+  if (c === n) return true;
+  const firstToken = n.split(/\s+/)[0];
+  return firstToken.length > 0 && c === firstToken;
+}
+
 const DORMANT_BUCKET_IDS = new Set([
   "forgotten_high_value",
   "stale_reengage",
@@ -489,7 +511,13 @@ function crmContactToCard(
     contactId: contact.id,
     rank,
     name: contact.name,
-    company: contact.company,
+    // Defensive guard for legacy data: the import normalizer used to
+    // substitute the contact's name as the company when no company
+    // column was mapped, producing "Greg · Greg" cards. The normalizer
+    // is fixed at the source; this guard hides the corruption that
+    // remains in already-imported rows. Renders empty string so the
+    // card layout naturally suppresses the company chip.
+    company: companyLooksLikeContactName(contact.company, contact.name) ? "" : contact.company,
     relationshipLabel: contact.sourceCrm ? `From ${contact.sourceCrm}` : "Imported contact",
     strength: effectivePriorityScore(contact, transparency.value),
     strengthRaw: transparency.value,

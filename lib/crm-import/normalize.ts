@@ -118,7 +118,12 @@ export function normalizeCrmRow(
   sourceLabel: string,
 ): NormalizedCrmContact {
   const name = getMappedValue(row, mapping, "name");
-  const company = getMappedValue(row, mapping, "company") || name;
+  // Do NOT fall back to `name` when no company is present. Substituting
+  // the contact's own name as their company produces the "Greg · Greg"
+  // render bug — a fabricated detail that the operator immediately
+  // distrusts. If the CSV doesn't carry a company, the company stays
+  // empty and the render layer correctly hides it.
+  const company = getMappedValue(row, mapping, "company");
   const phone = getMappedValue(row, mapping, "phone");
   const email = getMappedValue(row, mapping, "email");
   const address = getMappedValue(row, mapping, "address");
@@ -157,7 +162,10 @@ export function normalizeCrmRow(
   return {
     rowIndex,
     name: name.trim() || company.trim(),
-    company: company.trim() || name.trim(),
+    // Empty string preserves the storage shape (CrmContactRecord.company
+    // is typed `string`, not `string | null`) while letting render
+    // layers cleanly suppress an absent company.
+    company: company.trim(),
     phone: phone.trim() || null,
     email: normalizedEmail,
     address: address.trim() || null,
