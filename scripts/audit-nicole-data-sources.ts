@@ -219,20 +219,33 @@ async function main(): Promise<void> {
   }
 
   // ── Hunter coverage detail ─────────────────────────────────────────
-  const hunterCounts = { found: 0, not_found: 0, skipped: 0, error: 0, missing: 0 };
+  // We bucket by a human-readable label derived from (status, reason)
+  // so "error" never appears alone — every error is named.
+  function hunterLabel(h: { status: string; reason?: string } | undefined): string {
+    if (!h) return "no enrichment";
+    if (h.status === "found") return "found";
+    if (h.status === "not_found") return "not_found";
+    if (h.status === "skipped") {
+      const r = h.reason ?? "skipped";
+      return `skipped:${r}`;
+    }
+    // error variants — derive a canonical label from reason
+    const r = h.reason ?? "unknown";
+    if (r === "auth_error") return "auth_error";
+    if (r === "quota_exceeded") return "quota_exceeded";
+    if (r === "rate_limited") return "rate_limited";
+    if (r.startsWith("wrong_params")) return "wrong_params";
+    if (r.startsWith("transient_error")) return "transient_error";
+    return `error:${r}`;
+  }
+  const hunterBuckets = new Map<string, number>();
   const hunterHighConfidence: Array<{ id: string; conf: number; date: string }> = [];
   const hunterMissingProvenance: string[] = [];
   for (const c of visible) {
     const h = c.enrichment?.hunter;
-    if (!h) {
-      hunterCounts.missing += 1;
-      continue;
-    }
-    if (h.status === "found") hunterCounts.found += 1;
-    else if (h.status === "not_found") hunterCounts.not_found += 1;
-    else if (h.status === "skipped") hunterCounts.skipped += 1;
-    else hunterCounts.error += 1;
-    if (h.status === "found") {
+    const label = hunterLabel(h as { status: string; reason?: string } | undefined);
+    hunterBuckets.set(label, (hunterBuckets.get(label) ?? 0) + 1);
+    if (h?.status === "found") {
       if (!h.source || !h.fetchedAt || typeof h.confidence !== "number") {
         hunterMissingProvenance.push(c.id);
       } else if (h.confidence >= 75) {
@@ -242,12 +255,11 @@ async function main(): Promise<void> {
   }
   console.log("");
   console.log("--- Hunter enrichment coverage (visible contacts) ---");
-  console.log(`  found:           ${hunterCounts.found}`);
-  console.log(`  not_found:       ${hunterCounts.not_found}`);
-  console.log(`  skipped:         ${hunterCounts.skipped}`);
-  console.log(`  error:           ${hunterCounts.error}`);
-  console.log(`  no enrichment:   ${hunterCounts.missing}`);
-  console.log(`  ≥75% confidence: ${hunterHighConfidence.length}  (eligible to surface in openers)`);
+  for (const [label, n] of [...hunterBuckets.entries()].sort((a, b) => b[1] - a[1])) {
+    console.log(`  ${label.padEnd(32)} ${n}`);
+  }
+  console.log(`  --`);
+  console.log(`  ≥75% confidence found:           ${hunterHighConfidence.length}  (eligible to surface in openers)`);
   if (hunterMissingProvenance.length > 0) {
     console.log(`  ⚠ rows with status=found but missing provenance: ${hunterMissingProvenance.length}`);
   }
@@ -302,13 +314,19 @@ async function main(): Promise<void> {
     console.log(`    opener evidence:  ${p.supportingEvidence}`);
     console.log(`    trust level:      ${p.trustLevel}`);
     const hunter = c.enrichment?.hunter;
-    const hunterStr = hunter
-      ? `Hunter ${hunter.status}` +
-        (typeof hunter.confidence === "number" ? ` ${hunter.confidence}%` : "") +
-        (hunter.role ? ` · role=${hunter.role}` : "") +
-        (hunter.company ? ` · company=${hunter.company}` : "") +
-        (hunter.fetchedAt ? ` · ${hunter.fetchedAt.slice(0, 10)}` : "")
-      : "none — CRM import only";
+    const hunterStr = (() => {
+      if (!hunter) return "none — CRM import only";
+      const label = hunterLabel(hunter as { status: string; reason?: string });
+      const confTxt = typeof hunter.confidence === "number" ? ` ${hunter.confidence}%` : "";
+      const meta = [
+        hunter.role ? `role=${hunter.role}` : null,
+        hunter.company ? `company=${hunter.company}` : null,
+        hunter.fetchedAt ? hunter.fetchedAt.slice(0, 10) : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      return `Hunter ${label}${confTxt}${meta ? " · " + meta : ""}`;
+    })();
     console.log(`    external enrich:  ${hunterStr}`);
     console.log(`    last touch:       ${p.lastTouchSummary}`);
     if (warnings.length > 0) {

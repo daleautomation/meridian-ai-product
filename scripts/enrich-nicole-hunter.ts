@@ -103,6 +103,18 @@ function splitName(full: string): { first: string; last: string } | null {
   return { first: parts[0], last: parts[parts.length - 1] };
 }
 
+/**
+ * Hunter Email Finder requires either a full_name OR both first_name
+ * AND last_name. A single-token CRM name will be rejected with
+ * HTTP 400 / wrong_params. We refuse to call Hunter in that case so
+ * the no-last-name population doesn't burn quota on guaranteed errors.
+ */
+function hasUsableNameForHunter(
+  parts: { first: string; last: string } | null,
+): parts is { first: string; last: string } {
+  return !!parts && parts.first.trim().length > 0 && parts.last.trim().length > 0;
+}
+
 function isFreshHunterEnrichment(
   existing: HunterEnrichmentEntry | undefined,
   now: Date,
@@ -136,6 +148,51 @@ interface CallResult {
   sourceUrl?: string;
 }
 
+/**
+ * Map a Hunter error response (or HTTP-level failure) to a canonical
+ * reason string. The reason is stored on the row so audit tooling can
+ * group failures meaningfully.
+ *
+ * Canonical reasons:
+ *   auth_error          — 401, or `invalid_api_key`
+ *   quota_exceeded      — 4xx with `usage_exceeded` / `plan_limit_reached`
+ *   rate_limited        — 429 or `too_many_requests`
+ *   wrong_params:<id>   — 400 with `wrong_params` and a detail message
+ *   transient_error:<…> — 5xx, network errors, parse errors
+ */
+interface HunterErrorBodyShape {
+  errors?: Array<{ id?: string; code?: number; details?: string }>;
+}
+
+function classifyHunterFailure(httpStatus: number, body: HunterErrorBodyShape | null): {
+  status: "error";
+  reason: string;
+} {
+  const id = body?.errors?.[0]?.id;
+  const details = body?.errors?.[0]?.details;
+
+  if (httpStatus === 401 || id === "invalid_api_key") {
+    return { status: "error", reason: "auth_error" };
+  }
+  if (httpStatus === 429 || id === "too_many_requests") {
+    return { status: "error", reason: "rate_limited" };
+  }
+  if (id === "usage_exceeded" || id === "plan_limit_reached" || id === "monthly_limit_reached") {
+    return { status: "error", reason: "quota_exceeded" };
+  }
+  if (id === "wrong_params") {
+    const tag = details ? `wrong_params:${details.slice(0, 80)}` : "wrong_params";
+    return { status: "error", reason: tag };
+  }
+  if (httpStatus >= 500) {
+    return { status: "error", reason: `transient_error:http_${httpStatus}` };
+  }
+  if (id) {
+    return { status: "error", reason: `hunter_error:${id}` };
+  }
+  return { status: "error", reason: `http_${httpStatus}` };
+}
+
 async function callHunterEmailFinder(
   domain: string,
   name: { first: string; last: string },
@@ -143,8 +200,8 @@ async function callHunterEmailFinder(
 ): Promise<CallResult> {
   const params = new URLSearchParams();
   params.set("domain", domain);
-  if (name.first) params.set("first_name", name.first);
-  if (name.last) params.set("last_name", name.last);
+  params.set("first_name", name.first);
+  params.set("last_name", name.last);
   params.set("api_key", apiKey);
   let res: Response;
   try {
@@ -152,18 +209,30 @@ async function callHunterEmailFinder(
   } catch (err) {
     return {
       status: "error",
-      reason: `network:${err instanceof Error ? err.name : "unknown"}`,
+      reason: `transient_error:network_${err instanceof Error ? err.name : "unknown"}`,
       confidence: null,
     };
   }
+  let bodyText: string;
+  try {
+    bodyText = await res.text();
+  } catch {
+    return { status: "error", reason: `transient_error:body_read_${res.status}`, confidence: null };
+  }
   if (!res.ok) {
-    return { status: "error", reason: `http:${res.status}`, confidence: null };
+    let body: HunterErrorBodyShape | null = null;
+    try {
+      body = JSON.parse(bodyText) as HunterErrorBodyShape;
+    } catch {
+      // Body was not JSON. Classify on status alone.
+    }
+    return { ...classifyHunterFailure(res.status, body), confidence: null };
   }
   let json: HunterFinderResponse;
   try {
-    json = (await res.json()) as HunterFinderResponse;
+    json = JSON.parse(bodyText) as HunterFinderResponse;
   } catch {
-    return { status: "error", reason: "json_parse", confidence: null };
+    return { status: "error", reason: "transient_error:json_parse", confidence: null };
   }
   const data = json.data;
   if (!data || typeof data.score !== "number") {
@@ -220,11 +289,20 @@ async function processContact(
     };
   }
   const name = splitName(contact.name);
-  if (!name || (!name.first && !name.last)) {
+  if (!name || !name.first) {
     return {
       source: "hunter",
       status: "skipped",
       reason: "no_name",
+      fetchedAt: now.toISOString(),
+      confidence: null,
+    };
+  }
+  if (!name.last) {
+    return {
+      source: "hunter",
+      status: "skipped",
+      reason: "no_last_name",
       fetchedAt: now.toISOString(),
       confidence: null,
     };
@@ -261,7 +339,13 @@ async function sleep(ms: number): Promise<void> {
 interface CallPlan {
   contact: CrmContactRecord;
   domain: string;
-  decision: "would_call" | "would_skip_fresh" | "would_skip_personal" | "would_skip_no_email" | "would_skip_no_name";
+  decision:
+    | "would_call"
+    | "would_skip_fresh"
+    | "would_skip_personal"
+    | "would_skip_no_email"
+    | "would_skip_no_name"
+    | "would_skip_no_last_name";
 }
 
 function planForContact(contact: CrmContactRecord, now: Date): CallPlan {
@@ -278,7 +362,12 @@ function planForContact(contact: CrmContactRecord, now: Date): CallPlan {
     return { contact, domain, decision: "would_skip_fresh" };
   }
   const name = splitName(contact.name);
-  if (!name) return { contact, domain, decision: "would_skip_no_name" };
+  if (!name || !name.first) {
+    return { contact, domain, decision: "would_skip_no_name" };
+  }
+  if (!hasUsableNameForHunter(name)) {
+    return { contact, domain, decision: "would_skip_no_last_name" };
+  }
   return { contact, domain, decision: "would_call" };
 }
 
@@ -318,6 +407,7 @@ async function main(): Promise<void> {
     "would_skip_personal",
     "would_skip_no_email",
     "would_skip_no_name",
+    "would_skip_no_last_name",
   ] as const) {
     console.log(`  ${decision.padEnd(28)} ${counts[decision] ?? 0}`);
   }
