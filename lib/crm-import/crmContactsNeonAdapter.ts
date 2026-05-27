@@ -122,6 +122,42 @@ export async function listContactsNeon(workspaceId: string): Promise<CrmContactR
 }
 
 /**
+ * Merge a single contact's `source_metadata.enrichment.propertyIntelligence`
+ * entry. Touches only that nested key — leaves enrichment.hunter and the
+ * rest of source_metadata byte-identical.
+ *
+ * Constitution §1: this writer cannot overwrite T1–T3 CRM truth.
+ * Constitution §2: caller MUST pass a fully-provenanced entry; the
+ *   non-optional fields of PropertyIntelligenceEntry enforce this at
+ *   the type layer.
+ *
+ * Returns true if a row was updated, false if no such
+ * (workspace, contact_id) row exists.
+ */
+export async function applyContactPropertyIntelligenceNeon(
+  workspaceId: string,
+  contactId: string,
+  entry: import("./types").PropertyIntelligenceEntry,
+): Promise<boolean> {
+  assertWorkspaceSlug(workspaceId);
+  const sql = getCrmSql();
+  const result = (await sql`
+    update crm_contacts
+       set source_metadata = jsonb_set(
+             coalesce(source_metadata, '{}'::jsonb),
+             '{enrichment,propertyIntelligence}',
+             ${JSON.stringify(entry)}::jsonb,
+             true
+           ),
+           updated_at = now()
+     where workspace_id = ${workspaceId}
+       and contact_id = ${contactId}
+    returning contact_id
+  `) as Array<{ contact_id: string }>;
+  return result.length > 0;
+}
+
+/**
  * Merge a single contact's `source_metadata.enrichment` key in place.
  * Never touches normalized / trust / any other source_metadata field.
  * Returns true if a row was updated, false if no such (workspace, contact_id)

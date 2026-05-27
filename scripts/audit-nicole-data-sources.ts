@@ -27,6 +27,7 @@ import { buildPersonalWorkspaceModel } from "@/lib/personal-workspace/workspace"
 import { buildWeeklyState } from "@/lib/personal-workspace/weeklyState";
 import { buildResurfacingBuckets } from "@/lib/relationship-intelligence/resurfacing";
 import { readCustomerOutcomes } from "@/lib/recovery/outcomes/persistence";
+import { normalizeAddress } from "@/lib/enrichment/property/addressNormalizer";
 
 const WORKSPACE = "nicole-lonergan";
 
@@ -334,6 +335,63 @@ async function main(): Promise<void> {
     }
   }
 
+  // ── Property Layer readiness (Phase 1: no calls, only measurement) ─
+  // Constitution §11: every future expansion needs a known cost +
+  // callable population before integration. This block answers that
+  // for the residential property layer.
+  console.log("");
+  console.log("--- Property Layer readiness (visible contacts) ---");
+  let withUsableAddress = 0;
+  let withZip = 0;
+  let withState = 0;
+  let withLikelyJacksonCounty = 0;
+  let withLikelyJohnsonCounty = 0;
+  let withSurname = 0;
+  let normalizationHigh = 0;
+  let normalizationMed = 0;
+  let normalizationLow = 0;
+  let normalizationNone = 0;
+  // Estimated "provider-callable" = HIGH or MED normalized address AND
+  // contact name has a usable surname. This is the same gate Hunter
+  // taught us: name without surname = guaranteed-error.
+  let providerCallable = 0;
+  for (const c of visible) {
+    const norm = normalizeAddress(c.address);
+    if (norm.confidence === "HIGH") normalizationHigh += 1;
+    else if (norm.confidence === "MED") normalizationMed += 1;
+    else if (norm.confidence === "LOW") normalizationLow += 1;
+    else normalizationNone += 1;
+    if (norm.normalizedAddress) withUsableAddress += 1;
+    if (norm.zip) withZip += 1;
+    if (norm.state) withState += 1;
+    if (norm.state === "MO" && norm.city && /kansas city|brookside|waldo|westport|river market/.test(norm.city)) {
+      withLikelyJacksonCounty += 1;
+    }
+    if (norm.state === "KS" && norm.city && /overland park|lenexa|olathe|leawood|shawnee|prairie village|mission/.test(norm.city)) {
+      withLikelyJohnsonCounty += 1;
+    }
+    const nameTokens = (c.name ?? "").trim().split(/\s+/).filter(Boolean);
+    const hasSurname = nameTokens.length >= 2;
+    if (hasSurname) withSurname += 1;
+    if ((norm.confidence === "HIGH" || norm.confidence === "MED") && hasSurname) {
+      providerCallable += 1;
+    }
+  }
+  console.log(`  any usable address parsed:           ${withUsableAddress} / ${visible.length}`);
+  console.log(`  with ZIP:                            ${withZip}`);
+  console.log(`  with state:                          ${withState}`);
+  console.log(`  likely Jackson County, MO (Nicole):  ${withLikelyJacksonCounty}`);
+  console.log(`  likely Johnson County, KS (Nicole):  ${withLikelyJohnsonCounty}`);
+  console.log(`  with surname on file (matchable):    ${withSurname}`);
+  console.log(`  missing surname (would be skipped):  ${visible.length - withSurname}`);
+  console.log(`  --`);
+  console.log(`  normalization HIGH:                  ${normalizationHigh}`);
+  console.log(`  normalization MED:                   ${normalizationMed}`);
+  console.log(`  normalization LOW:                   ${normalizationLow}`);
+  console.log(`  normalization NONE:                  ${normalizationNone}`);
+  console.log(`  --`);
+  console.log(`  estimated provider-callable:         ${providerCallable}  (HIGH/MED addr + surname)`);
+
   console.log("");
   console.log("==================================");
   console.log("Summary");
@@ -342,6 +400,7 @@ async function main(): Promise<void> {
   console.log(`  Every priority traceable to CRM import row: ${weekly.priorities.every((p) => contactsById.has(p.contactId)) ? "YES" : "no"}`);
   console.log(`  Contacts lacking any actionable channel:    ${visible.filter((c) => !c.phone && !c.email && !c.normalizedEmail).length} / ${visible.length}`);
   console.log(`  Contacts whose only notes are automation:   ${completeness.notesAutomationResidueOnly} / ${visible.length}`);
+  console.log(`  Property Layer — provider-callable today:   ${providerCallable} / ${visible.length}`);
 }
 
 main().catch((err) => {

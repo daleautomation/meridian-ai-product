@@ -185,8 +185,102 @@ export type HunterEnrichmentEntry = {
   sourceUrl?: string;
 };
 
+// ── Property Intelligence Entry ────────────────────────────────────
+//
+// Per-contact storage shape for residential property data.
+// Governed by docs/INTELLIGENCE_SYSTEM_CONSTITUTION.md:
+//   §1 Source-of-Truth Hierarchy — T4 (verified external lookup) / T5
+//       (public record) / T6 (derived). Never silently overrides
+//       T1–T3 CRM truth.
+//   §2 Provenance Requirements — source / fetchedAt / confidence /
+//       status are non-optional.
+//   §4 Confidence System — HIGH requires parcel match + owner-name
+//       match (exact or strong-surname). MED requires parcel match +
+//       weaker name match. LOW is stored but never surfaced.
+//   §6 Forbidden Behaviors — no predictive financial fields. No
+//       refinance windows, equity estimates, or "ready to sell"
+//       probabilities. Period.
+
+export type PropertyIntelligenceStatus =
+  | "matched"
+  | "ownership_mismatch"
+  | "not_found"
+  | "ambiguous"
+  | "skipped"
+  | "error";
+
+export type PropertyIntelligenceConfidence = "HIGH" | "MED" | "LOW";
+
+export type PropertyOwnerNameMatch =
+  | "exact"        // full normalized name match
+  | "surname"      // surname only — common with spouse-only-on-title cases
+  | "trust_or_llc" // owner string contains contact surname inside a trust/LLC suffix
+  | "fuzzy"        // minor variation (initial vs first name, hyphenation)
+  | "no_match";    // address resolved but owner names do not align
+
+export type PropertyOccupancyHint =
+  | "owner_occupied_likely" // mailing == situs
+  | "absentee_likely"       // mailing != situs (excluding P.O. Box ambiguity)
+  | "unknown";              // P.O. Box mailing, or missing data
+
+export type PropertyPermitCategory =
+  | "roof"
+  | "kitchen"
+  | "bath"
+  | "addition"
+  | "structural"
+  | "other";
+
+export interface PropertyPermitSignal {
+  permitNumber: string;
+  filedAt: string;              // ISO-8601, verbatim from source
+  category: PropertyPermitCategory;
+  descriptionVerbatim: string;  // never paraphrased
+}
+
+export interface PropertyAssessedValueTrend {
+  previousValue: number;
+  currentValue: number;
+  /** Computed: ((currentValue - previousValue) / previousValue) * 100. */
+  deltaPct: number;
+  windowYears: number;
+}
+
+export interface PropertyIntelligenceEntry {
+  // ── Provenance (mandatory; constitution §2) ──────────────────────
+  source: string;        // canonical provider id: "regrid" | "estated" | "<county>_assessor"
+  fetchedAt: string;     // ISO-8601 UTC instant
+  confidence: PropertyIntelligenceConfidence;
+  status: PropertyIntelligenceStatus;
+  reason?: string;       // canonical vocabulary when status !== "matched"
+
+  // ── Public-record identifiers ────────────────────────────────────
+  county: string;        // verbatim from provider, e.g. "Jackson County, MO"
+  parcelId: string;
+  situsAddress: string;  // provider's normalized address
+
+  // ── Owner-attribution ────────────────────────────────────────────
+  ownerNameOnRecord: string;  // verbatim public-record string
+  ownerNameMatch: PropertyOwnerNameMatch;
+
+  // ── HIGH-trust public-record facts ───────────────────────────────
+  ownershipYears: number | null;   // null when ownershipStartDate missing
+  lastSaleDate: string | null;     // ISO-8601, verbatim from source
+
+  // ── MED-trust derived signals (optional) ─────────────────────────
+  assessedValueTrend?: PropertyAssessedValueTrend;
+  occupancyHint?: PropertyOccupancyHint;
+
+  // ── HIGH-trust public-record events (optional) ───────────────────
+  permitSignals?: PropertyPermitSignal[];
+
+  // ── Direct citation link ─────────────────────────────────────────
+  sourceUrl?: string;
+}
+
 export type ContactEnrichment = {
   hunter?: HunterEnrichmentEntry;
+  propertyIntelligence?: PropertyIntelligenceEntry;
 };
 
 export type ImportDiagnostics = {
