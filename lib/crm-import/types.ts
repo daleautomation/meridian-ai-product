@@ -1,21 +1,67 @@
 // Meridian CRM import — canonical types for contact ingestion.
 
+/**
+ * Canonical fields the import normalizer maps source CSV columns into.
+ *
+ * Two classes of fields:
+ *   • SINGLE-VALUE fields (`name`, `address`) — used when a source CSV
+ *     supplies the full value in one column (e.g., a column literally
+ *     called "Name" or "Full Address").
+ *   • COMPONENT fields (`firstName`, `lastName`, `street`, `unit`,
+ *     `city`, `state`, `postalCode`) — used when the source splits the
+ *     value across columns (the WiseAgent shape: "First Name" +
+ *     "Last Name" + "Home Street" + "Home City" + "Home State" +
+ *     "Home Postal Code"). The normalizer ASSEMBLES these into the
+ *     final single-value fields at `normalizeCrmRow` time.
+ *
+ * The two classes coexist on `ColumnMapping` so a CSV that mixes them
+ * (rare but possible — e.g., a "Name" column AND a "Last Name" column)
+ * detects both. The assembly logic in `normalizeCrmRow` prefers the
+ * SINGLE-VALUE field when present, falling back to the component
+ * assembly only when the single-value field is empty.
+ */
 export type CrmImportField =
   | "name"
+  | "firstName"
+  | "lastName"
   | "company"
   | "phone"
   | "email"
   | "address"
+  | "street"
+  | "unit"
+  | "city"
+  | "state"
+  | "postalCode"
   | "notes"
   | "tags"
   | "lastInteraction"
   | "sourceCrm";
 
+/**
+ * Detection order. **Specific fields are listed BEFORE general ones.**
+ *
+ * `detectColumnMapping` claims headers in iteration order, so listing
+ * `firstName` before `name` lets a "First Name" header be captured as
+ * a component without ALSO being claimed by `name` via substring match.
+ * Same idea for street/city/state/postalCode vs. address.
+ *
+ * Mixing single-value and component columns in the same source CSV is
+ * supported — the assembly logic picks the single-value field when
+ * available.
+ */
 export const CRM_IMPORT_FIELDS: CrmImportField[] = [
+  "firstName",
+  "lastName",
   "name",
   "company",
   "phone",
   "email",
+  "street",
+  "unit",
+  "city",
+  "state",
+  "postalCode",
   "address",
   "notes",
   "tags",

@@ -383,6 +383,7 @@ export function scoreContactOpportunity(input: OpportunityScoringInput): Opportu
     ownerMatchConfidence: input.ownerMatchConfidence,
     ownershipDurationYears: input.ownershipDurationYears,
     lastSaleDate: input.lastSaleDate,
+    publicRecordSource: input.publicRecordSource,
     currentListingStatus: input.currentListingStatus,
     listingAgentName: input.listingAgentName,
     listingAgentMatch: input.listingAgentMatch,

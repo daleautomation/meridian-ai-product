@@ -10,7 +10,7 @@ import { randomUUID } from "node:crypto";
 import { safeReadJson, safeWriteJson } from "@/lib/utils/fsSafeWrite";
 import {
   listContactsNeon,
-  replaceWorkspaceContactsNeon,
+  destructivelyReplaceWorkspaceContactsNeon,
   upsertContactsNeon,
 } from "./crmContactsNeonAdapter";
 import { ensureCrmContactsSchema } from "./initCrmContactsSchema";
@@ -244,7 +244,17 @@ async function writeWorkspaceContacts(
 
   if (useCrmNeonStorage()) {
     await ensureCrmContactsSchema();
-    await replaceWorkspaceContactsNeon(workspaceId, contacts);
+    // Use the JSONB-merging upsert path so re-imports preserve
+    // operator state (repairs, enrichment, parcel links). Per the
+    // audit Sev-1 finding, the prior destructive replace would have
+    // wiped Hunter + opportunity + repairs on every CRM re-sync.
+    //
+    // Contacts present in the existing workspace but not in this
+    // incoming list are intentionally NOT removed by this path —
+    // explicit removal goes through a different operation (rollback
+    // via destructivelyReplaceWorkspaceContactsNeon, or a future
+    // sync-with-delete API that surfaces removals to the operator).
+    await upsertContactsNeon(contacts);
     return true;
   }
 
@@ -444,7 +454,14 @@ export async function rollbackImport(snapshotId: string): Promise<{ restored: nu
 
   const ok = useCrmNeonStorage()
     ? await (async () => {
-        await replaceWorkspaceContactsNeon(snapshot.workspaceId, snapshot.contacts);
+        // Snapshot restore is INTENTIONALLY destructive — the operator
+        // is explicitly rolling the workspace to a prior state, so any
+        // enrichment / repairs accumulated since the snapshot are
+        // expected to be discarded.
+        await destructivelyReplaceWorkspaceContactsNeon(
+          snapshot.workspaceId,
+          snapshot.contacts,
+        );
         // No cache to update — Neon path bypasses memoryContactsByWorkspace.
         return true;
       })()

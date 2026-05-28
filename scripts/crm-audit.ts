@@ -19,6 +19,7 @@
  */
 
 import { listContactsByWorkspace } from "@/lib/crm-import/store";
+import type { OpportunitySignal, OpportunityTier } from "@/lib/enrichment/opportunity/types";
 import {
   classifyCrmIntegrity,
   summarizeCrmIntegrity,
@@ -27,6 +28,23 @@ import { summarizeEnrichmentEligibility } from "@/lib/crm-import/enrichmentEligi
 import { isInternalDiagnosticContact } from "@/lib/crm-import/internalContactFilter";
 import { companyLooksLikeContactName } from "@/lib/personal-workspace/workspace";
 import type { CrmContactRecord } from "@/lib/crm-import/types";
+import {
+  readSubstrateCounts,
+  readWorkspaceLinkAudit,
+} from "@/lib/enrichment/public-records/canonicalStorage/auditView";
+import {
+  canonicalPropertyKey,
+  detectWeakAddress,
+  normalizeAddress,
+} from "@/lib/enrichment/address";
+import {
+  listParcelsByCanonicalKey,
+} from "@/lib/enrichment/public-records/canonicalStorage/neonAdapter";
+
+const SUPPORTED_COUNTIES: readonly string[] = [
+  "us-mo-jackson",
+  "us-ks-johnson",
+] as const;
 
 interface CliArgs {
   customer: string;
@@ -215,6 +233,201 @@ async function main(): Promise<void> {
   }
   console.log("");
 
+  // ── Public-record substrate coverage (workspace-agnostic + per-ws) ──
+  // Wrapped in try/catch so a missing schema or DB hiccup doesn't tank
+  // the audit. The constitution forbids fake-data fallbacks — if the
+  // substrate is not initialized we say so honestly.
+  let substrateAvailable = true;
+  let parcelResolutionUnresolved = 0;
+  let parcelResolutionAmbiguous = 0;
+  let parcelResolutionWeakAddress = 0;
+  let parcelResolutionNoAddress = 0;
+  let parcelResolutionMatched = 0;
+  try {
+    const counts = await readSubstrateCounts();
+    const linkAudit = await readWorkspaceLinkAudit(args.customer);
+
+    console.log("Public-record substrate");
+    if (!counts.schemaInitialized) {
+      console.log("  schema not initialized — run `npm run init-public-records-schema` and");
+      console.log("  ingest a canonical CSV before opportunity scoring can run.");
+      substrateAvailable = false;
+    } else {
+      console.log(`  total parcels:               ${counts.totalParcels}`);
+      for (const [county, n] of Object.entries(counts.parcelsByCounty)) {
+        console.log(`    ${county.padEnd(20)} ${n}`);
+      }
+      console.log(`  ownership snapshots:         ${counts.totalSnapshots}`);
+      console.log(`  distinct sources ingested:   ${counts.distinctSources}`);
+      if (counts.oldestSnapshot && counts.newestSnapshot) {
+        console.log(`  snapshot range:              ${counts.oldestSnapshot.slice(0,10)} → ${counts.newestSnapshot.slice(0,10)}`);
+      }
+    }
+    console.log("");
+
+    if (substrateAvailable) {
+      // Per-contact resolution preview — honest counts of what would
+      // resolve against the substrate as it stands TODAY. Does not
+      // mutate any state.
+      for (const contact of visible) {
+        if (!contact.address) {
+          parcelResolutionNoAddress += 1;
+          continue;
+        }
+        const normalized = normalizeAddress(contact.address);
+        if (detectWeakAddress(normalized)) {
+          parcelResolutionWeakAddress += 1;
+          continue;
+        }
+        const key = canonicalPropertyKey(normalized);
+        let candidateCount = 0;
+        for (const county of SUPPORTED_COUNTIES) {
+          const parcels = await listParcelsByCanonicalKey({ countyCode: county, propertyKey: key });
+          candidateCount += parcels.length;
+        }
+        if (candidateCount === 0) parcelResolutionUnresolved += 1;
+        else if (candidateCount > 1) parcelResolutionAmbiguous += 1;
+        else parcelResolutionMatched += 1;
+      }
+    }
+
+    console.log("Workspace parcel resolution (this workspace)");
+    if (!substrateAvailable) {
+      console.log("  unavailable: public-record substrate not initialized.");
+    } else {
+      console.log(`  active links:                ${linkAudit.totalActiveLinks}`);
+      console.log(`  superseded links (audit):    ${linkAudit.totalSupersededLinks}`);
+      console.log(`    HIGH                        ${linkAudit.linksByConfidence.HIGH}`);
+      console.log(`    MED                         ${linkAudit.linksByConfidence.MED}`);
+      console.log(`    WEAK                        ${linkAudit.linksByConfidence.WEAK}`);
+      console.log("  link reasons:");
+      const reasonOrder = ["exact", "surname", "trust_or_llc", "fuzzy", "ownership_mismatch"];
+      for (const reason of reasonOrder) {
+        const n = linkAudit.linksByMatchReason[reason] ?? 0;
+        console.log(`    ${reason.padEnd(28)} ${n}`);
+      }
+      console.log("  review flags:");
+      console.log(`    stale observation           ${linkAudit.staleObservationLinks}`);
+      console.log(`    ownership mismatch          ${linkAudit.ownershipMismatchLinks}`);
+      console.log(`    trust or LLC                ${linkAudit.trustOrLlcLinks}`);
+      console.log(`    surname-only match          ${linkAudit.surnameOnlyLinks}`);
+      console.log("");
+      console.log("Contact-to-parcel resolution preview");
+      console.log(`  contacts with parcel match:  ${parcelResolutionMatched}`);
+      console.log(`  no parcel match (out of substrate or out of county): ${parcelResolutionUnresolved}`);
+      console.log(`  ambiguous (multiple parcels match address): ${parcelResolutionAmbiguous}`);
+      console.log(`  weak address (cannot canonicalize): ${parcelResolutionWeakAddress}`);
+      console.log(`  no address on contact: ${parcelResolutionNoAddress}`);
+      console.log("");
+      console.log("  → run `npm run resolve-contact-parcels -- --customer=<slug> --write` to");
+      console.log("    persist active links into workspace_contact_parcel_links.");
+    }
+  } catch (err) {
+    console.log("Public-record substrate");
+    console.log(`  unavailable: ${err instanceof Error ? err.message : String(err)}`);
+    substrateAvailable = false;
+  }
+  console.log("");
+
+  // ── Opportunity tier coverage (per-contact enrichment.opportunity) ──
+  // Reads each contact's persisted OpportunitySignal. Contacts without
+  // a signal are reported honestly; the audit does NOT score on the fly.
+  const opportunitySignals: Array<{ contact: CrmContactRecord; signal: OpportunitySignal }> = [];
+  let contactsMissingOpportunity = 0;
+  for (const c of visible) {
+    const o = c.enrichment?.opportunity;
+    if (o && o.source === "meridian_opportunity_v1") {
+      opportunitySignals.push({ contact: c, signal: o });
+    } else {
+      contactsMissingOpportunity += 1;
+    }
+  }
+  const tierCounts: Record<OpportunityTier, number> = { HIGH: 0, MED: 0, WEAK: 0, REVIEW: 0 };
+  const capReasonCounts: Record<string, number> = {};
+  const factorAppliedCounts: Record<string, number> = {};
+  const uncertaintyCountsAudit: Record<string, number> = {};
+  let cappedByWeakOwner = 0;
+  let cappedByNoChannel = 0;
+  for (const { signal } of opportunitySignals) {
+    tierCounts[signal.priorityTier] += 1;
+    if (signal.tierCapReason) {
+      capReasonCounts[signal.tierCapReason] = (capReasonCounts[signal.tierCapReason] ?? 0) + 1;
+      if (signal.tierCapReason === "weak_owner_match") cappedByWeakOwner += 1;
+      if (signal.tierCapReason === "no_actionable_channel") cappedByNoChannel += 1;
+    }
+    for (const f of signal.priorityFactors) {
+      if (f.applied) factorAppliedCounts[f.name] = (factorAppliedCounts[f.name] ?? 0) + 1;
+    }
+    for (const u of signal.uncertaintyReasons) {
+      uncertaintyCountsAudit[u.code] = (uncertaintyCountsAudit[u.code] ?? 0) + 1;
+    }
+  }
+
+  console.log("Opportunity tier distribution (visible)");
+  if (opportunitySignals.length === 0) {
+    console.log("  No contacts carry an enrichment.opportunity signal yet.");
+    console.log("  Run `npm run enrich-opportunity -- --customer=<slug> --write` to populate.");
+  } else {
+    console.log(`  HIGH   ${String(tierCounts.HIGH).padStart(4)}  ${bar(tierCounts.HIGH, opportunitySignals.length)}  ${pct(tierCounts.HIGH, opportunitySignals.length)}`);
+    console.log(`  MED    ${String(tierCounts.MED).padStart(4)}  ${bar(tierCounts.MED, opportunitySignals.length)}  ${pct(tierCounts.MED, opportunitySignals.length)}`);
+    console.log(`  REVIEW ${String(tierCounts.REVIEW).padStart(4)}  ${bar(tierCounts.REVIEW, opportunitySignals.length)}  ${pct(tierCounts.REVIEW, opportunitySignals.length)}`);
+    console.log(`  WEAK   ${String(tierCounts.WEAK).padStart(4)}  ${bar(tierCounts.WEAK, opportunitySignals.length)}  ${pct(tierCounts.WEAK, opportunitySignals.length)}`);
+    console.log("");
+    console.log(`  contacts missing opportunity signal: ${contactsMissingOpportunity} / ${visible.length}`);
+  }
+  console.log("");
+
+  if (opportunitySignals.length > 0) {
+    // Top source-backed opportunities — contacts with parcelId set,
+    // sorted by transparentPriorityScore desc.
+    const sourced = opportunitySignals.filter(({ signal }) => signal.parcelId !== null);
+    sourced.sort((a, b) => {
+      if (b.signal.transparentPriorityScore !== a.signal.transparentPriorityScore) {
+        return b.signal.transparentPriorityScore - a.signal.transparentPriorityScore;
+      }
+      return a.contact.name.localeCompare(b.contact.name);
+    });
+    console.log("Top source-backed opportunities (this workspace)");
+    if (sourced.length === 0) {
+      console.log("  (none — no contacts have public-record-backed opportunity signals yet)");
+    } else {
+      for (const { contact, signal } of sourced.slice(0, 10)) {
+        const grounding = signal.matchedPropertyAddress ?? "(address withheld)";
+        const sourceTag = signal.publicRecordSource ?? "(source unknown)";
+        console.log(
+          `  ${signal.priorityTier.padEnd(6)} ${String(signal.transparentPriorityScore).padStart(3)} · ${contact.name.padEnd(28).slice(0, 28)} · ${grounding}  [${sourceTag}]`,
+        );
+      }
+    }
+    console.log("");
+
+    console.log("Top applied factors (across all contacts)");
+    const factorPairs = Object.entries(factorAppliedCounts).sort((a, b) => b[1] - a[1]);
+    for (const [name, n] of factorPairs.slice(0, 8)) {
+      console.log(`  ${name.padEnd(36)} ${n}`);
+    }
+    console.log("");
+
+    console.log("Top uncertainty reasons (across all contacts)");
+    const uncertaintyPairs = Object.entries(uncertaintyCountsAudit).sort((a, b) => b[1] - a[1]);
+    if (uncertaintyPairs.length === 0) {
+      console.log("  (none)");
+    } else {
+      for (const [code, n] of uncertaintyPairs) {
+        console.log(`  ${code.padEnd(36)} ${n}`);
+      }
+    }
+    console.log("");
+
+    console.log("Tier cap reasons");
+    console.log(`  capped by weak owner match → REVIEW    ${cappedByWeakOwner}`);
+    console.log(`  capped by no actionable channel → WEAK ${cappedByNoChannel}`);
+    if (Object.keys(capReasonCounts).length === 0) {
+      console.log("  (no caps fired — all tiers are score-derived)");
+    }
+    console.log("");
+  }
+
   // ── Founder verdict ─────────────────────────────────────────────
   console.log("Founder verdict");
   const verdicts: string[] = [];
@@ -232,6 +445,9 @@ async function main(): Promise<void> {
   }
   if (eligibility.property.eligible === 0) {
     verdicts.push(`Property cannot be run usefully here — 0 eligible rows. Pause Property for this workspace.`);
+  }
+  if (substrateAvailable && parcelResolutionUnresolved + parcelResolutionAmbiguous + parcelResolutionWeakAddress + parcelResolutionNoAddress > parcelResolutionMatched && parcelResolutionMatched === 0) {
+    verdicts.push(`Public-record coverage is empty for this workspace — ingest county data before opportunity scoring can produce meaningful tiers.`);
   }
   if (verdicts.length === 0) {
     console.log("  ✓ No blocking issues detected. Workspace is paid-customer ready from a data-integrity standpoint.");

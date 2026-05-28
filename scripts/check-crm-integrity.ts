@@ -28,6 +28,10 @@ import {
 } from "@/lib/crm-import/enrichmentEligibility";
 import { companyLooksLikeContactName } from "@/lib/personal-workspace/workspace";
 import type { ContactRepair } from "@/lib/crm-import/types";
+import {
+  detectColumnMapping,
+  normalizeCrmRow,
+} from "@/lib/crm-import/normalize";
 
 const failures: string[] = [];
 function fail(msg: string): void {
@@ -375,6 +379,275 @@ function runRepairOverlayChecks(): void {
   }
 }
 
+// ──────────────────────────────────────────────────────────────────
+// SECTION — Import-boundary assembly (Phase A1 + A2)
+// ──────────────────────────────────────────────────────────────────
+//
+// The WiseAgent column-shape audit (2026-05-28) found:
+//   • 1/130 surnames — import was dropping the Last Name column
+//   • 7/130 canonical addresses — import was dropping City/State/Zip
+// Root cause: the previous COLUMN_ALIASES mixed full-value and
+// component column names, so `detectColumnMapping`'s first-match-wins
+// claimed only the first component column it saw.
+//
+// These fixtures lock in the multi-column assembly behavior so the
+// regression cannot reappear.
+
+function runWiseAgentColumnAssembly(): void {
+  // The exact column shape from Nicole's WiseAgent export.
+  const wiseAgentHeaders = [
+    "First Name",
+    "Last Name",
+    "Email",
+    "Home Phone",
+    "Home Street",
+    "Home City",
+    "Home State",
+    "Home Postal Code",
+    "Tags",
+    "Last Activity",
+  ];
+  const mapping = detectColumnMapping(wiseAgentHeaders);
+
+  // Component fields must be claimed.
+  if (mapping.firstName !== "First Name") {
+    fail(`WiseAgent: mapping.firstName expected "First Name", got ${JSON.stringify(mapping.firstName)}`);
+  }
+  if (mapping.lastName !== "Last Name") {
+    fail(`WiseAgent: mapping.lastName expected "Last Name", got ${JSON.stringify(mapping.lastName)}`);
+  }
+  if (mapping.street !== "Home Street") {
+    fail(`WiseAgent: mapping.street expected "Home Street", got ${JSON.stringify(mapping.street)}`);
+  }
+  if (mapping.city !== "Home City") {
+    fail(`WiseAgent: mapping.city expected "Home City", got ${JSON.stringify(mapping.city)}`);
+  }
+  if (mapping.state !== "Home State") {
+    fail(`WiseAgent: mapping.state expected "Home State", got ${JSON.stringify(mapping.state)}`);
+  }
+  if (mapping.postalCode !== "Home Postal Code") {
+    fail(`WiseAgent: mapping.postalCode expected "Home Postal Code", got ${JSON.stringify(mapping.postalCode)}`);
+  }
+  // Critically — `name` and `address` MUST NOT be set when only
+  // components are present. Their absence is what makes the assembly
+  // pathway fire.
+  if (mapping.name !== undefined) {
+    fail(`WiseAgent: mapping.name should be undefined (only components present), got ${JSON.stringify(mapping.name)}`);
+  }
+  if (mapping.address !== undefined) {
+    fail(`WiseAgent: mapping.address should be undefined (only components present), got ${JSON.stringify(mapping.address)}`);
+  }
+
+  // Three real rows from the corpus (anonymized via the user's
+  // examples).
+  type Row = Record<string, string>;
+  const susie: Row = {
+    "First Name": "Susie",
+    "Last Name": "Adams",
+    "Email": "susie@example.com",
+    "Home Phone": "8165551111",
+    "Home Street": "5006 W 65th St",
+    "Home City": "Prairie Village",
+    "Home State": "KS",
+    "Home Postal Code": "66208",
+    "Tags": "Seller",
+    "Last Activity": "2024-01-15",
+  };
+  const rashondra: Row = {
+    "First Name": "RaShondra",
+    "Last Name": "Banks",
+    "Email": "rashondra@example.com",
+    "Home Phone": "8165552222",
+    "Home Street": "1463 E 76th Terrace",
+    "Home City": "Kansas City",
+    "Home State": "MO",
+    "Home Postal Code": "64131",
+    "Tags": "Buyer",
+    "Last Activity": "2023-09-01",
+  };
+  const leah: Row = {
+    "First Name": "Leah B.",
+    "Last Name": "Barnett",
+    "Email": "leah@example.com",
+    "Home Phone": "8165553333",
+    "Home Street": "7316 Hullwood Ave",
+    "Home City": "Kansas City",
+    "Home State": "MO",
+    "Home Postal Code": "64133",
+    "Tags": "",
+    "Last Activity": "",
+  };
+
+  const susieResult = normalizeCrmRow(susie, 0, mapping, "wise_agent");
+  if (susieResult.name !== "Susie Adams") {
+    fail(`WiseAgent: Susie name expected "Susie Adams", got "${susieResult.name}"`);
+  }
+  if (susieResult.address !== "5006 W 65th St, Prairie Village, KS 66208") {
+    fail(`WiseAgent: Susie address expected "5006 W 65th St, Prairie Village, KS 66208", got "${susieResult.address}"`);
+  }
+  if (susieResult.normalizedName !== "susie adams") {
+    fail(`WiseAgent: Susie normalizedName expected "susie adams", got "${susieResult.normalizedName}"`);
+  }
+
+  const rashondraResult = normalizeCrmRow(rashondra, 1, mapping, "wise_agent");
+  if (rashondraResult.name !== "RaShondra Banks") {
+    fail(`WiseAgent: RaShondra name expected "RaShondra Banks", got "${rashondraResult.name}"`);
+  }
+  if (rashondraResult.address !== "1463 E 76th Terrace, Kansas City, MO 64131") {
+    fail(`WiseAgent: RaShondra address expected "1463 E 76th Terrace, Kansas City, MO 64131", got "${rashondraResult.address}"`);
+  }
+
+  const leahResult = normalizeCrmRow(leah, 2, mapping, "wise_agent");
+  // Middle-initial preserved verbatim.
+  if (leahResult.name !== "Leah B. Barnett") {
+    fail(`WiseAgent: Leah name expected "Leah B. Barnett", got "${leahResult.name}"`);
+  }
+  if (leahResult.address !== "7316 Hullwood Ave, Kansas City, MO 64133") {
+    fail(`WiseAgent: Leah address expected "7316 Hullwood Ave, Kansas City, MO 64133", got "${leahResult.address}"`);
+  }
+}
+
+function runSingleValueColumnsStillWork(): void {
+  // A CSV with a single full-name column AND a single full-address column
+  // continues to work as it did before — the assembly pathway only fires
+  // when the single-value columns are absent.
+  const legacyHeaders = ["Name", "Email", "Phone", "Address", "Tags"];
+  const mapping = detectColumnMapping(legacyHeaders);
+  if (mapping.name !== "Name") {
+    fail(`legacy: mapping.name expected "Name", got ${JSON.stringify(mapping.name)}`);
+  }
+  if (mapping.address !== "Address") {
+    fail(`legacy: mapping.address expected "Address", got ${JSON.stringify(mapping.address)}`);
+  }
+  const row = {
+    "Name": "Greg Smith",
+    "Email": "greg@example.com",
+    "Phone": "8165554444",
+    "Address": "4321 W 63rd St, Kansas City, MO 64113",
+    "Tags": "Seller",
+  };
+  const result = normalizeCrmRow(row, 0, mapping, "legacy");
+  if (result.name !== "Greg Smith") {
+    fail(`legacy: name expected "Greg Smith", got "${result.name}"`);
+  }
+  if (result.address !== "4321 W 63rd St, Kansas City, MO 64113") {
+    fail(`legacy: address expected verbatim, got "${result.address}"`);
+  }
+}
+
+function runMixedColumnsSingleValueWins(): void {
+  // A CSV that has BOTH a "Name" column AND "First Name"/"Last Name"
+  // columns — the single-value column wins. This preserves
+  // backward compatibility: a CSV that provided a canonical "Name" gets
+  // exactly what it provided, even if components are also present.
+  const mixedHeaders = ["Name", "First Name", "Last Name", "Address", "Home Street", "Home City"];
+  const mapping = detectColumnMapping(mixedHeaders);
+  if (mapping.name !== "Name") {
+    fail(`mixed: mapping.name expected "Name" (single wins), got ${JSON.stringify(mapping.name)}`);
+  }
+  if (mapping.firstName !== "First Name") {
+    fail(`mixed: mapping.firstName also detected, got ${JSON.stringify(mapping.firstName)}`);
+  }
+  if (mapping.address !== "Address") {
+    fail(`mixed: mapping.address expected "Address" (single wins), got ${JSON.stringify(mapping.address)}`);
+  }
+  const row = {
+    "Name": "Greg Smith",
+    "First Name": "Greg",
+    "Last Name": "Smith",
+    "Address": "4321 W 63rd St, KC, MO 64113",
+    "Home Street": "ignored",
+    "Home City": "ignored",
+  };
+  const result = normalizeCrmRow(row, 0, mapping, "mixed");
+  if (result.name !== "Greg Smith") {
+    fail(`mixed: name expected "Greg Smith" (single-value wins), got "${result.name}"`);
+  }
+  if (result.address !== "4321 W 63rd St, KC, MO 64113") {
+    fail(`mixed: address expected single-value, got "${result.address}"`);
+  }
+}
+
+function runPartialComponentsDegradeGracefully(): void {
+  // First name only, no last name — should degrade to first-name-only
+  // (current behavior preserved as a graceful degradation, not an error).
+  const firstOnlyMapping = detectColumnMapping(["First Name", "Email"]);
+  const firstOnly = normalizeCrmRow(
+    { "First Name": "Greg", "Email": "greg@example.com" },
+    0, firstOnlyMapping, "wise_agent",
+  );
+  if (firstOnly.name !== "Greg") {
+    fail(`degraded: first-only name expected "Greg", got "${firstOnly.name}"`);
+  }
+
+  // Last name only — also graceful.
+  const lastOnlyMapping = detectColumnMapping(["Last Name", "Email"]);
+  const lastOnly = normalizeCrmRow(
+    { "Last Name": "Smith", "Email": "smith@example.com" },
+    0, lastOnlyMapping, "wise_agent",
+  );
+  if (lastOnly.name !== "Smith") {
+    fail(`degraded: last-only name expected "Smith", got "${lastOnly.name}"`);
+  }
+
+  // Street with no city/state/zip — produces just the street line. The
+  // downstream address normalizer will flag this as weak via
+  // detectWeakAddress; that's correct behavior.
+  const streetOnlyMapping = detectColumnMapping(["First Name", "Last Name", "Home Street"]);
+  const streetOnly = normalizeCrmRow(
+    { "First Name": "Greg", "Last Name": "Smith", "Home Street": "4321 W 63rd St" },
+    0, streetOnlyMapping, "wise_agent",
+  );
+  if (streetOnly.address !== "4321 W 63rd St") {
+    fail(`degraded: street-only address expected "4321 W 63rd St", got "${streetOnly.address}"`);
+  }
+
+  // Unit gets concatenated onto the street line.
+  const unitMapping = detectColumnMapping([
+    "First Name", "Last Name", "Home Street", "Apt", "Home City", "Home State", "Home Postal Code",
+  ]);
+  const withUnit = normalizeCrmRow(
+    {
+      "First Name": "Greg",
+      "Last Name": "Smith",
+      "Home Street": "100 Main St",
+      "Apt": "#4B",
+      "Home City": "Kansas City",
+      "Home State": "MO",
+      "Home Postal Code": "64108",
+    },
+    0, unitMapping, "wise_agent",
+  );
+  if (withUnit.address !== "100 Main St #4B, Kansas City, MO 64108") {
+    fail(`degraded: address with unit expected verbatim, got "${withUnit.address}"`);
+  }
+}
+
+function runDeterministicAssembly(): void {
+  // Same inputs → byte-identical output across calls.
+  const headers = [
+    "First Name", "Last Name", "Email", "Home Phone",
+    "Home Street", "Home City", "Home State", "Home Postal Code",
+  ];
+  const mapping = detectColumnMapping(headers);
+  const row: Record<string, string> = {
+    "First Name": "Susie",
+    "Last Name": "Adams",
+    "Email": "susie@example.com",
+    "Home Phone": "8165551111",
+    "Home Street": "5006 W 65th St",
+    "Home City": "Prairie Village",
+    "Home State": "KS",
+    "Home Postal Code": "66208",
+  };
+  const a = JSON.stringify(normalizeCrmRow(row, 0, mapping, "wise_agent"));
+  const b = JSON.stringify(normalizeCrmRow(row, 0, mapping, "wise_agent"));
+  const c = JSON.stringify(normalizeCrmRow(row, 0, mapping, "wise_agent"));
+  if (a !== b || b !== c) {
+    fail("assembly determinism: 3 calls produced different output");
+  }
+}
+
 function main(): void {
   runCompanyGuardChecks();
   runIntegrityChecks();
@@ -382,6 +655,11 @@ function main(): void {
   runEligibilityChecks();
   runLaborTechReadiness();
   runRepairOverlayChecks();
+  runWiseAgentColumnAssembly();
+  runSingleValueColumnsStillWork();
+  runMixedColumnsSingleValueWins();
+  runPartialComponentsDegradeGracefully();
+  runDeterministicAssembly();
 
   if (failures.length > 0) {
     console.error("");
@@ -408,6 +686,12 @@ function main(): void {
       "repair-overlay: post-repair Hunter eligibility flips no_last_name → eligible",
       "repair-overlay: import-time originalValue preserved on every repair entry",
       "repair-overlay: multi-repair last-write-wins (chronological)",
+      "WiseAgent column shape: First+Last → name; Home Street/City/State/Postal Code → canonical address",
+      "WiseAgent assembly: 3 real-row fixtures produce verbatim expected output",
+      "legacy single-value columns (Name, Address) continue to work unchanged",
+      "mixed CSV with both single + components: single-value wins",
+      "partial components degrade gracefully: first-only, last-only, street-only, with-unit",
+      "assembly determinism: 3 calls → byte-identical output",
     ],
   });
 }

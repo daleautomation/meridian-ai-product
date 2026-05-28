@@ -113,6 +113,14 @@ export interface OpportunitySignal {
   ownerMatchConfidence: OwnerMatchConfidence;
   ownershipDurationYears: number | null;
   lastSaleDate: string | null;
+  /**
+   * Source string for the public record that backed the ownership
+   * fields above. Equals input.publicRecordSource. Null when no
+   * public-record substrate was loaded for this contact. Carried
+   * through to the signal so consumers can show provenance without
+   * walking the factor list. Constitution §2.
+   */
+  publicRecordSource: string | null;
 
   // Listing context (optional)
   currentListingStatus: CurrentListingStatus;

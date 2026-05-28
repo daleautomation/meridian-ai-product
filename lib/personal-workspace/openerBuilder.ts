@@ -47,6 +47,9 @@ export type OpenerSource =
   // verified external enrichment (MED) — only fires when provenance,
   // confidence ≥ 75, and at least company or role are present.
   | "enrichment:hunter_role"
+  // public-record-backed opportunity priority (MED) — only fires when
+  // tier is HIGH or MED AND parcel grounding exists.
+  | "enrichment:opportunity_priority"
   // stale-only (WEAK)
   | "stale_relationship:months"
   | "stale_relationship:years"
@@ -80,6 +83,28 @@ export interface OpenerInput {
     company?: string;
     role?: string;
     fetchedAt: string;
+  } | null;
+  /**
+   * Public-record-backed opportunity signal (Commit C). The extractor
+   * only fires when:
+   *   • priorityTier is HIGH or MED (never WEAK / REVIEW)
+   *   • a parcel + ownership snapshot grounded the score
+   *     (publicRecordSource present)
+   *   • a higher-trust opener (notes, Hunter) did NOT fire upstream
+   *
+   * Carries only the fields the opener uses. The full signal lives on
+   * the contact's enrichment.opportunity for audit + downstream UI.
+   */
+  opportunity?: {
+    priorityTier: "HIGH" | "MED" | "WEAK" | "REVIEW";
+    transparentPriorityScore: number;
+    matchedPropertyAddress: string | null;
+    ownerName: string | null;
+    ownershipDurationYears: number | null;
+    publicRecordSource: string | null;
+    fetchedAt: string;
+    /** Names of factors with applied: true, sorted by weight desc. */
+    topAppliedFactorNames: readonly string[];
   } | null;
 }
 
@@ -463,6 +488,87 @@ function extractHunterRole(input: OpenerInput): SuggestedOpener | null {
   };
 }
 
+// ── Opportunity-priority extractor ─────────────────────────────────
+
+function formatIsoDate(iso: string): string {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return iso;
+  const d = new Date(t);
+  const yyyy = d.getUTCFullYear();
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function describeFactor(name: string): string {
+  // Operator-facing label for the closed set of factor names. Calm,
+  // descriptive — never inflated. New factor names default to a
+  // sanitized form of the name string.
+  switch (name) {
+    case "prior_seller_relationship": return "you helped them sell before";
+    case "prior_buyer_relationship": return "you helped them buy before";
+    case "operator_preference_seller_bias": return "seller-side fit for your book";
+    case "active_listing_found": return "an active listing on file";
+    case "listed_by_another_agent": return "listed with another agent";
+    case "ownership_duration_over_7yr": return "held the property 7+ years";
+    case "stale_relationship_over_12mo": return "12+ months since last touch";
+    case "verified_contact_path": return "a working contact channel";
+    default: return name.replace(/_/g, " ");
+  }
+}
+
+/**
+ * Build an opener that cites the transparent opportunity priority.
+ * Only fires when:
+ *   • priorityTier is HIGH or MED
+ *   • a public_record source grounded the score (publicRecordSource
+ *     present)
+ *
+ * Every claim is sourced and dated inline. No hype framing — banned-
+ * phrase regex scans cover this in check-opener-generation +
+ * check-opportunity-pipeline.
+ */
+function extractOpportunityPriority(input: OpenerInput): SuggestedOpener | null {
+  const o = input.opportunity;
+  if (!o) return null;
+  if (o.priorityTier !== "HIGH" && o.priorityTier !== "MED") return null;
+  // Requires actual parcel grounding — Commit C contract: no opener
+  // without a source.
+  if (!o.publicRecordSource) return null;
+  if (!o.matchedPropertyAddress) return null;
+  if (o.topAppliedFactorNames.length === 0) return null;
+
+  const factorBlurb = describeFactor(o.topAppliedFactorNames[0]);
+  const tierLabel = o.priorityTier === "HIGH" ? "this week" : "this cycle";
+  const ownershipBlurb =
+    o.ownershipDurationYears !== null && o.ownershipDurationYears >= 7
+      ? `held the property ${o.ownershipDurationYears}+ years`
+      : o.ownershipDurationYears !== null
+        ? `${o.ownershipDurationYears} yr${o.ownershipDurationYears === 1 ? "" : "s"} on title`
+        : "current owner on title";
+  const dateStr = formatIsoDate(o.fetchedAt);
+
+  const opener =
+    `Public record shows ${firstName(input.name)} on title at ${o.matchedPropertyAddress} (${ownershipBlurb}, source ${o.publicRecordSource}). ` +
+    `Worth surfacing as a priority ${tierLabel} — ${factorBlurb}.`;
+
+  const evidenceParts = [
+    `${o.priorityTier} · score ${o.transparentPriorityScore}`,
+    o.matchedPropertyAddress,
+    o.publicRecordSource,
+    `as of ${dateStr}`,
+  ];
+  const supportingEvidence = clipEvidence(evidenceParts.join(" · "));
+
+  return {
+    opener,
+    openerSource: "enrichment:opportunity_priority",
+    supportingEvidence,
+    trustLevel: "MED",
+    isSpecific: true,
+  };
+}
+
 // ── Main builder ───────────────────────────────────────────────────
 
 /**
@@ -503,7 +609,13 @@ export function buildSuggestedOpener(
   const hunterOpener = extractHunterRole(input);
   if (hunterOpener) return hunterOpener;
 
-  // 3. Tag-based openers. Past-buyer / past-seller / repeat carry the
+  // 3. Public-record-backed opportunity-priority opener. Only fires when
+  //    tier is HIGH/MED AND parcel grounding (publicRecordSource +
+  //    matchedPropertyAddress) is present. Otherwise defer to tag chain.
+  const opportunityOpener = extractOpportunityPriority(input);
+  if (opportunityOpener) return opportunityOpener;
+
+  // 4. Tag-based openers. Past-buyer / past-seller / repeat carry the
   //    last-close year when available.
   const tags = input.tags ?? [];
   const closeYear = yearOf(input.lastInteractionAt);
@@ -652,6 +764,7 @@ export function buildSuggestedOpenerFromContact(
   options: OpenerOptions = {},
 ): SuggestedOpener {
   const h = contact.enrichment?.hunter;
+  const o = contact.enrichment?.opportunity;
   return buildSuggestedOpener(
     {
       name: contact.name,
@@ -666,6 +779,26 @@ export function buildSuggestedOpenerFromContact(
             company: h.company,
             role: h.role,
             fetchedAt: h.fetchedAt,
+          }
+        : null,
+      opportunity: o
+        ? {
+            priorityTier: o.priorityTier,
+            transparentPriorityScore: o.transparentPriorityScore,
+            matchedPropertyAddress: o.matchedPropertyAddress,
+            ownerName: o.ownerName,
+            ownershipDurationYears: o.ownershipDurationYears,
+            publicRecordSource: o.publicRecordSource ?? null,
+            fetchedAt: o.fetchedAt,
+            topAppliedFactorNames: (o.priorityFactors ?? [])
+              .filter((f) => f.applied)
+              .slice()
+              .sort((a, b) =>
+                b.weight !== a.weight
+                  ? b.weight - a.weight
+                  : a.name < b.name ? -1 : a.name > b.name ? 1 : 0,
+              )
+              .map((f) => f.name),
           }
         : null,
     },

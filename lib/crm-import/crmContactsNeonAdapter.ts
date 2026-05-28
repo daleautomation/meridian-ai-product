@@ -355,6 +355,49 @@ export async function applyContactEnrichmentNeon(
   return result.length > 0;
 }
 
+/**
+ * Upsert contacts via Neon. The ON CONFLICT path is a **JSONB-merging
+ * upsert**: CRM-truth keys from the import overwrite, while operator
+ * and derived state in `source_metadata` is preserved across re-imports.
+ *
+ * Protected keys (preserved from existing row on every re-import):
+ *   • source_metadata.repairs      — operator-entered T1 truth
+ *   • source_metadata.enrichment.* — Hunter, opportunity,
+ *                                    propertyIntelligence, future
+ *                                    enrichment namespaces
+ *
+ * Overwrite keys (replaced from the new import):
+ *   • normalized.*                 — CRM canonical truth
+ *   • trust                        — T1–T6 tier metadata
+ *   • source_metadata.{importJobId, sourceCrm, tags, notes,
+ *     lastInteractionAt, relationshipScore, scoreMetadata}
+ *
+ * Why this shape: the audit (docs/public-record-intelligence-audit.md)
+ * documented this path as Sev-1 — a whole-source_metadata overwrite
+ * would silently wipe enrichment + repairs every time an operator
+ * re-imported their CRM. This is the canonical fix.
+ *
+ * SQL semantics (Postgres `||` is shallow JSONB merge, right-side wins):
+ *
+ *   source_metadata =
+ *     excluded.source_metadata                           -- new CRM-side keys
+ *     || jsonb_build_object(                              -- but re-overlay protected keys
+ *       'repairs', coalesce(existing.source_metadata->'repairs', '[]'),
+ *       'enrichment', coalesce(existing.source_metadata->'enrichment', '{}')
+ *     )
+ *
+ * For a first insert (no conflict), excluded.source_metadata is written
+ * as-is. For a re-import (conflict), protected keys carry forward
+ * verbatim while CRM-truth keys come from the new import.
+ *
+ * Constitution alignment:
+ *   §1 source-of-truth — `normalized.*` from import is canonical T1–T3;
+ *      operator repairs (T1) overlay on read.
+ *   §2 provenance — every preserved enrichment carries its own
+ *      source + observedAt, untouched here.
+ *   §6.11 workspace isolation — every read + write filters by
+ *      (workspace_id, contact_id).
+ */
 export async function upsertContactsNeon(
   records: CrmContactRecord[],
 ): Promise<{ inserted: number; updated: number }> {
@@ -397,7 +440,14 @@ export async function upsertContactsNeon(
       do update set
         normalized = excluded.normalized,
         trust = excluded.trust,
-        source_metadata = excluded.source_metadata,
+        source_metadata =
+          excluded.source_metadata
+          || jsonb_build_object(
+            'repairs',
+            coalesce(crm_contacts.source_metadata->'repairs', '[]'::jsonb),
+            'enrichment',
+            coalesce(crm_contacts.source_metadata->'enrichment', '{}'::jsonb)
+          ),
         updated_at = excluded.updated_at
     `;
 
@@ -408,7 +458,25 @@ export async function upsertContactsNeon(
   return { inserted, updated };
 }
 
-export async function replaceWorkspaceContactsNeon(
+/**
+ * DESTRUCTIVE — wipes every row in a workspace and re-inserts.
+ *
+ * Use case: explicit rollback via `restoreFromSnapshot`. NOT for
+ * routine CRM re-import — that path is `upsertContactsNeon`, which
+ * preserves operator state via the JSONB-merging upsert.
+ *
+ * This function:
+ *   • DELETEs every crm_contacts row for the workspace
+ *   • ORPHANS every workspace_contact_parcel_links row pointing at
+ *     deleted contacts (no FK cascade yet — see audit Priority 3)
+ *   • DESTROYS every source_metadata.enrichment.* and
+ *     source_metadata.repairs[] in the workspace
+ *
+ * The name is intentionally verbose so callers must acknowledge the
+ * destructive behavior. Adding a new caller requires a code review
+ * that explicitly opts in to destruction.
+ */
+export async function destructivelyReplaceWorkspaceContactsNeon(
   workspaceId: string,
   contacts: CrmContactRecord[],
 ): Promise<void> {
