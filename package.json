@@ -53,6 +53,7 @@
     "check-grounding-quality": "tsx scripts/check-grounding-quality.ts",
     "check-import-quality": "tsx scripts/check-import-quality.ts",
     "verify-wiseagent-preview": "tsx scripts/verify-wiseagent-preview.ts",
+    "rehab-truncated-from-csv": "tsx scripts/rehab-truncated-from-csv.ts",
     "brief:determinism": "tsx scripts/check-brief-determinism.ts",
     "check-brief-determinism": "tsx scripts/check-brief-determinism.ts",
     "signals:check": "tsx scripts/check-workspace-signals.ts",
