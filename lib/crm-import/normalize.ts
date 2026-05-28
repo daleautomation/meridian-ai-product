@@ -34,9 +34,20 @@ export const COLUMN_ALIASES: Record<CrmImportField, string[]> = {
   // ── Single-value name (used when CSV has a full-name column) ──
   // Intentionally NARROW — does NOT include first/last variants. Those
   // belong to firstName / lastName so the component pathway can fire.
+  //
+  // DO NOT add single-word generic aliases like "contact" or "person"
+  // here. The matcher uses `header.key.includes(alias)`, so a one-word
+  // alias matches any longer header that happens to contain it:
+  //   • "contact" → captures "Contact Status" / "Contact Type" /
+  //     "Contact Source" → assembled name short-circuits to the
+  //     status / category value (e.g., "No Status") and firstName +
+  //     lastName assembly never runs.
+  //   • "person" → captures "Personal Email" / "Person Type".
+  // Every alias here must be specific enough that it cannot be a
+  // substring of an unrelated column header.
   name: [
-    "name", "full name", "fullname", "contact name", "contact",
-    "person", "client name", "lead name", "primary contact", "display name",
+    "name", "full name", "fullname", "contact name",
+    "client name", "lead name", "primary contact", "display name",
   ],
   // ── Component names ──
   firstName: [

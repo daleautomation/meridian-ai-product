@@ -403,6 +403,48 @@ function runRepairOverlayChecks(): void {
 // These fixtures lock in the multi-column assembly behavior so the
 // regression cannot reappear.
 
+function runStatusColumnDoesNotClaimName(): void {
+  // Regression: the alias "contact" in COLUMN_ALIASES.name was matching
+  // "Contact Status" via header.key.includes(alias), causing the
+  // assembled name to short-circuit to the status value. Same class of
+  // bug applied to "person" matching "Personal Email" / "Person Type".
+  const headers = [
+    "First Name", "Last Name", "Email", "Home Phone",
+    "Home Street", "Home City", "Home State", "Home Postal Code",
+    "Contact Status", "Person Type", "Personal Email",
+  ];
+  const mapping = detectColumnMapping(headers);
+  if (mapping.name) {
+    fail(`regression: mapping.name should be undefined when only "Contact Status" / "Person Type" / "Personal Email" exist alongside First/Last, got ${JSON.stringify(mapping.name)}`);
+  }
+  if (mapping.firstName !== "First Name") {
+    fail(`regression: firstName claim should still win, got ${JSON.stringify(mapping.firstName)}`);
+  }
+  if (mapping.lastName !== "Last Name") {
+    fail(`regression: lastName claim should still win, got ${JSON.stringify(mapping.lastName)}`);
+  }
+  // Assembly check on a row with the bad column populated.
+  const row = normalizeCrmRow(
+    {
+      "First Name": "Susie",
+      "Last Name": "Adams",
+      "Email": "susie@example.com",
+      "Home Phone": "8165551111",
+      "Home Street": "5006 W 65th St",
+      "Home City": "Prairie Village",
+      "Home State": "KS",
+      "Home Postal Code": "66208",
+      "Contact Status": "No Status",
+      "Person Type": "Lead",
+      "Personal Email": "personal@example.com",
+    },
+    0, mapping, "wise_agent",
+  );
+  if (row.name !== "Susie Adams") {
+    fail(`regression: assembled name must equal "Susie Adams" even when "Contact Status" column has "No Status", got "${row.name}"`);
+  }
+}
+
 function runWiseAgentColumnAssembly(): void {
   // The exact column shape from Nicole's WiseAgent export.
   const wiseAgentHeaders = [
@@ -1067,6 +1109,7 @@ function main(): void {
   runEligibilityChecks();
   runLaborTechReadiness();
   runRepairOverlayChecks();
+  runStatusColumnDoesNotClaimName();
   runWiseAgentColumnAssembly();
   runSingleValueColumnsStillWork();
   runMixedColumnsSingleValueWins();
