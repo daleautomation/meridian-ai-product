@@ -51,6 +51,7 @@
     "check-reimport-survival": "tsx scripts/check-reimport-survival.ts",
     "check-manual-parcels-csv": "tsx scripts/check-manual-parcels-csv.ts",
     "check-grounding-quality": "tsx scripts/check-grounding-quality.ts",
+    "check-import-quality": "tsx scripts/check-import-quality.ts",
     "brief:determinism": "tsx scripts/check-brief-determinism.ts",
     "check-brief-determinism": "tsx scripts/check-brief-determinism.ts",
     "signals:check": "tsx scripts/check-workspace-signals.ts",

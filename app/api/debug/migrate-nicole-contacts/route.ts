@@ -1,11 +1,29 @@
 // Meridian — /api/debug/migrate-nicole-contacts
 //
-// Admin-only one-time migration endpoint. Accepts a JSON body matching
-// the on-disk shape of `data/crm-contacts/nicole-lonergan.json` and
-// upserts each contact into Neon via the canonical `upsertContacts`
-// path. Used to promote contacts that were imported during the local
-// file-storage era (before DATABASE_URL was wired) into durable
-// per-workspace Postgres storage.
+// ────────────────────────────────────────────────────────────────────
+// ⚠️  DEBUG / ONE-TIME MIGRATION ENDPOINT — NOT FOR ROUTINE IMPORTS  ⚠️
+// ────────────────────────────────────────────────────────────────────
+//
+// This endpoint accepts pre-formed `CrmContactRecord[]` objects from a
+// stored JSON file and writes them straight through `upsertContacts`.
+// It DOES NOT call `normalize.ts`. It DOES NOT detect column mappings.
+// It DOES NOT run the assembly logic that produces full names from
+// First/Last components or canonical addresses from Street/City/State/
+// PostalCode components.
+//
+// On 2026-05-28 a re-import via this path produced the corpus shape:
+//   • 1 surname out of 130 contacts
+//   • 7 canonical addresses out of 130 contacts
+// That outcome was a confirmation that this endpoint reads PRE-
+// NORMALIZED data — it is a migration tool for promoting the file-
+// storage-era JSON corpus into Neon, not a CRM-import path.
+//
+// Routine CRM imports MUST use the canonical pipeline:
+//   POST /api/crm-import/preview   ← runs normalize.ts on the raw CSV
+//   POST /api/crm-import/execute   ← persists via the JSONB-merging upsert
+//
+// This endpoint requires an explicit `acknowledge_pre_normalized: true`
+// flag in the request body to prevent accidental routine use.
 //
 // Why an endpoint vs a script:
 //   • Vercel runtime is the only process that holds the production
@@ -102,6 +120,38 @@ export async function POST(req: Request) {
           ok: false,
           error: "Body must be { contacts: CrmContactRecord[] }",
           fingerprint,
+        },
+        { status: 400 },
+      ),
+    );
+  }
+
+  // ── DEBUG-ONLY GUARD ─────────────────────────────────────────────
+  // This endpoint reads pre-normalized contacts and bypasses
+  // normalize.ts. It is NOT a routine CRM import path. The caller MUST
+  // explicitly acknowledge that the data they are POSTing has already
+  // been normalized — otherwise the call is rejected and the operator
+  // is redirected to the canonical /api/crm-import/preview path.
+  const ack =
+    body && typeof body === "object"
+      ? (body as { acknowledge_pre_normalized?: unknown }).acknowledge_pre_normalized
+      : undefined;
+  if (ack !== true) {
+    return applyAuthNoStoreHeaders(
+      NextResponse.json(
+        {
+          ok: false,
+          error:
+            "This is a DEBUG migration endpoint that bypasses normalize.ts. " +
+            "Routine CRM imports must use /api/crm-import/preview followed by " +
+            "/api/crm-import/execute. If you are intentionally promoting the " +
+            "file-storage-era JSON corpus into Neon, add " +
+            '`"acknowledge_pre_normalized": true` to the request body.',
+          fingerprint,
+          canonicalImportPath: {
+            preview: "/api/crm-import/preview",
+            execute: "/api/crm-import/execute",
+          },
         },
         { status: 400 },
       ),

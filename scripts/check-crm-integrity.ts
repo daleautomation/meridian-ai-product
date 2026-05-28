@@ -32,6 +32,16 @@ import {
   detectColumnMapping,
   normalizeCrmRow,
 } from "@/lib/crm-import/normalize";
+import {
+  mintContactId,
+  resolveExistingContact,
+  resolveExistingContactForRow,
+} from "@/lib/crm-import/identityKey";
+import { mergeContactRecords } from "@/lib/crm-import/merge";
+import {
+  findDedupePairs,
+} from "@/lib/crm-import/dedupe";
+import { computeImportDiagnostics } from "@/lib/crm-import/diagnostics";
 
 const failures: string[] = [];
 function fail(msg: string): void {
@@ -648,6 +658,408 @@ function runDeterministicAssembly(): void {
   }
 }
 
+// ──────────────────────────────────────────────────────────────────
+// SECTION — Import hardening: identity resolution + dedupe + merge
+// ──────────────────────────────────────────────────────────────────
+
+function makeNormalizedRow(over: Partial<{
+  rowIndex: number;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  normalizedEmail: string | null;
+  normalizedPhone: string | null;
+  normalizedName: string | null;
+  address: string | null;
+}> = {}): import("@/lib/crm-import/types").NormalizedCrmContact {
+  const base = {
+    rowIndex: 0,
+    name: "Susie Adams",
+    company: "",
+    phone: null,
+    email: "susie@example.com",
+    address: "5006 W 65th St, Prairie Village, KS 66208",
+    notes: null,
+    tags: [] as string[],
+    lastInteractionAt: null,
+    sourceCrm: "wise_agent",
+    normalizedPhone: null,
+    normalizedEmail: "susie@example.com",
+    normalizedCompany: null,
+    normalizedName: "susie adams",
+    dataTrust: {
+      name: { value: "Susie Adams", source: "crm_import:wise_agent", confidence: 78, trustLevel: "acceptable" as const, lastVerifiedAt: null, enrichmentProvider: null, conflictState: "none" as const, displayAsTrusted: true },
+      company: { value: null, source: "crm_import:wise_agent", confidence: 0, trustLevel: "missing" as const, lastVerifiedAt: null, enrichmentProvider: null, conflictState: "none" as const, displayAsTrusted: false },
+      phone: { value: null, source: "crm_import:wise_agent", confidence: 0, trustLevel: "missing" as const, lastVerifiedAt: null, enrichmentProvider: null, conflictState: "none" as const, displayAsTrusted: false },
+      email: { value: "susie@example.com", source: "crm_import:wise_agent", confidence: 78, trustLevel: "acceptable" as const, lastVerifiedAt: null, enrichmentProvider: null, conflictState: "none" as const, displayAsTrusted: true },
+      address: { value: "5006 W 65th St, Prairie Village, KS 66208", source: "crm_import:wise_agent", confidence: 78, trustLevel: "acceptable" as const, lastVerifiedAt: null, enrichmentProvider: null, conflictState: "none" as const, displayAsTrusted: true },
+      lastInteraction: { value: null, source: "crm_import:wise_agent", confidence: 0, trustLevel: "missing" as const, lastVerifiedAt: null, enrichmentProvider: null, conflictState: "none" as const, displayAsTrusted: false },
+    },
+    validationErrors: [] as string[],
+    validationWarnings: [] as string[],
+    ...over,
+  };
+  return base;
+}
+
+function makeExisting(over: Partial<CrmContactRecord> = {}): CrmContactRecord {
+  return makeContact({
+    id: "crm-existing-1",
+    name: "Susie Adams",
+    email: "susie@example.com",
+    phone: null,
+    address: "5006 W 65th St, Prairie Village, KS 66208",
+    normalizedEmail: "susie@example.com",
+    normalizedPhone: null,
+    normalizedName: "susie adams",
+    createdAt: "2026-01-15T00:00:00Z",
+    updatedAt: "2026-01-15T00:00:00Z",
+    ...over,
+  });
+}
+
+function runIdentityResolution(): void {
+  const existing = [
+    makeExisting({ id: "crm-1", normalizedEmail: "susie@example.com", normalizedName: "susie adams" }),
+    makeExisting({ id: "crm-2", normalizedEmail: "greg@example.com", normalizedPhone: "+18165550100", normalizedName: "greg smith" }),
+    makeExisting({ id: "crm-3", normalizedEmail: null, normalizedPhone: null, normalizedName: "patricia wong",
+      address: "4321 W 63rd St, Kansas City, MO 64113" }),
+  ];
+
+  // 1. Exact email match → safe identity hit
+  const incomingEmail = makeNormalizedRow({ normalizedEmail: "susie@example.com" });
+  const emailRes = resolveExistingContactForRow(incomingEmail, existing);
+  if (emailRes.reason !== "email" || emailRes.existing?.id !== "crm-1") {
+    fail(`identity: email match expected crm-1, got reason=${emailRes.reason} id=${emailRes.existing?.id}`);
+  }
+
+  // 2. Exact phone match (no email overlap)
+  const incomingPhone = makeNormalizedRow({
+    normalizedEmail: null,
+    normalizedPhone: "+18165550100",
+    name: "G Smith",
+    normalizedName: "g smith",
+  });
+  const phoneRes = resolveExistingContactForRow(incomingPhone, existing);
+  if (phoneRes.reason !== "phone" || phoneRes.existing?.id !== "crm-2") {
+    fail(`identity: phone match expected crm-2, got reason=${phoneRes.reason} id=${phoneRes.existing?.id}`);
+  }
+
+  // 3. Surname + canonical address match (no email/phone overlap)
+  const incomingNameAddr = makeNormalizedRow({
+    normalizedEmail: null,
+    normalizedPhone: null,
+    name: "Patricia Wong",
+    normalizedName: "patricia wong",
+    address: "4321 W 63rd St, Kansas City, MO 64113",
+  });
+  const nameAddrRes = resolveExistingContactForRow(incomingNameAddr, existing);
+  if (nameAddrRes.reason !== "name_and_address" || nameAddrRes.existing?.id !== "crm-3") {
+    fail(`identity: name+addr match expected crm-3, got reason=${nameAddrRes.reason} id=${nameAddrRes.existing?.id}`);
+  }
+
+  // 4. First-name-only must NOT match — two "Susie"s without email/phone/addr overlap
+  const susieB = makeNormalizedRow({
+    normalizedEmail: null,
+    normalizedPhone: null,
+    name: "Susie Bartholomew",
+    normalizedName: "susie bartholomew",
+    address: "100 Other St, Other City, MO 64108",
+  });
+  const susieRes = resolveExistingContact(
+    { normalizedEmail: null, normalizedPhone: null, normalizedName: susieB.normalizedName, address: susieB.address },
+    existing,
+  );
+  if (susieRes.existing !== null) {
+    fail(`identity: first-name-only must NOT match — got id=${susieRes.existing.id}`);
+  }
+
+  // 5. Same surname but DIFFERENT canonical address → no match
+  const wongOther = makeNormalizedRow({
+    normalizedEmail: null,
+    normalizedPhone: null,
+    name: "Bob Wong",
+    normalizedName: "bob wong",
+    address: "999 Elsewhere Ave, Topeka, KS 66603",
+  });
+  const wongRes = resolveExistingContactForRow(wongOther, existing);
+  if (wongRes.existing !== null) {
+    fail(`identity: different address must NOT match same surname — got id=${wongRes.existing.id}`);
+  }
+
+  // 6. Truly new contact (no identity overlap) → no match
+  const fresh = makeNormalizedRow({
+    normalizedEmail: "totally-new@example.com",
+    normalizedPhone: "+19999990000",
+    name: "Brand New",
+    normalizedName: "brand new",
+  });
+  const freshRes = resolveExistingContactForRow(fresh, existing);
+  if (freshRes.existing !== null) {
+    fail(`identity: fresh contact should NOT match, got id=${freshRes.existing.id}`);
+  }
+}
+
+function runDeterministicContactIds(): void {
+  // mintContactId derives a stable id from the strongest signal.
+  // Same input → same id; different positions in CSV → same id when
+  // identity signals are the same.
+  const a = makeNormalizedRow({ rowIndex: 0, normalizedEmail: "susie@example.com" });
+  const b = makeNormalizedRow({ rowIndex: 99, normalizedEmail: "susie@example.com" });
+  const idA = mintContactId("nicole-lonergan", a, { importJobId: "job-1" });
+  const idB = mintContactId("nicole-lonergan", b, { importJobId: "job-2" });
+  if (idA.id !== idB.id) {
+    fail(`mintContactId: same email at different rowIndex should produce SAME id; got ${idA.id} vs ${idB.id}`);
+  }
+  if (idA.basis !== "email") fail(`mintContactId basis expected email, got ${idA.basis}`);
+
+  // Phone-only path
+  const phoneRow = makeNormalizedRow({
+    normalizedEmail: null,
+    normalizedPhone: "+18165550100",
+  });
+  const phoneId = mintContactId("nicole-lonergan", phoneRow, { importJobId: "job-1" });
+  if (phoneId.basis !== "phone") fail(`mintContactId basis expected phone, got ${phoneId.basis}`);
+
+  // Name + address path
+  const nameAddrRow = makeNormalizedRow({
+    normalizedEmail: null,
+    normalizedPhone: null,
+    normalizedName: "patricia wong",
+    address: "4321 W 63rd St, Kansas City, MO 64113",
+  });
+  const nameAddrId = mintContactId("nicole-lonergan", nameAddrRow, { importJobId: "job-1" });
+  if (nameAddrId.basis !== "name_and_address") {
+    fail(`mintContactId basis expected name_and_address, got ${nameAddrId.basis}`);
+  }
+
+  // Cross-workspace ids must differ even with same identity
+  const idNicole = mintContactId("nicole-lonergan", a, { importJobId: "j" });
+  const idOther = mintContactId("brookside-test", a, { importJobId: "j" });
+  if (idNicole.id === idOther.id) {
+    fail(`mintContactId: cross-workspace ids must differ for same identity; got ${idNicole.id}`);
+  }
+}
+
+function runDedupeExactSafeMerge(): void {
+  // findDedupePairs MUST treat exact identity hits as safe_merge.
+  const existing = [
+    makeExisting({ id: "crm-1", normalizedEmail: "susie@example.com" }),
+  ];
+  const incoming = [
+    makeNormalizedRow({ rowIndex: 0, normalizedEmail: "susie@example.com" }),
+  ];
+  const pairs = findDedupePairs(incoming, existing);
+  if (pairs.length !== 1) {
+    fail(`dedupe: expected 1 pair, got ${pairs.length}`);
+    return;
+  }
+  if (pairs[0].verdict !== "safe_merge") {
+    fail(`dedupe: exact email → safe_merge, got ${pairs[0].verdict}`);
+  }
+  if (pairs[0].existingContactId !== "crm-1") {
+    fail(`dedupe: pair pointed to ${pairs[0].existingContactId}, expected crm-1`);
+  }
+}
+
+function runDedupeRefusesFirstNameOnly(): void {
+  // Two contacts both named "Susie" with no shared email/phone/address:
+  // must NOT produce safe_merge.
+  const existing = [
+    makeExisting({
+      id: "crm-1",
+      name: "Susie Adams",
+      normalizedName: "susie",
+      normalizedEmail: null,
+      normalizedPhone: null,
+      address: null,
+    }),
+  ];
+  const incoming = [
+    makeNormalizedRow({
+      normalizedName: "susie",
+      name: "Susie",
+      normalizedEmail: null,
+      normalizedPhone: null,
+      address: null,
+    }),
+  ];
+  const pairs = findDedupePairs(incoming, existing);
+  if (pairs.some((p) => p.verdict === "safe_merge")) {
+    fail("dedupe: first-name-only match must NOT produce safe_merge");
+  }
+}
+
+function runMergePreservesNonBlankFields(): void {
+  // Existing has phone; incoming has email but NO phone. Merge must
+  // keep the existing phone (never nuke non-blank existing values).
+  const existing = makeExisting({
+    id: "crm-1",
+    name: "Susie Adams",
+    email: null,
+    phone: "+18165551111",
+    normalizedEmail: null,
+    normalizedPhone: "+18165551111",
+    tags: ["sphere"],
+    notes: "first import — sphere of influence",
+    lastInteractionAt: "2024-01-15T00:00:00Z",
+  });
+  const incoming = makeExisting({
+    id: "crm-temporary-incoming-id",
+    name: "Susie Adams",
+    email: "susie@example.com",
+    phone: null, // blank in CSV
+    normalizedEmail: "susie@example.com",
+    normalizedPhone: null,
+    tags: ["VIP"],
+    notes: "shorter note", // shorter than existing
+    lastInteractionAt: "2024-06-20T00:00:00Z",
+    createdAt: "2026-05-28T12:00:00Z", // newer than existing
+  });
+  const merged = mergeContactRecords({ incoming, existing });
+
+  if (merged.id !== "crm-1") fail(`merge: id should be existing's, got ${merged.id}`);
+  if (merged.phone !== "+18165551111") fail(`merge: must preserve existing phone, got ${merged.phone}`);
+  if (merged.email !== "susie@example.com") fail(`merge: incoming email should win, got ${merged.email}`);
+  if (merged.normalizedPhone !== "+18165551111") fail(`merge: normalized phone preserved, got ${merged.normalizedPhone}`);
+  if (merged.createdAt !== existing.createdAt) {
+    fail(`merge: createdAt must be existing's (oldest), got ${merged.createdAt}`);
+  }
+  if (merged.notes !== existing.notes) {
+    fail(`merge: richer notes preserved, expected "${existing.notes}", got "${merged.notes}"`);
+  }
+  if (merged.lastInteractionAt !== "2024-06-20T00:00:00Z") {
+    fail(`merge: later lastInteractionAt should win, got ${merged.lastInteractionAt}`);
+  }
+  // Tag union
+  if (!merged.tags.includes("sphere") || !merged.tags.includes("VIP")) {
+    fail(`merge: tag union expected, got [${merged.tags.join(", ")}]`);
+  }
+}
+
+function runMergePreservesEnrichmentAndRepairs(): void {
+  // The merge function itself preserves enrichment + repairs at the
+  // record level. The persistence-layer JSONB-merging upsert preserves
+  // them at the SQL level (covered by check-reimport-survival). This
+  // fixture proves the application-layer merge defers correctly.
+  const existing = makeExisting({
+    id: "crm-1",
+    enrichment: {
+      opportunity: {
+        source: "meridian_opportunity_v1",
+        fetchedAt: "2026-05-27T00:00:00Z",
+        priorityTier: "HIGH",
+      } as unknown as NonNullable<CrmContactRecord["enrichment"]>["opportunity"],
+    },
+    repairs: [
+      {
+        field: "name" as const,
+        originalValue: "Susie",
+        newValue: "Susie Adams",
+        source: "founder_rehab" as const,
+        repairedAt: "2026-05-26T00:00:00Z",
+      },
+    ],
+  });
+  const incoming = makeExisting({
+    id: "tmp",
+    enrichment: undefined,
+    repairs: undefined,
+  });
+  const merged = mergeContactRecords({ incoming, existing });
+  if (!merged.enrichment) fail("merge: enrichment must be preserved");
+  if (!merged.repairs || merged.repairs.length !== 1) {
+    fail("merge: repairs[] must be preserved");
+  }
+}
+
+function runMergeRefusesCrossWorkspace(): void {
+  const existing = makeExisting({ id: "crm-1", workspaceId: "nicole-lonergan" });
+  const incoming = makeExisting({ id: "tmp", workspaceId: "other-workspace" });
+  let threw = false;
+  try {
+    mergeContactRecords({ incoming, existing });
+  } catch {
+    threw = true;
+  }
+  if (!threw) fail("merge: cross-workspace merge must throw");
+}
+
+function runDiagnosticsAssembly(): void {
+  // Re-use the WiseAgent fixtures to make sure the diagnostics
+  // surface the assembly correctly.
+  const headers = [
+    "First Name", "Last Name", "Email", "Home Phone",
+    "Home Street", "Home City", "Home State", "Home Postal Code",
+  ];
+  const mapping = detectColumnMapping(headers);
+  const row = normalizeCrmRow(
+    {
+      "First Name": "Susie",
+      "Last Name": "Adams",
+      "Email": "susie@example.com",
+      "Home Phone": "8165551111",
+      "Home Street": "5006 W 65th St",
+      "Home City": "Prairie Village",
+      "Home State": "KS",
+      "Home Postal Code": "66208",
+    },
+    0, mapping, "wise_agent",
+  );
+  const diag = computeImportDiagnostics({ headers, mapping, rows: [row] });
+  if (!diag.detectsSplitName) fail("diagnostics: detectsSplitName expected true");
+  if (!diag.detectsSplitAddress) fail("diagnostics: detectsSplitAddress expected true");
+  if (diag.rowsAssembledFromComponents !== 1) {
+    fail(`diagnostics: rowsAssembledFromComponents expected 1, got ${diag.rowsAssembledFromComponents}`);
+  }
+  if (diag.rowsAddressAssembledFromComponents !== 1) {
+    fail(`diagnostics: rowsAddressAssembledFromComponents expected 1, got ${diag.rowsAddressAssembledFromComponents}`);
+  }
+  if (diag.rowsMissingSurname !== 0) {
+    fail(`diagnostics: rowsMissingSurname expected 0, got ${diag.rowsMissingSurname}`);
+  }
+  if (diag.rowsWithWeakAddress !== 0) {
+    fail(`diagnostics: rowsWithWeakAddress expected 0, got ${diag.rowsWithWeakAddress}`);
+  }
+  if (diag.assemblySamples.length === 0) fail("diagnostics: assemblySamples should include the row");
+  if (diag.assemblySamples[0].fromName !== "Susie Adams") {
+    fail(`diagnostics: sample name expected "Susie Adams", got "${diag.assemblySamples[0].fromName}"`);
+  }
+  if (diag.assemblySamples[0].fromAddress !== "5006 W 65th St, Prairie Village, KS 66208") {
+    fail(`diagnostics: sample address verbatim expected, got "${diag.assemblySamples[0].fromAddress}"`);
+  }
+}
+
+function runReimportStabilityViaIdentity(): void {
+  // Simulate a re-import: existing has 3 contacts; incoming repeats
+  // those 3 (possibly with row-order changes) plus 1 new. Identity
+  // resolution must produce 3 matches + 1 new — never 7 contacts.
+  const existing = [
+    makeExisting({ id: "crm-1", normalizedEmail: "a@example.com", normalizedName: "alice apple" }),
+    makeExisting({ id: "crm-2", normalizedEmail: "b@example.com", normalizedName: "bob banana" }),
+    makeExisting({ id: "crm-3", normalizedEmail: "c@example.com", normalizedName: "carol cherry" }),
+  ];
+  const incoming = [
+    // Reordered + reindexed re-import
+    makeNormalizedRow({ rowIndex: 0, normalizedEmail: "c@example.com", name: "Carol Cherry", normalizedName: "carol cherry" }),
+    makeNormalizedRow({ rowIndex: 1, normalizedEmail: "a@example.com", name: "Alice Apple", normalizedName: "alice apple" }),
+    makeNormalizedRow({ rowIndex: 2, normalizedEmail: "d@example.com", name: "Dan Date", normalizedName: "dan date" }), // new
+    makeNormalizedRow({ rowIndex: 3, normalizedEmail: "b@example.com", name: "Bob Banana", normalizedName: "bob banana" }),
+  ];
+  let matched = 0;
+  let fresh = 0;
+  for (const r of incoming) {
+    const res = resolveExistingContactForRow(r, existing);
+    if (res.existing) matched += 1;
+    else fresh += 1;
+  }
+  if (matched !== 3 || fresh !== 1) {
+    fail(`re-import stability: expected 3 matched + 1 fresh, got ${matched} matched + ${fresh} fresh`);
+  }
+  // Active contact count would become 3 (existing) + 1 (new) = 4.
+  // Critically NOT 7 (which is what rowIndex-derived IDs would produce).
+}
+
 function main(): void {
   runCompanyGuardChecks();
   runIntegrityChecks();
@@ -660,6 +1072,15 @@ function main(): void {
   runMixedColumnsSingleValueWins();
   runPartialComponentsDegradeGracefully();
   runDeterministicAssembly();
+  runIdentityResolution();
+  runDeterministicContactIds();
+  runDedupeExactSafeMerge();
+  runDedupeRefusesFirstNameOnly();
+  runMergePreservesNonBlankFields();
+  runMergePreservesEnrichmentAndRepairs();
+  runMergeRefusesCrossWorkspace();
+  runDiagnosticsAssembly();
+  runReimportStabilityViaIdentity();
 
   if (failures.length > 0) {
     console.error("");
@@ -692,6 +1113,18 @@ function main(): void {
       "mixed CSV with both single + components: single-value wins",
       "partial components degrade gracefully: first-only, last-only, street-only, with-unit",
       "assembly determinism: 3 calls → byte-identical output",
+      "identity resolution: exact email / phone / surname+address all match correctly",
+      "identity resolution: first-name-only does NOT match unrelated people",
+      "identity resolution: same surname different address does NOT match",
+      "mintContactId: deterministic, stable across rowIndex changes, cross-workspace differ",
+      "dedupe: exact identity hit produces safe_merge verdict",
+      "dedupe: first-name-only never produces safe_merge",
+      "merge: preserves existing phone when incoming is blank (never nukes non-blank)",
+      "merge: preserves enrichment + repairs at application layer",
+      "merge: keeps oldest createdAt + later lastInteractionAt + union of tags + richer notes",
+      "merge: refuses cross-workspace merge (throws)",
+      "diagnostics: detects split-name + split-address; counts assembled rows; samples preview",
+      "re-import stability: 3 existing × 4 incoming (3 repeats + 1 new) → 3 matched + 1 fresh (not 7)",
     ],
   });
 }

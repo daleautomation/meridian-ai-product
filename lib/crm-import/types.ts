@@ -412,6 +412,24 @@ export type ImportDiagnostics = {
   highPhoneMissingRate: boolean;
   /** Phone-sparse export with usable email — relationship workspace should lean on email + history. */
   isEmailFirstExport: boolean;
+
+  // ── Assembly diagnostics (Commit: import hardening) ─────────────
+  /** True when the CSV had no single-value name column AND `firstName`+`lastName` components produced the row's name. */
+  detectsSplitName: boolean;
+  /** Rows whose `name` was assembled from First Name + Last Name. */
+  rowsAssembledFromComponents: number;
+  /** Same for address — `street` + `city` + `state` + `postalCode` flowing into a single line. */
+  detectsSplitAddress: boolean;
+  rowsAddressAssembledFromComponents: number;
+  /** Rows whose final name is single-token (no surname) — operator should be alerted. */
+  rowsMissingSurname: number;
+  /** Rows whose final address fails canonicalization (missing city/state/zip). */
+  rowsWithWeakAddress: number;
+  /** Sample assembled rows so operator can sanity-check the preview before clicking Import. */
+  assemblySamples: Array<{
+    fromName: string;
+    fromAddress: string;
+  }>;
 };
 
 export type ImportPreviewResult = {

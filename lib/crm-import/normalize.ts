@@ -55,9 +55,14 @@ export const COLUMN_ALIASES: Record<CrmImportField, string[]> = {
     "phone number", "mobile phone", "contact phone", "cell phone", "mobile number",
     "primary phone number", "phone 1", "phone1", "home phone", "day phone",
     "evening phone", "main phone", "direct phone",
+    "business phone", "office phone", "personal phone", "mobile 1", "mobile1",
+    "phone (mobile)", "phone (home)", "phone (work)", "phone (primary)",
   ],
   email: [
     "email", "e-mail", "email address", "work email", "primary email",
+    "personal email", "alternate email", "secondary email", "email 1", "email1",
+    "primary email address", "personal email address", "work email address",
+    "contact email",
   ],
 
   // ── Single-value address (used when CSV has a full-address column) ──
@@ -87,9 +92,11 @@ export const COLUMN_ALIASES: Record<CrmImportField, string[]> = {
 
   notes: [
     "notes", "note", "description", "comments", "memo",
+    "details", "remarks", "summary", "contact notes", "agent notes",
   ],
   tags: [
     "tags", "tag", "labels", "categories", "segment",
+    "groups", "group", "lists", "list", "type", "stage", "status",
   ],
   lastInteraction: [
     "last interaction", "last contact", "last activity", "last touch",

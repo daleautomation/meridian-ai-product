@@ -475,6 +475,18 @@ export async function rollbackImport(snapshotId: string): Promise<{ restored: nu
   return { restored: snapshot.contacts.length };
 }
 
+/**
+ * @deprecated Use `mintContactId` from `./identityKey.ts` instead.
+ *
+ * This rowIndex-based ID was the root cause of the 130 → 228 duplicate
+ * bloat in Nicole's workspace: any re-import with even one row of
+ * difference (added, removed, reordered) shifted rowIndexes and
+ * produced new contact_ids, INSERTing duplicates instead of UPDATEing
+ * existing rows. The replacement (`mintContactId`) derives a stable id
+ * from the strongest identity signal in the row (email > phone >
+ * name+address > name > rowIndex). It is kept here only for legacy
+ * tests; no production import path calls it.
+ */
 export function newContactId(workspaceId: string, rowIndex: number): string {
   return `crm-${workspaceId}-${rowIndex}-${Date.now().toString(36)}`;
 }
