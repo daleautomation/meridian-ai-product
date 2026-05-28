@@ -100,6 +100,122 @@ function hasSurname(name: string | null): boolean {
   return i > 0;
 }
 
+/**
+ * Status / category / tag-column values that some CRMs leak into the
+ * Last Name field. If an assembled "name" is one of these, OR contains
+ * any of these as a whole-word substring, the source row is not a
+ * person record — refuse to write a name repair using it.
+ *
+ * Address repairs are unaffected: an address can still be canonical
+ * even if the name field is polluted (different row, different
+ * column, address might be intact).
+ */
+const NAME_STOP_PHRASES: ReadonlyArray<string> = [
+  "no status",
+  "active",
+  "inactive",
+  "past client",
+  "past clients",
+  "current client",
+  "lead",
+  "leads",
+  "buyer",
+  "buyers",
+  "seller",
+  "sellers",
+  "prospect",
+  "prospects",
+  "client",
+  "clients",
+  "customer",
+  "customers",
+  "vendor",
+  "partner",
+  "referral",
+  "referrer",
+  "sphere",
+  "soi",
+  "coi",
+  "vip",
+  "cold",
+  "warm",
+  "hot",
+  "do not contact",
+  "dnc",
+  "follow up",
+  "follow-up",
+  "qualified",
+  "unqualified",
+  "open",
+  "closed",
+  "pending",
+  "archived",
+  "won",
+  "lost",
+  "tbd",
+  "n/a",
+  "na",
+  "none",
+  "null",
+  "test",
+  "unknown",
+  "new",
+  "imported",
+  "unassigned",
+  "type",
+  "category",
+  "status",
+  "stage",
+  "tag",
+  "tags",
+  "label",
+  "labels",
+  "group",
+  "groups",
+  "list",
+  "lists",
+];
+
+/**
+ * Strict person-name validator. Accepts names like "Susie Adams",
+ * "RaShondra Banks", "Leah B. Barnett". Rejects "No Status", "Active",
+ * "Past Client", "Lead", "Buyer", "Seller", "Prospect", single tokens,
+ * names whose first or last token isn't alphabetic, names containing
+ * any stop-phrase as a whole-word substring.
+ */
+function looksLikePersonName(name: string | null | undefined): boolean {
+  if (!name) return false;
+  const trimmed = name.trim();
+  if (trimmed.length < 3) return false;
+  const lower = trimmed.toLowerCase();
+
+  // Exact match against any stop phrase.
+  for (const phrase of NAME_STOP_PHRASES) {
+    if (lower === phrase) return false;
+  }
+  // Whole-word substring containment.
+  for (const phrase of NAME_STOP_PHRASES) {
+    const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
+    if (new RegExp(`(^|\\W)${escaped}($|\\W)`, "i").test(lower)) return false;
+  }
+
+  const tokens = trimmed.split(/\s+/).filter(Boolean);
+  if (tokens.length < 2) return false;
+
+  const firstToken = tokens[0].replace(/[.,]/g, "");
+  const lastToken = tokens[tokens.length - 1].replace(/[.,]/g, "");
+
+  // First and last token must each be a word starting with a letter,
+  // ≥2 chars, letters / hyphens / apostrophes only. Unicode letter
+  // class covers extended ASCII (María, García, Søren, Ðejan, etc.)
+  // and CJK characters.
+  const alphabeticWord = /^\p{L}[\p{L}'\-]+$/u;
+  if (!alphabeticWord.test(firstToken)) return false;
+  if (!alphabeticWord.test(lastToken)) return false;
+
+  return true;
+}
+
 function addressCanonicalizes(addr: string | null): boolean {
   if (!addr || !addr.trim()) return false;
   try {
@@ -135,13 +251,27 @@ interface PlannedRepair {
   addressRepair: { from: string; to: string } | null;
 }
 
+interface RejectedNameRepair {
+  contactId: string;
+  contactName: string;
+  matchKey: "email" | "phone";
+  matchValue: string;
+  rejectedName: string;
+  reason: string;
+}
+
+interface PlanOutcome {
+  plan: PlannedRepair | null;
+  rejected: RejectedNameRepair | null;
+}
+
 function planRepair(
   contact: CrmContactRecord,
   index: SourceIndex,
-): PlannedRepair | null {
+): PlanOutcome {
   const existingNameOk = hasSurname(contact.name);
   const existingAddrOk = addressCanonicalizes(contact.address);
-  if (existingNameOk && existingAddrOk) return null;
+  if (existingNameOk && existingAddrOk) return { plan: null, rejected: null };
 
   // Identity lookup: email first, then phone.
   let match: NormalizedCrmContact | undefined;
@@ -163,13 +293,32 @@ function planRepair(
       matchValue = contact.normalizedPhone;
     }
   }
-  if (!match) return null;
+  if (!match) return { plan: null, rejected: null };
 
-  // Decide which fields to repair.
+  // ── Name repair candidate ────────────────────────────────────
   let nameRepair: PlannedRepair["nameRepair"] = null;
+  let rejected: RejectedNameRepair | null = null;
   if (!existingNameOk && hasSurname(match.name) && match.name !== contact.name) {
-    nameRepair = { from: contact.name ?? "", to: match.name };
+    if (looksLikePersonName(match.name)) {
+      nameRepair = { from: contact.name ?? "", to: match.name };
+    } else {
+      // Surname-bearing but matches a status/category vocabulary. The
+      // source row's "name" came from a non-name column. Do NOT plan
+      // a name repair; report it.
+      rejected = {
+        contactId: contact.id,
+        contactName: contact.name ?? "(unnamed)",
+        matchKey,
+        matchValue,
+        rejectedName: match.name,
+        reason: "source name fails person-name validator (status / category / non-name column)",
+      };
+    }
   }
+
+  // ── Address repair candidate ────────────────────────────────
+  // Independent of the name decision. Operator explicitly allowed
+  // address repairs to proceed even when name repair is rejected.
   let addressRepair: PlannedRepair["addressRepair"] = null;
   if (
     !existingAddrOk &&
@@ -179,15 +328,21 @@ function planRepair(
   ) {
     addressRepair = { from: contact.address ?? "", to: match.address };
   }
-  if (!nameRepair && !addressRepair) return null;
+
+  if (!nameRepair && !addressRepair) {
+    return { plan: null, rejected };
+  }
 
   return {
-    contactId: contact.id,
-    contactName: contact.name ?? "(unnamed)",
-    matchKey,
-    matchValue,
-    nameRepair,
-    addressRepair,
+    plan: {
+      contactId: contact.id,
+      contactName: contact.name ?? "(unnamed)",
+      matchKey,
+      matchValue,
+      nameRepair,
+      addressRepair,
+    },
+    rejected,
   };
 }
 
@@ -199,6 +354,7 @@ interface Summary {
   planned: number;
   nameRepairs: number;
   addressRepairs: number;
+  rejectedNameRepairs: number;
   writes: { applied: number; missing: number };
   unmatchedContactIds: string[];
 }
@@ -232,10 +388,12 @@ async function main() {
     planned: 0,
     nameRepairs: 0,
     addressRepairs: 0,
+    rejectedNameRepairs: 0,
     writes: { applied: 0, missing: 0 },
     unmatchedContactIds: [],
   };
   const plans: PlannedRepair[] = [];
+  const rejectedNameRepairs: RejectedNameRepair[] = [];
   const sourceRowMatchCount = new Map<string, number>();
 
   for (const c of contacts) {
@@ -243,10 +401,16 @@ async function main() {
       summary.alreadyHealthy += 1;
       continue;
     }
-    const plan = planRepair(c, index);
+    const { plan, rejected } = planRepair(c, index);
+    if (rejected) rejectedNameRepairs.push(rejected);
     if (!plan) {
-      summary.noIdentityMatch += 1;
-      summary.unmatchedContactIds.push(c.id);
+      // No plan AND no rejection → genuinely no identity match.
+      // No plan WITH rejection → matched but name failed validation
+      // AND no address upgrade available; treat as no-write.
+      if (!rejected) {
+        summary.noIdentityMatch += 1;
+        summary.unmatchedContactIds.push(c.id);
+      }
       continue;
     }
     const key = `${plan.matchKey}:${plan.matchValue}`;
@@ -260,6 +424,7 @@ async function main() {
   summary.planned = plans.length;
   summary.nameRepairs = plans.filter((p) => p.nameRepair).length;
   summary.addressRepairs = plans.filter((p) => p.addressRepair).length;
+  summary.rejectedNameRepairs = rejectedNameRepairs.length;
 
   // ── Report ─────────────────────────────────────────────────────
   console.log("");
@@ -272,8 +437,29 @@ async function main() {
   console.log(`  planned repairs:               ${summary.planned}`);
   console.log(`    name repairs                  ${summary.nameRepairs}`);
   console.log(`    address repairs               ${summary.addressRepairs}`);
+  console.log(`  rejected name candidates:      ${summary.rejectedNameRepairs}  (source name failed person-name validator)`);
   console.log(`  duplicate contacts matched to same source row: ${summary.duplicateSourceMatches}`);
   console.log("");
+
+  if (rejectedNameRepairs.length > 0) {
+    console.log(`Rejected name repairs (showing up to 15):`);
+    console.log(`  These contacts matched a source row by identity, but the source row's`);
+    console.log(`  assembled "name" failed the person-name validator (looks like a status,`);
+    console.log(`  category, tag, or non-name column value). NO name repair is planned for`);
+    console.log(`  these contacts. Address repair may still be planned separately if the`);
+    console.log(`  source row's address canonicalizes.`);
+    console.log("");
+    for (const r of rejectedNameRepairs.slice(0, 15)) {
+      console.log(`  ${r.contactId.slice(0, 28).padEnd(28)} [${r.matchKey}]`);
+      console.log(`    existing name:  "${r.contactName}"`);
+      console.log(`    source name:    "${r.rejectedName}"  ← rejected`);
+      console.log(`    reason:         ${r.reason}`);
+    }
+    if (rejectedNameRepairs.length > 15) {
+      console.log(`  ... ${rejectedNameRepairs.length - 15} more rejected`);
+    }
+    console.log("");
+  }
   if (plans.length > 0) {
     console.log(`Sample planned repairs (showing up to 10):`);
     for (const p of plans.slice(0, 10)) {
