@@ -50,8 +50,33 @@ data/usage-events.jsonl
 data/pipelineJobHistory.json
 !data/recovery-briefs/.gitkeep
 !data/snapshots/.gitkeep
-
 data/crm-contacts/
 data/crm-import-jobs/
+data/crmImportJobs.json
+data/crmContacts.json
 data/crmImportRollbacks/
 
+# Raw county exports. Directory scaffolding stays in git via .gitkeep;
+# any real data file (CSV / XLSX / Parquet / JSON) is intentionally
+# local-only so real property data never ships to the remote.
+data/raw/**/*.csv
+data/raw/**/*.tsv
+data/raw/**/*.xlsx
+data/raw/**/*.xls
+data/raw/**/*.parquet
+data/raw/**/*.json
+data/raw/**/*.gz
+data/raw/**/*.zip
+.vercel
+.env*.local
+
+# --- Workspace runtime state (local-only) ----------------------------------
+# Per-customer weekly snapshots written by scripts/generate-weekly-state.ts.
+# These belong on the founder's machine + production filesystem, not git.
+data/weekly-state/
+# Append-only outcome capture history. Per-customer JSON, durable, never
+# committed (production reads/writes its own copy on disk).
+data/outcomes/
+data/backups/*.json
+.cursor/
+test-results/

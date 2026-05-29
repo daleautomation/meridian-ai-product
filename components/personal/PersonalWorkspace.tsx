@@ -1,9 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { PERSONAL_NAV, personalPalette, type PersonalNavId } from "@/lib/personal-workspace/config";
+import {
+  isContactCardProminent,
+  isContactCardSelected,
+  resolveSelectedContact,
+  syncSelectedId,
+} from "@/lib/personal-workspace/selection";
 import type { PersonalContactCard, PersonalInsightRow, PersonalWorkspaceModel } from "@/lib/personal-workspace/workspace";
+import WeeklyBriefingPanel from "./WeeklyBriefingPanel";
 
 interface PersonalWorkspaceProps {
   model: PersonalWorkspaceModel;
@@ -16,8 +23,14 @@ export default function PersonalWorkspace({ model }: PersonalWorkspaceProps) {
   const sectionMeta = PERSONAL_NAV.find((n) => n.id === activeNav);
 
   const visibleContacts = useMemo(() => contactsForNav(model, activeNav), [model, activeNav]);
+
+  useEffect(() => {
+    const synced = syncSelectedId(visibleContacts, selectedId);
+    if (synced !== selectedId) setSelectedId(synced);
+  }, [visibleContacts, selectedId]);
+
   const selected = useMemo(
-    () => visibleContacts.find((c) => c.id === selectedId) ?? visibleContacts[0] ?? null,
+    () => resolveSelectedContact(visibleContacts, selectedId),
     [visibleContacts, selectedId],
   );
 
@@ -49,7 +62,11 @@ export default function PersonalWorkspace({ model }: PersonalWorkspaceProps) {
             <button
               key={item.id}
               type="button"
-              onClick={() => setActiveNav(item.id)}
+              onClick={() => {
+                setActiveNav(item.id);
+                const nextList = contactsForNav(model, item.id);
+                setSelectedId(syncSelectedId(nextList, selectedId));
+              }}
               style={{
                 ...styles.navButton,
                 ...(active ? styles.navButtonActive : null),
@@ -66,6 +83,17 @@ export default function PersonalWorkspace({ model }: PersonalWorkspaceProps) {
         <p style={styles.reachabilityBanner}>{model.reachability.summary}</p>
       ) : null}
 
+      {model.weeklyState && model.weeklyMode ? (
+        <WeeklyBriefingPanel
+          state={model.weeklyState}
+          mode={model.weeklyMode}
+          onSelectContact={(cardId) => {
+            setActiveNav("priority");
+            setSelectedId(cardId);
+          }}
+        />
+      ) : null}
+
       <section style={styles.dashboard}>
         <div style={styles.heroCard}>
           <div style={styles.heroLabel}>{model.hero.focus}</div>
@@ -74,7 +102,11 @@ export default function PersonalWorkspace({ model }: PersonalWorkspaceProps) {
         <SummaryMetric label="Contacts" value={String(model.summary.totalContacts)} />
         <SummaryMetric label="Priority" value={String(model.summary.priorityCount)} />
         <SummaryMetric label="Follow-ups" value={String(model.summary.followUpsDue)} />
-        <SummaryMetric label="Avg. strength" value={`${model.summary.averageStrength}%`} />
+        <SummaryMetric
+          label="Reachable"
+          value={String(model.summary.reachableCount)}
+          hint={model.summary.pastSellerCount > 0 ? `${model.summary.pastSellerCount} past sellers` : undefined}
+        />
       </section>
 
       {model.resurfacingHighlights.length > 0 ? (
@@ -88,7 +120,12 @@ export default function PersonalWorkspace({ model }: PersonalWorkspaceProps) {
                   <span style={styles.resurfacingBucket}>{h.bucketLabel}</span>
                 </div>
                 <p style={styles.resurfacingWhy}>{h.whyNow}</p>
+                <div style={styles.trustBadgeRow}>
+                  <span style={styles.verificationBadge}>{h.verificationStatusLabel}</span>
+                  <span style={styles.dataQualityBadge}>{h.dataQualityLabel}</span>
+                </div>
                 <p style={styles.resurfacingAction}>{h.recommendedAction}</p>
+                <p style={styles.resurfacingEvidence}>{h.recommendationWhy}</p>
               </article>
             ))}
           </div>
@@ -134,8 +171,8 @@ export default function PersonalWorkspace({ model }: PersonalWorkspaceProps) {
                   key={card.id}
                   card={card}
                   emailPrimaryLabel={copy.emailPrimaryBadge}
-                  selected={selected?.id === card.id}
-                  prominent={index === 0 && activeNav === "priority"}
+                  selected={isContactCardSelected(card.id, selectedId)}
+                  prominent={isContactCardProminent(index, activeNav, card.id, selectedId)}
                   onSelect={() => setSelectedId(card.id)}
                 />
               ))}
@@ -143,7 +180,10 @@ export default function PersonalWorkspace({ model }: PersonalWorkspaceProps) {
           )}
         </div>
 
-        <ContactDetailPanel card={selected} copy={copy} />
+        <ContactDetailPanel
+          card={activeNav === "insights" ? null : selected}
+          copy={copy}
+        />
       </section>
     </main>
   );
@@ -190,7 +230,6 @@ function InsightsList({ insights }: { insights: PersonalInsightRow[] }) {
         <article key={row.id} style={styles.insightCard}>
           <div style={styles.insightTop}>
             <strong>{row.name}</strong>
-            <span style={styles.strengthPill}>{row.strength}%</span>
           </div>
           <div style={styles.muted}>{row.company}</div>
           <p style={styles.insightText}>{row.insight}</p>
@@ -225,15 +264,36 @@ function ContactCard({
     >
       <div style={styles.cardTop}>
         <span style={styles.rank}>#{card.rank}</span>
-        <span style={styles.strengthPill}>{card.strength}%</span>
+        <span
+          style={styles.relationshipChip}
+          title={card.relationshipReasons.join(" · ")}
+        >
+          {card.relationshipLabel}
+        </span>
         <span style={styles.timing}>{card.timing}</span>
       </div>
+      <div style={styles.intelligenceRow}>
+        <span style={card.reachable ? styles.reachableBadge : styles.unreachableBadge}>
+          {card.reachabilityStatus}
+        </span>
+        <span style={styles.recencyBadge}>{card.lastInteractionRecency}</span>
+        <span style={styles.confidenceBadge}>Confidence: {card.relationshipConfidence}</span>
+      </div>
+      {card.marketOpportunity ? (
+        <span style={styles.marketOpportunityBadge} title={card.marketOpportunity.summary}>
+          {card.marketOpportunity.label} · {card.marketOpportunity.tier}
+        </span>
+      ) : null}
       <div style={styles.cardNameRow}>
         <div>
           <h3 style={styles.cardName}>{card.name}</h3>
           <div style={styles.muted}>{card.company}</div>
         </div>
-        <span style={styles.actionChip}>{card.suggestedAction}</span>
+        <span style={styles.actionChip}>{card.suggestedActionLabel}</span>
+      </div>
+      <div style={styles.trustBadgeRow}>
+        <span style={styles.verificationBadge}>{card.verificationStatusLabel}</span>
+        <span style={styles.dataQualityBadge}>{card.dataQualityLabel}</span>
       </div>
       {card.primaryChannel === "email" ? (
         <span style={styles.emailBadge}>{emailPrimaryLabel}</span>
@@ -265,20 +325,97 @@ function ContactDetailPanel({
       <div style={styles.detailHeader}>
         <h2 style={styles.detailTitle}>{card.name}</h2>
         <p style={styles.muted}>{card.company}</p>
-        <span style={styles.strengthPill}>{card.strength}% {copy.strengthLabel}</span>
+        <span style={styles.enrichmentBadge}>{card.enrichmentLabel}</span>
+        <div style={styles.relationshipBlock}>
+          <span style={styles.relationshipChip}>{card.relationshipLabel}</span>
+          <div style={styles.intelligenceRow}>
+            <span style={card.reachable ? styles.reachableBadge : styles.unreachableBadge}>
+              {card.reachabilityStatus}
+            </span>
+            <span style={styles.recencyBadge}>{card.lastInteractionRecency}</span>
+            <span style={styles.confidenceBadge}>Confidence: {card.relationshipConfidence}</span>
+          </div>
+          {card.relationshipReasons.map((line) => (
+            <div key={line} style={styles.detailRow}>{line}</div>
+          ))}
+        </div>
+        <div style={styles.scoreRow}>
+          <span style={styles.strengthPill} title={strengthTitle(card)}>
+            {card.strength}%{strengthSuffix(card)} {copy.strengthLabel}
+          </span>
+          <span style={styles.scoreMeta}>{card.scoreLabel}</span>
+        </div>
+        {!card.scoreIsAuthoritative ? (
+          <p style={styles.scoreDisclaimer}>{card.scoreExplanation}</p>
+        ) : null}
+        <div style={styles.trustBadgeRow}>
+          <span style={styles.verificationBadge}>{card.verificationStatusLabel}</span>
+          <span style={styles.dataQualityBadge}>{card.dataQualityLabel}</span>
+        </div>
       </div>
 
-      <DetailBlock title="Suggested next step">
+      {card.marketOpportunity ? (
+        <DetailBlock title="Market opportunity">
+          <div style={styles.detailRow}>
+            {card.marketOpportunity.label} · {card.marketOpportunity.tier} · score {card.marketOpportunity.score}
+          </div>
+          <div style={styles.detailRow}>{card.marketOpportunity.summary}</div>
+        </DetailBlock>
+      ) : null}
+
+      <DetailBlock title={card.nextStepIsTemplate ? "Suggested follow-up template" : "Suggested next step"}>
         <p style={styles.detailBody}>{card.nextStep}</p>
+        {card.nextStepIsTemplate ? (
+          <p style={styles.templateNote}>{copy.templateNote}</p>
+        ) : null}
+      </DetailBlock>
+
+      <DetailBlock title="Why this recommendation">
+        <p style={styles.detailBody}>{card.recommendationWhy}</p>
+        {card.recommendationEvidence.map((line) => (
+          <div key={line} style={styles.detailRow}>Evidence: {line}</div>
+        ))}
+        {card.recommendationMissing.length > 0 ? (
+          <div style={styles.warn}>
+            Missing: {card.recommendationMissing.join(" · ")}
+          </div>
+        ) : null}
       </DetailBlock>
 
       <DetailBlock title="Angle">
         <p style={styles.detailBody}>{card.angle}</p>
       </DetailBlock>
 
+      <DetailBlock title="Scoring basis">
+        <div style={styles.detailRow}>Provenance: {card.scoreProvenance}</div>
+        {card.scoreReasonCodes.length > 0 ? (
+          <div style={styles.detailRow}>
+            Reasons: {card.scoreReasonCodes.join(", ")}
+          </div>
+        ) : (
+          <div style={styles.detailRow}>No reason codes recorded</div>
+        )}
+        <div style={styles.detailRow}>Confidence: {card.source.confidence}</div>
+      </DetailBlock>
+
       <DetailBlock title="Reachability">
-        {card.phone ? <div style={styles.detailRow}>Phone: {card.phone}</div> : null}
-        {card.email ? <div style={styles.detailRow}>Email: {card.email}</div> : null}
+        {card.phone ? (
+          <div style={card.phoneActionable ? styles.detailRow : styles.detailRowDisabled}>
+            Phone: {card.phone}
+            {card.phoneDowngraded ? " (review before call)" : ""}
+            {!card.phoneActionable ? " — not actionable at current trust" : ""}
+          </div>
+        ) : null}
+        {card.email ? (
+          <div style={card.emailActionable ? styles.detailRow : styles.detailRowDisabled}>
+            Email: {card.email}
+            {card.emailDowngraded ? " (review before send)" : ""}
+            {!card.emailActionable ? " — not actionable at current trust" : ""}
+          </div>
+        ) : null}
+        {card.contactMethodNote ? (
+          <div style={styles.info}>{card.contactMethodNote}</div>
+        ) : null}
         {!card.phone && card.email ? (
           <div style={styles.info}>{card.reachabilityNote ?? copy.noPhoneExplanation}</div>
         ) : null}
@@ -317,6 +454,20 @@ function ContactDetailPanel({
   );
 }
 
+function strengthSuffix(card: PersonalContactCard): string {
+  if (card.strengthRaw !== card.strength && card.rank <= 3) {
+    return ` · raw ${card.strengthRaw}`;
+  }
+  return "";
+}
+
+function strengthTitle(card: PersonalContactCard): string | undefined {
+  if (card.strengthRaw !== card.strength) {
+    return `Trust-adjusted priority ${card.strength} (raw import score ${card.strengthRaw})`;
+  }
+  return undefined;
+}
+
 function DetailBlock({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section style={styles.detailBlock}>
@@ -326,11 +477,12 @@ function DetailBlock({ title, children }: { title: string; children: React.React
   );
 }
 
-function SummaryMetric({ label, value }: { label: string; value: string }) {
+function SummaryMetric({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div style={styles.metric}>
       <div style={styles.metricValue}>{value}</div>
       <div style={styles.metricLabel}>{label}</div>
+      {hint ? <div style={styles.metricHint}>{hint}</div> : null}
     </div>
   );
 }
@@ -555,6 +707,74 @@ const styles: Record<string, CSSProperties> = {
     fontSize: "11px",
     fontWeight: 600,
   },
+  relationshipChip: {
+    padding: "3px 10px",
+    borderRadius: "999px",
+    background: personalPalette.surfaceMuted,
+    color: personalPalette.text,
+    fontSize: "11px",
+    fontWeight: 700,
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    maxWidth: "180px",
+  },
+  relationshipBlock: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+    marginTop: "8px",
+  },
+  intelligenceRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "6px",
+    marginTop: "4px",
+  },
+  reachableBadge: {
+    padding: "2px 8px",
+    borderRadius: "999px",
+    background: personalPalette.successBg,
+    color: personalPalette.success,
+    fontSize: "10px",
+    fontWeight: 700,
+  },
+  unreachableBadge: {
+    padding: "2px 8px",
+    borderRadius: "999px",
+    background: personalPalette.warningBg,
+    color: personalPalette.warning,
+    fontSize: "10px",
+    fontWeight: 700,
+  },
+  recencyBadge: {
+    padding: "2px 8px",
+    borderRadius: "999px",
+    background: personalPalette.surfaceMuted,
+    color: personalPalette.textMuted,
+    fontSize: "10px",
+    fontWeight: 600,
+  },
+  confidenceBadge: {
+    padding: "2px 8px",
+    borderRadius: "999px",
+    border: `1px solid ${personalPalette.border}`,
+    color: personalPalette.textMuted,
+    fontSize: "10px",
+    fontWeight: 600,
+  },
+  marketOpportunityBadge: {
+    display: "inline-block",
+    width: "fit-content",
+    padding: "3px 10px",
+    borderRadius: "999px",
+    background: personalPalette.accentSoft,
+    color: personalPalette.accent,
+    fontSize: "10px",
+    fontWeight: 700,
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+  },
   timing: {
     marginLeft: "auto",
     color: personalPalette.textMuted,
@@ -735,6 +955,83 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 700,
     letterSpacing: "0.06em",
     textTransform: "uppercase",
+  },
+  enrichmentBadge: {
+    display: "inline-block",
+    marginTop: "8px",
+    padding: "4px 10px",
+    borderRadius: "999px",
+    background: personalPalette.surfaceMuted,
+    fontSize: "11px",
+    fontWeight: 600,
+    color: personalPalette.textMuted,
+  },
+  trustBadgeRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "6px",
+    marginTop: "8px",
+  },
+  verificationBadge: {
+    padding: "3px 8px",
+    borderRadius: "999px",
+    background: personalPalette.accentSoft,
+    color: personalPalette.accent,
+    fontSize: "10px",
+    fontWeight: 700,
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+  },
+  dataQualityBadge: {
+    padding: "3px 8px",
+    borderRadius: "999px",
+    border: `1px solid ${personalPalette.border}`,
+    background: personalPalette.surface,
+    fontSize: "10px",
+    fontWeight: 600,
+    color: personalPalette.textMuted,
+  },
+  resurfacingEvidence: {
+    margin: "6px 0 0",
+    fontSize: "12px",
+    color: personalPalette.textMuted,
+    lineHeight: 1.45,
+  },
+  detailRowDisabled: {
+    fontSize: "13px",
+    lineHeight: 1.5,
+    color: personalPalette.textMuted,
+    opacity: 0.65,
+    textDecoration: "line-through",
+    textDecorationColor: personalPalette.border,
+  },
+  scoreRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: "8px",
+    marginTop: "10px",
+  },
+  scoreMeta: {
+    fontSize: "12px",
+    color: personalPalette.textMuted,
+  },
+  scoreDisclaimer: {
+    margin: "8px 0 0",
+    fontSize: "12px",
+    lineHeight: 1.4,
+    color: personalPalette.warning,
+  },
+  templateNote: {
+    margin: "8px 0 0",
+    fontSize: "12px",
+    color: personalPalette.textMuted,
+    fontStyle: "italic",
+  },
+  metricHint: {
+    marginTop: "4px",
+    fontSize: "10px",
+    color: personalPalette.textMuted,
   },
   detailMeta: {
     display: "flex",

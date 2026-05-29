@@ -1,4 +1,5 @@
 import type { StaleCategory } from "@/lib/recovery/staleness";
+import { WEAK_SIGNAL_JUDGMENT_LABEL } from "@/lib/recovery/brief";
 
 export type WhyNowInput = {
   daysSinceTouch?: number | null;
@@ -10,6 +11,9 @@ export type WhyNowInput = {
   crmStatus?: string | null;
   lastAction?: string | null;
   hasVerifiedContactPath?: boolean;
+  /** When true, copy stays factual — no headline-grade recommendation. */
+  weakOnly?: boolean;
+  headlineSignal?: string | null;
 };
 
 function cleanSentence(value: string | null | undefined): string | null {
@@ -28,7 +32,27 @@ function isQualifiedStatus(value: string | null | undefined): boolean {
   return ["qualified", "open", "proposal", "demo", "interested", "warm"].includes(normalized);
 }
 
+function weakOnlyWhyNow(input: WhyNowInput): string {
+  const days = input.daysSinceTouch;
+  const lastAction = cleanFragment(input.lastAction);
+  const parts: string[] = [WEAK_SIGNAL_JUDGMENT_LABEL];
+
+  if (lastAction) {
+    parts.push(`Last note on file: "${lastAction}."`);
+  } else if (typeof days === "number") {
+    parts.push(`${days} days since the last logged touch — limited public or CRM signals on file.`);
+  } else {
+    parts.push("Limited public or CRM signals on file for this account.");
+  }
+
+  return parts.join(" ");
+}
+
 export function generateWhyNow(input: WhyNowInput): string {
+  if (input.weakOnly) {
+    return weakOnlyWhyNow(input);
+  }
+
   const days = input.daysSinceTouch;
   const stale = input.staleCategory === "Dormant" || input.staleCategory === "Recovery candidate";
   const activity = cleanSentence(input.activityLabel);

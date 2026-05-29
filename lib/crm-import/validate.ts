@@ -47,10 +47,21 @@ export function rowsEligibleForImport(
   dedupePairs: DedupePair[],
 ): NormalizedCrmContact[] {
   const blocked = new Set(blockedRowIndexes);
+  // Only "likely_duplicate" rows are filtered out of the import. They
+  // need explicit operator review before being merged.
+  //
+  // "safe_merge" rows MUST flow through to executeImport — that path
+  // resolves the existing contact_id and applies field-level merge via
+  // mergeContactRecords. Dropping them here would leave the existing
+  // (potentially stale) record un-updated, which is the failure mode
+  // that caused the WiseAgent re-import not to converge: incoming
+  // assembled rows were correctly identified as safe_merge duplicates
+  // of pre-fix truncated rows, then SKIPPED, so the truncated rows
+  // were never replaced.
   const duplicateRows = skipDuplicateRows
     ? new Set(
         dedupePairs
-          .filter((p) => p.verdict === "safe_merge" || p.verdict === "likely_duplicate")
+          .filter((p) => p.verdict === "likely_duplicate")
           .map((p) => p.incomingRowIndex),
       )
     : new Set<number>();

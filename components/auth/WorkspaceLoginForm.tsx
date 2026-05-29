@@ -53,9 +53,16 @@ export function WorkspaceLoginForm({ initialNext }: { initialNext?: string | nul
         setLoading(false);
         return;
       }
+      // Trust any sanitized internal path the API returns. The API
+      // already validates the next param + workspace access via
+      // resolvePostLoginRedirect, so the returned path is the final
+      // authorized destination. Defensively reject only paths that
+      // are missing the leading slash (which would route relative to
+      // /login and fail) or use a protocol-relative prefix (//evil).
+      const candidate = typeof data.redirectTo === "string" ? data.redirectTo : "";
       const redirectTo =
-        typeof data.redirectTo === "string" && data.redirectTo.startsWith("/login")
-          ? data.redirectTo
+        candidate.startsWith("/") && !candidate.startsWith("//")
+          ? candidate
           : "/login";
       setLoading(false);
       router.replace(redirectTo);

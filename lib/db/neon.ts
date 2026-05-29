@@ -25,14 +25,29 @@ export function validateDatabaseUrl(value = process.env.DATABASE_URL, name = "DA
   return assertPostgresUrl(value.trim(), name);
 }
 
-export function getDatabaseUrl(options: { direct?: boolean } = {}): string {
+function resolveDatabaseUrl(options: { direct?: boolean }): string | undefined {
   if (options.direct) {
-    return validateDatabaseUrl(
-      process.env.DIRECT_DATABASE_URL ?? process.env.DATABASE_URL,
-      process.env.DIRECT_DATABASE_URL ? "DIRECT_DATABASE_URL" : "DATABASE_URL",
+    return (
+      process.env.DIRECT_DATABASE_URL?.trim()
+      ?? process.env.DATABASE_URL?.trim()
+      ?? process.env.POSTGRES_URL?.trim()
     );
   }
-  return validateDatabaseUrl(process.env.DATABASE_URL, "DATABASE_URL");
+  return process.env.DATABASE_URL?.trim() ?? process.env.POSTGRES_URL?.trim();
+}
+
+export function getDatabaseUrl(options: { direct?: boolean } = {}): string {
+  const value = resolveDatabaseUrl(options);
+  const name = options.direct
+    ? process.env.DIRECT_DATABASE_URL
+      ? "DIRECT_DATABASE_URL"
+      : process.env.DATABASE_URL
+        ? "DATABASE_URL"
+        : "POSTGRES_URL"
+    : process.env.DATABASE_URL
+      ? "DATABASE_URL"
+      : "POSTGRES_URL";
+  return validateDatabaseUrl(value, name);
 }
 
 export function getNeonSql(options: { direct?: boolean } = {}): NeonSql {

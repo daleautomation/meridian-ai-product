@@ -1,9 +1,15 @@
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { DevAuthDebug } from "@/components/auth/DevAuthDebug";
 import { SignedInLoginPortal } from "@/components/auth/SignedInLoginPortal";
 import { WorkspaceLoginForm } from "@/components/auth/WorkspaceLoginForm";
 import { getSession } from "@/lib/auth";
+import {
+  isPostLoginPathAllowed,
+  sanitizeInternalPath,
+  workspaceSelectCardsForUser,
+} from "@/lib/auth/postLoginRouting";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -34,6 +40,28 @@ export default async function LoginPage(props: {
   const user = await getSession();
   const params = (await props.searchParams) ?? {};
   const nextRaw = Array.isArray(params.next) ? params.next[0] : params.next;
+
+  // Signed-in users land here in three shapes:
+  //   1. With an allowed `next` → forward immediately. No interstitial.
+  //   2. With no `next` but exactly one accessible workspace → forward
+  //      to that workspace's home path. No interstitial.
+  //   3. With no `next` and multiple workspaces → render the portal
+  //      so they can choose. This is the only legitimate case for the
+  //      "Continue to …" buttons.
+  // redirect() throws a Next.js NEXT_REDIRECT signal and never returns,
+  // so the rest of this function only runs for the form-render path.
+  if (user) {
+    const sanitized = sanitizeInternalPath(nextRaw ?? null);
+    if (sanitized && isPostLoginPathAllowed(user, sanitized)) {
+      redirect(sanitized);
+    }
+    if (!sanitized) {
+      const cards = workspaceSelectCardsForUser(user);
+      if (cards.length === 1) {
+        redirect(cards[0].href);
+      }
+    }
+  }
 
   return (
     <main className="workspace-login-shell">

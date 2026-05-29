@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { TENANTS, toPublicUser } from "@/config/tenants";
 import { findTenantByCredentials } from "@/config/tenants";
 import { normalizeLoginUsername } from "@/lib/auth/credentials";
-import { sanitizeInternalPath } from "@/lib/auth/postLoginRouting";
+import { resolvePostLoginRedirect, sanitizeInternalPath } from "@/lib/auth/postLoginRouting";
 import { createSessionToken, isSecureSessionRequest, SESSION_COOKIE } from "@/lib/session";
 import { applyAuthNoStoreHeaders } from "@/lib/auth/sessionCleanup";
 
@@ -72,7 +72,10 @@ export async function POST(req: Request) {
   }
   const user = toPublicUser(tenant);
   const safeNext = sanitizeInternalPath(body.next ?? null);
-  const redirectTo = safeNext ? `/login?next=${encodeURIComponent(safeNext)}` : "/login";
+  // Compute the final, authorized destination here. The client then
+  // navigates directly to it. No /login round-trip — that was the
+  // source of the "Continue to requested destination" interstitial.
+  const redirectTo = resolvePostLoginRedirect(user, safeNext);
   const res = NextResponse.json({ user, redirectTo });
   const fwdProto = req.headers.get("x-forwarded-proto") ?? "";
   const isHttps = isSecureSessionRequest(req);
