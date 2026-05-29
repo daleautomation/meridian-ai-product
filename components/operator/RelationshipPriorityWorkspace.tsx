@@ -123,7 +123,10 @@ export default function RelationshipPriorityWorkspace({
             </div>
           </div>
           <Metric label={showcase ? "Ready now" : "Ready now"} value={String(model.summary.readyNowCount)} />
-          <Metric label={showcase ? "Avg. confidence" : "Avg. strength"} value={`${model.summary.averageMarketFit}%`} />
+          <Metric
+            label={showcase ? "Reachable" : "Reachable"}
+            value={String(model.summary.reachableCount)}
+          />
           <Metric
             label={showcase ? showcase.screenSafe.label : "Compressed signals"}
             value={showcase ? "9:16" : String(model.summary.compressedSignals)}
@@ -387,11 +390,29 @@ function PriorityCard({
         >
           #{card.rank}
         </span>
-        <span style={fitStyle(card.marketFit)} title={scoreFitTitle(card)}>
-          {card.marketFit}% {showcase ? "fit" : "strength"}{scoreFitSuffix(card)}
+        <span style={styles.relationshipPill} title={card.relationshipReasons?.join(" · ")}>
+          {card.relationship}
         </span>
         <span style={urgencyStyle(card.urgency)}>{card.urgency}</span>
       </div>
+      {card.source.kind === "crm-import" ? (
+        <div style={styles.intelligenceRow}>
+          <span style={card.reachable !== false ? styles.reachablePill : styles.unreachablePill}>
+            {card.reachabilityStatus ?? (card.reachable !== false ? "Reachable" : "Not Reachable")}
+          </span>
+          {card.lastInteractionRecency ? (
+            <span style={styles.recencyPill}>{card.lastInteractionRecency}</span>
+          ) : null}
+          {card.relationshipConfidence ? (
+            <span style={styles.confidencePill}>Confidence: {card.relationshipConfidence}</span>
+          ) : null}
+        </div>
+      ) : null}
+      {card.marketOpportunity ? (
+        <span style={styles.marketOpportunityPill} title={card.marketOpportunity.summary}>
+          {card.marketOpportunity.label} · {card.marketOpportunity.tier}
+        </span>
+      ) : null}
       <TrustPills card={card} compact />
       <div style={styles.cardTitleRow}>
         <div>
@@ -513,10 +534,29 @@ function RelationshipContextPanel({
           <h2 style={styles.contextTitle}>{card.company}</h2>
           <p style={styles.contextSubtitle}>{card.suggestedAngle}</p>
         </div>
-        <span style={fitStyle(card.marketFit)} title={scoreFitTitle(card)}>
-          {card.marketFit}%{scoreFitSuffix(card)}
-        </span>
+        <span style={styles.relationshipPill}>{card.relationship}</span>
       </div>
+      {card.source.kind === "crm-import" ? (
+        <div style={styles.intelligenceRow}>
+          <span style={card.reachable !== false ? styles.reachablePill : styles.unreachablePill}>
+            {card.reachabilityStatus ?? (card.reachable !== false ? "Reachable" : "Not Reachable")}
+          </span>
+          {card.lastInteractionRecency ? (
+            <span style={styles.recencyPill}>{card.lastInteractionRecency}</span>
+          ) : null}
+          {card.relationshipConfidence ? (
+            <span style={styles.confidencePill}>Confidence: {card.relationshipConfidence}</span>
+          ) : null}
+        </div>
+      ) : null}
+      {card.marketOpportunity ? (
+        <ContextBlock title="Market opportunity">
+          <div style={styles.signalRow}>
+            {card.marketOpportunity.label} · {card.marketOpportunity.tier} · score {card.marketOpportunity.score}
+          </div>
+          <div style={styles.signalRow}>{card.marketOpportunity.summary}</div>
+        </ContextBlock>
+      ) : null}
       <TrustPills card={card} />
 
       <div style={styles.contextActions}>
@@ -535,6 +575,14 @@ function RelationshipContextPanel({
         <ActionButton label="Follow Up" primary={card.recommendedAction === "Follow Up"} />
         <ActionButton label="Assign" primary={card.recommendedAction === "Assign"} />
       </div>
+
+      {card.source.kind === "crm-import" && card.relationshipReasons && card.relationshipReasons.length > 0 ? (
+        <ContextBlock title="Relationship intelligence">
+          {card.relationshipReasons.map((line) => (
+            <div key={line} style={styles.timelineItem}>{line}</div>
+          ))}
+        </ContextBlock>
+      ) : null}
 
       {card.recommendationWhy ? (
         <ContextBlock title="Why this recommendation">
@@ -671,33 +719,6 @@ function ActionButton({
       {disabled ? " (disabled)" : ""}
     </button>
   );
-}
-
-function scoreFitSuffix(card: RelationshipPriorityCard): string {
-  if (
-    card.marketFitRaw !== undefined
-    && card.marketFitRaw !== card.marketFit
-    && card.rank <= 3
-  ) {
-    return ` · raw ${card.marketFitRaw}`;
-  }
-  return "";
-}
-
-function scoreFitTitle(card: RelationshipPriorityCard): string | undefined {
-  if (card.marketFitRaw !== undefined && card.marketFitRaw !== card.marketFit) {
-    return `Trust-adjusted priority ${card.marketFit} (raw import score ${card.marketFitRaw})`;
-  }
-  return undefined;
-}
-
-function fitStyle(value: number): CSSProperties {
-  return {
-    ...styles.fitPill,
-    color: value >= 90 ? palette.success : palette.blue,
-    background: value >= 90 ? palette.successBg : palette.bluePale,
-    borderColor: value >= 90 ? "rgba(22, 163, 74, 0.18)" : palette.blueBorder,
-  };
 }
 
 function urgencyStyle(value: RelationshipPriorityCard["urgency"]): CSSProperties {
@@ -1081,6 +1102,75 @@ const styles: Record<string, CSSProperties> = {
     padding: "6px 9px",
     fontSize: "12px",
     fontWeight: 800,
+  },
+  relationshipPill: {
+    border: `1px solid ${palette.blueBorder}`,
+    borderRadius: "999px",
+    padding: "6px 9px",
+    fontSize: "12px",
+    fontWeight: 800,
+    color: palette.blue,
+    background: palette.bluePale,
+    maxWidth: "220px",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  intelligenceRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "6px",
+    marginBottom: "10px",
+  },
+  reachablePill: {
+    borderRadius: "999px",
+    padding: "4px 8px",
+    fontSize: "10px",
+    fontWeight: 800,
+    color: palette.success,
+    background: palette.successBg,
+    border: "1px solid rgba(22,163,74,0.22)",
+  },
+  unreachablePill: {
+    borderRadius: "999px",
+    padding: "4px 8px",
+    fontSize: "10px",
+    fontWeight: 800,
+    color: palette.danger,
+    background: palette.dangerBg,
+    border: "1px solid rgba(220,38,38,0.22)",
+  },
+  recencyPill: {
+    borderRadius: "999px",
+    padding: "4px 8px",
+    fontSize: "10px",
+    fontWeight: 700,
+    color: palette.textSecondary,
+    background: palette.surfaceHover,
+    border: `1px solid ${palette.border}`,
+  },
+  confidencePill: {
+    borderRadius: "999px",
+    padding: "4px 8px",
+    fontSize: "10px",
+    fontWeight: 700,
+    color: palette.textSecondary,
+    background: palette.surface,
+    border: `1px solid ${palette.border}`,
+  },
+  marketOpportunityPill: {
+    display: "inline-block",
+    width: "fit-content",
+    marginBottom: "10px",
+    borderRadius: "999px",
+    padding: "4px 10px",
+    fontSize: "10px",
+    fontWeight: 800,
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+    color: palette.orange,
+    background: palette.orangePale,
+    border: `1px solid ${palette.orangeBorder}`,
   },
   urgencyPill: {
     borderRadius: "999px",

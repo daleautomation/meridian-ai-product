@@ -31,10 +31,11 @@ import {
 } from "@/lib/crm-import/scoreTransparency";
 import { scoreFromCrmContact } from "@/lib/relationship-intelligence/scoring";
 import {
-  classifyRelationship,
-  type RelationshipClass,
-  type RelationshipClassification,
-} from "@/lib/enrichment/opportunity/relationshipClassification";
+  buildCombinedPriority,
+  compareCombinedPriority,
+  type MarketOpportunityDisplay,
+} from "@/lib/enrichment/opportunity/combinedPriority";
+import type { RelationshipClass } from "@/lib/enrichment/opportunity/relationshipClassification";
 import { workspaceImportPath } from "@/lib/workspaceRouting";
 import { personalCopyForWorkspace, PERSONAL_NAV, type PersonalNavId } from "./config";
 import { buildSuggestedOpenerFromContact, type SuggestedOpener } from "./openerBuilder";
@@ -56,6 +57,10 @@ export interface PersonalContactCard {
   relationshipConfidence: "medium" | "low";
   relationshipReasons: string[];
   reachable: boolean;
+  reachabilityStatus: "Reachable" | "Not Reachable";
+  lastInteractionRecency: string;
+  /** Market opportunity — only when listing/public-record evidence exists. */
+  marketOpportunity: MarketOpportunityDisplay | null;
   strength: number;
   strengthRaw: number;
   timing: "Soon" | "This week" | "When ready";
@@ -146,7 +151,8 @@ export interface PersonalWorkspaceModel {
     followUpsDue: number;
     dormantCount: number;
     needsEnrichment: number;
-    averageStrength: number;
+    reachableCount: number;
+    pastSellerCount: number;
   };
   priorityContacts: PersonalContactCard[];
   allContacts: PersonalContactCard[];
@@ -205,27 +211,17 @@ const RESURFACING_HIGHLIGHT_BUCKETS = new Set([
   "dormant_high_frequency",
 ]);
 
-/**
- * Ranking order for relationship classes (higher = surfaces first).
- * This is the PRIMARY sort key for the workspace; the relationship-
- * intelligence strength score is only a tiebreaker within a class.
- * Not-reachable contacts sink to the bottom — they cannot be actioned.
- */
-const CLASS_RANK: Record<RelationshipClass, number> = {
-  past_seller_reconnect: 4,
-  seller_history_verify_recency: 3,
-  sphere_reengagement: 2,
-  cold_relationship: 1,
-  not_reachable: 0,
-};
-
-function classifyContact(contact: CrmContactRecord, now: Date): RelationshipClassification {
-  return classifyRelationship({
-    tags: contact.tags ?? [],
-    hasPhone: contactHasReachablePhone(contact),
-    hasEmail: contactHasReachableEmail(contact),
-    lastInteractionAt: contact.lastInteractionAt ?? null,
-    now,
+function combinedPriorityForContact(contact: CrmContactRecord, now: Date) {
+  return buildCombinedPriority({
+    relationship: {
+      tags: contact.tags ?? [],
+      hasPhone: contactHasReachablePhone(contact),
+      hasEmail: contactHasReachableEmail(contact),
+      lastInteractionAt: contact.lastInteractionAt ?? null,
+      now,
+    },
+    opportunity: contact.enrichment?.opportunity ?? null,
+    strengthTiebreaker: effectivePriorityScore(contact),
   });
 }
 
@@ -250,17 +246,18 @@ export function buildPersonalWorkspaceModel(args: {
   const phoneLight = reachability.phoneLight;
 
   const now = new Date(generatedAt);
-  const classByContact = new Map<string, RelationshipClassification>(
-    crmContacts.map((c) => [c.id, classifyContact(c, now)]),
+  const priorityByContact = new Map(
+    crmContacts.map((c) => [c.id, combinedPriorityForContact(c, now)]),
   );
 
   const allContacts = crmContacts
     .slice()
     .sort((a, b) => {
-      // PRIMARY: relationship class. SECONDARY: strength score within class.
-      const classDelta =
-        CLASS_RANK[classByContact.get(b.id)!.label] - CLASS_RANK[classByContact.get(a.id)!.label];
-      if (classDelta !== 0) return classDelta;
+      const cmp = compareCombinedPriority(
+        priorityByContact.get(a.id)!,
+        priorityByContact.get(b.id)!,
+      );
+      if (cmp !== 0) return cmp;
       return prioritySortScore(b, phoneLight) - prioritySortScore(a, phoneLight);
     })
     .map((contact, index) =>
@@ -268,7 +265,7 @@ export function buildPersonalWorkspaceModel(args: {
         phoneLight,
         copy,
         workspaceSlug: workspace.slug,
-        classification: classByContact.get(contact.id)!,
+        combined: priorityByContact.get(contact.id)!,
       }),
     );
 
@@ -369,7 +366,11 @@ export function buildPersonalWorkspaceModel(args: {
       followUpsDue,
       dormantCount,
       needsEnrichment,
-      averageStrength: average(allContacts.map((c) => c.strength)),
+      reachableCount: allContacts.filter((c) => c.reachable).length,
+      pastSellerCount: allContacts.filter((c) =>
+        c.relationshipClass === "past_seller_reconnect"
+        || c.relationshipClass === "seller_history_verify_recency",
+      ).length,
     },
     priorityContacts,
     allContacts,
@@ -411,7 +412,8 @@ function buildHeroAnswer(args: {
       args.importedOnlyCount === args.crmContactCount && args.crmContactCount > 0
         ? " (baseline import scores — not enriched yet)"
         : "";
-    return `${top.name} at ${top.company} — ${top.scoreLabel}${channelHint}${enrichmentHint}`;
+    const marketHint = top.marketOpportunity ? ` · ${top.marketOpportunity.label}` : "";
+    return `${top.name} at ${top.company} — ${top.relationshipLabel}${marketHint}${channelHint}${enrichmentHint}`;
   }
   if (args.crmContactCount === 0) {
     return "Import contacts to start prioritizing your network.";
@@ -489,9 +491,10 @@ function crmContactToCard(
     phoneLight: boolean;
     copy: ReturnType<typeof personalCopyForWorkspace>;
     workspaceSlug: string;
-    classification: RelationshipClassification;
+    combined: ReturnType<typeof buildCombinedPriority>;
   },
 ): PersonalContactCard {
+  const { classification } = ctx.combined;
   const score = scoreFromCrmContact(contact);
   const transparency = buildContactScoreTransparency(contact);
   const state = freshnessStateFor(ageDaysFromIso(contact.lastInteractionAt ?? contact.updatedAt));
@@ -575,11 +578,14 @@ function crmContactToCard(
     // remains in already-imported rows. Renders empty string so the
     // card layout naturally suppresses the company chip.
     company: companyLooksLikeContactName(contact.company, contact.name) ? "" : contact.company,
-    relationshipLabel: ctx.classification.displayLabel,
-    relationshipClass: ctx.classification.label,
-    relationshipConfidence: ctx.classification.confidence,
-    relationshipReasons: ctx.classification.reasons,
-    reachable: ctx.classification.reachable,
+    relationshipLabel: classification.displayLabel,
+    relationshipClass: classification.label,
+    relationshipConfidence: classification.confidence,
+    relationshipReasons: classification.reasons,
+    reachable: classification.reachable,
+    reachabilityStatus: ctx.combined.reachabilityStatus,
+    lastInteractionRecency: ctx.combined.lastInteractionRecency,
+    marketOpportunity: ctx.combined.marketOpportunity,
     strength: effectivePriorityScore(contact, transparency.value),
     strengthRaw: transparency.value,
     timing: rank === 1 ? "Soon" : rank <= 3 ? "This week" : "When ready",
@@ -755,9 +761,4 @@ function compact(values: Array<string | null | undefined>): string[] {
   return values
     .map((v) => v?.trim())
     .filter((v): v is string => Boolean(v));
-}
-
-function average(values: number[]): number {
-  if (values.length === 0) return 0;
-  return Math.round(values.reduce((s, v) => s + v, 0) / values.length);
 }

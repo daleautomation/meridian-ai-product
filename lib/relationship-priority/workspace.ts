@@ -26,20 +26,12 @@ import {
 } from "@/lib/crm-import/reachability";
 import { scoreFromCrmContact } from "@/lib/relationship-intelligence/scoring";
 import {
-  classifyRelationship,
-  type RelationshipClass,
-} from "@/lib/enrichment/opportunity/relationshipClassification";
+  buildCombinedPriority,
+  compareCombinedPriority,
+  type MarketOpportunityDisplay,
+} from "@/lib/enrichment/opportunity/combinedPriority";
+import type { RelationshipClass } from "@/lib/enrichment/opportunity/relationshipClassification";
 import type { CrmContactRecord, VerificationTier } from "@/lib/crm-import/types";
-
-/** Relationship-class ranking for the operator CRM queue (mirrors the
- *  personal workspace). Higher surfaces first; not-reachable sinks. */
-const OPERATOR_CLASS_RANK: Record<RelationshipClass, number> = {
-  past_seller_reconnect: 4,
-  seller_history_verify_recency: 3,
-  sphere_reengagement: 2,
-  cold_relationship: 1,
-  not_reachable: 0,
-};
 
 type EngineSummary = RelationshipEngineOperatorSurface["workflows"]["relationshipSummaries"][number];
 type EngineQueueItem = RelationshipEngineOperatorSurface["queues"][number]["items"][number];
@@ -80,7 +72,8 @@ export interface RelationshipPriorityWorkspaceModel {
   summary: {
     priorityCount: number;
     readyNowCount: number;
-    averageMarketFit: number;
+    reachableCount: number;
+    marketOpportunityCount: number;
     followUpsDue: number;
     compressedSignals: number;
   };
@@ -103,6 +96,14 @@ export interface RelationshipPriorityCard {
   rank: number;
   company: string;
   relationship: string;
+  relationshipClass?: RelationshipClass;
+  relationshipConfidence?: "medium" | "low";
+  relationshipReasons?: string[];
+  reachable?: boolean;
+  reachabilityStatus?: "Reachable" | "Not Reachable";
+  lastInteractionRecency?: string;
+  marketOpportunity?: MarketOpportunityDisplay | null;
+  /** @deprecated Internal tiebreaker only — not shown in CRM-import UI. */
   marketFit: number;
   urgency: "Now" | "Today" | "This week";
   importance: "highest" | "high" | "medium";
@@ -223,7 +224,7 @@ export function buildRelationshipPriorityWorkspaceModel(args: {
       question: "Who matters, why now, and what should happen next?",
       focus: "Today's Priority Queue",
       answer: priorityQueue[0]
-        ? `${priorityQueue[0].company} is first because ${lowercaseFirst(priorityQueue[0].topReasons[0])}`
+        ? `${priorityQueue[0].company} — ${priorityQueue[0].relationship}${priorityQueue[0].marketOpportunity ? ` · ${priorityQueue[0].marketOpportunity.label}` : ""}`
         : "Relationship signals are compressed into the next best operator action.",
     },
     nav: [
@@ -236,7 +237,8 @@ export function buildRelationshipPriorityWorkspaceModel(args: {
     summary: {
       priorityCount: priorityQueue.length,
       readyNowCount: priorityQueue.filter((card) => card.urgency === "Now").length,
-      averageMarketFit: average(priorityQueue.map((card) => card.marketFit)),
+      reachableCount: priorityQueue.filter((card) => card.reachable !== false).length,
+      marketOpportunityCount: priorityQueue.filter((card) => card.marketOpportunity).length,
       followUpsDue,
       compressedSignals: surface.metadata.summaryDisplay.queueItemCount
         + surface.metadata.summaryDisplay.feedItemCount
@@ -270,23 +272,33 @@ export function buildRelationshipPriorityWorkspaceModel(args: {
 
 function crmContactsToPriorityCards(
   contacts: CrmContactRecord[],
-  _generatedAt: string,
+  generatedAt: string,
 ): RelationshipPriorityCard[] {
-  const now = new Date(_generatedAt);
-  const classOf = (c: CrmContactRecord): RelationshipClass =>
-    classifyRelationship({
-      tags: c.tags ?? [],
-      hasPhone: contactHasReachablePhone(c),
-      hasEmail: contactHasReachableEmail(c),
-      lastInteractionAt: c.lastInteractionAt ?? null,
-      now,
-    }).label;
+  const now = new Date(generatedAt);
+  const combinedByContact = new Map(
+    contacts.map((c) => [
+      c.id,
+      buildCombinedPriority({
+        relationship: {
+          tags: c.tags ?? [],
+          hasPhone: contactHasReachablePhone(c),
+          hasEmail: contactHasReachableEmail(c),
+          lastInteractionAt: c.lastInteractionAt ?? null,
+          now,
+        },
+        opportunity: c.enrichment?.opportunity ?? null,
+        strengthTiebreaker: effectivePriorityScore(c, c.relationshipScore ?? 0),
+      }),
+    ]),
+  );
   return contacts
     .slice()
     .sort((a, b) => {
-      // PRIMARY: relationship class. SECONDARY: trust-adjusted strength.
-      const classDelta = OPERATOR_CLASS_RANK[classOf(b)] - OPERATOR_CLASS_RANK[classOf(a)];
-      if (classDelta !== 0) return classDelta;
+      const cmp = compareCombinedPriority(
+        combinedByContact.get(a.id)!,
+        combinedByContact.get(b.id)!,
+      );
+      if (cmp !== 0) return cmp;
       return (
         effectivePriorityScore(b, b.relationshipScore ?? 0)
         - effectivePriorityScore(a, a.relationshipScore ?? 0)
@@ -294,13 +306,8 @@ function crmContactsToPriorityCards(
     })
     .slice(0, 12)
     .map((contact, index) => {
-      const classification = classifyRelationship({
-        tags: contact.tags ?? [],
-        hasPhone: contactHasReachablePhone(contact),
-        hasEmail: contactHasReachableEmail(contact),
-        lastInteractionAt: contact.lastInteractionAt ?? null,
-        now,
-      });
+      const combined = combinedByContact.get(contact.id)!;
+      const classification = combined.classification;
       const score = scoreFromCrmContact(contact);
       const transparency = buildContactScoreTransparency(contact);
       const recommendation = buildRecommendationExplanation(contact, transparency);
@@ -350,26 +357,28 @@ function crmContactsToPriorityCards(
             ? "Needs review"
             : "Imported contact";
 
-      const marketFitRaw = contact.relationshipScore ?? score.total;
-      const marketFitEffective = effectivePriorityScore(contact, marketFitRaw);
-
       return {
         id: `crm-${contact.id}`,
         relationshipId: contact.id,
         rank: index + 1,
         company: contact.company,
         relationship: classification.displayLabel,
-        marketFit: marketFitEffective,
-        marketFitRaw,
+        relationshipClass: classification.label,
+        relationshipConfidence: classification.confidence,
+        relationshipReasons: classification.reasons,
+        reachable: classification.reachable,
+        reachabilityStatus: combined.reachabilityStatus,
+        lastInteractionRecency: combined.lastInteractionRecency,
+        marketOpportunity: combined.marketOpportunity,
+        marketFit: effectivePriorityScore(contact, contact.relationshipScore ?? score.total),
+        marketFitRaw: contact.relationshipScore ?? score.total,
         urgency: index === 0 ? "Now" : index < 3 ? "Today" : "This week",
         importance: index === 0 ? "highest" : index < 3 ? "high" : "medium",
         stage,
         topReasons: compact([
-          recommendation.why,
-          contact.tags[0] ? `Tag: ${contact.tags[0]}` : null,
-          contact.lastInteractionAt
-            ? `Last interaction ${relativeDate(contact.lastInteractionAt)}`
-            : "Last interaction unknown",
+          classification.reasons[0] ?? recommendation.why,
+          combined.lastInteractionRecency,
+          combined.reachabilityStatus,
         ]),
         bestContact: {
           name: contact.name,
@@ -752,21 +761,10 @@ function sentence(value: string): string {
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
 }
 
-function lowercaseFirst(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return trimmed;
-  return `${trimmed.charAt(0).toLowerCase()}${trimmed.slice(1)}`;
-}
-
 function compact(values: Array<string | null | undefined>): string[] {
   return values
     .map((value) => value?.trim())
     .filter((value): value is string => Boolean(value));
-}
-
-function average(values: number[]): number {
-  if (values.length === 0) return 0;
-  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
 }
 
 function clamp(value: number, min: number, max: number): number {

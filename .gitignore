@@ -79,3 +79,5 @@ data/weekly-state/
 data/outcomes/
 data/backups/*.json
 data/backups/*.json
+.cursor/
+test-results/

@@ -51,6 +51,9 @@ export interface WeeklyPriority {
   rank: number;
   name: string;
   company: string;
+  /** Primary relationship-intelligence label for this contact. */
+  relationshipLabel: string;
+  /** @deprecated Retained for snapshot schema compat — not shown in UI. */
   score: number;
   suggestedOpener: string;
   openerSource: OpenerSource;
@@ -396,6 +399,7 @@ function buildPriority(
     rank: card.rank,
     name: card.name,
     company: card.company,
+    relationshipLabel: card.relationshipLabel,
     score: card.strengthRaw,
     suggestedOpener: opener.opener,
     openerSource: opener.openerSource,

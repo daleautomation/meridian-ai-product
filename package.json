@@ -20,6 +20,7 @@
     "phone-mapping:check": "tsx scripts/check-phone-mapping.ts",
     "column-mapping:check": "tsx scripts/check-column-mapping.ts",
     "relationship-classification:check": "tsx scripts/check-relationship-classification.ts",
+    "relationship-intelligence-ui:check": "tsx scripts/check-relationship-intelligence-ui.ts",
     "contact-persistence:check": "tsx scripts/check-contact-persistence.ts",
     "nicole-contacts:check": "tsx scripts/check-nicole-contacts-neon.ts",
     "nicole-contacts:migrate-from-file": "tsx scripts/migrate-nicole-contacts-to-neon.ts",
@@ -73,7 +74,9 @@
     "king-county:join": "tsx scripts/join-king-county-records.ts",
     "king-county:inspect": "tsx scripts/inspect-king-county-headers.ts",
     "auth:check": "tsx scripts/check-workspace-auth.ts",
-    "auth:live": "tsx scripts/check-live-auth.ts"
+    "auth:live": "tsx scripts/check-live-auth.ts",
+    "autonoma:nicole:live": "playwright test tests/e2e/nicole-workspace.spec.ts",
+    "autonoma:nicole:check-spec": "tsx scripts/check-autonoma-nicole-spec.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

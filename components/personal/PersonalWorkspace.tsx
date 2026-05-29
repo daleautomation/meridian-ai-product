@@ -103,9 +103,9 @@ export default function PersonalWorkspace({ model }: PersonalWorkspaceProps) {
         <SummaryMetric label="Priority" value={String(model.summary.priorityCount)} />
         <SummaryMetric label="Follow-ups" value={String(model.summary.followUpsDue)} />
         <SummaryMetric
-          label="Avg. strength"
-          value={`${model.summary.averageStrength}%`}
-          hint={model.crmContactCount > 0 ? "Baseline import scores" : undefined}
+          label="Reachable"
+          value={String(model.summary.reachableCount)}
+          hint={model.summary.pastSellerCount > 0 ? `${model.summary.pastSellerCount} past sellers` : undefined}
         />
       </section>
 
@@ -230,7 +230,6 @@ function InsightsList({ insights }: { insights: PersonalInsightRow[] }) {
         <article key={row.id} style={styles.insightCard}>
           <div style={styles.insightTop}>
             <strong>{row.name}</strong>
-            <span style={styles.strengthPill}>{row.strength}%</span>
           </div>
           <div style={styles.muted}>{row.company}</div>
           <p style={styles.insightText}>{row.insight}</p>
@@ -273,6 +272,18 @@ function ContactCard({
         </span>
         <span style={styles.timing}>{card.timing}</span>
       </div>
+      <div style={styles.intelligenceRow}>
+        <span style={card.reachable ? styles.reachableBadge : styles.unreachableBadge}>
+          {card.reachabilityStatus}
+        </span>
+        <span style={styles.recencyBadge}>{card.lastInteractionRecency}</span>
+        <span style={styles.confidenceBadge}>Confidence: {card.relationshipConfidence}</span>
+      </div>
+      {card.marketOpportunity ? (
+        <span style={styles.marketOpportunityBadge} title={card.marketOpportunity.summary}>
+          {card.marketOpportunity.label} · {card.marketOpportunity.tier}
+        </span>
+      ) : null}
       <div style={styles.cardNameRow}>
         <div>
           <h3 style={styles.cardName}>{card.name}</h3>
@@ -317,10 +328,13 @@ function ContactDetailPanel({
         <span style={styles.enrichmentBadge}>{card.enrichmentLabel}</span>
         <div style={styles.relationshipBlock}>
           <span style={styles.relationshipChip}>{card.relationshipLabel}</span>
-          <span style={styles.scoreMeta}>
-            Relationship intelligence · confidence {card.relationshipConfidence}
-            {card.reachable ? "" : " · not reachable"}
-          </span>
+          <div style={styles.intelligenceRow}>
+            <span style={card.reachable ? styles.reachableBadge : styles.unreachableBadge}>
+              {card.reachabilityStatus}
+            </span>
+            <span style={styles.recencyBadge}>{card.lastInteractionRecency}</span>
+            <span style={styles.confidenceBadge}>Confidence: {card.relationshipConfidence}</span>
+          </div>
           {card.relationshipReasons.map((line) => (
             <div key={line} style={styles.detailRow}>{line}</div>
           ))}
@@ -329,17 +343,16 @@ function ContactDetailPanel({
           <span style={styles.verificationBadge}>{card.verificationStatusLabel}</span>
           <span style={styles.dataQualityBadge}>{card.dataQualityLabel}</span>
         </div>
-        {/* Relationship strength is a secondary CRM-baseline signal, not a
-            market/opportunity score. Shown muted, never as the headline. */}
-        <div style={styles.scoreRow}>
-          <span style={styles.scoreMeta} title={strengthTitle(card)}>
-            Relationship strength {card.strength}%{strengthSuffix(card)} · {card.scoreLabel}
-          </span>
-        </div>
-        {!card.scoreIsAuthoritative ? (
-          <p style={styles.scoreDisclaimer}>{card.scoreExplanation}</p>
-        ) : null}
       </div>
+
+      {card.marketOpportunity ? (
+        <DetailBlock title="Market opportunity">
+          <div style={styles.detailRow}>
+            {card.marketOpportunity.label} · {card.marketOpportunity.tier} · score {card.marketOpportunity.score}
+          </div>
+          <div style={styles.detailRow}>{card.marketOpportunity.summary}</div>
+        </DetailBlock>
+      ) : null}
 
       <DetailBlock title={card.nextStepIsTemplate ? "Suggested follow-up template" : "Suggested next step"}>
         <p style={styles.detailBody}>{card.nextStep}</p>
@@ -362,18 +375,6 @@ function ContactDetailPanel({
 
       <DetailBlock title="Angle">
         <p style={styles.detailBody}>{card.angle}</p>
-      </DetailBlock>
-
-      <DetailBlock title="Scoring basis">
-        <div style={styles.detailRow}>Provenance: {card.scoreProvenance}</div>
-        {card.scoreReasonCodes.length > 0 ? (
-          <div style={styles.detailRow}>
-            Reasons: {card.scoreReasonCodes.join(", ")}
-          </div>
-        ) : (
-          <div style={styles.detailRow}>No reason codes recorded</div>
-        )}
-        <div style={styles.detailRow}>Confidence: {card.source.confidence}</div>
       </DetailBlock>
 
       <DetailBlock title="Reachability">
@@ -432,19 +433,6 @@ function ContactDetailPanel({
   );
 }
 
-function strengthSuffix(card: PersonalContactCard): string {
-  if (card.strengthRaw !== card.strength && card.rank <= 3) {
-    return ` · raw ${card.strengthRaw}`;
-  }
-  return "";
-}
-
-function strengthTitle(card: PersonalContactCard): string | undefined {
-  if (card.strengthRaw !== card.strength) {
-    return `Trust-adjusted priority ${card.strength} (raw import score ${card.strengthRaw})`;
-  }
-  return undefined;
-}
 
 function DetailBlock({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -702,6 +690,56 @@ const styles: Record<string, CSSProperties> = {
     flexDirection: "column",
     gap: "4px",
     marginTop: "8px",
+  },
+  intelligenceRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "6px",
+    marginTop: "4px",
+  },
+  reachableBadge: {
+    padding: "2px 8px",
+    borderRadius: "999px",
+    background: personalPalette.successBg,
+    color: personalPalette.success,
+    fontSize: "10px",
+    fontWeight: 700,
+  },
+  unreachableBadge: {
+    padding: "2px 8px",
+    borderRadius: "999px",
+    background: personalPalette.warningBg,
+    color: personalPalette.warning,
+    fontSize: "10px",
+    fontWeight: 700,
+  },
+  recencyBadge: {
+    padding: "2px 8px",
+    borderRadius: "999px",
+    background: personalPalette.surfaceMuted,
+    color: personalPalette.textMuted,
+    fontSize: "10px",
+    fontWeight: 600,
+  },
+  confidenceBadge: {
+    padding: "2px 8px",
+    borderRadius: "999px",
+    border: `1px solid ${personalPalette.border}`,
+    color: personalPalette.textMuted,
+    fontSize: "10px",
+    fontWeight: 600,
+  },
+  marketOpportunityBadge: {
+    display: "inline-block",
+    width: "fit-content",
+    padding: "3px 10px",
+    borderRadius: "999px",
+    background: personalPalette.accentSoft,
+    color: personalPalette.accent,
+    fontSize: "10px",
+    fontWeight: 700,
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
   },
   timing: {
     marginLeft: "auto",
