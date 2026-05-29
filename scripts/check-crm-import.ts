@@ -1,5 +1,6 @@
 // Meridian — CRM import + relationship intelligence smoke checks.
 
+import { execSync } from "node:child_process";
 import { computeImportDiagnostics } from "../lib/crm-import/diagnostics";
 import { detectColumnMapping, normalizeCrmRow } from "../lib/crm-import/normalize";
 import { findDedupePairs, verdictFromScore, scoreDuplicatePair } from "../lib/crm-import/dedupe";
@@ -9,9 +10,16 @@ import {
   TRUST_CONFIDENCE,
 } from "../lib/crm-import/trust";
 import { validateImportRows } from "../lib/crm-import/validate";
-import { computeRelationshipScore } from "../lib/relationship-intelligence/scoring";
+import {
+  buildContactScoreTransparency,
+  effectivePriorityScore,
+  scoreMetadataForImport,
+} from "../lib/crm-import/scoreTransparency";
+import { computeRelationshipScore, scoreFromCrmContact } from "../lib/relationship-intelligence/scoring";
 import { buildResurfacingBuckets } from "../lib/relationship-intelligence/resurfacing";
 import type { ContactDatumTrust, CrmContactRecord, CrmImportJob } from "../lib/crm-import/types";
+import { __resetCrmSchemaReadyForTests } from "../lib/crm-import/initCrmContactsSchema";
+import { useCrmNeonStorage } from "../lib/crm-import/storageConfig";
 import {
   __resetCrmImportMemoryForTests,
   getImportJob,
@@ -24,6 +32,28 @@ import {
 function assert(condition: boolean, message: string) {
   if (!condition) throw new Error(message);
 }
+
+/** Fail CI if generated CRM contact/job files are tracked (runtime PII). */
+function assertNoTrackedCrmRuntimeData(): void {
+  const paths = [
+    "data/crm-contacts",
+    "data/crm-import-jobs",
+    "data/crmImportJobs.json",
+    "data/crmContacts.json",
+    "data/crmImportRollbacks",
+  ];
+  for (const p of paths) {
+    let tracked = "";
+    try {
+      tracked = execSync(`git ls-files -- ${p}`, { encoding: "utf8" }).trim();
+    } catch {
+      tracked = "";
+    }
+    assert(!tracked, `CRM runtime data must not be git-tracked (${p}): ${tracked}`);
+  }
+}
+
+assertNoTrackedCrmRuntimeData();
 
 function assertTrustDatum(datum: ContactDatumTrust, context: string) {
   assert(isTrustDisplayAligned(datum), `${context}: trust display matches level`);
@@ -85,6 +115,7 @@ const existing: CrmContactRecord = {
   normalizedName: "jane doe",
   dataTrust: row.dataTrust,
   relationshipScore: 70,
+  scoreMetadata: null,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 };
@@ -108,6 +139,38 @@ const intel = computeRelationshipScore({
 });
 assert(intel.total >= 0 && intel.total <= 100, "score in range");
 assert(intel.factors.length >= 6, "factors present");
+
+const importMeta = scoreMetadataForImport(intel);
+assert(importMeta?.storedAtImport === true, "import metadata marks storedAtImport");
+assert(importMeta?.provenance === "imported", "import scores use imported provenance");
+assert(importMeta?.verificationTier === "imported" || importMeta?.verificationTier === "confidence_low", "import verification tier set");
+
+const scoredContact: CrmContactRecord = {
+  ...existing,
+  importJobId: "job-1",
+  relationshipScore: intel.total,
+  scoreMetadata: importMeta,
+};
+const persistedScore = scoreFromCrmContact(scoredContact);
+assert(
+  persistedScore.explanation.includes("Baseline import score")
+    || persistedScore.explanation.includes("CRM import"),
+  "persisted import score explains import provenance",
+);
+const transparency = buildContactScoreTransparency(scoredContact);
+assert(!transparency.isAuthoritative, "baseline import transparency is not authoritative");
+assert(transparency.verificationTier === "imported", "import contact tier is imported");
+assert(transparency.dataQualityLabel.includes("Data Quality"), "data quality badge label present");
+assert(transparency.recommendation.why.length > 0, "recommendation explains why");
+assert(transparency.recommendation.evidence.length > 0, "recommendation lists evidence");
+assert(transparency.reasonCodes.includes("BASELINE_IMPORT_SCORE"), "baseline reason code present");
+
+const legacyTransparency = buildContactScoreTransparency({ ...existing, scoreMetadata: null });
+assert(
+  legacyTransparency.reasonCodes.includes("MISSING_PROVENANCE_METADATA"),
+  "legacy contacts without scoreMetadata are flagged in reason codes",
+);
+assert(!legacyTransparency.isAuthoritative, "legacy contacts are not authoritative");
 
 const buckets = buildResurfacingBuckets([existing]);
 assert(buckets.length === 6, "six resurfacing buckets");
@@ -146,11 +209,22 @@ assert(noPhoneDiag.emailReachablePct === 100, "Brookside row has email");
 
 async function checkContactsPersistence() {
   __resetCrmImportMemoryForTests();
+  __resetCrmSchemaReadyForTests();
   assert(await isCrmImportPersistenceAvailable(), "CRM persistence must be writable in check env");
 
   const workspaceId = "nicole-lonergan";
+  const contactId = `crm-persist-check-${useCrmNeonStorage() ? "neon" : "file"}-${Date.now().toString(36)}`;
+  const persistScore = computeRelationshipScore({
+    lastInteractionAt: null,
+    tags: [],
+    hasPhone: false,
+    hasEmail: true,
+    notesLength: 0,
+    dataTrust: noPhoneRow.dataTrust,
+  });
+  const persistMeta = scoreMetadataForImport(persistScore);
   const contact: CrmContactRecord = {
-    id: "crm-persist-check-1",
+    id: contactId,
     workspaceId,
     importJobId: "job-persist",
     name: "Persist Check",
@@ -167,7 +241,11 @@ async function checkContactsPersistence() {
     normalizedCompany: "brookside",
     normalizedName: "persist check",
     dataTrust: noPhoneRow.dataTrust,
-    relationshipScore: 50,
+    relationshipScore: persistScore.total,
+    scoreMetadata: {
+      ...persistMeta,
+      sourceFieldsUsed: ["email", "name", "company"],
+    },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -177,8 +255,28 @@ async function checkContactsPersistence() {
 
   __resetCrmImportMemoryForTests();
   const reloaded = await listContactsByWorkspace(workspaceId);
-  assert(reloaded.length >= 1, "contacts survive memory reset via disk");
+  assert(reloaded.length >= 1, "contacts survive memory reset via durable store");
   assert(reloaded.some((c) => c.id === contact.id), "persisted contact id round-trips");
+  const roundTrip = reloaded.find((c) => c.id === contact.id);
+  assert(roundTrip?.scoreMetadata?.provenance === "imported", "persisted contact keeps imported provenance");
+  assert(
+    roundTrip?.scoreMetadata?.verificationTier === "imported"
+      || roundTrip?.scoreMetadata?.verificationTier === "confidence_low",
+    "persisted contact keeps verification tier",
+  );
+  assert(
+    effectivePriorityScore(roundTrip!, roundTrip!.relationshipScore ?? 0)
+      <= (roundTrip!.relationshipScore ?? 0),
+    "effective score is trust-adjusted down from raw import score",
+  );
+
+  if (useCrmNeonStorage()) {
+    const otherWorkspace = await listContactsByWorkspace("labortech");
+    assert(
+      !otherWorkspace.some((c) => c.id === contact.id),
+      "nicole contact must not appear in labortech workspace",
+    );
+  }
 }
 
 async function checkImportJobStore() {

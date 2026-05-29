@@ -4,12 +4,16 @@ import { parseCsv } from "@/lib/ingestion/csvParser";
 import { upsertRaw } from "@/lib/state/rawCompaniesStore";
 import { computeImportDiagnostics } from "./diagnostics";
 import { buildMergeRecommendations, dedupeSummary, findDedupePairs } from "./dedupe";
+import {
+  mintContactId,
+  resolveExistingContactForRow,
+} from "./identityKey";
+import { mergeContactRecords } from "./merge";
 import { detectColumnMapping, normalizeCrmRows } from "./normalize";
 import {
   createRollbackSnapshot,
   getImportJob,
   listContactsByWorkspace,
-  newContactId,
   newJobId,
   rollbackImport,
   saveImportJob,
@@ -23,6 +27,7 @@ import type {
   ImportPreviewResult,
   NormalizedCrmContact,
 } from "./types";
+import { scoreMetadataForImport } from "@/lib/crm-import/scoreTransparency";
 import { computeRelationshipScore } from "@/lib/relationship-intelligence/scoring";
 
 export function buildPreviewFromJob(job: CrmImportJob): ImportPreviewResult {
@@ -139,6 +144,8 @@ export async function executeImport(args: {
     );
 
     const now = new Date().toISOString();
+    let safeMergeCount = 0;
+    let newContactCount = 0;
     const contacts: CrmContactRecord[] = eligible.map((row) => {
       const score = computeRelationshipScore({
         lastInteractionAt: row.lastInteractionAt,
@@ -148,8 +155,22 @@ export async function executeImport(args: {
         notesLength: row.notes?.length ?? 0,
         dataTrust: row.dataTrust,
       });
-      return {
-        id: newContactId(job.workspaceId, row.rowIndex),
+
+      // ── Identity resolution: match incoming against existing ────
+      // Re-importing the same contact must REUSE the existing
+      // contact_id so the JSONB-merging upsert UPDATES the row
+      // (preserving enrichment + repairs) instead of inserting a
+      // duplicate. Only the rules in identityKey.ts can produce a
+      // match — exact email, exact phone, or same surname + same
+      // canonical address.
+      const resolution = resolveExistingContactForRow(row, existing);
+      const minted = mintContactId(job.workspaceId, row, { importJobId: job.id });
+
+      // Build the import-time record. ID is either the existing
+      // contact's (preserve identity + history) or the minted
+      // identity-derived id.
+      const importedRecord: CrmContactRecord = {
+        id: resolution.existing ? resolution.existing.id : minted.id,
         workspaceId: job.workspaceId,
         importJobId: job.id,
         name: row.name,
@@ -167,12 +188,46 @@ export async function executeImport(args: {
         normalizedName: row.normalizedName,
         dataTrust: row.dataTrust,
         relationshipScore: score.total,
-        createdAt: now,
+        scoreMetadata: {
+          ...scoreMetadataForImport(score),
+          sourceFieldsUsed: [
+            ...(row.lastInteractionAt ? ["lastInteractionAt"] : []),
+            ...(row.tags.length > 0 ? ["tags"] : []),
+            ...(row.notes?.trim() ? ["notes"] : []),
+            ...(row.normalizedPhone ? ["phone"] : []),
+            ...(row.normalizedEmail ? ["email"] : []),
+            ...(row.company?.trim() ? ["company"] : []),
+            ...(row.name?.trim() ? ["name"] : []),
+          ],
+        },
+        createdAt: resolution.existing ? resolution.existing.createdAt : now,
         updatedAt: now,
       };
+
+      // If we matched an existing contact, MERGE field-by-field so
+      // blank incoming values don't blow away non-empty existing
+      // values. Enrichment + repairs are preserved at the
+      // persistence layer (upsertContactsNeon's ON CONFLICT clause).
+      if (resolution.existing) {
+        safeMergeCount += 1;
+        return mergeContactRecords({
+          incoming: importedRecord,
+          existing: resolution.existing,
+        });
+      }
+      newContactCount += 1;
+      return importedRecord;
     });
 
-    const { inserted } = await upsertContacts(contacts);
+    // The persistence layer's JSONB-merging upsert preserves
+    // source_metadata.enrichment.* and source_metadata.repairs[] on
+    // every UPDATE. Matched contacts get their CRM-truth fields
+    // refreshed; non-matched contacts get inserted with new identity-
+    // derived IDs.
+    const { inserted, updated } = await upsertContacts(contacts);
+    void updated;
+    void safeMergeCount;
+    void newContactCount;
 
     if (args.alsoUpsertRawCompanies !== false) {
       await upsertRaw(

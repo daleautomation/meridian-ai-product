@@ -7,3 +7,5 @@ export * from "./diagnostics";
 export * from "./reachability";
 export * from "./store";
 export * from "./pipeline";
+export * from "./scoreTransparency";
+export * from "./audit";

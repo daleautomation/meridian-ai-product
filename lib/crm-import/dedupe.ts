@@ -7,6 +7,10 @@ import type {
   MergeRecommendation,
   NormalizedCrmContact,
 } from "./types";
+import {
+  resolveExistingContactForRow,
+  type IdentityMatchReason,
+} from "./identityKey";
 
 const SAFE_MERGE_THRESHOLD = 0.92;
 const LIKELY_DUPLICATE_THRESHOLD = 0.78;
@@ -99,6 +103,19 @@ export function verdictFromScore(score: number): DedupeVerdict {
   return "unique";
 }
 
+function identityReasonLabel(reason: IdentityMatchReason): string {
+  switch (reason) {
+    case "email":
+      return "Exact normalized-email match — same contact.";
+    case "phone":
+      return "Exact normalized-phone match — same contact.";
+    case "name_and_address":
+      return "Same surname AND same canonical address — same household contact.";
+    default:
+      return "";
+  }
+}
+
 export function findDedupePairs(
   incomingRows: NormalizedCrmContact[],
   existingContacts: CrmContactRecord[],
@@ -108,10 +125,48 @@ export function findDedupePairs(
   for (const row of incomingRows) {
     if (row.validationErrors.length > 0) continue;
 
+    // ── Step 1: EXACT identity match → unambiguous safe_merge ────
+    // The identity resolver (lib/crm-import/identityKey.ts) implements
+    // the only rules under which two rows are KNOWN to be the same
+    // contact: same normalized email, same normalized phone, OR same
+    // surname + same canonical address. First-name-only is never a
+    // basis for merge.
+    const resolution = resolveExistingContactForRow(row, existingContacts);
+    if (resolution.existing && resolution.reason) {
+      const existing = resolution.existing;
+      pairs.push({
+        incomingRowIndex: row.rowIndex,
+        existingContactId: existing.id,
+        verdict: "safe_merge",
+        score: 1,
+        reasons: [identityReasonLabel(resolution.reason)],
+        incomingPreview: {
+          name: row.name,
+          company: row.company,
+          phone: row.phone,
+          email: row.email,
+        },
+        existingPreview: {
+          name: existing.name,
+          company: existing.company,
+          phone: existing.phone,
+          email: existing.email,
+        },
+      });
+      continue;
+    }
+
+    // ── Step 2: fuzzy fall-through for ambiguity ────────────────
+    // When no exact identity signal matches, fall back to the legacy
+    // fuzzy scorer. Results SURFACE for operator review but never
+    // produce a safe_merge automatically — only the rules above can.
     let best: DedupePair | null = null;
     for (const existing of existingContacts) {
       const { score, reasons } = scoreDuplicatePair(row, existing);
-      const verdict = verdictFromScore(score);
+      let verdict = verdictFromScore(score);
+      // Fuzzy scorer is NEVER allowed to claim safe_merge — only the
+      // exact-identity path does. Downgrade to likely_duplicate.
+      if (verdict === "safe_merge") verdict = "likely_duplicate";
       if (verdict === "unique") continue;
 
       const candidate: DedupePair = {

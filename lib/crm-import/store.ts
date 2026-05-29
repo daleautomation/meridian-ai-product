@@ -1,22 +1,89 @@
 // Meridian CRM import — persistence for jobs, contacts, and rollback snapshots.
 //
-// Contacts are stored per workspace (data/crm-contacts/<workspace>.json) with
-// atomic writes. On read-only deploy trees (Vercel), writes fall through to
-// /tmp/meridian-crm-contacts — durable across warm requests, not cold starts.
-// Import execute fails loudly when no writable store is available.
+// Imported contacts are durable in Neon/Postgres when DATABASE_URL or POSTGRES_URL
+// is set. Local development without a database uses per-workspace JSON under
+// data/crm-contacts/. On Vercel without Postgres, contact import fails loudly.
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { safeReadJson, safeWriteJson } from "@/lib/utils/fsSafeWrite";
+import {
+  listContactsNeon,
+  destructivelyReplaceWorkspaceContactsNeon,
+  upsertContactsNeon,
+} from "./crmContactsNeonAdapter";
+import { ensureCrmContactsSchema } from "./initCrmContactsSchema";
+import {
+  assertDurableCrmStorageConfigured,
+  assertWorkspaceSlug,
+  crmContactsFileRoots,
+  crmImportJobDirs,
+  CRM_CONTACTS_LEGACY_PATH,
+  CRM_IMPORT_JOBS_PATH,
+  CRM_IMPORT_ROLLBACK_DIR,
+  DURABLE_STORAGE_NOT_CONFIGURED,
+  importJobFilePath,
+  isVercelProduction,
+  rollbackSnapshotFilePath,
+  safePathSegment,
+  useCrmNeonStorage,
+  workspaceContactsFilePath,
+} from "./storageConfig";
 import type { CrmContactRecord, CrmImportJob } from "./types";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const JOBS_PATH = path.join(DATA_DIR, "crmImportJobs.json");
-const LEGACY_CONTACTS_PATH = path.join(DATA_DIR, "crmContacts.json");
-const ROLLBACK_DIR = path.join(DATA_DIR, "crmImportRollbacks");
+/**
+ * Thrown when a contact READ is attempted in a deployment that has no
+ * durable storage configured (Vercel/serverless without
+ * DATABASE_URL/POSTGRES_URL).
+ *
+ * Original bug: this case silently returned [] and a customer workspace
+ * looked like it had 0 contacts when in fact storage simply wasn't
+ * wired. Callers (`app/personal/page.tsx`, `app/operator/relationship-priority/page.tsx`)
+ * catch this error and surface an explicit "storage not configured"
+ * state instead of an empty list.
+ */
+export class ContactStorageUnavailableError extends Error {
+  readonly code = "no_durable_storage_in_production";
+  readonly workspaceId: string;
+  constructor(workspaceId: string, detail: string) {
+    super(detail);
+    this.name = "ContactStorageUnavailableError";
+    this.workspaceId = workspaceId;
+  }
+}
 
-const WORKSPACE_SLUG_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
+export type ContactStorageMode = "neon" | "file" | "none";
+
+/** Describe the storage backend currently in use. Pure read. */
+export function describeContactStorageMode(): {
+  mode: ContactStorageMode;
+  durable: boolean;
+  detail: string;
+} {
+  if (useCrmNeonStorage()) {
+    return { mode: "neon", durable: true, detail: "DATABASE_URL/POSTGRES_URL configured" };
+  }
+  if (isVercelProduction()) {
+    return {
+      mode: "none",
+      durable: false,
+      detail: "Vercel production without DATABASE_URL — contact reads/writes will fail loud",
+    };
+  }
+  return {
+    mode: "file",
+    durable: false,
+    detail: `local file storage under ${crmContactsFileRoots().join(", ")}`,
+  };
+}
+
+function normalizeContactRecord(contact: CrmContactRecord): CrmContactRecord {
+  return {
+    ...contact,
+    scoreMetadata: contact.scoreMetadata ?? null,
+  };
+}
 
 type JobsFile = { jobs: CrmImportJob[] };
 type ContactsFile = { contacts: CrmContactRecord[] };
@@ -30,63 +97,28 @@ const memoryRollbacks = new Map<
 
 let persistenceProbe: boolean | null = null;
 
-function assertWorkspaceSlug(workspaceId: string): void {
-  if (!WORKSPACE_SLUG_RE.test(workspaceId)) {
-    throw new Error(`crm-import: invalid workspace slug "${workspaceId}"`);
-  }
-}
-
-function contactsRepoRoot(): string {
-  return path.join(DATA_DIR, "crm-contacts");
-}
-
-function contactsTmpRoot(): string {
-  return process.platform === "win32"
-    ? path.join(process.env.TEMP ?? ".", "meridian-crm-contacts")
-    : "/tmp/meridian-crm-contacts";
-}
-
-function contactsRoots(): string[] {
-  const custom = process.env.MERIDIAN_CRM_CONTACTS_DIR?.trim();
-  const roots = [custom, contactsRepoRoot(), contactsTmpRoot()].filter(
-    (r): r is string => Boolean(r),
-  );
-  return [...new Set(roots)];
-}
-
-function jobsRepoDir(): string {
-  return path.join(DATA_DIR, "crm-import-jobs");
-}
-
-function jobsTmpDir(): string {
-  return process.platform === "win32"
-    ? path.join(process.env.TEMP ?? ".", "meridian-crm-import-jobs")
-    : "/tmp/meridian-crm-import-jobs";
-}
-
-function jobDirs(): string[] {
-  return [...new Set([jobsRepoDir(), jobsTmpDir()])];
-}
-
-function workspaceContactsPath(root: string, workspaceId: string): string {
-  const safe = workspaceId.replace(/[^a-zA-Z0-9._-]/g, "_");
-  return path.join(root, `${safe}.json`);
-}
-
-function jobFilePath(dir: string, jobId: string): string {
-  const safe = jobId.replace(/[^a-zA-Z0-9._-]/g, "_");
-  return path.join(dir, `${safe}.json`);
-}
-
-function rollbackFilePath(snapshotId: string): string {
-  const safe = snapshotId.replace(/[^a-zA-Z0-9._-]/g, "_");
-  return path.join(ROLLBACK_DIR, `${safe}.json`);
-}
-
-/** Whether at least one contacts directory is writable on this host. */
+/** Whether imported contacts can be persisted on this host. */
 export async function isCrmImportPersistenceAvailable(): Promise<boolean> {
   if (persistenceProbe !== null) return persistenceProbe;
-  for (const root of contactsRoots()) {
+
+  if (useCrmNeonStorage()) {
+    try {
+      await ensureCrmContactsSchema();
+      persistenceProbe = true;
+      return true;
+    } catch (e) {
+      console.error("[crm-import] Neon CRM schema unavailable:", e);
+      persistenceProbe = false;
+      return false;
+    }
+  }
+
+  if (isVercelProduction()) {
+    persistenceProbe = false;
+    return false;
+  }
+
+  for (const root of crmContactsFileRoots()) {
     try {
       await fs.mkdir(root, { recursive: true });
       const probe = path.join(root, ".write-probe");
@@ -102,12 +134,15 @@ export async function isCrmImportPersistenceAvailable(): Promise<boolean> {
   return false;
 }
 
-async function atomicWriteJson(filePath: string, data: unknown): Promise<boolean> {
-  const dir = path.dirname(filePath);
-  const tmpName = `.${path.basename(filePath)}.${randomUUID()}.tmp`;
-  const tmp = path.join(dir, tmpName);
+async function atomicWriteJson(
+  parentDir: string,
+  fileName: string,
+  data: unknown,
+): Promise<boolean> {
+  const filePath = path.join(parentDir, fileName);
+  const tmp = path.join(parentDir, `.${fileName}.${randomUUID()}.tmp`);
   try {
-    await fs.mkdir(dir, { recursive: true });
+    await fs.mkdir(parentDir, { recursive: true });
     await fs.writeFile(tmp, JSON.stringify(data, null, 2), "utf8");
     await fs.rename(tmp, filePath);
     return true;
@@ -124,8 +159,8 @@ async function atomicWriteJson(filePath: string, data: unknown): Promise<boolean
 
 async function readWorkspaceContactsFromDisk(workspaceId: string): Promise<CrmContactRecord[]> {
   assertWorkspaceSlug(workspaceId);
-  for (const root of contactsRoots()) {
-    const filePath = workspaceContactsPath(root, workspaceId);
+  for (const root of crmContactsFileRoots()) {
+    const filePath = workspaceContactsFilePath(root, workspaceId);
     const data = await safeReadJson<ContactsFile>(filePath);
     if (data?.contacts?.length) {
       return data.contacts.filter((c) => c.workspaceId === workspaceId);
@@ -133,24 +168,23 @@ async function readWorkspaceContactsFromDisk(workspaceId: string): Promise<CrmCo
     if (data?.contacts) return [];
   }
 
-  const legacy = await safeReadJson<ContactsFile>(LEGACY_CONTACTS_PATH);
+  const legacy = await safeReadJson<ContactsFile>(CRM_CONTACTS_LEGACY_PATH);
   const fromLegacy = (legacy?.contacts ?? []).filter((c) => c.workspaceId === workspaceId);
   if (fromLegacy.length > 0) {
-    await writeWorkspaceContacts(workspaceId, fromLegacy);
+    await writeWorkspaceContactsToFile(workspaceId, fromLegacy);
   }
   return fromLegacy;
 }
 
-async function writeWorkspaceContacts(
+async function writeWorkspaceContactsToFile(
   workspaceId: string,
   contacts: CrmContactRecord[],
 ): Promise<boolean> {
   assertWorkspaceSlug(workspaceId);
-  memoryContactsByWorkspace.set(workspaceId, contacts);
   const payload: ContactsFile = { contacts };
-  for (const root of contactsRoots()) {
-    const filePath = workspaceContactsPath(root, workspaceId);
-    if (await atomicWriteJson(filePath, payload)) {
+  const fileName = `${safePathSegment(workspaceId)}.json`;
+  for (const root of crmContactsFileRoots()) {
+    if (await atomicWriteJson(root, fileName, payload)) {
       return true;
     }
   }
@@ -158,28 +192,90 @@ async function writeWorkspaceContacts(
 }
 
 async function readWorkspaceContacts(workspaceId: string): Promise<CrmContactRecord[]> {
+  // ── Neon path: always read fresh ─────────────────────────────────
+  // The in-memory cache cannot be kept consistent across function
+  // instances on serverless (Vercel), or across the dev-server and a
+  // separate npm-script process. A previous read that landed an empty
+  // workspace caches `[]` indefinitely; after a later import to the
+  // same Neon DB, the cache hides every row.
+  //
+  // Live root cause of "Nicole shows 0 after Imported: 98":
+  //   • An earlier /personal render cached `[]` for nicole-lonergan
+  //     while Neon was empty.
+  //   • The import wrote 98 rows to Neon.
+  //   • Re-rendering /personal hit the stale cache and returned 0.
+  //
+  // Fix: skip the cache for the durable backend; Neon HTTP reads are
+  // fast enough that pure correctness wins. The cache stays for the
+  // local file path below, where one process owns the file and an
+  // upsert in the same process correctly invalidates the cache.
+  if (useCrmNeonStorage()) {
+    return (await listContactsNeon(workspaceId)).map(normalizeContactRecord);
+  }
+
   const cached = memoryContactsByWorkspace.get(workspaceId);
   if (cached) return cached;
-  const disk = await readWorkspaceContactsFromDisk(workspaceId);
-  memoryContactsByWorkspace.set(workspaceId, disk);
-  return disk;
+
+  // No Neon. In a Vercel-style production environment this is a
+  // misconfiguration: the read MUST surface that fact rather than
+  // pretend there are 0 contacts. The file roots that follow can never
+  // be durable in serverless (deploy bundle is read-only; /tmp is
+  // ephemeral) so we refuse to silently return [].
+  if (isVercelProduction()) {
+    const detail =
+      `Contact storage is not configured for workspace "${workspaceId}". ` +
+      `DATABASE_URL or POSTGRES_URL must be set for durable contact persistence in production. ` +
+      `Until configured, imported contacts cannot be read back across cold starts.`;
+    // eslint-disable-next-line no-console
+    console.error(`[crm-import] ${detail}`);
+    throw new ContactStorageUnavailableError(workspaceId, detail);
+  }
+
+  const rows = (await readWorkspaceContactsFromDisk(workspaceId)).map(normalizeContactRecord);
+  memoryContactsByWorkspace.set(workspaceId, rows);
+  return rows;
+}
+
+async function writeWorkspaceContacts(
+  workspaceId: string,
+  contacts: CrmContactRecord[],
+): Promise<boolean> {
+  memoryContactsByWorkspace.set(workspaceId, contacts);
+
+  if (useCrmNeonStorage()) {
+    await ensureCrmContactsSchema();
+    // Use the JSONB-merging upsert path so re-imports preserve
+    // operator state (repairs, enrichment, parcel links). Per the
+    // audit Sev-1 finding, the prior destructive replace would have
+    // wiped Hunter + opportunity + repairs on every CRM re-sync.
+    //
+    // Contacts present in the existing workspace but not in this
+    // incoming list are intentionally NOT removed by this path —
+    // explicit removal goes through a different operation (rollback
+    // via destructivelyReplaceWorkspaceContactsNeon, or a future
+    // sync-with-delete API that surfaces removals to the operator).
+    await upsertContactsNeon(contacts);
+    return true;
+  }
+
+  return writeWorkspaceContactsToFile(workspaceId, contacts);
 }
 
 async function readLegacyJobs(): Promise<CrmImportJob[]> {
-  const data = await safeReadJson<JobsFile>(JOBS_PATH);
+  const data = await safeReadJson<JobsFile>(CRM_IMPORT_JOBS_PATH);
   return data?.jobs ?? [];
 }
 
 async function writeLegacyJobs(jobs: CrmImportJob[]): Promise<void> {
-  await safeWriteJson(JOBS_PATH, { jobs });
+  await safeWriteJson(CRM_IMPORT_JOBS_PATH, { jobs });
 }
 
 export async function getImportJob(jobId: string): Promise<CrmImportJob | null> {
   const mem = memoryJobs.get(jobId);
   if (mem?.id === jobId) return mem;
 
-  for (const dir of jobDirs()) {
-    const perJob = await safeReadJson<CrmImportJob>(jobFilePath(dir, jobId));
+  for (const dir of crmImportJobDirs()) {
+    const perJob = await safeReadJson<CrmImportJob>(importJobFilePath(dir, jobId));
     if (perJob?.id === jobId) {
       memoryJobs.set(jobId, perJob);
       return perJob;
@@ -196,10 +292,10 @@ export async function saveImportJob(job: CrmImportJob): Promise<void> {
   memoryJobs.set(job.id, job);
 
   let persisted = false;
-  for (const dir of jobDirs()) {
+  const jobFileName = `${safePathSegment(job.id)}.json`;
+  for (const dir of crmImportJobDirs()) {
     try {
-      await fs.mkdir(dir, { recursive: true });
-      if (await atomicWriteJson(jobFilePath(dir, job.id), job)) {
+      if (await atomicWriteJson(dir, jobFileName, job)) {
         persisted = true;
         break;
       }
@@ -225,15 +321,57 @@ export async function listContactsByWorkspace(workspaceId: string): Promise<CrmC
   return readWorkspaceContacts(workspaceId);
 }
 
+/**
+ * Diagnostic: storage-mode + per-workspace contact count for a set of
+ * workspaces. Reads through the same path the personal/operator pages
+ * use, so a count returned here matches what the workspace renders.
+ *
+ * Returns one report per workspace; each report carries an `error`
+ * field when storage is unavailable so an operator can tell "0
+ * contacts" from "storage misconfigured".
+ */
+export async function getWorkspaceContactCounts(workspaceIds: readonly string[]): Promise<{
+  storage: ReturnType<typeof describeContactStorageMode>;
+  workspaces: Array<{
+    workspaceId: string;
+    count: number | null;
+    error: string | null;
+  }>;
+}> {
+  const storage = describeContactStorageMode();
+  const workspaces: Array<{ workspaceId: string; count: number | null; error: string | null }> = [];
+  for (const id of workspaceIds) {
+    try {
+      const list = await readWorkspaceContacts(id);
+      workspaces.push({ workspaceId: id, count: list.length, error: null });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      workspaces.push({ workspaceId: id, count: null, error: message });
+    }
+  }
+  return { storage, workspaces };
+}
+
 export async function upsertContacts(records: CrmContactRecord[]): Promise<{ inserted: number; updated: number }> {
   if (records.length === 0) return { inserted: 0, updated: 0 };
 
+  assertDurableCrmStorageConfigured();
+
   const canPersist = await isCrmImportPersistenceAvailable();
   if (!canPersist) {
-    throw new Error(
-      "CRM contacts cannot be saved on this server (no writable storage). " +
-        "Import was not completed — configure MERIDIAN_CRM_CONTACTS_DIR or deploy with a writable data path.",
-    );
+    const message = isVercelProduction()
+      ? DURABLE_STORAGE_NOT_CONFIGURED
+      : "CRM contacts cannot be saved on this server (no writable storage). " +
+        "Import was not completed — configure DATABASE_URL/POSTGRES_URL or MERIDIAN_CRM_CONTACTS_DIR.";
+    throw new Error(message);
+  }
+
+  if (useCrmNeonStorage()) {
+    await ensureCrmContactsSchema();
+    const result = await upsertContactsNeon(records);
+    // No cache to invalidate on the Neon path — readWorkspaceContacts
+    // always reads through to Neon for durable storage.
+    return result;
   }
 
   const workspaceIds = [...new Set(records.map((r) => r.workspaceId))];
@@ -278,14 +416,16 @@ export async function createRollbackSnapshot(workspaceId: string): Promise<strin
   };
   memoryRollbacks.set(snapshotId, payload);
 
-  try {
-    await fs.mkdir(ROLLBACK_DIR, { recursive: true });
-    const ok = await safeWriteJson(rollbackFilePath(snapshotId), payload);
-    if (!ok) {
-      console.warn("[crm-import] rollback file write failed; snapshot kept in memory:", snapshotId);
+  if (!useCrmNeonStorage()) {
+    try {
+      await fs.mkdir(CRM_IMPORT_ROLLBACK_DIR, { recursive: true });
+      const ok = await safeWriteJson(rollbackSnapshotFilePath(snapshotId), payload);
+      if (!ok) {
+        console.warn("[crm-import] rollback file write failed; snapshot kept in memory:", snapshotId);
+      }
+    } catch (e) {
+      console.error("[crm-import] rollback file persist skipped:", snapshotId, e);
     }
-  } catch (e) {
-    console.error("[crm-import] rollback file persist skipped:", snapshotId, e);
   }
 
   return snapshotId;
@@ -295,12 +435,38 @@ export async function rollbackImport(snapshotId: string): Promise<{ restored: nu
   const mem = memoryRollbacks.get(snapshotId);
   const snapshot =
     mem ??
-    (await safeReadJson<{ workspaceId: string; contacts: CrmContactRecord[] }>(
-      rollbackFilePath(snapshotId),
-    ));
+    (useCrmNeonStorage()
+      ? null
+      : await safeReadJson<{ workspaceId: string; contacts: CrmContactRecord[] }>(
+          rollbackSnapshotFilePath(snapshotId),
+        ));
   if (!snapshot) return { restored: 0 };
 
-  const ok = await writeWorkspaceContacts(snapshot.workspaceId, snapshot.contacts);
+  assertDurableCrmStorageConfigured();
+  const canPersist = await isCrmImportPersistenceAvailable();
+  if (!canPersist) {
+    throw new Error(
+      isVercelProduction()
+        ? DURABLE_STORAGE_NOT_CONFIGURED
+        : `Could not restore contacts for workspace "${snapshot.workspaceId}" — storage is not writable.`,
+    );
+  }
+
+  const ok = useCrmNeonStorage()
+    ? await (async () => {
+        // Snapshot restore is INTENTIONALLY destructive — the operator
+        // is explicitly rolling the workspace to a prior state, so any
+        // enrichment / repairs accumulated since the snapshot are
+        // expected to be discarded.
+        await destructivelyReplaceWorkspaceContactsNeon(
+          snapshot.workspaceId,
+          snapshot.contacts,
+        );
+        // No cache to update — Neon path bypasses memoryContactsByWorkspace.
+        return true;
+      })()
+    : await writeWorkspaceContacts(snapshot.workspaceId, snapshot.contacts);
+
   if (!ok) {
     throw new Error(
       `Could not restore contacts for workspace "${snapshot.workspaceId}" — storage is not writable.`,
@@ -309,6 +475,18 @@ export async function rollbackImport(snapshotId: string): Promise<{ restored: nu
   return { restored: snapshot.contacts.length };
 }
 
+/**
+ * @deprecated Use `mintContactId` from `./identityKey.ts` instead.
+ *
+ * This rowIndex-based ID was the root cause of the 130 → 228 duplicate
+ * bloat in Nicole's workspace: any re-import with even one row of
+ * difference (added, removed, reordered) shifted rowIndexes and
+ * produced new contact_ids, INSERTing duplicates instead of UPDATEing
+ * existing rows. The replacement (`mintContactId`) derives a stable id
+ * from the strongest identity signal in the row (email > phone >
+ * name+address > name > rowIndex). It is kept here only for legacy
+ * tests; no production import path calls it.
+ */
 export function newContactId(workspaceId: string, rowIndex: number): string {
   return `crm-${workspaceId}-${rowIndex}-${Date.now().toString(36)}`;
 }
