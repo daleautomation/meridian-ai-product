@@ -77,3 +77,4 @@ data/weekly-state/
 # Append-only outcome capture history. Per-customer JSON, durable, never
 # committed (production reads/writes its own copy on disk).
 data/outcomes/
+data/backups/*.json
