@@ -125,6 +125,122 @@ function normalizeHeaderKey(header: string): string {
 }
 
 /**
+ * Phone columns belonging to the CONTACT, in selection priority.
+ *
+ * Mobile/cell beats home beats work beats a generic "phone" column,
+ * with free-text "extra phone numbers" as the last resort. This is the
+ * fix for the WiseAgent regression: the contact's MOBILE number is the
+ * reachable one (59/105 in Nicole's export) while HOME was almost always
+ * blank (7/105). The previous detector claimed whichever phone header
+ * appeared first in the CSV row \u2014 "Home Phone" \u2014 and stranded 56
+ * reachable contacts.
+ *
+ * Spouse / fax / DNC columns are deliberately excluded: a spouse's
+ * mobile is a different person, and fax/DNC are not call targets.
+ */
+const PHONE_PRIORITY: string[] = [
+  "mobile phone", "cell phone", "mobile number", "mobile 1", "mobile1",
+  "mobile", "cell", "phone (mobile)",
+  "primary phone number", "primary phone", "phone (primary)",
+  "home phone", "phone (home)",
+  "work phone", "office phone", "business phone", "direct phone",
+  "main phone", "day phone", "evening phone", "personal phone", "phone (work)",
+  "telephone", "contact phone", "phone number", "phone 1", "phone1", "phone",
+  "extra phone numbers",
+];
+
+const PHONE_EXCLUDE = /spouse|fax|dnc/;
+
+/**
+ * Return the contact's own phone headers from a header list, ordered by
+ * selection priority (PHONE_PRIORITY). Spouse/fax/DNC excluded. Each
+ * header appears once.
+ */
+function orderedPhoneHeaders(headers: string[]): string[] {
+  const candidates = headers.map((raw) => ({ raw, key: normalizeHeaderKey(raw) }));
+  const picked: string[] = [];
+  const seen = new Set<string>();
+  for (const alias of PHONE_PRIORITY) {
+    for (const c of candidates) {
+      if (seen.has(c.raw)) continue;
+      if (PHONE_EXCLUDE.test(c.key)) continue;
+      if (c.key === alias || c.key.includes(alias)) {
+        picked.push(c.raw);
+        seen.add(c.raw);
+      }
+    }
+  }
+  return picked;
+}
+
+/**
+ * "Extra Phone Numbers" can hold several numbers and labels
+ * (e.g. "816-555-0150 (work); 816-555-0151"). Take the first phone-like
+ * run so multi-number free-text isn't digit-concatenated into a bogus
+ * number by the downstream normalizer.
+ */
+function firstPhoneToken(value: string): string {
+  const match = value.match(/[+(]?\d[\d().\-\s]{6,}\d/);
+  return match ? match[0].trim() : value.trim();
+}
+
+/**
+ * Resolve a single phone value for a row: the primary mapped column
+ * first (mobile-preferred via detectColumnMapping), then the contact's
+ * other own-phone columns in priority order. This per-row fallback is
+ * what recovers contacts whose primary column is blank for that row.
+ */
+function resolvePhoneValue(
+  row: Record<string, string>,
+  mapping: ColumnMapping,
+): string {
+  const primary = getMappedValue(row, mapping, "phone");
+  if (primary.trim()) return primary.trim();
+  for (const header of orderedPhoneHeaders(Object.keys(row))) {
+    const raw = (row[header] ?? "").trim();
+    if (!raw) continue;
+    return /extra/i.test(header) ? firstPhoneToken(raw) : raw;
+  }
+  return "";
+}
+
+/**
+ * Fields that identify or reach the CONTACT themselves. A header naming
+ * a different person (spouse/partner) must never populate these.
+ */
+const CONTACT_IDENTITY_FIELDS: ReadonlySet<CrmImportField> = new Set<CrmImportField>([
+  "firstName", "lastName", "name", "company", "phone", "email", "address",
+]);
+
+/** Headers belonging to someone other than the contact, or to a
+ * non-contact channel — excluded from every contact-identity field. */
+const NON_CONTACT_HEADER = /\b(spouse|partner|fax|dnc)\b/;
+
+/** Address-component words. A header carrying one is part of an address,
+ * never a company name — defends "Business Street/City/State" → company. */
+const ADDRESS_COMPONENT_WORD =
+  /\b(street|avenue|ave|road|drive|lane|city|state|province|zip|postal|postcode|county|suite|apt|unit|address)\b/;
+
+/** Other-channel words. A header carrying one is not a postal address —
+ * defends "…Email Address" → address. */
+const NON_ADDRESS_CHANNEL_WORD = /\b(e-?mail|phone|fax|web|url|page)\b/;
+
+/**
+ * Field-scoped guard layered on top of alias matching. Alias matching
+ * is substring-based (`key.includes(alias)`), which lets a short alias
+ * match an unrelated header that merely contains it ("business" ⊂
+ * "Business Street"; "address" ⊂ "Spouse Email Address"). This guard
+ * rejects headers whose own words prove they belong to a different
+ * field or person, defeating those false-positives.
+ */
+function headerAllowedForField(key: string, field: CrmImportField): boolean {
+  if (CONTACT_IDENTITY_FIELDS.has(field) && NON_CONTACT_HEADER.test(key)) return false;
+  if (field === "company" && ADDRESS_COMPONENT_WORD.test(key)) return false;
+  if (field === "address" && NON_ADDRESS_CHANNEL_WORD.test(key)) return false;
+  return true;
+}
+
+/**
  * Walk the headers per field in CRM_IMPORT_FIELDS order, claiming each
  * matched header so a more-specific field (e.g. firstName) does not
  * compete with a more-general field (e.g. name) for the same column.
@@ -142,10 +258,23 @@ export function detectColumnMapping(headers: string[]): ColumnMapping {
   const claimedKeys = new Set<string>();
 
   for (const field of CRM_IMPORT_FIELDS) {
+    // Phone selection is priority-ordered (mobile > home > work > …),
+    // not header-order, and excludes spouse/fax/DNC. See orderedPhoneHeaders.
+    if (field === "phone") {
+      const primary = orderedPhoneHeaders(headers).find(
+        (raw) => !claimedKeys.has(normalizeHeaderKey(raw)),
+      );
+      if (primary) {
+        mapping.phone = primary;
+        claimedKeys.add(normalizeHeaderKey(primary));
+      }
+      continue;
+    }
     const aliases = COLUMN_ALIASES[field];
     const match = normalizedHeaders.find(
       (header) =>
         !claimedKeys.has(header.key) &&
+        headerAllowedForField(header.key, field) &&
         aliases.some((alias) => header.key === alias || header.key.includes(alias)),
     );
     if (match) {
@@ -269,7 +398,9 @@ export function normalizeCrmRow(
   // distrusts. If the CSV doesn't carry a company, the company stays
   // empty and the render layer correctly hides it.
   const company = getMappedValue(row, mapping, "company");
-  const phone = getMappedValue(row, mapping, "phone");
+  // Phone: primary mapped column (mobile-preferred), then per-row
+  // fallback across the contact's other own-phone columns.
+  const phone = resolvePhoneValue(row, mapping);
   const email = getMappedValue(row, mapping, "email");
   // ── Address: single-value column wins; otherwise assemble from components ──
   const addressSingle = getMappedValue(row, mapping, "address");
