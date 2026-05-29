@@ -52,7 +52,7 @@ export type OpportunityFactorName =
   | "listed_by_another_agent"
   | "ownership_duration_over_7yr"
   | "stale_relationship_over_12mo"
-  | "verified_contact_path";
+  | "contact_channel_present";
 
 export interface PriorityFactor {
   name: OpportunityFactorName;
@@ -90,7 +90,11 @@ export interface UncertaintyReason {
 
 // ── Why a tier cap was applied ─────────────────────────────────────
 
-export type TierCapReason = "weak_owner_match" | "no_actionable_channel" | null;
+export type TierCapReason =
+  | "weak_owner_match"
+  | "no_actionable_channel"
+  | "no_market_evidence"
+  | null;
 
 // ── Main signal ────────────────────────────────────────────────────
 

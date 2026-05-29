@@ -512,7 +512,7 @@ function describeFactor(name: string): string {
     case "listed_by_another_agent": return "listed with another agent";
     case "ownership_duration_over_7yr": return "held the property 7+ years";
     case "stale_relationship_over_12mo": return "12+ months since last touch";
-    case "verified_contact_path": return "a working contact channel";
+    case "contact_channel_present": return "a contact channel on file";
     default: return name.replace(/_/g, " ");
   }
 }

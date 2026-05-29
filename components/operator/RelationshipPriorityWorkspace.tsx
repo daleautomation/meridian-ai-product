@@ -123,7 +123,7 @@ export default function RelationshipPriorityWorkspace({
             </div>
           </div>
           <Metric label={showcase ? "Ready now" : "Ready now"} value={String(model.summary.readyNowCount)} />
-          <Metric label={showcase ? "Avg. confidence" : "Avg. fit"} value={`${model.summary.averageMarketFit}%`} />
+          <Metric label={showcase ? "Avg. confidence" : "Avg. strength"} value={`${model.summary.averageMarketFit}%`} />
           <Metric
             label={showcase ? showcase.screenSafe.label : "Compressed signals"}
             value={showcase ? "9:16" : String(model.summary.compressedSignals)}
@@ -388,7 +388,7 @@ function PriorityCard({
           #{card.rank}
         </span>
         <span style={fitStyle(card.marketFit)} title={scoreFitTitle(card)}>
-          {card.marketFit}% fit{scoreFitSuffix(card)}
+          {card.marketFit}% {showcase ? "fit" : "strength"}{scoreFitSuffix(card)}
         </span>
         <span style={urgencyStyle(card.urgency)}>{card.urgency}</span>
       </div>

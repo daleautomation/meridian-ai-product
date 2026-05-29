@@ -11,6 +11,7 @@
 import {
   scoreContactOpportunity,
   WEIGHTS,
+  SCORING_FACTORS,
 } from "@/lib/enrichment/opportunity/scoreOpportunity";
 import { classifyRelationshipType } from "@/lib/enrichment/opportunity/relationshipType";
 import type {
@@ -106,7 +107,7 @@ function assertUniversalInvariants(label: string, s: OpportunitySignal): void {
     "listed_by_another_agent",
     "ownership_duration_over_7yr",
     "stale_relationship_over_12mo",
-    "verified_contact_path",
+    "contact_channel_present",
   ];
   for (const name of expectedFactorNames) {
     if (!s.priorityFactors.find((f) => f.name === name)) {
@@ -119,14 +120,17 @@ function assertUniversalInvariants(label: string, s: OpportunitySignal): void {
     );
   }
 
-  // transparentPriorityScore must equal sum of applied weights.
+  // transparentPriorityScore must equal sum of applied SCORING_FACTORS
+  // weights only. operator_preference_seller_bias (sort-only) and
+  // contact_channel_present (reachability gate) are listed in
+  // priorityFactors but never contribute to the score.
   const sum = s.priorityFactors.reduce(
-    (acc, f) => acc + (f.applied ? f.weight : 0),
+    (acc, f) => acc + (f.applied && SCORING_FACTORS.has(f.name) ? f.weight : 0),
     0,
   );
   if (sum !== s.transparentPriorityScore) {
     fail(
-      `${label}: transparentPriorityScore=${s.transparentPriorityScore} does not equal sum of applied weights=${sum}`,
+      `${label}: transparentPriorityScore=${s.transparentPriorityScore} does not equal sum of applied SCORING weights=${sum}`,
     );
   }
 
@@ -288,9 +292,10 @@ function runFactorAppliedFixtures(): void {
     const f = getFactor(s, "active_listing_found");
     if (f?.applied) fail("F8: active_listing should NOT be applied for stale listing");
     if (!f?.decayed) fail("F8: active_listing should be marked decayed");
-    // Score contribution must be 0
-    if (s.transparentPriorityScore !== WEIGHTS.verified_contact_path)
-      fail(`F8: decayed listing must contribute 0 to score; expected ${WEIGHTS.verified_contact_path}, got ${s.transparentPriorityScore}`);
+    // Decayed listing + no other scoring factor → score 0 (channel is a
+    // gate, not a contribution).
+    if (s.transparentPriorityScore !== 0)
+      fail(`F8: decayed listing must contribute 0 to score; expected 0, got ${s.transparentPriorityScore}`);
     if (!s.uncertaintyReasons.some((u) => u.code === "stale_listing"))
       fail("F8: stale_listing uncertainty should be recorded");
   }
@@ -386,28 +391,33 @@ function runFactorAppliedFixtures(): void {
       fail("F15: stale_relationship_over_12mo should NOT apply at 200 days");
   }
 
-  // 16. verified_contact_path applied (default has actionable channel)
+  // 16. contact_channel_present applied (default has actionable channel)
+  // — a gate, so it contributes 0 to the score.
   {
     const s = scoreContactOpportunity(makeInput({}));
-    assertUniversalInvariants("F16 verified_contact_applied", s);
-    if (!getFactor(s, "verified_contact_path")?.applied)
-      fail("F16: verified_contact_path should be applied when hasActionableChannel=true");
+    assertUniversalInvariants("F16 contact_channel_present_applied", s);
+    const f = getFactor(s, "contact_channel_present");
+    if (!f?.applied)
+      fail("F16: contact_channel_present should be applied when hasActionableChannel=true");
+    if (f && f.weight !== 0)
+      fail(`F16: contact_channel_present must have weight 0 (gate, not scored), got ${f.weight}`);
   }
 
-  // 17. verified_contact_path NOT applied when no channel
+  // 17. contact_channel_present NOT applied when no channel
   {
     const s = scoreContactOpportunity(
       makeInput({ hasActionableChannel: false, contactPathSource: null }),
     );
-    assertUniversalInvariants("F17 verified_contact_skipped", s);
-    if (getFactor(s, "verified_contact_path")?.applied)
-      fail("F17: verified_contact_path should NOT apply when no channel");
+    assertUniversalInvariants("F17 contact_channel_present_skipped", s);
+    if (getFactor(s, "contact_channel_present")?.applied)
+      fail("F17: contact_channel_present should NOT apply when no channel");
   }
 }
 
 function runScoreDeltaFixtures(): void {
   // 18. Seller vs Buyer score delta — same data otherwise, seller should
-  // score higher by (30 - 10 + 15-bias) = +35.
+  // score higher by (30 - 10) = +20. operator_preference_seller_bias no
+  // longer contributes to the score (sort-only).
   {
     const seller = scoreContactOpportunity(
       makeInput({
@@ -425,7 +435,7 @@ function runScoreDeltaFixtures(): void {
     );
     assertUniversalInvariants("F18a seller", seller);
     assertUniversalInvariants("F18b buyer", buyer);
-    const expectedDelta = WEIGHTS.prior_seller_relationship + 15 - WEIGHTS.prior_buyer_relationship;
+    const expectedDelta = WEIGHTS.prior_seller_relationship - WEIGHTS.prior_buyer_relationship;
     const actualDelta = seller.transparentPriorityScore - buyer.transparentPriorityScore;
     if (actualDelta !== expectedDelta) {
       fail(`F18: seller-vs-buyer delta expected ${expectedDelta}, got ${actualDelta}`);
@@ -460,13 +470,15 @@ function runTierResolutionFixtures(): void {
     assertUniversalInvariants("F19 HIGH tier", s);
     if (s.priorityTier !== "HIGH")
       fail(`F19: expected HIGH tier, got ${s.priorityTier} (score=${s.transparentPriorityScore})`);
-    // Sanity: score should be 30 + 15 + 35 + 25 + 15 + 10 + 10 = 140
-    if (s.transparentPriorityScore !== 140)
-      fail(`F19: expected score 140, got ${s.transparentPriorityScore}`);
+    // Sanity: score = 30 + 35 + 25 + 15 + 10 = 115 (bias + channel excluded)
+    if (s.transparentPriorityScore !== 115)
+      fail(`F19: expected score 115, got ${s.transparentPriorityScore}`);
     if (s.tierCapReason !== null) fail("F19: no cap should apply");
   }
 
-  // 20. MED tier (40 <= score < 70)
+  // 20a. MARKET-EVIDENCE GATE: a CRM-only seller scores 40 but is capped
+  // at WEAK because no listing/public-record evidence exists. CRM-only
+  // contacts never earn an "Opportunity" tier.
   {
     const old = new Date(FIXED_NOW.getTime() - 400 * 24 * 60 * 60 * 1000).toISOString();
     const s = scoreContactOpportunity(
@@ -474,16 +486,38 @@ function runTierResolutionFixtures(): void {
         relationshipType: "prior_seller",
         relationshipTypeSource: "crm:tag:Seller",
         operatorSellerBias: 15,
-        // No active listing, no ownership data
+        // No listing source, no public-record source.
         lastInteractionAt: old, // +10 stale
       }),
     );
-    assertUniversalInvariants("F20 MED tier", s);
-    // 30 + 15 + 10 + 10 = 65
-    if (s.transparentPriorityScore !== 65)
-      fail(`F20: expected score 65, got ${s.transparentPriorityScore}`);
+    assertUniversalInvariants("F20a market-evidence gate", s);
+    // 30 (seller) + 10 (stale) = 40; bias + channel excluded.
+    if (s.transparentPriorityScore !== 40)
+      fail(`F20a: expected score 40, got ${s.transparentPriorityScore}`);
+    if (s.priorityTier !== "WEAK")
+      fail(`F20a: CRM-only contact must be capped WEAK, got ${s.priorityTier}`);
+    if (s.tierCapReason !== "no_market_evidence")
+      fail(`F20a: tierCapReason expected "no_market_evidence", got ${s.tierCapReason}`);
+  }
+
+  // 20b. MED tier requires market evidence: seller + 7yr ownership +
+  // public-record source → score 40, tier MED (gate satisfied).
+  {
+    const s = scoreContactOpportunity(
+      makeInput({
+        relationshipType: "prior_seller",
+        relationshipTypeSource: "crm:tag:Seller",
+        ownershipDurationYears: 14,
+        publicRecordSource: "jackson_county_mo",
+        ownerMatchConfidence: "HIGH",
+      }),
+    );
+    assertUniversalInvariants("F20b MED tier with market evidence", s);
+    // 30 (seller) + 15 (ownership) = 45.
+    if (s.transparentPriorityScore !== 45)
+      fail(`F20b: expected score 45, got ${s.transparentPriorityScore}`);
     if (s.priorityTier !== "MED")
-      fail(`F20: expected MED tier, got ${s.priorityTier}`);
+      fail(`F20b: expected MED tier, got ${s.priorityTier} (cap=${s.tierCapReason})`);
   }
 
   // 21. WEAK tier (score < 40, no caps)
@@ -491,12 +525,14 @@ function runTierResolutionFixtures(): void {
     const s = scoreContactOpportunity(
       makeInput({
         relationshipType: "unknown",
-        // Only verified contact path applies = 10
+        // No scoring factors apply → score 0 (channel is a gate, not scored).
       }),
     );
     assertUniversalInvariants("F21 WEAK tier by score", s);
     if (s.priorityTier !== "WEAK")
       fail(`F21: expected WEAK tier, got ${s.priorityTier}`);
+    // Already WEAK by score, so the market-evidence cap does not lower the
+    // rank further and records no reason.
     if (s.tierCapReason !== null) fail("F21: WEAK from score should have no cap reason");
   }
 
@@ -685,11 +721,11 @@ function main(): void {
   }
   console.log("");
   console.log("check-opportunity-scoring passed", {
-    fixtures: 34,
+    fixtures: 35,
     checks: [
       "prior_seller_relationship applied/skipped paths",
       "prior_buyer_relationship applied path",
-      "operator_preference_seller_bias applied (+15) when seller AND bias>0",
+      "operator_preference_seller_bias applied as a factor (+15) but NOT scored (sort-only)",
       "operator_preference_seller_bias skipped when bias=0 OR not seller",
       "active_listing_found applied (fresh)",
       "active_listing_found decayed (stale >60 days) — contributes 0",
@@ -698,10 +734,11 @@ function main(): void {
       "listed_by_another_agent decayed with stale listing",
       "ownership_duration_over_7yr applied at 14yr, skipped at 3yr",
       "stale_relationship_over_12mo applied at 400 days, skipped at 200 days",
-      "verified_contact_path applied/skipped",
-      "seller vs buyer score delta = +30 +15 -10 = +35",
-      "HIGH tier when score >= 70 and no caps",
-      "MED tier when 40 <= score < 70",
+      "contact_channel_present applied/skipped as a gate (weight 0, never scored)",
+      "seller vs buyer score delta = 30 - 10 = +20 (bias excluded from score)",
+      "HIGH tier when score >= 70 and market evidence present",
+      "MARKET-EVIDENCE GATE: CRM-only contact capped WEAK (no_market_evidence) even at score>=40",
+      "MED tier when 40 <= score < 70 AND market evidence present",
       "WEAK tier when score < 40 and no caps",
       "REVIEW cap fires on weak owner match (tier capped regardless of score)",
       "WEAK cap fires on no actionable channel",

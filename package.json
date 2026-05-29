@@ -19,6 +19,7 @@
     "crm-import:audit": "tsx scripts/crm-import-audit.ts",
     "phone-mapping:check": "tsx scripts/check-phone-mapping.ts",
     "column-mapping:check": "tsx scripts/check-column-mapping.ts",
+    "relationship-classification:check": "tsx scripts/check-relationship-classification.ts",
     "contact-persistence:check": "tsx scripts/check-contact-persistence.ts",
     "nicole-contacts:check": "tsx scripts/check-nicole-contacts-neon.ts",
     "nicole-contacts:migrate-from-file": "tsx scripts/migrate-nicole-contacts-to-neon.ts",

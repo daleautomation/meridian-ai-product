@@ -32,22 +32,46 @@ import type {
 
 // ── Weights (the closed table) ──────────────────────────────────────
 //
-// Every weight is a constant. The only exception is
-// operator_preference_seller_bias, which uses the per-workspace value
-// from `input.operatorSellerBias`. The WEIGHTS table records the
-// canonical default (15) so audit tooling can detect over/under-shooting
-// across workspaces.
+// Every weight is a constant. Two factors are recorded here but DO NOT
+// contribute to the score (see SCORING_FACTORS):
+//   • operator_preference_seller_bias — a workspace SORT preference, not
+//     evidence about the contact. Surfaced via operatorPreferenceWeight
+//     for ordering only. (Audit proved it changed 0 classifications.)
+//   • contact_channel_present — reachability is a GATE (no actionable
+//     channel → tier capped at WEAK), not a score contribution. Weight 0.
 
 export const WEIGHTS: Record<OpportunityFactorName, number> = {
   prior_seller_relationship: 30,
   prior_buyer_relationship: 10,
-  operator_preference_seller_bias: 15, // default; overridable by workspace.preferences.sellerBias
+  operator_preference_seller_bias: 15, // NOT scored — sort preference only
   active_listing_found: 35,
   listed_by_another_agent: 25,
   ownership_duration_over_7yr: 15,
   stale_relationship_over_12mo: 10,
-  verified_contact_path: 10,
+  contact_channel_present: 0, // gate, not a score contribution
 };
+
+// Factors that actually contribute to transparentPriorityScore. Excludes
+// operator_preference_seller_bias (sort-only) and contact_channel_present
+// (a reachability gate).
+export const SCORING_FACTORS: ReadonlySet<OpportunityFactorName> = new Set<OpportunityFactorName>([
+  "prior_seller_relationship",
+  "prior_buyer_relationship",
+  "active_listing_found",
+  "listed_by_another_agent",
+  "ownership_duration_over_7yr",
+  "stale_relationship_over_12mo",
+]);
+
+// Market / property evidence. An "Opportunity" tier (MED/HIGH) may only
+// be reached when one of these is present. CRM-only contacts (no listing
+// and no public-record source loaded) are capped at WEAK and handled by
+// the relationship-intelligence classifier instead.
+export const MARKET_EVIDENCE_FACTORS: ReadonlySet<OpportunityFactorName> = new Set<OpportunityFactorName>([
+  "active_listing_found",
+  "listed_by_another_agent",
+  "ownership_duration_over_7yr",
+]);
 
 // ── Tier thresholds ────────────────────────────────────────────────
 
@@ -287,31 +311,38 @@ export function scoreContactOpportunity(input: OpportunityScoringInput): Opportu
     });
   }
 
-  // 8. verified_contact_path
+  // 8. contact_channel_present — a reachability GATE, not a score
+  // contribution (weight 0). The no-actionable-channel cap below is the
+  // enforcement; this row exists only so the signal documents
+  // reachability transparently. Renamed from "verified_contact_path":
+  // presence of a phone/email is NOT verification.
   if (input.hasActionableChannel) {
     factors.push({
-      name: "verified_contact_path",
-      weight: WEIGHTS.verified_contact_path,
+      name: "contact_channel_present",
+      weight: WEIGHTS.contact_channel_present,
       applied: true,
       source: input.contactPathSource ?? "crm:email_or_phone",
-      evidenceLabel: "Contact has phone or email on file",
+      evidenceLabel: "Contact has a phone or email on file (presence, not verified)",
     });
   } else {
     factors.push({
-      name: "verified_contact_path",
-      weight: WEIGHTS.verified_contact_path,
+      name: "contact_channel_present",
+      weight: WEIGHTS.contact_channel_present,
       applied: false,
       source: "",
       evidenceLabel: "No phone or email on file",
     });
   }
 
-  // ── Sum of applied weights ───────────────────────────────────────
+  // ── Sum of applied SCORING weights ───────────────────────────────
+  // Only SCORING_FACTORS contribute. operator_preference_seller_bias and
+  // contact_channel_present are listed in priorityFactors for
+  // transparency but never added to the score.
   let transparentPriorityScore = 0;
   const revenueOpportunitySignals: OpportunityFactorName[] = [];
   for (const f of factors) {
     if (f.applied) {
-      transparentPriorityScore += f.weight;
+      if (SCORING_FACTORS.has(f.name)) transparentPriorityScore += f.weight;
       revenueOpportunitySignals.push(f.name);
     }
   }
@@ -327,6 +358,20 @@ export function scoreContactOpportunity(input: OpportunityScoringInput): Opportu
   // Compose by taking the minimum.
   let cappedRank = derivedRank;
   let tierCapReason: TierCapReason = null;
+  // Market-evidence cap → WEAK (rank 0). An "Opportunity" (MED/HIGH)
+  // may only be reached with listing or public-record evidence. A
+  // contact scored purely on CRM relationship factors is capped at WEAK
+  // and routed to the relationship-intelligence classifier instead.
+  const hasMarketEvidence =
+    factors.some((f) => f.applied && MARKET_EVIDENCE_FACTORS.has(f.name)) ||
+    input.listingSource !== null ||
+    input.publicRecordSource !== null;
+  if (!hasMarketEvidence) {
+    if (TIER_RANK.WEAK < cappedRank) {
+      cappedRank = TIER_RANK.WEAK;
+      tierCapReason = "no_market_evidence";
+    }
+  }
   // Weak-owner-match cap → REVIEW (rank 1)
   if (input.ownerMatchConfidence === "WEAK") {
     if (TIER_RANK.REVIEW < cappedRank) {

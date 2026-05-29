@@ -237,11 +237,13 @@ function runPipelineEndToEnd(): void {
   expectEqual(sFull.matchedPropertyAddress, "4321 W 63rd St, Kansas City, MO 64113", "signal address");
   expectEqual(sFull.publicRecordSource, "us-mo-jackson_manual_2026-05-27", "signal publicRecordSource");
   expect(sFull.transparentPriorityScore > 0, "scored > 0");
-  // Should include prior_seller_relationship + operator bias + ownership_over_7yr + verified channel
-  // + stale relationship (lastInteractionAt = 2024-01 → 2026-05 = 28 months > 12)
-  // = 30 + 15 + 15 + 10 + 10 = 80
-  expectEqual(sFull.transparentPriorityScore, 80, "expected score sum");
-  expectEqual(sFull.priorityTier, "HIGH", "HIGH tier at score 80");
+  // Scored factors only: prior_seller_relationship + ownership_over_7yr +
+  // stale relationship (lastInteractionAt 2024-01 → 2026-05 = 28 months > 12).
+  // operator_preference_seller_bias and contact_channel_present no longer
+  // contribute. = 30 + 15 + 10 = 55. MED (no listing/MLS → not HIGH).
+  // Market-evidence gate satisfied via public-record (ownership) grounding.
+  expectEqual(sFull.transparentPriorityScore, 55, "expected score sum");
+  expectEqual(sFull.priorityTier, "MED", "MED tier at score 55 with public-record grounding");
   // No public-record uncertainty when source is loaded.
   const codes = sFull.uncertaintyReasons.map((u) => u.code);
   expect(!codes.includes("no_public_record_source_loaded"), "no public-record uncertainty when grounded");
@@ -317,8 +319,8 @@ function runPriorityContext(): void {
   }));
   const ctx = buildPriorityContext(signal);
 
-  expectEqual(ctx.tier, "HIGH", "context tier mirrors signal");
-  expectEqual(ctx.score, 80, "context score mirrors signal");
+  expectEqual(ctx.tier, "MED", "context tier mirrors signal");
+  expectEqual(ctx.score, 55, "context score mirrors signal");
   expectEqual(ctx.grounding.address, "4321 W 63rd St, Kansas City, MO 64113", "grounding address");
   expectEqual(ctx.grounding.ownerName, "SMITH, GREG", "grounding owner");
   expectEqual(ctx.grounding.ownershipDurationYears, 11, "grounding duration");
@@ -334,7 +336,7 @@ function runPriorityContext(): void {
   // summarizePriorityContext is clean + non-empty.
   const summary = summarizePriorityContext(ctx);
   expect(summary.length > 0, "summary non-empty");
-  expect(summary.startsWith("HIGH"), "summary leads with tier");
+  expect(summary.startsWith("MED"), "summary leads with tier");
   scanClean(summary, "summary");
 
   // Helper: ownershipDurationYearsFor

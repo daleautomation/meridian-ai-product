@@ -266,10 +266,10 @@ function ContactCard({
       <div style={styles.cardTop}>
         <span style={styles.rank}>#{card.rank}</span>
         <span
-          style={styles.strengthPill}
-          title={strengthTitle(card)}
+          style={styles.relationshipChip}
+          title={card.relationshipReasons.join(" · ")}
         >
-          {card.strength}%{strengthSuffix(card)}
+          {card.relationshipLabel}
         </span>
         <span style={styles.timing}>{card.timing}</span>
       </div>
@@ -315,15 +315,26 @@ function ContactDetailPanel({
         <h2 style={styles.detailTitle}>{card.name}</h2>
         <p style={styles.muted}>{card.company}</p>
         <span style={styles.enrichmentBadge}>{card.enrichmentLabel}</span>
+        <div style={styles.relationshipBlock}>
+          <span style={styles.relationshipChip}>{card.relationshipLabel}</span>
+          <span style={styles.scoreMeta}>
+            Relationship intelligence · confidence {card.relationshipConfidence}
+            {card.reachable ? "" : " · not reachable"}
+          </span>
+          {card.relationshipReasons.map((line) => (
+            <div key={line} style={styles.detailRow}>{line}</div>
+          ))}
+        </div>
         <div style={styles.trustBadgeRow}>
           <span style={styles.verificationBadge}>{card.verificationStatusLabel}</span>
           <span style={styles.dataQualityBadge}>{card.dataQualityLabel}</span>
         </div>
+        {/* Relationship strength is a secondary CRM-baseline signal, not a
+            market/opportunity score. Shown muted, never as the headline. */}
         <div style={styles.scoreRow}>
-          <span style={styles.strengthPill} title={strengthTitle(card)}>
-            {card.strength}%{strengthSuffix(card)} {copy.strengthLabel}
+          <span style={styles.scoreMeta} title={strengthTitle(card)}>
+            Relationship strength {card.strength}%{strengthSuffix(card)} · {card.scoreLabel}
           </span>
-          <span style={styles.scoreMeta}>{card.scoreLabel}</span>
         </div>
         {!card.scoreIsAuthoritative ? (
           <p style={styles.scoreDisclaimer}>{card.scoreExplanation}</p>
@@ -673,6 +684,24 @@ const styles: Record<string, CSSProperties> = {
     color: personalPalette.success,
     fontSize: "11px",
     fontWeight: 600,
+  },
+  relationshipChip: {
+    padding: "3px 10px",
+    borderRadius: "999px",
+    background: personalPalette.surfaceMuted,
+    color: personalPalette.text,
+    fontSize: "11px",
+    fontWeight: 700,
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    maxWidth: "180px",
+  },
+  relationshipBlock: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+    marginTop: "8px",
   },
   timing: {
     marginLeft: "auto",

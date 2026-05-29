@@ -30,6 +30,11 @@ import {
   type VerificationTier,
 } from "@/lib/crm-import/scoreTransparency";
 import { scoreFromCrmContact } from "@/lib/relationship-intelligence/scoring";
+import {
+  classifyRelationship,
+  type RelationshipClass,
+  type RelationshipClassification,
+} from "@/lib/enrichment/opportunity/relationshipClassification";
 import { workspaceImportPath } from "@/lib/workspaceRouting";
 import { personalCopyForWorkspace, PERSONAL_NAV, type PersonalNavId } from "./config";
 import { buildSuggestedOpenerFromContact, type SuggestedOpener } from "./openerBuilder";
@@ -43,7 +48,14 @@ export interface PersonalContactCard {
   rank: number;
   name: string;
   company: string;
+  /** Primary relationship-intelligence label (e.g. "Past Seller
+   *  Reconnect"). Derived from CRM tags + recency + reachability — NOT a
+   *  market/opportunity signal. */
   relationshipLabel: string;
+  relationshipClass: RelationshipClass;
+  relationshipConfidence: "medium" | "low";
+  relationshipReasons: string[];
+  reachable: boolean;
   strength: number;
   strengthRaw: number;
   timing: "Soon" | "This week" | "When ready";
@@ -193,6 +205,30 @@ const RESURFACING_HIGHLIGHT_BUCKETS = new Set([
   "dormant_high_frequency",
 ]);
 
+/**
+ * Ranking order for relationship classes (higher = surfaces first).
+ * This is the PRIMARY sort key for the workspace; the relationship-
+ * intelligence strength score is only a tiebreaker within a class.
+ * Not-reachable contacts sink to the bottom — they cannot be actioned.
+ */
+const CLASS_RANK: Record<RelationshipClass, number> = {
+  past_seller_reconnect: 4,
+  seller_history_verify_recency: 3,
+  sphere_reengagement: 2,
+  cold_relationship: 1,
+  not_reachable: 0,
+};
+
+function classifyContact(contact: CrmContactRecord, now: Date): RelationshipClassification {
+  return classifyRelationship({
+    tags: contact.tags ?? [],
+    hasPhone: contactHasReachablePhone(contact),
+    hasEmail: contactHasReachableEmail(contact),
+    lastInteractionAt: contact.lastInteractionAt ?? null,
+    now,
+  });
+}
+
 export function buildPersonalWorkspaceModel(args: {
   workspace: WorkspaceConfig;
   user: PublicUser;
@@ -213,11 +249,27 @@ export function buildPersonalWorkspaceModel(args: {
   const copy = personalCopyForWorkspace(workspace.branding);
   const phoneLight = reachability.phoneLight;
 
+  const now = new Date(generatedAt);
+  const classByContact = new Map<string, RelationshipClassification>(
+    crmContacts.map((c) => [c.id, classifyContact(c, now)]),
+  );
+
   const allContacts = crmContacts
     .slice()
-    .sort((a, b) => prioritySortScore(b, phoneLight) - prioritySortScore(a, phoneLight))
+    .sort((a, b) => {
+      // PRIMARY: relationship class. SECONDARY: strength score within class.
+      const classDelta =
+        CLASS_RANK[classByContact.get(b.id)!.label] - CLASS_RANK[classByContact.get(a.id)!.label];
+      if (classDelta !== 0) return classDelta;
+      return prioritySortScore(b, phoneLight) - prioritySortScore(a, phoneLight);
+    })
     .map((contact, index) =>
-      crmContactToCard(contact, index + 1, { phoneLight, copy, workspaceSlug: workspace.slug }),
+      crmContactToCard(contact, index + 1, {
+        phoneLight,
+        copy,
+        workspaceSlug: workspace.slug,
+        classification: classByContact.get(contact.id)!,
+      }),
     );
 
   const priorityContacts = allContacts.slice(0, 8);
@@ -433,7 +485,12 @@ function navCount(
 function crmContactToCard(
   contact: CrmContactRecord,
   rank: number,
-  ctx: { phoneLight: boolean; copy: ReturnType<typeof personalCopyForWorkspace>; workspaceSlug: string },
+  ctx: {
+    phoneLight: boolean;
+    copy: ReturnType<typeof personalCopyForWorkspace>;
+    workspaceSlug: string;
+    classification: RelationshipClassification;
+  },
 ): PersonalContactCard {
   const score = scoreFromCrmContact(contact);
   const transparency = buildContactScoreTransparency(contact);
@@ -518,7 +575,11 @@ function crmContactToCard(
     // remains in already-imported rows. Renders empty string so the
     // card layout naturally suppresses the company chip.
     company: companyLooksLikeContactName(contact.company, contact.name) ? "" : contact.company,
-    relationshipLabel: contact.sourceCrm ? `From ${contact.sourceCrm}` : "Imported contact",
+    relationshipLabel: ctx.classification.displayLabel,
+    relationshipClass: ctx.classification.label,
+    relationshipConfidence: ctx.classification.confidence,
+    relationshipReasons: ctx.classification.reasons,
+    reachable: ctx.classification.reachable,
     strength: effectivePriorityScore(contact, transparency.value),
     strengthRaw: transparency.value,
     timing: rank === 1 ? "Soon" : rank <= 3 ? "This week" : "When ready",

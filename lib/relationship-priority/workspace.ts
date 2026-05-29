@@ -25,7 +25,21 @@ import {
   contactHasReachablePhone,
 } from "@/lib/crm-import/reachability";
 import { scoreFromCrmContact } from "@/lib/relationship-intelligence/scoring";
+import {
+  classifyRelationship,
+  type RelationshipClass,
+} from "@/lib/enrichment/opportunity/relationshipClassification";
 import type { CrmContactRecord, VerificationTier } from "@/lib/crm-import/types";
+
+/** Relationship-class ranking for the operator CRM queue (mirrors the
+ *  personal workspace). Higher surfaces first; not-reachable sinks. */
+const OPERATOR_CLASS_RANK: Record<RelationshipClass, number> = {
+  past_seller_reconnect: 4,
+  seller_history_verify_recency: 3,
+  sphere_reengagement: 2,
+  cold_relationship: 1,
+  not_reachable: 0,
+};
 
 type EngineSummary = RelationshipEngineOperatorSurface["workflows"]["relationshipSummaries"][number];
 type EngineQueueItem = RelationshipEngineOperatorSurface["queues"][number]["items"][number];
@@ -258,15 +272,35 @@ function crmContactsToPriorityCards(
   contacts: CrmContactRecord[],
   _generatedAt: string,
 ): RelationshipPriorityCard[] {
+  const now = new Date(_generatedAt);
+  const classOf = (c: CrmContactRecord): RelationshipClass =>
+    classifyRelationship({
+      tags: c.tags ?? [],
+      hasPhone: contactHasReachablePhone(c),
+      hasEmail: contactHasReachableEmail(c),
+      lastInteractionAt: c.lastInteractionAt ?? null,
+      now,
+    }).label;
   return contacts
     .slice()
-    .sort(
-      (a, b) =>
+    .sort((a, b) => {
+      // PRIMARY: relationship class. SECONDARY: trust-adjusted strength.
+      const classDelta = OPERATOR_CLASS_RANK[classOf(b)] - OPERATOR_CLASS_RANK[classOf(a)];
+      if (classDelta !== 0) return classDelta;
+      return (
         effectivePriorityScore(b, b.relationshipScore ?? 0)
-        - effectivePriorityScore(a, a.relationshipScore ?? 0),
-    )
+        - effectivePriorityScore(a, a.relationshipScore ?? 0)
+      );
+    })
     .slice(0, 12)
     .map((contact, index) => {
+      const classification = classifyRelationship({
+        tags: contact.tags ?? [],
+        hasPhone: contactHasReachablePhone(contact),
+        hasEmail: contactHasReachableEmail(contact),
+        lastInteractionAt: contact.lastInteractionAt ?? null,
+        now,
+      });
       const score = scoreFromCrmContact(contact);
       const transparency = buildContactScoreTransparency(contact);
       const recommendation = buildRecommendationExplanation(contact, transparency);
@@ -324,7 +358,7 @@ function crmContactsToPriorityCards(
         relationshipId: contact.id,
         rank: index + 1,
         company: contact.company,
-        relationship: contact.sourceCrm ? `From ${contact.sourceCrm}` : "Imported relationship",
+        relationship: classification.displayLabel,
         marketFit: marketFitEffective,
         marketFitRaw,
         urgency: index === 0 ? "Now" : index < 3 ? "Today" : "This week",
