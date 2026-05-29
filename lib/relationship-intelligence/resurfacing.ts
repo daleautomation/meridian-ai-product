@@ -1,6 +1,13 @@
 // Meridian — contact resurfacing engine (intelligent buckets, no silent promotion).
 
 import {
+  buildContactScoreTransparency,
+  buildRecommendationExplanation,
+  effectivePriorityScore,
+  honestSuggestedActionLabel,
+  qualifiesForHighValueResurfacing,
+} from "@/lib/crm-import/scoreTransparency";
+import {
   contactHasReachableEmail,
   contactHasReachablePhone,
 } from "@/lib/crm-import/reachability";
@@ -28,8 +35,14 @@ export type ResurfacingContact = {
   name: string;
   company: string;
   score: number;
+  effectiveScore: number;
   whyNow: string;
   recommendedAction: string;
+  recommendationWhy: string;
+  recommendationEvidence: string[];
+  recommendationMissing: string[];
+  verificationTier: string;
+  dataQualityLabel: string;
   trustWarnings: string[];
   relationshipScore: RelationshipIntelligenceScore;
 };
@@ -75,27 +88,40 @@ export function buildResurfacingBuckets(contacts: CrmContactRecord[]): Resurfaci
 
   for (const contact of contacts) {
     const score = scoreFromCrmContact(contact);
+    const transparency = buildContactScoreTransparency(contact);
+    const recommendation = buildRecommendationExplanation(contact, transparency);
     const days = daysSince(contact.lastInteractionAt);
     const warnings = trustWarnings(contact);
+    const effectiveScore = effectivePriorityScore(contact, score.total);
     const base = {
       contactId: contact.id,
       name: contact.name,
       company: contact.company,
       score: score.total,
+      effectiveScore,
+      recommendationWhy: recommendation.why,
+      recommendationEvidence: recommendation.evidence,
+      recommendationMissing: recommendation.missing,
+      verificationTier: transparency.verificationTier,
+      dataQualityLabel: transparency.dataQualityLabel,
       trustWarnings: warnings,
       relationshipScore: score,
     };
 
+    const wrapAction = (action: string) =>
+      honestSuggestedActionLabel(action, transparency);
+
     const hasPhone = contactHasReachablePhone(contact);
     const hasEmail = contactHasReachableEmail(contact);
 
-    if (score.total >= 75 && days !== null && days > 60) {
+    if (days !== null && qualifiesForHighValueResurfacing(contact, score.total, days)) {
       buckets.forgotten_high_value.push({
         ...base,
-        whyNow: `High relationship score (${score.total}) but quiet for ${days} days.`,
-        recommendedAction: resurfacingAction(
-          contact,
-          "Reopen with a direct, low-friction ask.",
+        whyNow: transparency.isAuthoritative
+          ? `High relationship score (${score.total}) but quiet for ${days} days.`
+          : `Import score ${score.total} — quiet ${days} days; verify before treating as high-value.`,
+        recommendedAction: wrapAction(
+          resurfacingAction(contact, "Reopen with a direct, low-friction ask."),
         ),
       });
     }
@@ -104,9 +130,8 @@ export function buildResurfacingBuckets(contacts: CrmContactRecord[]): Resurfaci
       buckets.overdue_follow_ups.push({
         ...base,
         whyNow: `Follow-up window overdue (${days} days since last touch).`,
-        recommendedAction: resurfacingAction(
-          contact,
-          "Close the loop on the last promise or note.",
+        recommendedAction: wrapAction(
+          resurfacingAction(contact, "Close the loop on the last promise or note."),
         ),
       });
     }
@@ -115,19 +140,21 @@ export function buildResurfacingBuckets(contacts: CrmContactRecord[]): Resurfaci
       buckets.incomplete_relationships.push({
         ...base,
         whyNow: "Missing reachability — relationship cannot progress safely.",
-        recommendedAction: "Enrich contact paths before outreach.",
+        recommendedAction: wrapAction("Enrich contact paths before outreach."),
       });
     } else if (!hasPhone && hasEmail) {
       buckets.incomplete_relationships.push({
         ...base,
         whyNow: "Email on file without phone — enrichment optional; email resurfacing is viable.",
-        recommendedAction: resurfacingAction(contact, "Send a note referencing your last interaction."),
+        recommendedAction: wrapAction(
+          resurfacingAction(contact, "Send a note referencing your last interaction."),
+        ),
       });
     } else if (warnings.length >= 2) {
       buckets.incomplete_relationships.push({
         ...base,
         whyNow: "Multiple fields lack trusted verification.",
-        recommendedAction: "Verify identity before high-stakes outreach.",
+        recommendedAction: wrapAction("Verify identity before high-stakes outreach."),
       });
     }
 
@@ -135,9 +162,8 @@ export function buildResurfacingBuckets(contacts: CrmContactRecord[]): Resurfaci
       buckets.stale_reengage.push({
         ...base,
         whyNow: `Stale but still viable (${days} days idle).`,
-        recommendedAction: resurfacingAction(
-          contact,
-          "Send a concise re-engagement note.",
+        recommendedAction: wrapAction(
+          resurfacingAction(contact, "Send a concise re-engagement note."),
         ),
       });
     }
@@ -146,9 +172,8 @@ export function buildResurfacingBuckets(contacts: CrmContactRecord[]): Resurfaci
       buckets.referral_opportunities.push({
         ...base,
         whyNow: "Tagged for referral or partner potential.",
-        recommendedAction: resurfacingAction(
-          contact,
-          "Ask for one warm introduction.",
+        recommendedAction: wrapAction(
+          resurfacingAction(contact, "Ask for one warm introduction."),
         ),
       });
     }
@@ -158,15 +183,14 @@ export function buildResurfacingBuckets(contacts: CrmContactRecord[]): Resurfaci
       buckets.dormant_high_frequency.push({
         ...base,
         whyNow: dormantFactor.explanation,
-        recommendedAction: resurfacingAction(
-          contact,
-          "Restart rhythm before the relationship decays further.",
+        recommendedAction: wrapAction(
+          resurfacingAction(contact, "Restart rhythm before the relationship decays further."),
         ),
       });
     }
   }
 
-  const sortDesc = (a: ResurfacingContact, b: ResurfacingContact) => b.score - a.score;
+  const sortDesc = (a: ResurfacingContact, b: ResurfacingContact) => b.effectiveScore - a.effectiveScore;
 
   return [
     {

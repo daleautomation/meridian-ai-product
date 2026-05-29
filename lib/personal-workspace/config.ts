@@ -32,7 +32,7 @@ export const PERSONAL_NAV: Array<{
   {
     id: "insights",
     label: "Relationship Insights",
-    description: "Scored signals explaining why a contact matters and what to do next.",
+    description: "Score explanations from import and enrichment — not fabricated intelligence.",
   },
   {
     id: "dormant",
@@ -64,6 +64,8 @@ export const PERSONAL_COPY_DEFAULTS = {
   emptyInsights:
     "Relationship insights explain why each contact matters and what signal drove their score.",
   strengthLabel: "Relationship strength",
+  templateNote: "Template suggestion from import data — not a verified insight.",
+  scoringBasisTitle: "Scoring basis",
   reachOut: "Reach out",
   sendNote: "Send a note",
   followUp: "Follow up",

@@ -2,9 +2,16 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PersonalWorkspace } from "@/components/personal";
 import { getSession } from "@/lib/auth";
-import { listContactsByWorkspace } from "@/lib/crm-import/store";
+import {
+  ContactStorageUnavailableError,
+  describeContactStorageMode,
+  listContactsByWorkspace,
+} from "@/lib/crm-import/store";
 import { buildResurfacingBuckets } from "@/lib/relationship-intelligence/resurfacing";
 import { buildPersonalWorkspaceModel } from "@/lib/personal-workspace/workspace";
+import { applyOutcomesOverlay, resolveWeeklyMode } from "@/lib/personal-workspace/weeklyState";
+import { loadWeeklyStateFromDisk } from "@/lib/personal-workspace/weeklyStateLoader";
+import { readCustomerOutcomes } from "@/lib/recovery/outcomes/persistence";
 import { getWorkspaceAccess } from "@/lib/workspaceAccess";
 import {
   defaultWorkspaceFor,
@@ -18,8 +25,16 @@ import {
   workspaceHomePath,
 } from "@/lib/workspaceRouting";
 import { personalPalette } from "@/lib/personal-workspace/config";
+import {
+  describeRuntimeFingerprint,
+  logRuntimeBannerOnce,
+} from "@/lib/diagnostics/runtimeFingerprint";
 
 export const dynamic = "force-dynamic";
+// Belt-and-suspenders on top of force-dynamic so no intermediate cache
+// layer can serve a stale "0 contacts" view of /personal after an import.
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 type SearchParams = {
   workspace?: string | string[];
@@ -28,6 +43,7 @@ type SearchParams = {
 export default async function PersonalWorkspacePage(props: {
   searchParams?: Promise<SearchParams>;
 }) {
+  logRuntimeBannerOnce();
   const user = await getSession();
   if (!user) redirect("/login?next=/personal");
 
@@ -106,14 +122,79 @@ export default async function PersonalWorkspacePage(props: {
     );
   }
 
-  const crmContacts = await listContactsByWorkspace(workspace.slug);
-  const resurfacingBuckets = buildResurfacingBuckets(crmContacts);
+  let crmContacts;
+  try {
+    crmContacts = await listContactsByWorkspace(workspace.slug);
+  } catch (err) {
+    if (err instanceof ContactStorageUnavailableError) {
+      return (
+        <PersonalAuthShell
+          title="Contact storage not configured"
+          copy={
+            `Imports for "${workspace.branding?.displayName ?? workspace.name}" cannot be loaded ` +
+            `because durable storage is not configured for this deployment. ` +
+            `Set DATABASE_URL or POSTGRES_URL in the production environment, redeploy, ` +
+            `and re-run the contact import. This page intentionally refuses to render ` +
+            `as "0 contacts" when previously-imported data may still exist elsewhere.`
+          }
+        />
+      );
+    }
+    throw err;
+  }
+  // Diagnostic — surface the exact workspaceId / count / storage path
+  // each render takes. Lets an operator confirm /personal is reading
+  // from the same backend the import wrote to. If `rawCrmContacts`
+  // here is > 0 but the model's `totalContacts` is 0, the model
+  // filtered every contact out (defect should be in
+  // buildPersonalWorkspaceModel). If `rawCrmContacts` is 0 but the
+  // import response said inserted=N, the read path is hitting a
+  // different store than the write — operator must reconcile
+  // DATABASE_URL across environments.
+  const personalStorage = describeContactStorageMode();
+  const personalFingerprint = describeRuntimeFingerprint();
+  const rawCrmContacts = crmContacts;
+  // eslint-disable-next-line no-console
+  console.log(
+    `[personal/page] read workspaceId=${workspace.slug} ` +
+      `rawCrmContacts.length=${rawCrmContacts.length} ` +
+      `storageMode=${personalStorage.mode} durable=${personalStorage.durable} ` +
+      `commit=${personalFingerprint.commitShort} branch=${personalFingerprint.branch} ` +
+      `dbHost=${personalFingerprint.dbHost ?? "(none)"}`,
+  );
+  const resurfacingBuckets = buildResurfacingBuckets(rawCrmContacts);
+  const renderNow = new Date();
+  const rawWeeklyState = await loadWeeklyStateFromDisk(workspace.slug, renderNow);
+  // Layer fresh durable outcomes on top of the immutable snapshot so a
+  // refresh shows whatever the operator has captured since 7am Monday
+  // — without ever mutating the snapshot file itself.
+  const weeklyState = rawWeeklyState
+    ? applyOutcomesOverlay(
+        rawWeeklyState,
+        await readCustomerOutcomes(workspace.slug),
+        renderNow,
+      )
+    : null;
+  const weeklyMode = weeklyState ? resolveWeeklyMode(renderNow) : null;
   const model = buildPersonalWorkspaceModel({
     workspace,
     user,
-    crmContacts,
+    crmContacts: rawCrmContacts,
     resurfacingBuckets,
+    weeklyState,
+    weeklyMode,
   });
+  // eslint-disable-next-line no-console
+  console.log(
+    `[personal/page] model workspaceId=${workspace.slug} ` +
+      `totalContacts=${model.summary.totalContacts} ` +
+      `priorityCount=${model.summary.priorityCount} ` +
+      `followUpsDue=${model.summary.followUpsDue} ` +
+      `dormantCount=${model.summary.dormantCount} ` +
+      `needsEnrichment=${model.summary.needsEnrichment} ` +
+      `commit=${personalFingerprint.commitShort} ` +
+      `dbHost=${personalFingerprint.dbHost ?? "(none)"}`,
+  );
 
   return <PersonalWorkspace model={model} />;
 }

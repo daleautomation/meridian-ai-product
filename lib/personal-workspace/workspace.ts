@@ -1,6 +1,7 @@
 import type { PublicUser } from "@/config/tenants";
 import type { WorkspaceConfig } from "@/config/workspaces";
 import type { CrmContactRecord } from "@/lib/crm-import/types";
+import { filterOutInternalDiagnosticContacts } from "@/lib/crm-import/internalContactFilter";
 import {
   computeWorkspaceReachability,
   contactHasReachableEmail,
@@ -14,9 +15,31 @@ import {
   type FreshnessState,
 } from "@/lib/display/trustVisibility";
 import type { ResurfacingBucket } from "@/lib/relationship-intelligence/resurfacing";
+import {
+  buildContactScoreTransparency,
+  buildRecommendationExplanation,
+  deriveEnrichmentStatus,
+  effectivePriorityScore,
+  enrichmentStatusLabel,
+  honestSuggestedActionLabel,
+  isGenericRecommendation,
+  verificationStatusLabel,
+  type ContactScoreTransparency,
+  type DataQualityTier,
+  type EnrichmentStatus,
+  type VerificationTier,
+} from "@/lib/crm-import/scoreTransparency";
 import { scoreFromCrmContact } from "@/lib/relationship-intelligence/scoring";
+import {
+  buildCombinedPriority,
+  compareCombinedPriority,
+  type MarketOpportunityDisplay,
+} from "@/lib/enrichment/opportunity/combinedPriority";
+import type { RelationshipClass } from "@/lib/enrichment/opportunity/relationshipClassification";
 import { workspaceImportPath } from "@/lib/workspaceRouting";
 import { personalCopyForWorkspace, PERSONAL_NAV, type PersonalNavId } from "./config";
+import { buildSuggestedOpenerFromContact, type SuggestedOpener } from "./openerBuilder";
+import type { WeeklyMode, WeeklyState } from "./weeklyState";
 
 export type PersonalPrimaryChannel = "email" | "phone" | "none";
 
@@ -26,8 +49,20 @@ export interface PersonalContactCard {
   rank: number;
   name: string;
   company: string;
+  /** Primary relationship-intelligence label (e.g. "Past Seller
+   *  Reconnect"). Derived from CRM tags + recency + reachability — NOT a
+   *  market/opportunity signal. */
   relationshipLabel: string;
+  relationshipClass: RelationshipClass;
+  relationshipConfidence: "medium" | "low";
+  relationshipReasons: string[];
+  reachable: boolean;
+  reachabilityStatus: "Reachable" | "Not Reachable";
+  lastInteractionRecency: string;
+  /** Market opportunity — only when listing/public-record evidence exists. */
+  marketOpportunity: MarketOpportunityDisplay | null;
   strength: number;
+  strengthRaw: number;
   timing: "Soon" | "This week" | "When ready";
   stage: string;
   reasons: string[];
@@ -48,6 +83,27 @@ export interface PersonalContactCard {
     confidence: string;
     missingFields: number;
   };
+  enrichmentStatus: EnrichmentStatus;
+  enrichmentLabel: string;
+  verificationTier: VerificationTier;
+  verificationStatusLabel: string;
+  dataQualityTier: DataQualityTier;
+  dataQualityLabel: string;
+  scoreLabel: string;
+  scoreExplanation: string;
+  scoreProvenance: ContactScoreTransparency["provenance"];
+  scoreReasonCodes: string[];
+  scoreIsAuthoritative: boolean;
+  recommendationWhy: string;
+  recommendationEvidence: string[];
+  recommendationMissing: string[];
+  phoneActionable: boolean;
+  emailActionable: boolean;
+  phoneDowngraded: boolean;
+  emailDowngraded: boolean;
+  contactMethodNote: string | null;
+  nextStepIsTemplate: boolean;
+  suggestedActionLabel: string;
 }
 
 export interface PersonalInsightRow {
@@ -66,6 +122,11 @@ export interface PersonalResurfacingHighlight {
   contactName: string;
   whyNow: string;
   recommendedAction: string;
+  recommendationWhy: string;
+  recommendationEvidence: string[];
+  recommendationMissing: string[];
+  verificationStatusLabel: string;
+  dataQualityLabel: string;
 }
 
 export interface PersonalWorkspaceModel {
@@ -90,7 +151,8 @@ export interface PersonalWorkspaceModel {
     followUpsDue: number;
     dormantCount: number;
     needsEnrichment: number;
-    averageStrength: number;
+    reachableCount: number;
+    pastSellerCount: number;
   };
   priorityContacts: PersonalContactCard[];
   allContacts: PersonalContactCard[];
@@ -102,6 +164,36 @@ export interface PersonalWorkspaceModel {
   crmContactCount: number;
   copy: ReturnType<typeof personalCopyForWorkspace>;
   emptyByNav: Record<PersonalNavId, string>;
+  /** Optional Monday snapshot. Present when a generator has written
+   *  `data/weekly-state/<slug>/<weekId>.json` for this workspace and
+   *  the page loaded it. Absent means the workspace falls back to its
+   *  live-computed view (no panel rendered). */
+  weeklyState?: WeeklyState | null;
+  /** Display mode for the briefing panel; derived deterministically
+   *  from `now` at page render time. */
+  weeklyMode?: WeeklyMode | null;
+}
+
+/**
+ * True when the stored `company` is just the contact's name (or first
+ * name) — the legacy normalize.ts bug where an absent company column
+ * was silently filled in with the contact's own name. The normalizer
+ * is now fixed at the source; this is the render-layer guard for the
+ * residual ~130 corrupted rows already in Neon. Cheap to keep around
+ * permanently as defense-in-depth.
+ *
+ * Pure. Same input → same output.
+ */
+export function companyLooksLikeContactName(
+  company: string | null | undefined,
+  contactName: string | null | undefined,
+): boolean {
+  const c = (company ?? "").trim().toLowerCase();
+  const n = (contactName ?? "").trim().toLowerCase();
+  if (!c || !n) return false;
+  if (c === n) return true;
+  const firstToken = n.split(/\s+/)[0];
+  return firstToken.length > 0 && c === firstToken;
 }
 
 const DORMANT_BUCKET_IDS = new Set([
@@ -119,23 +211,63 @@ const RESURFACING_HIGHLIGHT_BUCKETS = new Set([
   "dormant_high_frequency",
 ]);
 
+function combinedPriorityForContact(contact: CrmContactRecord, now: Date) {
+  return buildCombinedPriority({
+    relationship: {
+      tags: contact.tags ?? [],
+      hasPhone: contactHasReachablePhone(contact),
+      hasEmail: contactHasReachableEmail(contact),
+      lastInteractionAt: contact.lastInteractionAt ?? null,
+      now,
+    },
+    opportunity: contact.enrichment?.opportunity ?? null,
+    strengthTiebreaker: effectivePriorityScore(contact),
+  });
+}
+
 export function buildPersonalWorkspaceModel(args: {
   workspace: WorkspaceConfig;
   user: PublicUser;
   crmContacts: CrmContactRecord[];
   resurfacingBuckets: ResurfacingBucket[];
   generatedAt?: string;
+  weeklyState?: WeeklyState | null;
+  weeklyMode?: WeeklyMode | null;
 }): PersonalWorkspaceModel {
-  const { workspace, user, crmContacts, resurfacingBuckets } = args;
+  const { workspace, user, resurfacingBuckets } = args;
+  // Drop internal diagnostic rows (persist-check / sample@example.com
+  // / sourceCrm=test) so they never appear on a customer-visible
+  // priority surface. Production data is not deleted — they remain in
+  // the DB for forensic purposes — they are simply invisible here.
+  const crmContacts = filterOutInternalDiagnosticContacts(args.crmContacts);
   const generatedAt = args.generatedAt ?? new Date().toISOString();
   const reachability = computeWorkspaceReachability(crmContacts);
   const copy = personalCopyForWorkspace(workspace.branding);
   const phoneLight = reachability.phoneLight;
 
+  const now = new Date(generatedAt);
+  const priorityByContact = new Map(
+    crmContacts.map((c) => [c.id, combinedPriorityForContact(c, now)]),
+  );
+
   const allContacts = crmContacts
     .slice()
-    .sort((a, b) => prioritySortScore(b, phoneLight) - prioritySortScore(a, phoneLight))
-    .map((contact, index) => crmContactToCard(contact, index + 1, { phoneLight, copy }));
+    .sort((a, b) => {
+      const cmp = compareCombinedPriority(
+        priorityByContact.get(a.id)!,
+        priorityByContact.get(b.id)!,
+      );
+      if (cmp !== 0) return cmp;
+      return prioritySortScore(b, phoneLight) - prioritySortScore(a, phoneLight);
+    })
+    .map((contact, index) =>
+      crmContactToCard(contact, index + 1, {
+        phoneLight,
+        copy,
+        workspaceSlug: workspace.slug,
+        combined: priorityByContact.get(contact.id)!,
+      }),
+    );
 
   const priorityContacts = allContacts.slice(0, 8);
 
@@ -171,14 +303,14 @@ export function buildPersonalWorkspaceModel(args: {
   });
 
   const insights: PersonalInsightRow[] = crmContacts.slice(0, 12).map((contact) => {
-    const score = scoreFromCrmContact(contact);
+    const transparency = buildContactScoreTransparency(contact);
     return {
       id: `insight-${contact.id}`,
       contactId: contact.id,
       name: contact.name,
       company: contact.company,
-      insight: score.explanation,
-      strength: contact.relationshipScore ?? score.total,
+      insight: transparency.explanation,
+      strength: transparency.value,
     };
   });
 
@@ -188,12 +320,17 @@ export function buildPersonalWorkspaceModel(args: {
   const dormantCount = dormantOpportunities.length;
   const needsEnrichment = missingInformation.length;
 
+  const importedOnlyCount = crmContacts.filter(
+    (c) => deriveEnrichmentStatus(c) === "imported_only",
+  ).length;
+
   const heroAnswer = buildHeroAnswer({
     priorityContacts,
     crmContactCount: crmContacts.length,
     phoneLight,
     resurfacingHighlights,
     copy,
+    importedOnlyCount,
   });
 
   return {
@@ -229,7 +366,11 @@ export function buildPersonalWorkspaceModel(args: {
       followUpsDue,
       dormantCount,
       needsEnrichment,
-      averageStrength: average(allContacts.map((c) => c.strength)),
+      reachableCount: allContacts.filter((c) => c.reachable).length,
+      pastSellerCount: allContacts.filter((c) =>
+        c.relationshipClass === "past_seller_reconnect"
+        || c.relationshipClass === "seller_history_verify_recency",
+      ).length,
     },
     priorityContacts,
     allContacts,
@@ -248,6 +389,8 @@ export function buildPersonalWorkspaceModel(args: {
       dormant: copy.emptyDormant,
       missing: copy.emptyMissing,
     },
+    weeklyState: args.weeklyState ?? null,
+    weeklyMode: args.weeklyMode ?? null,
   };
 }
 
@@ -257,6 +400,7 @@ function buildHeroAnswer(args: {
   phoneLight: boolean;
   resurfacingHighlights: PersonalResurfacingHighlight[];
   copy: ReturnType<typeof personalCopyForWorkspace>;
+  importedOnlyCount: number;
 }): string {
   const top = args.priorityContacts[0];
   if (top) {
@@ -264,7 +408,12 @@ function buildHeroAnswer(args: {
       args.phoneLight && top.primaryChannel === "email"
         ? " — email-first resurfacing"
         : "";
-    return `${top.name} at ${top.company} — ${top.reasons[0] ?? "strongest relationship signal right now"}${channelHint}`;
+    const enrichmentHint =
+      args.importedOnlyCount === args.crmContactCount && args.crmContactCount > 0
+        ? " (baseline import scores — not enriched yet)"
+        : "";
+    const marketHint = top.marketOpportunity ? ` · ${top.marketOpportunity.label}` : "";
+    return `${top.name} at ${top.company} — ${top.relationshipLabel}${marketHint}${channelHint}${enrichmentHint}`;
   }
   if (args.crmContactCount === 0) {
     return "Import contacts to start prioritizing your network.";
@@ -288,6 +437,13 @@ function buildResurfacingHighlights(buckets: ResurfacingBucket[]): PersonalResur
         contactName: contact.name,
         whyNow: contact.whyNow,
         recommendedAction: contact.recommendedAction,
+        recommendationWhy: contact.recommendationWhy,
+        recommendationEvidence: contact.recommendationEvidence,
+        recommendationMissing: contact.recommendationMissing,
+        verificationStatusLabel: verificationStatusLabel(
+          contact.verificationTier as VerificationTier,
+        ),
+        dataQualityLabel: contact.dataQualityLabel,
       });
     }
   }
@@ -295,7 +451,7 @@ function buildResurfacingHighlights(buckets: ResurfacingBucket[]): PersonalResur
 }
 
 function prioritySortScore(contact: CrmContactRecord, phoneLight: boolean): number {
-  const base = contact.relationshipScore ?? scoreFromCrmContact(contact).total;
+  const base = effectivePriorityScore(contact);
   const days = contact.lastInteractionAt
     ? ageDaysFromIso(contact.lastInteractionAt) ?? 0
     : 999;
@@ -331,9 +487,16 @@ function navCount(
 function crmContactToCard(
   contact: CrmContactRecord,
   rank: number,
-  ctx: { phoneLight: boolean; copy: ReturnType<typeof personalCopyForWorkspace> },
+  ctx: {
+    phoneLight: boolean;
+    copy: ReturnType<typeof personalCopyForWorkspace>;
+    workspaceSlug: string;
+    combined: ReturnType<typeof buildCombinedPriority>;
+  },
 ): PersonalContactCard {
+  const { classification } = ctx.combined;
   const score = scoreFromCrmContact(contact);
+  const transparency = buildContactScoreTransparency(contact);
   const state = freshnessStateFor(ageDaysFromIso(contact.lastInteractionAt ?? contact.updatedAt));
   const trustWarnings = Object.entries(contact.dataTrust)
     .filter(([, datum]) => !datum.displayAsTrusted)
@@ -365,7 +528,27 @@ function crmContactToCard(
     suggestedAction = "Send a note";
   }
 
-  const nextStep = buildNextStep(contact, suggestedAction, { hasPhone, hasEmail, phoneLight: ctx.phoneLight });
+  const recommendation = buildRecommendationExplanation(contact, transparency, suggestedAction);
+  const methods = transparency.contactMethods;
+  // Deterministic opener — quotes the actual CRM evidence (notes / tag /
+  // last-close date). When a specific extractor fires (HIGH / MED trust),
+  // its line replaces the generic "Email X at Y — reference your last
+  // interaction" template. Honest fallback only when the CRM has no
+  // material.
+  const suggestedOpener: SuggestedOpener = buildSuggestedOpenerFromContact(contact);
+  const fallbackNextStep = buildNextStep(contact, suggestedAction, {
+    hasPhone,
+    hasEmail,
+    phoneLight: ctx.phoneLight,
+    phoneActionable: methods.phone.actionable,
+    emailActionable: methods.email.actionable,
+  });
+  const nextStep = suggestedOpener.isSpecific ? suggestedOpener.opener : fallbackNextStep;
+  const nextStepIsTemplate = !suggestedOpener.isSpecific
+    && (isGenericRecommendation(nextStep)
+      || transparency.enrichmentStatus === "imported_only"
+      || transparency.verificationTier === "imported"
+      || transparency.verificationTier === "confidence_low");
 
   const reachabilityNote =
     !hasPhone && hasEmail
@@ -374,18 +557,44 @@ function crmContactToCard(
         ? "No phone or email on file — enrich before outreach."
         : null;
 
+  const stage =
+    transparency.enrichmentStatus === "enriched" || transparency.enrichmentStatus === "verified"
+      ? score.confidence === "high" ? "Strong signal" : "Needs review"
+      : transparency.enrichmentStatus === "imported_only"
+        ? "Imported only"
+        : transparency.enrichmentStatus === "needs_review"
+          ? "Needs review"
+          : "Baseline import";
+
   return {
-    id: `nicole-${contact.id}`,
+    id: `${ctx.workspaceSlug}-${contact.id}`,
     contactId: contact.id,
     rank,
     name: contact.name,
-    company: contact.company,
-    relationshipLabel: contact.sourceCrm ? `From ${contact.sourceCrm}` : "Imported contact",
-    strength: contact.relationshipScore ?? score.total,
+    // Defensive guard for legacy data: the import normalizer used to
+    // substitute the contact's name as the company when no company
+    // column was mapped, producing "Greg · Greg" cards. The normalizer
+    // is fixed at the source; this guard hides the corruption that
+    // remains in already-imported rows. Renders empty string so the
+    // card layout naturally suppresses the company chip.
+    company: companyLooksLikeContactName(contact.company, contact.name) ? "" : contact.company,
+    relationshipLabel: classification.displayLabel,
+    relationshipClass: classification.label,
+    relationshipConfidence: classification.confidence,
+    relationshipReasons: classification.reasons,
+    reachable: classification.reachable,
+    reachabilityStatus: ctx.combined.reachabilityStatus,
+    lastInteractionRecency: ctx.combined.lastInteractionRecency,
+    marketOpportunity: ctx.combined.marketOpportunity,
+    strength: effectivePriorityScore(contact, transparency.value),
+    strengthRaw: transparency.value,
     timing: rank === 1 ? "Soon" : rank <= 3 ? "This week" : "When ready",
-    stage: score.confidence === "high" ? "Strong signal" : "Needs review",
+    stage,
     reasons: compact([
-      score.explanation,
+      transparency.scoreLabel,
+      // Promote the opener evidence to the top reason when it's specific —
+      // operator sees the exact CRM fragment that justified the next step.
+      suggestedOpener.isSpecific ? suggestedOpener.supportingEvidence : transparency.explanation,
       contact.tags[0] ? `Tagged: ${contact.tags[0]}` : null,
       contact.lastInteractionAt
         ? `Last touch ${relativeDate(contact.lastInteractionAt)}`
@@ -397,43 +606,117 @@ function crmContactToCard(
     primaryChannel,
     reachabilityNote,
     suggestedAction,
+    suggestedActionLabel: honestSuggestedActionLabel(suggestedAction, transparency),
     nextStep,
-    angle:
-      primaryChannel === "email"
-        ? score.factors[0]?.explanation ?? "Reference your last email or meeting note — keep the ask small."
-        : score.factors[0]?.explanation ?? "Lead with the clearest verified signal you have.",
-    signals: score.missingDataFlags.length > 0
-      ? score.missingDataFlags.slice(0, 3)
-      : primaryChannel === "email"
-        ? ["Email on file", "Relationship scored"]
-        : ["Imported CRM", "Relationship scored"],
+    nextStepIsTemplate,
+    angle: buildAngle(contact, primaryChannel, transparency, score),
+    signals: buildSignals(contact, primaryChannel, transparency, score),
     history: compact([
       contact.notes ? contact.notes.slice(0, 140) : null,
       contact.lastInteractionAt ? `Last interaction ${relativeDate(contact.lastInteractionAt)}` : null,
     ]),
     activityMemory: buildActivityMemory(contact),
-    trustNotes: trustWarnings.length > 0
-      ? trustWarnings
-      : ["Contact fields meet minimum trust for display."],
+    trustNotes: compact([
+      !contact.scoreMetadata ? "Legacy contact — score provenance not stored at import." : null,
+      ...trustWarnings,
+      trustWarnings.length === 0 && transparency.enrichmentStatus === "imported_only"
+        ? "Imported fields only — not enriched or verified."
+        : null,
+      trustWarnings.length === 0
+        && transparency.enrichmentStatus !== "imported_only"
+        && contact.scoreMetadata
+        ? "Contact fields meet minimum trust for display."
+        : null,
+    ]),
     source: {
       freshnessLabel: freshnessLabel(state, ageDaysFromIso(contact.lastInteractionAt ?? contact.updatedAt)),
       freshnessState: state,
-      confidence: score.confidence,
+      confidence: transparency.confidence,
       missingFields,
     },
+    enrichmentStatus: transparency.enrichmentStatus,
+    enrichmentLabel: enrichmentStatusLabel(transparency.enrichmentStatus),
+    verificationTier: transparency.verificationTier,
+    verificationStatusLabel: transparency.verificationStatusLabel,
+    dataQualityTier: transparency.dataQualityTier,
+    dataQualityLabel: transparency.dataQualityLabel,
+    scoreLabel: transparency.scoreLabel,
+    scoreExplanation: transparency.explanation,
+    scoreProvenance: transparency.provenance,
+    scoreReasonCodes: transparency.reasonCodes,
+    scoreIsAuthoritative: transparency.isAuthoritative,
+    recommendationWhy: recommendation.why,
+    recommendationEvidence: recommendation.evidence,
+    recommendationMissing: recommendation.missing,
+    phoneActionable: methods.phone.actionable,
+    emailActionable: methods.email.actionable,
+    phoneDowngraded: methods.phone.downgraded,
+    emailDowngraded: methods.email.downgraded,
+    contactMethodNote: methods.phone.reason ?? methods.email.reason,
   };
+}
+
+function buildAngle(
+  contact: CrmContactRecord,
+  primaryChannel: PersonalPrimaryChannel,
+  transparency: ContactScoreTransparency,
+  score: ReturnType<typeof scoreFromCrmContact>,
+): string {
+  if (transparency.enrichmentStatus === "imported_only") {
+    if (contact.notes?.trim()) {
+      return `From import notes: ${contact.notes.trim().slice(0, 120)}${contact.notes.length > 120 ? "…" : ""}`;
+    }
+    return "No enrichment yet — use imported notes and last activity only.";
+  }
+  if (primaryChannel === "email") {
+    return score.factors[0]?.explanation ?? "Reference your last email or meeting note — keep the ask small.";
+  }
+  return score.factors[0]?.explanation ?? "Lead with the clearest verified signal you have.";
+}
+
+function buildSignals(
+  contact: CrmContactRecord,
+  primaryChannel: PersonalPrimaryChannel,
+  transparency: ContactScoreTransparency,
+  score: ReturnType<typeof scoreFromCrmContact>,
+): string[] {
+  if (score.missingDataFlags.length > 0) {
+    return score.missingDataFlags.slice(0, 3);
+  }
+  if (transparency.enrichmentStatus === "imported_only") {
+    return compact([
+      contact.sourceCrm ? `Imported from ${contact.sourceCrm}` : "Imported from CRM",
+      primaryChannel === "email" ? "Email on file" : null,
+      "Not enriched yet",
+    ]);
+  }
+  return primaryChannel === "email"
+    ? ["Email on file", "Baseline import score"]
+    : ["Imported CRM", "Baseline import score"];
 }
 
 function buildNextStep(
   contact: CrmContactRecord,
   action: PersonalContactCard["suggestedAction"],
-  reach: { hasPhone: boolean; hasEmail: boolean; phoneLight: boolean },
+  reach: {
+    hasPhone: boolean;
+    hasEmail: boolean;
+    phoneLight: boolean;
+    phoneActionable: boolean;
+    emailActionable: boolean;
+  },
 ): string {
-  if (action === "Reach out" && reach.hasPhone && !reach.phoneLight) {
+  if (action === "Reach out" && reach.hasPhone && !reach.phoneLight && reach.phoneActionable) {
     return `Call or message ${contact.name} at ${contact.phone}.`;
   }
-  if (action === "Send a note" && reach.hasEmail) {
+  if (action === "Reach out" && reach.hasPhone && !reach.phoneActionable) {
+    return `Review phone trust for ${contact.name} before calling — import-only path.`;
+  }
+  if (action === "Send a note" && reach.hasEmail && reach.emailActionable) {
     return `Email ${contact.name} at ${contact.email} — reference your last interaction and one clear next step.`;
+  }
+  if (action === "Send a note" && reach.hasEmail && !reach.emailActionable) {
+    return `Review email trust for ${contact.name} before sending — weak or imported-only path.`;
   }
   if (action === "Follow up") {
     return `Close the loop on your last conversation with ${contact.name}${reach.hasEmail ? ` (${contact.email})` : ""}.`;
@@ -478,9 +761,4 @@ function compact(values: Array<string | null | undefined>): string[] {
   return values
     .map((v) => v?.trim())
     .filter((v): v is string => Boolean(v));
-}
-
-function average(values: number[]): number {
-  if (values.length === 0) return 0;
-  return Math.round(values.reduce((s, v) => s + v, 0) / values.length);
 }

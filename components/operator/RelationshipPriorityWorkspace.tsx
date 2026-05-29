@@ -105,15 +105,28 @@ export default function RelationshipPriorityWorkspace({
             <div style={styles.heroLabel}>{model.hero.focus}</div>
             <div style={styles.heroAnswer}>{model.hero.answer}</div>
             <div style={styles.heroActions}>
-              <ActionButton label="Call" primary />
-              <ActionButton label="Email" />
+              <ActionButton
+                label="Call"
+                primary={selected?.recommendedAction === "Call"}
+                disabled={selected?.phoneActionable === false}
+                disabledReason={selected?.contactMethods.find((m) => m.type === "Call")?.disabledReason}
+              />
+              <ActionButton
+                label="Email"
+                primary={selected?.recommendedAction === "Email"}
+                disabled={selected?.emailActionable === false}
+                disabledReason={selected?.contactMethods.find((m) => m.type === "Email")?.disabledReason}
+              />
               <ActionButton label="Follow Up" />
               <ActionButton label="Assign" />
               <ActionButton label="Open Context" />
             </div>
           </div>
           <Metric label={showcase ? "Ready now" : "Ready now"} value={String(model.summary.readyNowCount)} />
-          <Metric label={showcase ? "Avg. confidence" : "Avg. fit"} value={`${model.summary.averageMarketFit}%`} />
+          <Metric
+            label={showcase ? "Reachable" : "Reachable"}
+            value={String(model.summary.reachableCount)}
+          />
           <Metric
             label={showcase ? showcase.screenSafe.label : "Compressed signals"}
             value={showcase ? "9:16" : String(model.summary.compressedSignals)}
@@ -377,9 +390,29 @@ function PriorityCard({
         >
           #{card.rank}
         </span>
-        <span style={fitStyle(card.marketFit)}>{card.marketFit}% fit</span>
+        <span style={styles.relationshipPill} title={card.relationshipReasons?.join(" · ")}>
+          {card.relationship}
+        </span>
         <span style={urgencyStyle(card.urgency)}>{card.urgency}</span>
       </div>
+      {card.source.kind === "crm-import" ? (
+        <div style={styles.intelligenceRow}>
+          <span style={card.reachable !== false ? styles.reachablePill : styles.unreachablePill}>
+            {card.reachabilityStatus ?? (card.reachable !== false ? "Reachable" : "Not Reachable")}
+          </span>
+          {card.lastInteractionRecency ? (
+            <span style={styles.recencyPill}>{card.lastInteractionRecency}</span>
+          ) : null}
+          {card.relationshipConfidence ? (
+            <span style={styles.confidencePill}>Confidence: {card.relationshipConfidence}</span>
+          ) : null}
+        </div>
+      ) : null}
+      {card.marketOpportunity ? (
+        <span style={styles.marketOpportunityPill} title={card.marketOpportunity.summary}>
+          {card.marketOpportunity.label} · {card.marketOpportunity.tier}
+        </span>
+      ) : null}
       <TrustPills card={card} compact />
       <div style={styles.cardTitleRow}>
         <div>
@@ -431,8 +464,27 @@ function TrustPills({
     : card.source.confidence === "medium"
       ? styles.trustPillWatch
       : styles.trustPillMuted;
+  const verificationTone =
+    card.verificationTier === "verified" || card.verificationTier === "enriched"
+      ? styles.trustPillGood
+      : card.verificationTier === "confidence_low"
+        ? styles.trustPillDanger
+        : styles.trustPillWatch;
   const pills = [
-    { label: card.source.kind === "relationship-engine" ? "Source: relationship engine" : "Source: demo queue", style: styles.trustPillMuted },
+    ...(card.verificationStatusLabel
+      ? [{ label: `Verification: ${card.verificationStatusLabel}`, style: verificationTone }]
+      : []),
+    ...(card.dataQualityLabel
+      ? [{ label: card.dataQualityLabel, style: styles.trustPillMuted }]
+      : []),
+    {
+      label: card.source.kind === "crm-import"
+        ? "Source: CRM import"
+        : card.source.kind === "relationship-engine"
+          ? "Source: relationship engine"
+          : "Source: demo queue",
+      style: styles.trustPillMuted,
+    },
     { label: `Confidence: ${card.source.confidence.toUpperCase()}`, style: confidenceTone },
     { label: card.source.freshnessLabel, style: freshnessTone },
     { label: `Evidence: ${card.source.evidenceCount}`, style: styles.trustPillMuted },
@@ -482,16 +534,69 @@ function RelationshipContextPanel({
           <h2 style={styles.contextTitle}>{card.company}</h2>
           <p style={styles.contextSubtitle}>{card.suggestedAngle}</p>
         </div>
-        <span style={fitStyle(card.marketFit)}>{card.marketFit}%</span>
+        <span style={styles.relationshipPill}>{card.relationship}</span>
       </div>
+      {card.source.kind === "crm-import" ? (
+        <div style={styles.intelligenceRow}>
+          <span style={card.reachable !== false ? styles.reachablePill : styles.unreachablePill}>
+            {card.reachabilityStatus ?? (card.reachable !== false ? "Reachable" : "Not Reachable")}
+          </span>
+          {card.lastInteractionRecency ? (
+            <span style={styles.recencyPill}>{card.lastInteractionRecency}</span>
+          ) : null}
+          {card.relationshipConfidence ? (
+            <span style={styles.confidencePill}>Confidence: {card.relationshipConfidence}</span>
+          ) : null}
+        </div>
+      ) : null}
+      {card.marketOpportunity ? (
+        <ContextBlock title="Market opportunity">
+          <div style={styles.signalRow}>
+            {card.marketOpportunity.label} · {card.marketOpportunity.tier} · score {card.marketOpportunity.score}
+          </div>
+          <div style={styles.signalRow}>{card.marketOpportunity.summary}</div>
+        </ContextBlock>
+      ) : null}
       <TrustPills card={card} />
 
       <div style={styles.contextActions}>
-        <ActionButton label="Call" primary={card.recommendedAction === "Call"} />
-        <ActionButton label="Email" primary={card.recommendedAction === "Email"} />
+        <ActionButton
+          label="Call"
+          primary={card.recommendedAction === "Call"}
+          disabled={card.phoneActionable === false}
+          disabledReason={card.contactMethods.find((m) => m.type === "Call")?.disabledReason}
+        />
+        <ActionButton
+          label="Email"
+          primary={card.recommendedAction === "Email"}
+          disabled={card.emailActionable === false}
+          disabledReason={card.contactMethods.find((m) => m.type === "Email")?.disabledReason}
+        />
         <ActionButton label="Follow Up" primary={card.recommendedAction === "Follow Up"} />
         <ActionButton label="Assign" primary={card.recommendedAction === "Assign"} />
       </div>
+
+      {card.source.kind === "crm-import" && card.relationshipReasons && card.relationshipReasons.length > 0 ? (
+        <ContextBlock title="Relationship intelligence">
+          {card.relationshipReasons.map((line) => (
+            <div key={line} style={styles.timelineItem}>{line}</div>
+          ))}
+        </ContextBlock>
+      ) : null}
+
+      {card.recommendationWhy ? (
+        <ContextBlock title="Why this recommendation">
+          <div style={styles.signalRow}>{card.recommendationWhy}</div>
+          {(card.recommendationEvidence ?? []).map((line) => (
+            <div key={line} style={styles.signalRow}>Evidence: {line}</div>
+          ))}
+          {(card.recommendationMissing ?? []).length > 0 ? (
+            <div style={{ ...styles.signalRow, color: palette.warning }}>
+              Missing: {(card.recommendationMissing ?? []).join(" · ")}
+            </div>
+          ) : null}
+        </ContextBlock>
+      ) : null}
 
       <ContextBlock title="Best contact">
         <div style={styles.contactCard}>
@@ -501,8 +606,17 @@ function RelationshipContextPanel({
           </div>
           <div style={styles.contactMethods}>
             {card.contactMethods.map((method) => (
-              <span key={`${method.type}-${method.value}`} style={styles.methodPill}>
+              <span
+                key={`${method.type}-${method.value}`}
+                style={{
+                  ...styles.methodPill,
+                  ...(method.actionable === false ? styles.methodPillDisabled : null),
+                  ...(method.downgraded ? styles.methodPillDowngraded : null),
+                }}
+                title={method.disabledReason ?? undefined}
+              >
                 {method.type}: {method.value}
+                {method.actionable === false ? " (disabled)" : method.downgraded ? " (review)" : ""}
               </span>
             ))}
           </div>
@@ -581,31 +695,30 @@ function ContextBlock({ title, children }: { title: string; children: React.Reac
 function ActionButton({
   label,
   primary,
+  disabled,
+  disabledReason,
 }: {
   label: string;
   primary?: boolean;
+  disabled?: boolean;
+  disabledReason?: string | null;
 }) {
   return (
     <button
       type="button"
+      disabled={disabled}
+      title={disabled ? disabledReason ?? "Not available at current trust tier" : undefined}
       className="relationship-priority-action"
       style={{
         ...styles.actionButton,
-        ...(primary ? styles.actionButtonPrimary : null),
+        ...(primary && !disabled ? styles.actionButtonPrimary : null),
+        ...(disabled ? styles.actionButtonDisabled : null),
       }}
     >
       {label}
+      {disabled ? " (disabled)" : ""}
     </button>
   );
-}
-
-function fitStyle(value: number): CSSProperties {
-  return {
-    ...styles.fitPill,
-    color: value >= 90 ? palette.success : palette.blue,
-    background: value >= 90 ? palette.successBg : palette.bluePale,
-    borderColor: value >= 90 ? "rgba(22, 163, 74, 0.18)" : palette.blueBorder,
-  };
 }
 
 function urgencyStyle(value: RelationshipPriorityCard["urgency"]): CSSProperties {
@@ -990,6 +1103,75 @@ const styles: Record<string, CSSProperties> = {
     fontSize: "12px",
     fontWeight: 800,
   },
+  relationshipPill: {
+    border: `1px solid ${palette.blueBorder}`,
+    borderRadius: "999px",
+    padding: "6px 9px",
+    fontSize: "12px",
+    fontWeight: 800,
+    color: palette.blue,
+    background: palette.bluePale,
+    maxWidth: "220px",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  intelligenceRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "6px",
+    marginBottom: "10px",
+  },
+  reachablePill: {
+    borderRadius: "999px",
+    padding: "4px 8px",
+    fontSize: "10px",
+    fontWeight: 800,
+    color: palette.success,
+    background: palette.successBg,
+    border: "1px solid rgba(22,163,74,0.22)",
+  },
+  unreachablePill: {
+    borderRadius: "999px",
+    padding: "4px 8px",
+    fontSize: "10px",
+    fontWeight: 800,
+    color: palette.danger,
+    background: palette.dangerBg,
+    border: "1px solid rgba(220,38,38,0.22)",
+  },
+  recencyPill: {
+    borderRadius: "999px",
+    padding: "4px 8px",
+    fontSize: "10px",
+    fontWeight: 700,
+    color: palette.textSecondary,
+    background: palette.surfaceHover,
+    border: `1px solid ${palette.border}`,
+  },
+  confidencePill: {
+    borderRadius: "999px",
+    padding: "4px 8px",
+    fontSize: "10px",
+    fontWeight: 700,
+    color: palette.textSecondary,
+    background: palette.surface,
+    border: `1px solid ${palette.border}`,
+  },
+  marketOpportunityPill: {
+    display: "inline-block",
+    width: "fit-content",
+    marginBottom: "10px",
+    borderRadius: "999px",
+    padding: "4px 10px",
+    fontSize: "10px",
+    fontWeight: 800,
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+    color: palette.orange,
+    background: palette.orangePale,
+    border: `1px solid ${palette.orangeBorder}`,
+  },
   urgencyPill: {
     borderRadius: "999px",
     padding: "6px 9px",
@@ -1315,6 +1497,18 @@ const styles: Record<string, CSSProperties> = {
     padding: "7px 9px",
     fontSize: "12px",
     fontWeight: 720,
+  },
+  methodPillDisabled: {
+    opacity: 0.5,
+    textDecoration: "line-through",
+  },
+  methodPillDowngraded: {
+    borderColor: palette.warning,
+    color: palette.warning,
+  },
+  actionButtonDisabled: {
+    opacity: 0.45,
+    cursor: "not-allowed",
   },
   signalRow: {
     padding: "10px 12px",

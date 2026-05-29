@@ -194,6 +194,8 @@ export function scoreFromCrmContact(
     | "notes"
     | "dataTrust"
     | "relationshipScore"
+    | "scoreMetadata"
+    | "importJobId"
   >,
 ): RelationshipIntelligenceScore {
   if (typeof contact.relationshipScore === "number") {
@@ -202,12 +204,29 @@ export function scoreFromCrmContact(
     const channelNote =
       hasEmail && !hasPhone ? " Email-first contact — score reflects history, not call readiness."
       : "";
+    const meta = contact.scoreMetadata;
+    const provenance = meta?.provenance;
+    const storedAtImport = meta?.storedAtImport ?? Boolean(contact.importJobId);
+
+    let explanation: string;
+    if (provenance === "imported") {
+      explanation = `Score persisted from CRM import.${channelNote}`;
+    } else if (provenance === "enriched") {
+      explanation = `Enriched relationship score.${channelNote}`;
+    } else if (storedAtImport || provenance === "inferred") {
+      explanation = `Baseline import score — computed from CSV fields at import, not post-import enrichment.${channelNote}`;
+    } else {
+      explanation = `Relationship score on file — verify provenance before treating as authoritative.${channelNote}`;
+    }
+
+    const confidence = meta?.confidence ?? (storedAtImport ? "medium" : "low");
+
     return {
       total: contact.relationshipScore,
-      confidence: "medium",
+      confidence,
       factors: [],
       missingDataFlags: hasEmail && !hasPhone ? ["No phone on file — email is primary channel"] : [],
-      explanation: `Score persisted from CRM import.${channelNote}`,
+      explanation,
     };
   }
   return computeRelationshipScore({
