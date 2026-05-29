@@ -1,6 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const baseURL = (process.env.MERIDIAN_BASE_URL ?? "https://www.meridianai.work").replace(/\/$/, "");
+const storageState = process.env.PLAYWRIGHT_STORAGE_STATE;
+const bypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+const extraHTTPHeaders = bypassSecret
+  ? { "x-vercel-protection-bypass": bypassSecret }
+  : undefined;
 
 export default defineConfig({
   testDir: "tests/e2e",
@@ -13,6 +18,8 @@ export default defineConfig({
     baseURL,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
+    ...(storageState ? { storageState } : {}),
+    ...(extraHTTPHeaders ? { extraHTTPHeaders } : {}),
   },
   projects: [
     {
