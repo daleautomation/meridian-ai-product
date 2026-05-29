@@ -272,9 +272,9 @@ export function buildRelationshipPriorityWorkspaceModel(args: {
 
 function crmContactsToPriorityCards(
   contacts: CrmContactRecord[],
-  generatedAt: string,
+  _generatedAt: string,
 ): RelationshipPriorityCard[] {
-  const now = new Date(generatedAt);
+  const now = new Date(_generatedAt);
   const combinedByContact = new Map(
     contacts.map((c) => [
       c.id,

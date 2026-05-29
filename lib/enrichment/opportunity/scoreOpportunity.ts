@@ -372,6 +372,7 @@ export function scoreContactOpportunity(input: OpportunityScoringInput): Opportu
       tierCapReason = "no_market_evidence";
     }
   }
+
   // Weak-owner-match cap → REVIEW (rank 1)
   if (input.ownerMatchConfidence === "WEAK") {
     if (TIER_RANK.REVIEW < cappedRank) {

@@ -339,6 +339,15 @@ function ContactDetailPanel({
             <div key={line} style={styles.detailRow}>{line}</div>
           ))}
         </div>
+        <div style={styles.scoreRow}>
+          <span style={styles.strengthPill} title={strengthTitle(card)}>
+            {card.strength}%{strengthSuffix(card)} {copy.strengthLabel}
+          </span>
+          <span style={styles.scoreMeta}>{card.scoreLabel}</span>
+        </div>
+        {!card.scoreIsAuthoritative ? (
+          <p style={styles.scoreDisclaimer}>{card.scoreExplanation}</p>
+        ) : null}
         <div style={styles.trustBadgeRow}>
           <span style={styles.verificationBadge}>{card.verificationStatusLabel}</span>
           <span style={styles.dataQualityBadge}>{card.dataQualityLabel}</span>
@@ -375,6 +384,18 @@ function ContactDetailPanel({
 
       <DetailBlock title="Angle">
         <p style={styles.detailBody}>{card.angle}</p>
+      </DetailBlock>
+
+      <DetailBlock title="Scoring basis">
+        <div style={styles.detailRow}>Provenance: {card.scoreProvenance}</div>
+        {card.scoreReasonCodes.length > 0 ? (
+          <div style={styles.detailRow}>
+            Reasons: {card.scoreReasonCodes.join(", ")}
+          </div>
+        ) : (
+          <div style={styles.detailRow}>No reason codes recorded</div>
+        )}
+        <div style={styles.detailRow}>Confidence: {card.source.confidence}</div>
       </DetailBlock>
 
       <DetailBlock title="Reachability">
@@ -433,6 +454,19 @@ function ContactDetailPanel({
   );
 }
 
+function strengthSuffix(card: PersonalContactCard): string {
+  if (card.strengthRaw !== card.strength && card.rank <= 3) {
+    return ` · raw ${card.strengthRaw}`;
+  }
+  return "";
+}
+
+function strengthTitle(card: PersonalContactCard): string | undefined {
+  if (card.strengthRaw !== card.strength) {
+    return `Trust-adjusted priority ${card.strength} (raw import score ${card.strengthRaw})`;
+  }
+  return undefined;
+}
 
 function DetailBlock({ title, children }: { title: string; children: React.ReactNode }) {
   return (

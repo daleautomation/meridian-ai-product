@@ -7,6 +7,8 @@ import { companyKey } from "@/lib/mcp/types";
 import { listOutcomesFor } from "@/lib/recovery/outcomes/store";
 import type { RelationshipOutcome } from "@/lib/recovery/outcomes/types";
 import { LeadOutcomeBlock } from "@/components/outcomes/LeadOutcomeBlock";
+import { SignalDecomposition } from "@/components/brief/SignalDecomposition";
+import { WEAK_SIGNAL_JUDGMENT_LABEL } from "@/lib/recovery/brief";
 
 export const dynamic = "force-dynamic";
 
@@ -99,6 +101,9 @@ export default async function RecoveryBriefPage({ params }: BriefPageProps) {
                 <p className="recovery-brief-card-meta">
                   {item.contactName ?? "Contact not named"} · {item.location ?? "Location not provided"} · {daysLabel(item.staleness.daysSinceTouch)}
                 </p>
+                {item.weakOnly ? (
+                  <p className="recovery-brief-weak-label">{WEAK_SIGNAL_JUDGMENT_LABEL}</p>
+                ) : null}
                 <div className="recovery-brief-card-grid">
                   <section>
                     <h3>Why now</h3>
@@ -117,6 +122,7 @@ export default async function RecoveryBriefPage({ params }: BriefPageProps) {
                     <p>{item.verifiedContactPath}</p>
                   </section>
                 </div>
+                <SignalDecomposition item={item} now={now} />
                 <section className="recovery-brief-card-outcome">
                   <h3>Continuity</h3>
                   <LeadOutcomeBlock
@@ -251,6 +257,13 @@ export default async function RecoveryBriefPage({ params }: BriefPageProps) {
 
         .recovery-brief-card-meta {
           margin: 0;
+          font-size: 13px;
+          line-height: 1.45;
+        }
+
+        .recovery-brief-weak-label {
+          margin: 10px 0 0;
+          color: #2f3a46;
           font-size: 13px;
           line-height: 1.45;
         }

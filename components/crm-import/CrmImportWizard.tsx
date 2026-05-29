@@ -100,39 +100,20 @@ export default function CrmImportWizard({
         return;
       }
 
-      try {
-        const status = await fetchApiJson<{ preview?: ImportPreviewResult; job?: CrmImportJob }>(
-          `/api/crm-import/status?jobId=${encodeURIComponent(draft.jobId)}&workspaceId=${encodeURIComponent(workspaceId)}`,
-        );
-        if (!status.ok || !status.data.preview) {
-          clearDraft(workspaceId);
-          if (!cancelled) {
-            setError(
-              status.ok
-                ? "Saved import preview expired. Upload your CSV again."
-                : status.error,
-            );
-            setHydrating(false);
-          }
-          return;
-        }
-
-        if (cancelled) return;
-        setJobId(draft.jobId);
-        setPreview(status.data.preview);
-        setSourceLabel(draft.sourceLabel || status.data.job?.sourceLabel || "manual_csv");
-        if (draft.step === "preview" || draft.step === "importing") {
-          setStep("preview");
-        } else if (draft.step === "mapping") {
-          setStep("mapping");
-        }
-      } catch (err) {
-        if (!cancelled) {
-          clearDraft(workspaceId);
-          setError(err instanceof Error ? err.message : "Could not restore saved import preview.");
-        }
-      } finally {
-        if (!cancelled) setHydrating(false);
+      // ── No stale preview reuse ────────────────────────────────────
+      // Saved drafts never restore preview state. Every page load starts
+      // at the upload step. The user must upload their CSV again to
+      // generate a fresh preview from the current importer. This is the
+      // simplest possible guarantee that what the UI shows is what the
+      // CURRENT importer produces — no replay of previously-persisted
+      // normalized rows.
+      clearDraft(workspaceId);
+      if (!cancelled) {
+        setStep("upload");
+        setPreview(null);
+        setJobId(null);
+        setCsvText("");
+        setHydrating(false);
       }
     }
 
@@ -146,11 +127,19 @@ export default function CrmImportWizard({
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      setCsvText(String(reader.result ?? ""));
-      setStep("mapping");
+      // ── Force-fresh-import contract ─────────────────────────────────
+      // Every new file upload completely invalidates any prior session
+      // for this workspace: stored job draft, in-memory preview, in-memory
+      // job id, error banners. The next "Map columns & preview" click
+      // creates a brand-new preview from the freshly uploaded CSV. There
+      // is no path through which a stale snapshot can render after a
+      // new upload.
+      clearDraft(workspaceId);
       setPreview(null);
       setJobId(null);
-      clearDraft(workspaceId);
+      setError(null);
+      setCsvText(String(reader.result ?? ""));
+      setStep("mapping");
     };
     reader.readAsText(file);
   }, [workspaceId]);

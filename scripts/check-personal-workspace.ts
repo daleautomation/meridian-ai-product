@@ -8,6 +8,7 @@ import { buildResurfacingBuckets } from "../lib/relationship-intelligence/resurf
 import { TENANTS, toPublicUser } from "../config/tenants";
 import {
   buildContactScoreTransparency,
+  effectivePriorityScore,
 } from "../lib/crm-import/scoreTransparency";
 import {
   isContactCardProminent,
@@ -120,6 +121,15 @@ assert(card.reachabilityStatus === "Reachable", "email-only contact is reachable
 assert(card.lastInteractionRecency.length > 0, "recency label populated");
 assert(card.marketOpportunity === null, "CRM-only contact has no market opportunity");
 assert(model.hero.answer.includes("Sphere Reengagement"), "hero uses relationship label");
+assert(
+  card.strength === effectivePriorityScore(contact, transparency.value),
+  "card strength uses trust-adjusted effective score",
+);
+assert(card.strengthRaw === transparency.value, "card exposes raw import score separately");
+assert(
+  card.strength <= card.strengthRaw,
+  "effective strength never exceeds raw import score",
+);
 assert(!card.phoneActionable, "email-only import has non-actionable phone");
 if (transparency.verificationTier === "confidence_low") {
   assert(!card.emailActionable, "low-confidence tier disables email action");
