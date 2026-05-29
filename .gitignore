@@ -78,3 +78,4 @@ data/weekly-state/
 # committed (production reads/writes its own copy on disk).
 data/outcomes/
 data/backups/*.json
+data/backups/*.json
