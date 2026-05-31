@@ -36,8 +36,14 @@ generated/**/*
 !generated/exports/
 !generated/reports/
 !generated/snapshots/
+!generated/heartbeat/
+!generated/heartbeat/history/
 !generated/**/.gitkeep
 !generated/**/README.md
+generated/heartbeat/*
+!generated/heartbeat/.gitkeep
+!generated/heartbeat/history/
+!generated/heartbeat/history/.gitkeep
 
 # Legacy generated outputs that still live under data/ for runtime reasons.
 # Existing committed copies are preserved (use `git rm --cached <path>` to

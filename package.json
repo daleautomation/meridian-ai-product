@@ -18,7 +18,9 @@
     "crm-import:check": "tsx scripts/check-crm-import.ts",
     "personal-workspace:check": "tsx scripts/check-personal-workspace.ts",
     "auth:check": "tsx scripts/check-workspace-auth.ts",
-    "auth:live": "tsx scripts/check-live-auth.ts"
+    "auth:live": "tsx scripts/check-live-auth.ts",
+    "heartbeat:run": "tsx scripts/heartbeat/run.ts",
+    "heartbeat:notify": "node scripts/heartbeat/notify-local.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
