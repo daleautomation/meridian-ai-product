@@ -17,6 +17,7 @@ import {
 } from "./report";
 import { collectWorkspaceHealth, type WorkspaceHealthReport } from "./workspace-health";
 import { buildApprovalQueue, type ApprovalQueueItem } from "./approval-queue";
+import { buildDailyWorkflow, type DailyWorkflow } from "./daily-workflow";
 import type { CheckResult, CheckStatus, HeartbeatRun } from "./types";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -92,9 +93,10 @@ async function writeOutputs(
   regression: ReturnType<typeof buildRegressionSummary>,
   workspaceHealth: WorkspaceHealthReport | null,
   approvalQueue: ApprovalQueueItem[],
+  workflow: DailyWorkflow,
 ): Promise<void> {
-  const latest = renderLatestMarkdown(run, regression, workspaceHealth, approvalQueue);
-  const brief = renderBriefTodayMarkdown(run, regression, workspaceHealth, approvalQueue);
+  const latest = renderLatestMarkdown(run, regression, workspaceHealth, approvalQueue, workflow);
+  const brief = renderBriefTodayMarkdown(run, regression, workspaceHealth, approvalQueue, workflow);
   const history = renderHistoryJson(run, regression);
 
   await Promise.all([
@@ -141,7 +143,10 @@ async function main(): Promise<void> {
   // CEO Approval Queue: pure derivation from observed evidence. No execution.
   const approvalQueue = buildApprovalQueue(run, workspaceHealth);
 
-  await writeOutputs(run, regression, workspaceHealth, approvalQueue);
+  // CEO Daily Workflow: synthesizes priorities/blocked/opportunities from evidence.
+  const workflow = buildDailyWorkflow(run, workspaceHealth, approvalQueue);
+
+  await writeOutputs(run, regression, workspaceHealth, approvalQueue, workflow);
 
   console.log("");
   console.log(`Summary: ${summary.passed}/${summary.total} passed`);

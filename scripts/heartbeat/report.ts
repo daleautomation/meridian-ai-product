@@ -13,6 +13,12 @@ import {
   type WorkspaceMetrics,
 } from "./workspace-health";
 import type { ApprovalQueueItem } from "./approval-queue";
+import type {
+  BlockedItem,
+  DailyWorkflow,
+  Priority,
+  RevenueOpportunity,
+} from "./daily-workflow";
 
 function statusIcon(status: CheckStatus): string {
   if (status === "pass") return "✓";
@@ -249,6 +255,66 @@ export function renderWorkspaceHealth(report: WorkspaceHealthReport | null): str
   return [verdictLine, "", ...blocks].join("\n\n");
 }
 
+export function renderDailyWorkflowSummary(
+  workflow: DailyWorkflow | null,
+): string {
+  if (!workflow) return INSUFFICIENT;
+  const s = workflow.summary;
+  return [
+    `**At a glance:** ${s.approvalsAwaiting} approval(s) awaiting · ${s.priorities} priority(ies) today · ${s.blocked} blocked · ${s.opportunities} opportunity(ies) · checks ${s.checksPassing} passing.`,
+    "",
+    "_Meridian surfaces · Dylan decides · No workflow execution._",
+  ].join("\n");
+}
+
+function renderPriority(p: Priority): string {
+  return [
+    `**${p.rank}. ${p.title}** _(${p.source})_`,
+    `- Why it surfaced: ${p.whySurfaced}`,
+    `- Impacted workspace: ${p.workspace}`,
+    `- Suggested next step: ${p.suggestedNextStep}`,
+    `- Evidence: ${p.evidence.join("; ")}`,
+  ].join("\n");
+}
+
+export function renderTodaysPriorities(priorities: Priority[]): string {
+  if (priorities.length === 0) {
+    return "No priorities surfaced from current evidence. All observer checks pass and no Tier 2 approvals are pending.";
+  }
+  return priorities.map(renderPriority).join("\n\n");
+}
+
+function renderBlocked(b: BlockedItem): string {
+  return [
+    `**${b.title}** — ${b.workspace}`,
+    `- Reason: ${b.reason}`,
+    `- Blocked on: ${b.blockedOn}`,
+    `- Evidence: ${b.evidence.join("; ")}`,
+  ].join("\n");
+}
+
+export function renderBlockedItems(blocked: BlockedItem[]): string {
+  if (blocked.length === 0) {
+    return "No blocked items surfaced from current evidence.";
+  }
+  return blocked.map(renderBlocked).join("\n\n");
+}
+
+function renderOpportunity(o: RevenueOpportunity): string {
+  return [
+    `**${o.title}** — ${o.workspace}`,
+    `- Suggested next step: ${o.suggestedNextStep}`,
+    `- Evidence: ${o.evidence.join("; ")}`,
+  ].join("\n");
+}
+
+export function renderRevenueOpportunities(opportunities: RevenueOpportunity[]): string {
+  if (opportunities.length === 0) {
+    return "No revenue opportunities derivable from current evidence.";
+  }
+  return opportunities.map(renderOpportunity).join("\n\n");
+}
+
 /** Mandatory on every heartbeat report — exact commands, never "open a PR". */
 export function renderNextCommands(): string {
   return [
@@ -285,36 +351,32 @@ export function renderLatestMarkdown(
   regression: RegressionSummary,
   workspaceHealth: WorkspaceHealthReport | null = null,
   approvalQueue: ApprovalQueueItem[] = [],
+  workflow: DailyWorkflow | null = null,
 ): string {
-  const decisions = buildCeoDecisions(run);
   const runTime = new Date(run.runAt).toUTCString();
 
   return [
-    `# Meridian Heartbeat — ${run.date}`,
+    `# Meridian — CEO Daily Workflow — ${run.date}`,
     "",
     `_Observer-only · Read-only · Generated ${runTime}_`,
+    "",
+    "## CEO Daily Workflow",
+    "",
+    renderDailyWorkflowSummary(workflow),
     "",
     "## CEO Approval Queue",
     "",
     renderApprovalQueue(approvalQueue),
     "",
-    "## CEO Decisions",
+    "## Today's Priorities",
     "",
-    renderCeoDecisionsBlock(decisions),
+    "_Evidence-derived. Each priority traces to Heartbeat, the Approval Queue, or Workspace Health._",
     "",
-    "## Green Board",
+    renderTodaysPriorities(workflow ? workflow.priorities : []),
     "",
-    renderGreenBoard(run),
+    "## Blocked Items",
     "",
-    `**Summary:** ${overallHealth(run)}`,
-    "",
-    "## Regression",
-    "",
-    renderRegression(regression),
-    "",
-    "## Coverage",
-    "",
-    COVERAGE_LINE,
+    renderBlockedItems(workflow ? workflow.blocked : []),
     "",
     "## Workspace Health",
     "",
@@ -322,7 +384,27 @@ export function renderLatestMarkdown(
     "",
     renderWorkspaceHealth(workspaceHealth),
     "",
-    "## Role Boundaries",
+    "## Revenue Opportunities",
+    "",
+    "_Reachable-contact facts only — no projected revenue._",
+    "",
+    renderRevenueOpportunities(workflow ? workflow.opportunities : []),
+    "",
+    "## System Health",
+    "",
+    `**Summary:** ${overallHealth(run)}`,
+    "",
+    renderGreenBoard(run),
+    "",
+    "### Regression",
+    "",
+    renderRegression(regression),
+    "",
+    "### Coverage",
+    "",
+    COVERAGE_LINE,
+    "",
+    "### Role Boundaries",
     "",
     "- **Dylan** — CEO (decisions only)",
     "- **Meridian** — Operator (runs checks, writes reports)",
@@ -339,6 +421,7 @@ export function renderBriefTodayMarkdown(
   regression: RegressionSummary,
   workspaceHealth: WorkspaceHealthReport | null = null,
   approvalQueue: ApprovalQueueItem[] = [],
+  workflow: DailyWorkflow | null = null,
 ): string {
   const decisions = buildCeoDecisions(run);
 
@@ -378,9 +461,19 @@ export function renderBriefTodayMarkdown(
   return [
     "# Meridian Morning Brief",
     "",
+    renderDailyWorkflowSummary(workflow),
+    "",
     "## CEO Approval Queue",
     "",
     renderApprovalQueue(approvalQueue),
+    "",
+    "## Today's Priorities",
+    "",
+    renderTodaysPriorities(workflow ? workflow.priorities : []),
+    "",
+    "## Blocked Items",
+    "",
+    renderBlockedItems(workflow ? workflow.blocked : []),
     "",
     "## CEO Decisions",
     "",
@@ -405,6 +498,10 @@ export function renderBriefTodayMarkdown(
     "_Evidence-first: facts before verdicts._",
     "",
     renderWorkspaceHealth(workspaceHealth),
+    "",
+    "## Revenue Opportunities",
+    "",
+    renderRevenueOpportunities(workflow ? workflow.opportunities : []),
     "",
     "## Not Covered Yet",
     "",
