@@ -6,6 +6,12 @@ import type {
   RegressionSummary,
 } from "./types";
 import { COVERAGE_LINE, NOT_COVERED_YET } from "./manifest";
+import {
+  INSUFFICIENT,
+  MISSING_BASELINE,
+  type WorkspaceHealthReport,
+  type WorkspaceMetrics,
+} from "./workspace-health";
 
 function statusIcon(status: CheckStatus): string {
   if (status === "pass") return "✓";
@@ -154,9 +160,95 @@ function renderFailedDetails(run: HeartbeatRun): string {
   return ["## Failure Details", "", ...sections].join("\n");
 }
 
+/** A measured number, or the exact evidence-first literal when it is null. */
+function numOr(value: number | null): string {
+  return value === null ? INSUFFICIENT : String(value);
+}
+
+function renderWorkspaceMetrics(ws: WorkspaceMetrics): string {
+  const lines: string[] = [`### ${ws.workspace} (\`${ws.source}\`)`, ""];
+
+  if (!ws.measurable) {
+    // Source is not a contact store — every contact-level metric is insufficient.
+    lines.push(`- Record count: ${INSUFFICIENT}`);
+    lines.push(`- Duplicate count: ${INSUFFICIENT}`);
+    lines.push(`- Trust conflict count: ${INSUFFICIENT}`);
+    lines.push(`- Relationship coverage: ${INSUFFICIENT}`);
+    lines.push(`- Import activity: ${INSUFFICIENT}`);
+    lines.push(`- Record delta: ${INSUFFICIENT}`);
+    for (const note of ws.notes) lines.push(`- _${note}_`);
+    return lines.join("\n");
+  }
+
+  const coverage = ws.coverage
+    ? `email ${ws.coverage.withEmail}, phone ${ws.coverage.withPhone}, last-interaction ${ws.coverage.withLastInteraction}, non-default score ${ws.coverage.withNonDefaultScore} (of ${numOr(ws.recordCount)})`
+    : INSUFFICIENT;
+
+  const importActivity = ws.importActivity
+    ? `${ws.importActivity.distinctJobs} distinct import job(s); latest record update ${ws.importActivity.latestUpdate ?? INSUFFICIENT}`
+    : INSUFFICIENT;
+
+  const recordDelta = ws.baselineMissing ? MISSING_BASELINE : numOr(ws.recordDelta);
+
+  lines.push(`- Record count: ${numOr(ws.recordCount)}`);
+  lines.push(`- Duplicate count: ${numOr(ws.duplicateCount)} (${ws.duplicateKey})`);
+  lines.push(`- Trust conflict count (conflictState ≠ none): ${numOr(ws.trustConflictCount)}`);
+  lines.push(`- Flat-field vs trust-layer discrepancies: ${numOr(ws.flatTrustDiscrepancyCount)}`);
+  lines.push(`- Relationship coverage: ${coverage}`);
+  lines.push(`- Import activity: ${importActivity}`);
+  lines.push(`- Record delta: ${recordDelta}`);
+  for (const note of ws.notes) lines.push(`- _${note}_`);
+  return lines.join("\n");
+}
+
+export function renderWorkspaceHealth(report: WorkspaceHealthReport | null): string {
+  if (!report || report.workspaces.length === 0) {
+    return INSUFFICIENT;
+  }
+
+  const verdictLine = report.thresholdsDefined
+    ? "_Verdict thresholds defined. Verdict mapping is founder-curated._"
+    : "_Verdict thresholds defined: none — no verdicts emitted (facts only)._";
+
+  const blocks = report.workspaces.map(renderWorkspaceMetrics);
+  return [verdictLine, "", ...blocks].join("\n\n");
+}
+
+/** Mandatory on every heartbeat report — exact commands, never "open a PR". */
+export function renderNextCommands(): string {
+  return [
+    "## Next Commands",
+    "",
+    "```bash",
+    "# 1 · Validate",
+    "git status",
+    "npm run build",
+    "",
+    "# 2 · Commit (stage only intended files)",
+    "git add <files>",
+    'git commit -m "<message>"',
+    "",
+    "# 3 · Push branch",
+    "git push origin <branch>",
+    "",
+    "# 4 · After Dylan approves — merge to main",
+    "git checkout main",
+    "git pull origin main",
+    "git merge <branch>",
+    "git push origin main",
+    "",
+    "# 5 · Return local main to latest + clean up",
+    "git checkout main",
+    "git pull origin main",
+    "git branch -d <branch>",
+    "```",
+  ].join("\n");
+}
+
 export function renderLatestMarkdown(
   run: HeartbeatRun,
   regression: RegressionSummary,
+  workspaceHealth: WorkspaceHealthReport | null = null,
 ): string {
   const decisions = buildCeoDecisions(run);
   const runTime = new Date(run.runAt).toUTCString();
@@ -184,6 +276,12 @@ export function renderLatestMarkdown(
     "",
     COVERAGE_LINE,
     "",
+    "## Workspace Health",
+    "",
+    "_Evidence-first: facts before verdicts._",
+    "",
+    renderWorkspaceHealth(workspaceHealth),
+    "",
     "## Role Boundaries",
     "",
     "- **Dylan** — CEO (decisions only)",
@@ -191,12 +289,15 @@ export function renderLatestMarkdown(
     "- **Heartbeat** — Observer (no fixes, no merges, no production writes)",
     "",
     renderFailedDetails(run),
+    "",
+    renderNextCommands(),
   ].join("\n");
 }
 
 export function renderBriefTodayMarkdown(
   run: HeartbeatRun,
   regression: RegressionSummary,
+  workspaceHealth: WorkspaceHealthReport | null = null,
 ): string {
   const decisions = buildCeoDecisions(run);
 
@@ -254,9 +355,17 @@ export function renderBriefTodayMarkdown(
     "",
     needsDylan,
     "",
+    "## Workspace Health",
+    "",
+    "_Evidence-first: facts before verdicts._",
+    "",
+    renderWorkspaceHealth(workspaceHealth),
+    "",
     "## Not Covered Yet",
     "",
     NOT_COVERED_YET.join(", ") + ".",
+    "",
+    renderNextCommands(),
   ].join("\n");
 }
 
