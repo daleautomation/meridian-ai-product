@@ -16,6 +16,7 @@ import {
   renderLatestMarkdown,
 } from "./report";
 import { collectWorkspaceHealth, type WorkspaceHealthReport } from "./workspace-health";
+import { buildApprovalQueue, type ApprovalQueueItem } from "./approval-queue";
 import type { CheckResult, CheckStatus, HeartbeatRun } from "./types";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -90,9 +91,10 @@ async function writeOutputs(
   run: HeartbeatRun,
   regression: ReturnType<typeof buildRegressionSummary>,
   workspaceHealth: WorkspaceHealthReport | null,
+  approvalQueue: ApprovalQueueItem[],
 ): Promise<void> {
-  const latest = renderLatestMarkdown(run, regression, workspaceHealth);
-  const brief = renderBriefTodayMarkdown(run, regression, workspaceHealth);
+  const latest = renderLatestMarkdown(run, regression, workspaceHealth, approvalQueue);
+  const brief = renderBriefTodayMarkdown(run, regression, workspaceHealth, approvalQueue);
   const history = renderHistoryJson(run, regression);
 
   await Promise.all([
@@ -136,7 +138,10 @@ async function main(): Promise<void> {
   // Evidence-first workspace health: reads data/**, writes only its baseline snapshot.
   const workspaceHealth = await collectWorkspaceHealth(ROOT);
 
-  await writeOutputs(run, regression, workspaceHealth);
+  // CEO Approval Queue: pure derivation from observed evidence. No execution.
+  const approvalQueue = buildApprovalQueue(run, workspaceHealth);
+
+  await writeOutputs(run, regression, workspaceHealth, approvalQueue);
 
   console.log("");
   console.log(`Summary: ${summary.passed}/${summary.total} passed`);

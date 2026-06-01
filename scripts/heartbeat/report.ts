@@ -12,6 +12,7 @@ import {
   type WorkspaceHealthReport,
   type WorkspaceMetrics,
 } from "./workspace-health";
+import type { ApprovalQueueItem } from "./approval-queue";
 
 function statusIcon(status: CheckStatus): string {
   if (status === "pass") return "✓";
@@ -160,6 +161,40 @@ function renderFailedDetails(run: HeartbeatRun): string {
   return ["## Failure Details", "", ...sections].join("\n");
 }
 
+function renderApprovalItem(item: ApprovalQueueItem): string {
+  return [
+    `**[${item.category}] ${item.decision}**`,
+    `- Why approval is required: ${item.whyApprovalRequired}`,
+    `- Impacted workspace: ${item.workspace}`,
+    `- Impact category: ${item.category}`,
+    `- Due date: ${item.dueDate ?? "—"}`,
+    `- Evidence: ${item.evidence.join("; ")}`,
+  ].join("\n");
+}
+
+export function renderApprovalQueue(items: ApprovalQueueItem[]): string {
+  const tier2 = items.filter((i) => i.tier === 2);
+  const tier1 = items.filter((i) => i.tier === 1);
+
+  const lines: string[] = ["_Meridian surfaces · Dylan decides · No autonomous execution._", ""];
+
+  lines.push("### Awaiting your decision (Tier 2)", "");
+  if (tier2.length === 0) {
+    lines.push("No Tier 2 approvals pending.");
+  } else {
+    lines.push(tier2.map(renderApprovalItem).join("\n\n"));
+  }
+
+  lines.push("", "### Logged — auto-resolved, no action required (Tier 1)", "");
+  if (tier1.length === 0) {
+    lines.push("No Tier 1 items logged this run.");
+  } else {
+    lines.push(tier1.map(renderApprovalItem).join("\n\n"));
+  }
+
+  return lines.join("\n");
+}
+
 /** A measured number, or the exact evidence-first literal when it is null. */
 function numOr(value: number | null): string {
   return value === null ? INSUFFICIENT : String(value);
@@ -249,6 +284,7 @@ export function renderLatestMarkdown(
   run: HeartbeatRun,
   regression: RegressionSummary,
   workspaceHealth: WorkspaceHealthReport | null = null,
+  approvalQueue: ApprovalQueueItem[] = [],
 ): string {
   const decisions = buildCeoDecisions(run);
   const runTime = new Date(run.runAt).toUTCString();
@@ -257,6 +293,10 @@ export function renderLatestMarkdown(
     `# Meridian Heartbeat — ${run.date}`,
     "",
     `_Observer-only · Read-only · Generated ${runTime}_`,
+    "",
+    "## CEO Approval Queue",
+    "",
+    renderApprovalQueue(approvalQueue),
     "",
     "## CEO Decisions",
     "",
@@ -298,6 +338,7 @@ export function renderBriefTodayMarkdown(
   run: HeartbeatRun,
   regression: RegressionSummary,
   workspaceHealth: WorkspaceHealthReport | null = null,
+  approvalQueue: ApprovalQueueItem[] = [],
 ): string {
   const decisions = buildCeoDecisions(run);
 
@@ -336,6 +377,10 @@ export function renderBriefTodayMarkdown(
 
   return [
     "# Meridian Morning Brief",
+    "",
+    "## CEO Approval Queue",
+    "",
+    renderApprovalQueue(approvalQueue),
     "",
     "## CEO Decisions",
     "",
