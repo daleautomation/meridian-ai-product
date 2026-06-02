@@ -212,6 +212,7 @@ export interface ExecuteNowItem {
   action: string;
   dueDate: string | null;
   priority: Priority;
+  category: NeedsDylanCategory;
 }
 
 export interface QuickAction {

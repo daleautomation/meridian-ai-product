@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import type { CSSProperties, ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useState, type CSSProperties, type ReactNode } from "react";
 import { opportunityPipelineHref } from "@/lib/ae-jobs/career-brief";
 import { palette } from "@/lib/theme";
 import type {
   CareerBriefModel,
+  ExecuteNowItem,
   NeedsDylanCategory,
   Priority,
   RoleCategory,
@@ -25,6 +27,48 @@ const ROLE_SHORT: Record<RoleCategory, string> = {
 
 export function CareerBrief({ model }: CareerBriefProps) {
   const { morningBrief, careerMomentum } = model;
+  const router = useRouter();
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [touchpointFor, setTouchpointFor] = useState<string | null>(null);
+  const [touchpointNote, setTouchpointNote] = useState("");
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const runAction = useCallback(
+    async (
+      item: ExecuteNowItem,
+      action: "mark_done" | "snooze" | "log_touchpoint",
+      note?: string,
+    ) => {
+      const key = `${item.opportunityId}-${action}`;
+      setBusyKey(key);
+      setActionError(null);
+      try {
+        const res = await fetch("/api/ae-jobs/brief-actions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            opportunityId: item.opportunityId,
+            action,
+            category: item.category,
+            note,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          setActionError(data.error ?? "Action failed");
+          return;
+        }
+        setTouchpointFor(null);
+        setTouchpointNote("");
+        router.refresh();
+      } catch {
+        setActionError("Action failed — try again");
+      } finally {
+        setBusyKey(null);
+      }
+    },
+    [router],
+  );
 
   return (
     <main style={styles.shell}>
@@ -78,11 +122,12 @@ export function CareerBrief({ model }: CareerBriefProps) {
         count={model.executeNow.length}
         emptyMessage="No high-priority actions queued. Review Waiting On below."
       >
+        {actionError ? <p style={styles.actionError}>{actionError}</p> : null}
         <div style={styles.executeTableWrap}>
           <table style={styles.executeTable}>
             <thead>
               <tr>
-                {["Opportunity", "Action", "Due", ""].map((heading) => (
+                {["Opportunity", "Action", "Due", "Actions"].map((heading) => (
                   <th key={heading} style={styles.executeTh}>
                     {heading}
                   </th>
@@ -90,29 +135,74 @@ export function CareerBrief({ model }: CareerBriefProps) {
               </tr>
             </thead>
             <tbody>
-              {model.executeNow.map((item) => (
-                <tr key={`${item.opportunityId}-${item.action}`}>
-                  <td style={styles.executeTd}>
-                    <strong>{item.company}</strong>
-                    <span style={styles.cardRole}>{item.roleTitle}</span>
-                  </td>
-                  <td style={styles.executeTd}>{item.action}</td>
-                  <td style={styles.executeTd}>
-                    {item.dueDate ? (
-                      <span style={isDueToday(item.dueDate) ? styles.dueToday : undefined}>
-                        {isDueToday(item.dueDate) ? "Today" : formatDate(item.dueDate)}
-                      </span>
-                    ) : (
-                      <span style={styles.muted}>—</span>
-                    )}
-                  </td>
-                  <td style={styles.executeTd}>
-                    <Link href={opportunityPipelineHref(item.opportunityId)} style={styles.rowLink}>
-                      Open →
-                    </Link>
-                  </td>
-                </tr>
-              ))}
+              {model.executeNow.map((item) => {
+                const rowKey = `${item.opportunityId}-${item.category}`;
+                const busy = busyKey?.startsWith(item.opportunityId) ?? false;
+                const showingTouchpoint = touchpointFor === item.opportunityId;
+
+                return (
+                  <tr key={rowKey}>
+                    <td style={styles.executeTd}>
+                      <strong>{item.company}</strong>
+                      <span style={styles.cardRole}>{item.roleTitle}</span>
+                    </td>
+                    <td style={styles.executeTd}>{item.action}</td>
+                    <td style={styles.executeTd}>
+                      {item.dueDate ? (
+                        <span style={isDueToday(item.dueDate) ? styles.dueToday : undefined}>
+                          {isDueToday(item.dueDate) ? "Today" : formatDate(item.dueDate)}
+                        </span>
+                      ) : (
+                        <span style={styles.muted}>—</span>
+                      )}
+                    </td>
+                    <td style={styles.executeTd}>
+                      <div style={styles.actionRow}>
+                        <ActionButton
+                          label="Mark done"
+                          disabled={busy}
+                          onClick={() => runAction(item, "mark_done")}
+                        />
+                        <ActionButton
+                          label="Snooze 2d"
+                          disabled={busy}
+                          onClick={() => runAction(item, "snooze")}
+                        />
+                        <ActionButton
+                          label="Log touch"
+                          disabled={busy}
+                          onClick={() => {
+                            setTouchpointFor(showingTouchpoint ? null : item.opportunityId);
+                            setTouchpointNote("");
+                          }}
+                        />
+                        <Link href={opportunityPipelineHref(item.opportunityId)} style={styles.actionLink}>
+                          Open →
+                        </Link>
+                      </div>
+                      {showingTouchpoint ? (
+                        <div style={styles.touchpointForm}>
+                          <input
+                            type="text"
+                            value={touchpointNote}
+                            onChange={(e) => setTouchpointNote(e.target.value)}
+                            placeholder="Short note (optional)"
+                            style={styles.touchpointInput}
+                            maxLength={280}
+                            autoFocus
+                          />
+                          <ActionButton
+                            label="Save touchpoint"
+                            disabled={busy}
+                            primary
+                            onClick={() => runAction(item, "log_touchpoint", touchpointNote)}
+                          />
+                        </div>
+                      ) : null}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -251,6 +341,33 @@ export function CareerBrief({ model }: CareerBriefProps) {
         </Link>
       </footer>
     </main>
+  );
+}
+
+function ActionButton({
+  label,
+  disabled,
+  primary,
+  onClick,
+}: {
+  label: string;
+  disabled?: boolean;
+  primary?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      style={{
+        ...styles.actionButton,
+        ...(primary ? styles.actionButtonPrimary : {}),
+        ...(disabled ? styles.actionButtonDisabled : {}),
+      }}
+    >
+      {label}
+    </button>
   );
 }
 
@@ -564,6 +681,63 @@ const styles: Record<string, CSSProperties> = {
     verticalAlign: "top",
   },
   dueToday: { color: palette.orange, fontWeight: 800 },
+  actionError: {
+    margin: "0 0 10px",
+    padding: "10px 12px",
+    borderRadius: "10px",
+    background: palette.dangerBg,
+    color: palette.danger,
+    fontSize: "13px",
+    fontWeight: 600,
+  },
+  actionRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "6px",
+    alignItems: "center",
+  },
+  actionButton: {
+    padding: "5px 10px",
+    borderRadius: "8px",
+    border: `1px solid ${palette.border}`,
+    background: palette.surface,
+    color: palette.textPrimary,
+    fontSize: "11px",
+    fontWeight: 700,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  },
+  actionButtonPrimary: {
+    background: palette.blue,
+    color: "#fff",
+    borderColor: palette.blue,
+  },
+  actionButtonDisabled: {
+    opacity: 0.5,
+    cursor: "not-allowed",
+  },
+  actionLink: {
+    fontSize: "11px",
+    fontWeight: 700,
+    color: palette.blue,
+    textDecoration: "none",
+    whiteSpace: "nowrap",
+  },
+  touchpointForm: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "6px",
+    marginTop: "8px",
+    alignItems: "center",
+  },
+  touchpointInput: {
+    flex: "1 1 140px",
+    minWidth: "120px",
+    padding: "6px 10px",
+    borderRadius: "8px",
+    border: `1px solid ${palette.border}`,
+    fontSize: "12px",
+  },
   rowLink: {
     fontSize: "12px",
     fontWeight: 700,

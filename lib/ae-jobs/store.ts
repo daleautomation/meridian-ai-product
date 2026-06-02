@@ -60,7 +60,19 @@ export async function updateOpportunityChecklist(
 
 export async function updateOpportunityFields(
   opportunityId: string,
-  patch: Partial<Pick<JobOpportunity, "nextAction" | "followUpDate" | "priority" | "stage" | "notes">>,
+  patch: Partial<
+    Pick<
+      JobOpportunity,
+      | "nextAction"
+      | "followUpDate"
+      | "priority"
+      | "stage"
+      | "notes"
+      | "lastTouchpoint"
+      | "prepRequired"
+      | "waitingOnReply"
+    >
+  >,
   ownerId = DEFAULT_OWNER,
 ): Promise<JobOpportunity | null> {
   const store = await loadAeJobsStore(ownerId);

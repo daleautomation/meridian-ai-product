@@ -1,4 +1,5 @@
 // Validates AE Job OS domain model without starting the dev server.
+import { resolveBriefActionPatch, resolveMarkDonePatch } from "../lib/ae-jobs/brief-actions";
 import { buildCareerBriefModel } from "../lib/ae-jobs/career-brief";
 import { buildAeJobsWorkspaceModel, groupByRoleCategory } from "../lib/ae-jobs/workspace";
 import { seedOpportunities } from "../lib/ae-jobs/seed";
@@ -43,6 +44,10 @@ check(
   "career brief execute now includes clipboard",
   brief.executeNow.some((item) => item.company === "Clipboard"),
 );
+check(
+  "career brief execute now items have category",
+  brief.executeNow.every((item) => typeof item.category === "string"),
+);
 check("career brief quick actions", brief.quickActions.length === 4);
 check(
   "career brief quick action clipboard link",
@@ -71,6 +76,19 @@ for (const company of REAL_COMPANIES) {
 const clipboard = opportunities.find((o) => o.company === "Clipboard");
 check("clipboard loom due flagged", model.needsDylan.some((n) => n.company === "Clipboard" && n.category === "loom_due"));
 check("clipboard case study stage", clipboard?.stage === "case_study");
+
+if (clipboard) {
+  const markDone = resolveMarkDonePatch(clipboard, "loom_due");
+  check("mark done loom sets loom_recorded", markDone.checklist?.loom_recorded === true);
+  check("mark done loom clears prepRequired", markDone.fields?.prepRequired === false);
+
+  const snooze = resolveBriefActionPatch(clipboard, "snooze");
+  check("snooze sets followUpDate", typeof snooze.fields?.followUpDate === "string");
+
+  const touch = resolveBriefActionPatch(clipboard, "log_touchpoint", { note: "Called recruiter" });
+  check("touchpoint updates lastTouchpoint", typeof touch.fields?.lastTouchpoint === "string");
+  check("touchpoint appends note", touch.fields?.notes?.includes("Called recruiter") === true);
+}
 
 const safetyCulture = opportunities.find((o) => o.company === "SafetyCulture");
 check(

@@ -395,6 +395,7 @@ function buildExecuteNow(needsDylanToday: NeedsDylanItem[]): ExecuteNowItem[] {
     action: item.nextAction,
     dueDate: item.followUpDate,
     priority: item.priority,
+    category: item.category,
   }));
 }
 
