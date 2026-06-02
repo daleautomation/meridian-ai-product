@@ -4,10 +4,14 @@ import { buildNeedsDylanItems } from "./workspace";
 import type {
   CareerBriefModel,
   CareerHealthSummary,
+  CareerMomentum,
+  ExecuteNowItem,
   JobOpportunity,
+  MorningBriefHero,
   NeedsDylanItem,
   PipelineStage,
   Priority,
+  QuickAction,
   SuggestedNextMove,
   TopOpportunityItem,
   UpcomingItem,
@@ -51,6 +55,19 @@ const UPCOMING_KIND_LABELS: Record<UpcomingItemKind, string> = {
 };
 
 const ACTIONABLE_NEEDS_DYLAN = new Set(["loom_due", "follow_up_overdue", "prep_required"]);
+
+const APPLICATION_STAGES = new Set<PipelineStage>([
+  "applied",
+  "recruiter_screen",
+  "hiring_manager",
+  "interview",
+  "case_study",
+  "offer",
+]);
+
+export function opportunityPipelineHref(opportunityId: string): string {
+  return `/operator/jobs?opportunity=${encodeURIComponent(opportunityId)}`;
+}
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -344,21 +361,123 @@ function buildSuggestedNextMove(
   };
 }
 
+function formatTodayLabel(iso: string): string {
+  return new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function buildMorningBriefHero(
+  opportunities: JobOpportunity[],
+  needsDylanToday: NeedsDylanItem[],
+  waitingOn: WaitingOnItem[],
+  upcoming: UpcomingItem[],
+): MorningBriefHero {
+  const today = todayIso();
+  return {
+    todayLabel: formatTodayLabel(today),
+    todayIso: today,
+    activeOpportunities: opportunities.filter(isActive).length,
+    needsDylanCount: needsDylanToday.length,
+    waitingOnCount: waitingOn.length,
+    upcomingEventsCount: upcoming.length,
+  };
+}
+
+function buildExecuteNow(needsDylanToday: NeedsDylanItem[]): ExecuteNowItem[] {
+  return needsDylanToday.map((item) => ({
+    opportunityId: item.opportunityId,
+    company: item.company,
+    roleTitle: item.roleTitle,
+    action: item.nextAction,
+    dueDate: item.followUpDate,
+    priority: item.priority,
+  }));
+}
+
+function findOpportunityByCompany(
+  opportunities: JobOpportunity[],
+  company: string,
+): JobOpportunity | undefined {
+  const needle = company.toLowerCase();
+  return opportunities.find((opp) => opp.company.toLowerCase() === needle);
+}
+
+function buildQuickActions(opportunities: JobOpportunity[]): QuickAction[] {
+  const clipboard = findOpportunityByCompany(opportunities, "Clipboard");
+  const safetyCulture = findOpportunityByCompany(opportunities, "SafetyCulture");
+  const ronco = findOpportunityByCompany(opportunities, "Ronco");
+
+  return [
+    {
+      id: "clipboard",
+      label: "Open Clipboard",
+      href: clipboard ? opportunityPipelineHref(clipboard.id) : "/operator/jobs",
+    },
+    {
+      id: "safetyculture",
+      label: "Open SafetyCulture",
+      href: safetyCulture ? opportunityPipelineHref(safetyCulture.id) : "/operator/jobs",
+    },
+    {
+      id: "ronco",
+      label: "Open Ronco",
+      href: ronco ? opportunityPipelineHref(ronco.id) : "/operator/jobs",
+    },
+    {
+      id: "pipeline",
+      label: "Open Full Pipeline",
+      href: "/operator/jobs",
+    },
+  ];
+}
+
+function buildCareerMomentum(opportunities: JobOpportunity[]): CareerMomentum {
+  const today = todayIso();
+  const active = opportunities.filter(isActive);
+
+  return {
+    applicationsInProgress: opportunities.filter(
+      (opp) => opp.stage !== "closed_lost" && APPLICATION_STAGES.has(opp.stage),
+    ).length,
+    interviewsActive: opportunities.filter(
+      (opp) =>
+        opp.stage !== "closed_lost" &&
+        (opp.stage === "interview" || opp.checklist.interview_scheduled),
+    ).length,
+    followUpsDue: active.filter(
+      (opp) => opp.followUpDate && opp.followUpDate.slice(0, 10) <= today,
+    ).length,
+    waitingOnResponse: opportunities.filter(
+      (opp) => opp.stage !== "closed_lost" && opp.waitingOnReply === true,
+    ).length,
+  };
+}
+
 export function buildCareerBriefModel(
   opportunities: JobOpportunity[],
   user: PublicUser,
 ): CareerBriefModel {
   const allNeedsDylan = buildNeedsDylanItems(opportunities);
   const needsDylanToday = buildNeedsDylanToday(opportunities, allNeedsDylan);
+  const waitingOn = buildWaitingOn(opportunities);
+  const upcoming = buildUpcoming(opportunities);
   const topOpportunities = buildTopOpportunities(opportunities);
 
   return {
     generatedAt: new Date().toISOString(),
     owner: { id: user.id, name: user.name },
+    morningBrief: buildMorningBriefHero(opportunities, needsDylanToday, waitingOn, upcoming),
+    executeNow: buildExecuteNow(needsDylanToday),
+    quickActions: buildQuickActions(opportunities),
+    careerMomentum: buildCareerMomentum(opportunities),
     health: buildHealthSummary(opportunities),
     needsDylanToday,
-    waitingOn: buildWaitingOn(opportunities),
-    upcoming: buildUpcoming(opportunities),
+    waitingOn,
+    upcoming,
     topOpportunities,
     suggestedNextMove: buildSuggestedNextMove(needsDylanToday, topOpportunities),
     roleLabels: ROLE_LABELS,

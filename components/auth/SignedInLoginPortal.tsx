@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { PublicUser } from "@/config/tenants";
 import {
   isPostLoginPathAllowed,
+  postLoginRouteForUser,
   sanitizeInternalPath,
   workspaceSelectCardsForUser,
   type WorkspaceSelectCard,
@@ -9,6 +10,8 @@ import {
 import { isAdminOperator } from "@/lib/workspaceAccess";
 
 const ADMIN_LINKS = [
+  { href: "/operator/jobs/brief", label: "Career Brief", detail: "Daily operating surface" },
+  { href: "/operator/jobs", label: "Full pipeline", detail: "AE job operating system" },
   { href: "/admin/prospects", label: "Prospect research", detail: "Internal outreach cohorts" },
   { href: "/admin/outreach", label: "Outreach", detail: "Founder outreach queue" },
   { href: "/admin/runs", label: "Runs", detail: "Pipeline run history" },
@@ -24,6 +27,7 @@ export function SignedInLoginPortal({ user, requestedNext }: Props) {
   const showAdmin = isAdminOperator(user);
   const safeNext = sanitizeInternalPath(requestedNext ?? null);
   const nextAllowed = safeNext && isPostLoginPathAllowed(user, safeNext) ? safeNext : null;
+  const defaultRoute = postLoginRouteForUser(user);
 
   if (cards.length === 0) {
     return (
@@ -53,6 +57,15 @@ export function SignedInLoginPortal({ user, requestedNext }: Props) {
           <div className="workspace-login-next-banner">
             <Link href={nextAllowed} className="workspace-login-submit workspace-login-continue-primary">
               Continue to requested destination →
+            </Link>
+          </div>
+        ) : defaultRoute === "/operator/jobs/brief" ? (
+          <div className="workspace-login-next-banner">
+            <Link
+              href={defaultRoute}
+              className="workspace-login-submit workspace-login-continue-primary"
+            >
+              Open Career Brief →
             </Link>
           </div>
         ) : null}

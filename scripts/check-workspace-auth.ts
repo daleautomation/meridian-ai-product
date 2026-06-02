@@ -115,14 +115,22 @@ check("dylan / meridian authenticates (case-insensitive)", () => {
   assert.ok(t);
 });
 
-check("dylan routes to workspace selector", () => {
+check("dylan routes to career brief", () => {
   const t = findTenantByCredentials("dylan", "Meridian");
   assert.ok(t);
   const user = toPublicUser(t);
-  assert.equal(postLoginRouteForUser(user), "/workspace-select");
+  assert.equal(postLoginRouteForUser(user), "/operator/jobs/brief");
+  assert.equal(resolvePostLoginRedirect(user, null), "/operator/jobs/brief");
 });
 
-check("dylan workspace selector includes LaborTech and Brookside", () => {
+check("dylan can open career brief path", () => {
+  const t = findTenantByCredentials("dylan", "Meridian");
+  assert.ok(t);
+  const user = toPublicUser(t);
+  assert.equal(isPostLoginPathAllowed(user, "/operator/jobs/brief"), true);
+});
+
+check("dylan workspace selector still lists LaborTech and Brookside", () => {
   const t = findTenantByCredentials("dylan", "Meridian");
   assert.ok(t);
   const user = toPublicUser(t);

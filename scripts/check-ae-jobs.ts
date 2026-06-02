@@ -37,6 +37,19 @@ check("needs dylan items surfaced", model.needsDylan.length > 0);
 check("career brief needs dylan today", brief.needsDylanToday.length > 0);
 check("career brief waiting on ronco", brief.waitingOn.some((w) => w.company === "Ronco"));
 check("career brief suggested next move", brief.suggestedNextMove.headline.length > 0);
+check("career brief morning hero", brief.morningBrief.activeOpportunities > 0);
+check("career brief execute now", brief.executeNow.length > 0);
+check(
+  "career brief execute now includes clipboard",
+  brief.executeNow.some((item) => item.company === "Clipboard"),
+);
+check("career brief quick actions", brief.quickActions.length === 4);
+check(
+  "career brief quick action clipboard link",
+  brief.quickActions.find((a) => a.id === "clipboard")?.href.includes("opp-clipboard-ae") === true,
+);
+check("career brief momentum metrics", brief.careerMomentum.applicationsInProgress >= 0);
+check("career brief generated timestamp", brief.generatedAt.length > 0);
 check(
   "career brief clipboard loom recommendation",
   brief.suggestedNextMove.headline.toLowerCase().includes("clipboard") &&

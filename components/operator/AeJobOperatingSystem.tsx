@@ -16,13 +16,23 @@ import type {
 
 interface AeJobOperatingSystemProps {
   initialModel: AeJobsWorkspaceModel;
+  initialSelectedOpportunityId?: string;
 }
 
-export function AeJobOperatingSystem({ initialModel }: AeJobOperatingSystemProps) {
+export function AeJobOperatingSystem({
+  initialModel,
+  initialSelectedOpportunityId,
+}: AeJobOperatingSystemProps) {
+  const defaultSelectedId =
+    initialSelectedOpportunityId &&
+    initialModel.opportunities.some((o) => o.id === initialSelectedOpportunityId)
+      ? initialSelectedOpportunityId
+      : (initialModel.opportunities[0]?.id ?? "");
+
   const [model, setModel] = useState(initialModel);
   const [view, setView] = useState<AeJobsViewId>("today");
   const [roleFilter, setRoleFilter] = useState<RoleCategory | "all">("all");
-  const [selectedId, setSelectedId] = useState(model.opportunities[0]?.id ?? "");
+  const [selectedId, setSelectedId] = useState(defaultSelectedId);
   const [saving, setSaving] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [importJson, setImportJson] = useState("");

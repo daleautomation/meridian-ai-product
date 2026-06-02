@@ -1,9 +1,15 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { DevAuthDebug } from "@/components/auth/DevAuthDebug";
 import { SignedInLoginPortal } from "@/components/auth/SignedInLoginPortal";
 import { WorkspaceLoginForm } from "@/components/auth/WorkspaceLoginForm";
 import { getSession } from "@/lib/auth";
+import {
+  postLoginRouteForUser,
+  sanitizeInternalPath,
+  WORKSPACE_SELECT_PATH,
+} from "@/lib/auth/postLoginRouting";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -34,6 +40,14 @@ export default async function LoginPage(props: {
   const user = await getSession();
   const params = (await props.searchParams) ?? {};
   const nextRaw = Array.isArray(params.next) ? params.next[0] : params.next;
+  const safeNext = sanitizeInternalPath(nextRaw ?? null);
+
+  if (user && !safeNext) {
+    const defaultRoute = postLoginRouteForUser(user);
+    if (defaultRoute !== WORKSPACE_SELECT_PATH) {
+      redirect(defaultRoute);
+    }
+  }
 
   return (
     <main className="workspace-login-shell">

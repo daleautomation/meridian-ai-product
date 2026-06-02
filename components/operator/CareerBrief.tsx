@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
+import { opportunityPipelineHref } from "@/lib/ae-jobs/career-brief";
 import { palette } from "@/lib/theme";
 import type {
   CareerBriefModel,
@@ -23,8 +24,7 @@ const ROLE_SHORT: Record<RoleCategory, string> = {
 };
 
 export function CareerBrief({ model }: CareerBriefProps) {
-  const { health } = model;
-  const generated = formatDateTime(model.generatedAt);
+  const { morningBrief, careerMomentum } = model;
 
   return (
     <main style={styles.shell}>
@@ -32,13 +32,14 @@ export function CareerBrief({ model }: CareerBriefProps) {
         <div>
           <div style={styles.eyebrow}>AE Job Operating System</div>
           <h1 style={styles.title}>Career Brief</h1>
-          <p style={styles.subtitle}>
-            {model.owner.name}&apos;s morning pipeline memo — {generated}
+          <p style={styles.subtitle}>{model.owner.name}&apos;s daily operating surface</p>
+          <p style={styles.timestamp}>
+            Last generated: <strong>{formatDateTime(model.generatedAt)}</strong>
           </p>
         </div>
         <div style={styles.headerActions}>
           <Link href="/operator/jobs" style={styles.link}>
-            Pipeline OS
+            Full pipeline
           </Link>
           <Link href="/workspace-select" style={styles.link}>
             Workspaces
@@ -46,39 +47,97 @@ export function CareerBrief({ model }: CareerBriefProps) {
         </div>
       </header>
 
-      <section style={styles.heroCard} aria-label="Suggested next move">
-        <div style={styles.heroLabel}>Suggested next move</div>
-        <p style={styles.heroHeadline}>{model.suggestedNextMove.headline}</p>
-        <p style={styles.heroExplanation}>{model.suggestedNextMove.explanation}</p>
-      </section>
-
-      <section style={styles.section} aria-labelledby="health-heading">
-        <h2 id="health-heading" style={styles.sectionTitle}>
-          Career health summary
-        </h2>
-        <div style={styles.metricsGrid}>
-          <Metric label="Total opportunities" value={String(health.total)} />
-          <Metric label="Active interviews" value={String(health.activeInterviews)} />
-          <Metric label="Case studies in progress" value={String(health.caseStudiesInProgress)} />
-          <Metric label="Waiting on reply" value={String(health.waitingOnReplyCount)} />
-          <Metric label="Follow-ups due" value={String(health.followUpsDueCount)} />
-        </div>
-        <div style={styles.roleBreakdown}>
-          <span style={styles.roleBreakdownLabel}>By role type</span>
-          <div style={styles.rolePills}>
-            {(Object.keys(ROLE_SHORT) as RoleCategory[]).map((cat) => (
-              <span key={cat} style={styles.rolePill}>
-                {ROLE_SHORT[cat]} <strong>{health.byCategory[cat]}</strong>
-              </span>
-            ))}
+      <section style={styles.morningHero} aria-label="Morning brief">
+        <div style={styles.morningTop}>
+          <div>
+            <div style={styles.heroLabel}>Morning brief</div>
+            <p style={styles.todayDate}>{morningBrief.todayLabel}</p>
           </div>
         </div>
+        <div style={styles.heroMetrics}>
+          <HeroMetric label="Active opportunities" value={morningBrief.activeOpportunities} />
+          <HeroMetric label="Needs Dylan" value={morningBrief.needsDylanCount} accent="orange" />
+          <HeroMetric label="Waiting on" value={morningBrief.waitingOnCount} accent="blue" />
+          <HeroMetric label="Upcoming events" value={morningBrief.upcomingEventsCount} />
+        </div>
+      </section>
+
+      <section style={styles.quickActions} aria-label="Quick actions">
+        <h2 style={styles.inlineTitle}>Quick actions</h2>
+        <div style={styles.quickActionRow}>
+          {model.quickActions.map((action) => (
+            <Link key={action.id} href={action.href} style={styles.quickActionButton}>
+              {action.label}
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <BriefSection
+        title="Execute now"
+        count={model.executeNow.length}
+        emptyMessage="No high-priority actions queued. Review Waiting On below."
+      >
+        <div style={styles.executeTableWrap}>
+          <table style={styles.executeTable}>
+            <thead>
+              <tr>
+                {["Opportunity", "Action", "Due", ""].map((heading) => (
+                  <th key={heading} style={styles.executeTh}>
+                    {heading}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {model.executeNow.map((item) => (
+                <tr key={`${item.opportunityId}-${item.action}`}>
+                  <td style={styles.executeTd}>
+                    <strong>{item.company}</strong>
+                    <span style={styles.cardRole}>{item.roleTitle}</span>
+                  </td>
+                  <td style={styles.executeTd}>{item.action}</td>
+                  <td style={styles.executeTd}>
+                    {item.dueDate ? (
+                      <span style={isDueToday(item.dueDate) ? styles.dueToday : undefined}>
+                        {isDueToday(item.dueDate) ? "Today" : formatDate(item.dueDate)}
+                      </span>
+                    ) : (
+                      <span style={styles.muted}>—</span>
+                    )}
+                  </td>
+                  <td style={styles.executeTd}>
+                    <Link href={opportunityPipelineHref(item.opportunityId)} style={styles.rowLink}>
+                      Open →
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </BriefSection>
+
+      <section style={styles.section} aria-labelledby="momentum-heading">
+        <h2 id="momentum-heading" style={styles.sectionTitle}>
+          Career momentum
+        </h2>
+        <div style={styles.metricsGrid}>
+          <Metric label="Applications in progress" value={String(careerMomentum.applicationsInProgress)} />
+          <Metric label="Interviews active" value={String(careerMomentum.interviewsActive)} />
+          <Metric label="Follow-ups due" value={String(careerMomentum.followUpsDue)} />
+          <Metric
+            label="Waiting on response"
+            value={String(careerMomentum.waitingOnResponse)}
+          />
+        </div>
+        <p style={styles.momentumNote}>Deterministic counts only — no AI scoring.</p>
       </section>
 
       <BriefSection
         title="Needs Dylan today"
         count={model.needsDylanToday.length}
-        emptyMessage="No actions need Dylan today. Check Waiting On and Upcoming."
+        emptyMessage="No actions need Dylan today."
       >
         {model.needsDylanToday.map((item) => (
           <article key={`${item.opportunityId}-${item.category}`} style={styles.actionCard}>
@@ -93,6 +152,9 @@ export function CareerBrief({ model }: CareerBriefProps) {
             <strong style={styles.cardCompany}>{item.company}</strong>
             <span style={styles.cardRole}>{item.roleTitle}</span>
             <p style={styles.cardAction}>{item.nextAction}</p>
+            <Link href={opportunityPipelineHref(item.opportunityId)} style={styles.rowLink}>
+              Open opportunity →
+            </Link>
           </article>
         ))}
       </BriefSection>
@@ -156,7 +218,9 @@ export function CareerBrief({ model }: CareerBriefProps) {
                 <tr key={opp.opportunityId}>
                   <td style={styles.td}>{opp.rank}</td>
                   <td style={styles.td}>
-                    <strong>{opp.company}</strong>
+                    <Link href={opportunityPipelineHref(opp.opportunityId)} style={styles.tableLink}>
+                      <strong>{opp.company}</strong>
+                    </Link>
                   </td>
                   <td style={styles.td}>{opp.roleTitle}</td>
                   <td style={styles.td}>{opp.stageLabel}</td>
@@ -169,17 +233,48 @@ export function CareerBrief({ model }: CareerBriefProps) {
             </tbody>
           </table>
         </div>
+        <div style={styles.roleBreakdown}>
+          <span style={styles.roleBreakdownLabel}>By role type</span>
+          <div style={styles.rolePills}>
+            {(Object.keys(ROLE_SHORT) as RoleCategory[]).map((cat) => (
+              <span key={cat} style={styles.rolePill}>
+                {ROLE_SHORT[cat]} <strong>{model.health.byCategory[cat]}</strong>
+              </span>
+            ))}
+          </div>
+        </div>
       </BriefSection>
 
       <footer style={styles.footer}>
-        <p style={styles.footerNote}>
-          Rankings use priority, pipeline stage, and follow-up dates only — no AI scoring.
-        </p>
         <Link href="/operator/jobs" style={styles.footerLink}>
           Open full pipeline →
         </Link>
       </footer>
     </main>
+  );
+}
+
+function HeroMetric({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: number;
+  accent?: "orange" | "blue";
+}) {
+  const accentStyle =
+    accent === "orange"
+      ? { borderColor: palette.orangeBorder, background: palette.orangePale }
+      : accent === "blue"
+        ? { borderColor: palette.blueBorder, background: palette.bluePale }
+        : {};
+
+  return (
+    <div style={{ ...styles.heroMetric, ...accentStyle }}>
+      <div style={styles.metricLabel}>{label}</div>
+      <div style={styles.heroMetricValue}>{value}</div>
+    </div>
   );
 }
 
@@ -277,6 +372,7 @@ function formatDateTime(iso: string): string {
     return new Date(iso).toLocaleString("en-US", {
       month: "short",
       day: "numeric",
+      year: "numeric",
       hour: "numeric",
       minute: "2-digit",
     });
@@ -289,7 +385,7 @@ const styles: Record<string, CSSProperties> = {
   shell: {
     minHeight: "100dvh",
     padding: "20px 20px 48px",
-    maxWidth: "720px",
+    maxWidth: "760px",
     margin: "0 auto",
     background:
       "radial-gradient(circle at 20% 0%, rgba(37,99,235,0.1), transparent 28%), linear-gradient(180deg, #FBFDFF 0%, #F4F7FC 100%)",
@@ -302,7 +398,7 @@ const styles: Record<string, CSSProperties> = {
     alignItems: "flex-start",
     gap: "12px",
     flexWrap: "wrap",
-    marginBottom: "20px",
+    marginBottom: "16px",
   },
   eyebrow: {
     color: palette.blue,
@@ -318,6 +414,11 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.1,
   },
   subtitle: { color: palette.textSecondary, fontSize: "13px", margin: 0 },
+  timestamp: {
+    margin: "8px 0 0",
+    fontSize: "12px",
+    color: palette.textTertiary,
+  },
   headerActions: { display: "flex", gap: "12px", alignItems: "center" },
   link: {
     color: palette.blue,
@@ -325,35 +426,75 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 700,
     textDecoration: "none",
   },
-  heroCard: {
-    padding: "20px",
+  morningHero: {
+    padding: "18px 20px",
     borderRadius: "18px",
-    border: `1px solid ${palette.orangeBorder}`,
-    background: palette.orangePale,
-    marginBottom: "24px",
+    border: `1px solid ${palette.blueBorder}`,
+    background: palette.surface,
+    marginBottom: "16px",
+  },
+  morningTop: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "12px",
+    marginBottom: "14px",
   },
   heroLabel: {
     fontSize: "11px",
     fontWeight: 800,
     letterSpacing: "0.1em",
     textTransform: "uppercase",
-    color: palette.orange,
-    marginBottom: "8px",
+    color: palette.blue,
+    marginBottom: "4px",
   },
-  heroHeadline: {
-    margin: "0 0 8px",
-    fontSize: "20px",
+  todayDate: {
+    margin: 0,
+    fontSize: "18px",
     fontWeight: 800,
     letterSpacing: "-0.03em",
-    lineHeight: 1.25,
   },
-  heroExplanation: {
-    margin: 0,
-    fontSize: "14px",
-    color: palette.textSecondary,
-    lineHeight: 1.45,
+  heroMetrics: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+    gap: "8px",
   },
-  section: { marginBottom: "28px" },
+  heroMetric: {
+    padding: "12px 14px",
+    borderRadius: "14px",
+    border: `1px solid ${palette.border}`,
+    background: palette.surface,
+  },
+  heroMetricValue: {
+    fontSize: "24px",
+    fontWeight: 800,
+    marginTop: "4px",
+    letterSpacing: "-0.03em",
+  },
+  quickActions: { marginBottom: "20px" },
+  inlineTitle: {
+    margin: "0 0 10px",
+    fontSize: "15px",
+    fontWeight: 800,
+    letterSpacing: "-0.02em",
+  },
+  quickActionRow: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+    gap: "8px",
+  },
+  quickActionButton: {
+    display: "block",
+    padding: "12px 14px",
+    borderRadius: "12px",
+    border: `1px solid ${palette.border}`,
+    background: palette.surface,
+    color: palette.textPrimary,
+    fontSize: "13px",
+    fontWeight: 700,
+    textDecoration: "none",
+    textAlign: "center",
+  },
+  section: { marginBottom: "24px" },
   sectionTitle: {
     margin: "0 0 12px",
     fontSize: "17px",
@@ -373,9 +514,8 @@ const styles: Record<string, CSSProperties> = {
   },
   metricsGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
     gap: "8px",
-    marginBottom: "12px",
   },
   metric: {
     padding: "12px 14px",
@@ -396,7 +536,44 @@ const styles: Record<string, CSSProperties> = {
     marginTop: "4px",
     letterSpacing: "-0.03em",
   },
-  roleBreakdown: { marginTop: "4px" },
+  momentumNote: {
+    margin: "10px 0 0",
+    fontSize: "12px",
+    color: palette.textTertiary,
+  },
+  executeTableWrap: {
+    overflowX: "auto",
+    borderRadius: "14px",
+    border: `1px solid ${palette.orangeBorder}`,
+    background: palette.surface,
+  },
+  executeTable: { width: "100%", borderCollapse: "collapse", fontSize: "13px" },
+  executeTh: {
+    textAlign: "left",
+    padding: "10px 12px",
+    borderBottom: `2px solid ${palette.border}`,
+    color: palette.textSecondary,
+    fontSize: "10px",
+    textTransform: "uppercase",
+    letterSpacing: "0.06em",
+    whiteSpace: "nowrap",
+  },
+  executeTd: {
+    padding: "12px",
+    borderBottom: `1px solid ${palette.borderLight}`,
+    verticalAlign: "top",
+  },
+  dueToday: { color: palette.orange, fontWeight: 800 },
+  rowLink: {
+    fontSize: "12px",
+    fontWeight: 700,
+    color: palette.blue,
+    textDecoration: "none",
+    display: "inline-block",
+    marginTop: "6px",
+  },
+  tableLink: { color: palette.textPrimary, textDecoration: "none" },
+  roleBreakdown: { marginTop: "12px" },
   roleBreakdownLabel: {
     fontSize: "11px",
     fontWeight: 700,
@@ -503,6 +680,5 @@ const styles: Record<string, CSSProperties> = {
     paddingTop: "16px",
     borderTop: `1px solid ${palette.borderLight}`,
   },
-  footerNote: { margin: "0 0 8px", fontSize: "12px", color: palette.textTertiary },
   footerLink: { fontSize: "13px", fontWeight: 700, color: palette.blue, textDecoration: "none" },
 };

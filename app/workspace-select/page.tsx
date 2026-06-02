@@ -12,7 +12,8 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const ADMIN_LINKS = [
-  { href: "/operator/jobs", label: "AE Job OS", detail: "Personal career pipeline & follow-ups" },
+  { href: "/operator/jobs/brief", label: "Career Brief", detail: "Daily operating surface" },
+  { href: "/operator/jobs", label: "Full pipeline", detail: "AE job operating system" },
   { href: "/admin/prospects", label: "Prospect research", detail: "Internal outreach cohorts" },
   { href: "/admin/outreach", label: "Outreach", detail: "Founder outreach queue" },
   { href: "/admin/runs", label: "Runs", detail: "Pipeline run history" },

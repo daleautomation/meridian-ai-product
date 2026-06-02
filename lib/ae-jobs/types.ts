@@ -196,9 +196,44 @@ export interface SuggestedNextMove {
   opportunityId: string | null;
 }
 
+export interface MorningBriefHero {
+  todayLabel: string;
+  todayIso: string;
+  activeOpportunities: number;
+  needsDylanCount: number;
+  waitingOnCount: number;
+  upcomingEventsCount: number;
+}
+
+export interface ExecuteNowItem {
+  opportunityId: string;
+  company: string;
+  roleTitle: string;
+  action: string;
+  dueDate: string | null;
+  priority: Priority;
+}
+
+export interface QuickAction {
+  id: string;
+  label: string;
+  href: string;
+}
+
+export interface CareerMomentum {
+  applicationsInProgress: number;
+  interviewsActive: number;
+  followUpsDue: number;
+  waitingOnResponse: number;
+}
+
 export interface CareerBriefModel {
   generatedAt: string;
   owner: { id: string; name: string };
+  morningBrief: MorningBriefHero;
+  executeNow: ExecuteNowItem[];
+  quickActions: QuickAction[];
+  careerMomentum: CareerMomentum;
   health: CareerHealthSummary;
   needsDylanToday: NeedsDylanItem[];
   waitingOn: WaitingOnItem[];

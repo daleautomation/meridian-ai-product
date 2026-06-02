@@ -10,6 +10,15 @@ import { listAccessibleWorkspacesForPrincipal } from "@/lib/workspaceAccess";
 
 export { WORKSPACE_SELECT_PATH };
 
+/** Dylan's personal AE pipeline — default operating surface after login. */
+export const CAREER_BRIEF_HOME_PATH = "/operator/jobs/brief";
+
+const AE_JOBS_OPERATOR_ID = "dylan";
+
+export function careerBriefHomeForUser(user: PublicUser): string | null {
+  return user.id === AE_JOBS_OPERATOR_ID ? CAREER_BRIEF_HOME_PATH : null;
+}
+
 /** Sanitize internal redirect paths from login `next` params. */
 export function sanitizeInternalPath(path: string | null | undefined): string | null {
   if (!path) return null;
@@ -72,6 +81,9 @@ export function isPostLoginPathAllowed(user: PublicUser, path: string): boolean 
 
 /** Default landing route immediately after successful authentication. */
 export function postLoginRouteForUser(user: PublicUser): string {
+  const careerHome = careerBriefHomeForUser(user);
+  if (careerHome) return careerHome;
+
   const assigned = listAccessibleWorkspacesForPrincipal(user);
   if (assigned.length === 0) return "/login";
 
