@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "ownerId": "dylan",
+  "events": [
+    {
+      "contractVersion": "ae-job-calendar-v1",
+      "eventId": "demo-calendar-clipboard-hm-001",
+      "company": "Clipboard",
+      "role": "Territory Account Executive",
+      "eventType": "hiring_manager",
+      "startDateTime": "2026-06-04T04:32:52.182Z",
+      "endDateTime": "2026-06-04T05:32:52.182Z",
+      "notes": "HM screen — review territory patch plan and QBR examples.",
+      "matchedOpportunityId": "opp-clipboard-ae"
+    },
+    {
+      "contractVersion": "ae-job-calendar-v1",
+      "eventId": "demo-calendar-safetyculture-panel-001",
+      "company": "SafetyCulture",
+      "role": "Partner Account Manager",
+      "eventType": "panel_interview",
+      "startDateTime": "2026-06-03T12:32:52.182Z",
+      "endDateTime": "2026-06-03T14:02:52.182Z",
+      "notes": "Panel loop — partner ecosystem motion + first 90-day plan.",
+      "matchedOpportunityId": "opp-safetyculture-pam"
+    },
+    {
+      "contractVersion": "ae-job-calendar-v1",
+      "eventId": "demo-calendar-ronco-recruiter-001",
+      "company": "Ronco",
+      "role": "Project Engineer",
+      "eventType": "recruiter_call",
+      "startDateTime": "2026-06-05T16:32:52.182Z",
+      "endDateTime": "2026-06-05T17:02:52.182Z",
+      "notes": "Intro call with Rachel — referral status check-in."
+    }
+  ],
+  "lastSyncedAt": "2026-06-02T16:32:52.182Z",
+  "seenEventIds": [
+    "demo-calendar-clipboard-hm-001",
+    "demo-calendar-safetyculture-panel-001",
+    "demo-calendar-ronco-recruiter-001"
+  ],
+  "lastSyncResult": {
+    "imported": 3,
+    "skipped": 0,
+    "opportunitiesUpdated": 2,
+    "errors": []
+  }
+}

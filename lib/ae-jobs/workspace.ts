@@ -22,6 +22,8 @@ export const NEEDS_DYLAN_LABELS: Record<NeedsDylanCategory, string> = {
   follow_up_overdue: "Follow-up overdue",
   waiting_on_reply: "Waiting on reply",
   prep_required: "Prep required",
+  interview_reminder_48h: "Interview in 48h",
+  interview_reminder_24h: "Interview in 24h",
 };
 
 const INGESTION_STATUS = INGESTION_STATUS_MESSAGE;

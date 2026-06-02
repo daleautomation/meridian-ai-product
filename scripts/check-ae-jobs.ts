@@ -1,5 +1,17 @@
 // Validates AE Job OS domain model without starting the dev server.
 import { resolveBriefActionPatch, resolveMarkDonePatch } from "../lib/ae-jobs/brief-actions";
+import {
+  buildDemoCalendarBatch,
+  CALENDAR_CONTRACT_VERSION,
+  CALENDAR_STATUS_MESSAGE,
+  findMatchingOpportunityForCalendar,
+} from "../lib/ae-jobs/calendar";
+import {
+  applyCalendarSync,
+  buildCalendarReminderItems,
+  buildCalendarUpcomingItems,
+  enrichOpportunitiesFromCalendar,
+} from "../lib/ae-jobs/calendar-sync";
 import { buildCareerBriefModel } from "../lib/ae-jobs/career-brief";
 import { buildAeJobsWorkspaceModel, groupByRoleCategory } from "../lib/ae-jobs/workspace";
 import { seedOpportunities } from "../lib/ae-jobs/seed";
@@ -22,8 +34,14 @@ const user = {
 };
 
 const opportunities = seedOpportunities();
+const calendarBatch = buildDemoCalendarBatch("2026-06-02T12:00:00.000Z");
+const calendarNowMs = Date.parse(calendarBatch.syncedAt);
 const model = buildAeJobsWorkspaceModel(opportunities, user, null);
-const brief = buildCareerBriefModel(opportunities, user);
+const brief = buildCareerBriefModel(opportunities, user, undefined, {
+  events: calendarBatch.events,
+  lastSyncedAt: calendarBatch.syncedAt,
+  nowMs: calendarNowMs,
+});
 const groups = groupByRoleCategory(opportunities);
 
 const REAL_COMPANIES = ["Clipboard", "SafetyCulture", "Ronco"];
@@ -79,6 +97,58 @@ check(
 );
 check("career brief ingestion meta", brief.ingestion.statusMessage === INGESTION_STATUS_MESSAGE);
 check("career brief ingestion not wired", brief.ingestion.wired === false);
+check("career brief calendar meta", brief.calendar.contractVersion === CALENDAR_CONTRACT_VERSION);
+check(
+  "career brief calendar status message",
+  brief.calendar.statusMessage === CALENDAR_STATUS_MESSAGE,
+);
+check("career brief calendar events imported", brief.calendar.eventsImported === 3);
+check(
+  "career brief upcoming from calendar",
+  brief.upcoming.some((u) => u.company === "SafetyCulture"),
+);
+check(
+  "career brief 48h interview reminder",
+  brief.needsDylanToday.some(
+    (n) => n.category === "interview_reminder_48h" && n.company === "Clipboard",
+  ),
+);
+check(
+  "career brief 24h interview reminder",
+  brief.needsDylanToday.some(
+    (n) => n.category === "interview_reminder_24h" && n.company === "SafetyCulture",
+  ),
+);
+check(
+  "calendar enriches interview_scheduled",
+  enrichOpportunitiesFromCalendar(opportunities, calendarBatch.events).find(
+    (o) => o.company === "SafetyCulture",
+  )?.checklist.interview_scheduled === true,
+);
+check(
+  "calendar match safetyculture",
+  findMatchingOpportunityForCalendar(opportunities, calendarBatch.events[1])?.id ===
+    "opp-safetyculture-pam",
+);
+
+const calendarSeen = new Set<string>();
+const calendarSync = applyCalendarSync([], opportunities, calendarBatch, calendarSeen);
+check("calendar sync imports three", calendarSync.result.imported === 3);
+check(
+  "calendar sync sets interview_scheduled",
+  calendarSync.opportunities.find((o) => o.company === "SafetyCulture")?.checklist
+    .interview_scheduled === true,
+);
+const calendarReminders = buildCalendarReminderItems(
+  calendarBatch.events,
+  calendarSync.opportunities,
+  calendarNowMs,
+);
+check("calendar reminders deterministic", calendarReminders.length >= 2);
+check(
+  "calendar upcoming deterministic",
+  buildCalendarUpcomingItems(calendarBatch.events, opportunities, calendarNowMs).length >= 2,
+);
 
 const demoBatch = buildDemoIngestionBatch();
 const seen = new Set<string>();
@@ -108,6 +178,9 @@ if (clipboard) {
   const markDone = resolveMarkDonePatch(clipboard, "loom_due");
   check("mark done loom sets loom_recorded", markDone.checklist?.loom_recorded === true);
   check("mark done loom clears prepRequired", markDone.fields?.prepRequired === false);
+
+  const reminderDone = resolveMarkDonePatch(clipboard, "interview_reminder_48h");
+  check("mark done 48h reminder clears prep", reminderDone.fields?.prepRequired === false);
 
   const snooze = resolveBriefActionPatch(clipboard, "snooze");
   check("snooze sets followUpDate", typeof snooze.fields?.followUpDate === "string");

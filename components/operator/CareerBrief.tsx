@@ -117,6 +117,32 @@ export function CareerBrief({ model }: CareerBriefProps) {
         </div>
       </section>
 
+      <section style={styles.calendarPanel} aria-label="Calendar status">
+        <div style={styles.ingestionTop}>
+          <h2 style={styles.inlineTitle}>Calendar status</h2>
+          <code style={styles.ingestionCode}>POST /api/ae-jobs/calendar/sync</code>
+        </div>
+        <p style={styles.ingestionStatus}>{model.calendar.statusMessage}</p>
+        <div style={styles.ingestionMetrics}>
+          <IngestionMetric
+            label="Last synced"
+            value={
+              model.calendar.lastSyncedAt
+                ? formatDateTime(model.calendar.lastSyncedAt)
+                : "Never"
+            }
+          />
+          <IngestionMetric
+            label="Events imported"
+            value={String(model.calendar.eventsImported)}
+          />
+          <IngestionMetric
+            label="Upcoming interviews"
+            value={String(model.calendar.upcomingInterviews)}
+          />
+        </div>
+      </section>
+
       <section style={styles.ingestionPanel} aria-label="Email ingestion">
         <div style={styles.ingestionTop}>
           <h2 style={styles.inlineTitle}>Email ingestion</h2>
@@ -496,7 +522,10 @@ function PriorityPill({ priority }: { priority: Priority }) {
 }
 
 function NeedsDylanPill({ label, category }: { label: string; category: NeedsDylanCategory }) {
-  const urgent = category === "loom_due" || category === "follow_up_overdue";
+  const urgent =
+    category === "loom_due" ||
+    category === "follow_up_overdue" ||
+    category === "interview_reminder_24h";
   const colors = urgent
     ? { bg: palette.orangePale, color: palette.orange, border: palette.orangeBorder }
     : { bg: palette.bluePale, color: palette.blue, border: palette.blueBorder };
@@ -633,6 +662,13 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: "-0.03em",
   },
   quickActions: { marginBottom: "20px" },
+  calendarPanel: {
+    marginBottom: "20px",
+    padding: "14px 16px",
+    borderRadius: "14px",
+    border: `1px solid ${palette.blueBorder}`,
+    background: palette.bluePale,
+  },
   ingestionPanel: {
     marginBottom: "20px",
     padding: "14px 16px",

@@ -694,6 +694,8 @@ function NeedsDylanPill({
     follow_up_overdue: { bg: palette.orangePale, color: palette.orange, border: palette.orangeBorder },
     waiting_on_reply: { bg: palette.bluePale, color: palette.blue, border: palette.blueBorder },
     prep_required: { bg: palette.bluePale, color: palette.blue, border: palette.blueBorder },
+    interview_reminder_48h: { bg: palette.bluePale, color: palette.blue, border: palette.blueBorder },
+    interview_reminder_24h: { bg: palette.orangePale, color: palette.orange, border: palette.orangeBorder },
   }[category];
   return (
     <span

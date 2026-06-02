@@ -64,6 +64,11 @@ export function resolveMarkDonePatch(
         fields: { prepRequired: false },
       };
     }
+    case "interview_reminder_48h":
+    case "interview_reminder_24h":
+      return {
+        fields: { prepRequired: false },
+      };
     default:
       return { fields: { followUpDate: null } };
   }

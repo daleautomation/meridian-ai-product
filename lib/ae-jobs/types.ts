@@ -50,6 +50,8 @@ export const NEEDS_DYLAN_CATEGORIES = [
   "follow_up_overdue",
   "waiting_on_reply",
   "prep_required",
+  "interview_reminder_48h",
+  "interview_reminder_24h",
 ] as const;
 
 export type NeedsDylanCategory = (typeof NEEDS_DYLAN_CATEGORIES)[number];
@@ -246,6 +248,14 @@ export interface CareerBriefIngestionMeta {
   lastResult: IngestionResultCounts | null;
 }
 
+export interface CareerBriefCalendarMeta {
+  contractVersion: string;
+  statusMessage: string;
+  lastSyncedAt: string | null;
+  eventsImported: number;
+  upcomingInterviews: number;
+}
+
 export interface CareerBriefModel {
   generatedAt: string;
   owner: { id: string; name: string };
@@ -262,4 +272,5 @@ export interface CareerBriefModel {
   roleLabels: Record<RoleCategory, string>;
   stageLabels: Record<PipelineStage, string>;
   ingestion: CareerBriefIngestionMeta;
+  calendar: CareerBriefCalendarMeta;
 }

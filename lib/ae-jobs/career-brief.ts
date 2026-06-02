@@ -1,4 +1,12 @@
 import type { PublicUser } from "@/config/tenants";
+import { CALENDAR_STATUS_MESSAGE } from "./calendar";
+import type { CareerCalendarEvent } from "./calendar";
+import {
+  buildCalendarBriefMeta,
+  buildCalendarReminderItems,
+  buildCalendarUpcomingItems,
+  enrichOpportunitiesFromCalendar,
+} from "./calendar-sync";
 import { ROLE_LABELS, STAGE_LABELS } from "./labels";
 import { INGESTION_CONTRACT_VERSION, INGESTION_STATUS_MESSAGE } from "./ingestion";
 import { buildNeedsDylanItems } from "./workspace";
@@ -56,7 +64,13 @@ const UPCOMING_KIND_LABELS: Record<UpcomingItemKind, string> = {
   loom_deadline: "Loom deadline",
 };
 
-const ACTIONABLE_NEEDS_DYLAN = new Set(["loom_due", "follow_up_overdue", "prep_required"]);
+const ACTIONABLE_NEEDS_DYLAN = new Set([
+  "loom_due",
+  "follow_up_overdue",
+  "prep_required",
+  "interview_reminder_48h",
+  "interview_reminder_24h",
+]);
 
 const APPLICATION_STAGES = new Set<PipelineStage>([
   "applied",
@@ -345,6 +359,13 @@ function buildSuggestedNextMove(
         opportunityId: top.opportunityId,
       };
     }
+    if (top.category === "interview_reminder_48h" || top.category === "interview_reminder_24h") {
+      return {
+        headline: top.nextAction,
+        explanation: `${top.company} · ${top.roleTitle}`,
+        opportunityId: top.opportunityId.startsWith("calendar:") ? null : top.opportunityId,
+      };
+    }
   }
 
   const lead = topOpportunities[0];
@@ -460,25 +481,50 @@ function buildCareerMomentum(opportunities: JobOpportunity[]): CareerMomentum {
   };
 }
 
+function mergeUpcoming(pipeline: UpcomingItem[], calendar: UpcomingItem[]): UpcomingItem[] {
+  const seen = new Set<string>();
+  return [...pipeline, ...calendar]
+    .filter((item) => {
+      const key = `${item.opportunityId}:${item.kind}:${item.date}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
 export function buildCareerBriefModel(
   opportunities: JobOpportunity[],
   user: PublicUser,
   ingestionMeta?: Pick<CareerBriefIngestionMeta, "lastIngestedAt" | "lastResult">,
+  calendar?: {
+    events: CareerCalendarEvent[];
+    lastSyncedAt: string | null;
+    nowMs?: number;
+  },
 ): CareerBriefModel {
-  const allNeedsDylan = buildNeedsDylanItems(opportunities);
-  const needsDylanToday = buildNeedsDylanToday(opportunities, allNeedsDylan);
-  const waitingOn = buildWaitingOn(opportunities);
-  const upcoming = buildUpcoming(opportunities);
-  const topOpportunities = buildTopOpportunities(opportunities);
+  const nowMs = calendar?.nowMs ?? Date.now();
+  const calendarEvents = calendar?.events ?? [];
+  const enriched = enrichOpportunitiesFromCalendar(opportunities, calendarEvents);
+
+  const pipelineNeeds = buildNeedsDylanItems(enriched);
+  const calendarNeeds = buildCalendarReminderItems(calendarEvents, enriched, nowMs);
+  const allNeedsDylan = [...pipelineNeeds, ...calendarNeeds];
+  const needsDylanToday = buildNeedsDylanToday(enriched, allNeedsDylan);
+  const waitingOn = buildWaitingOn(enriched);
+  const pipelineUpcoming = buildUpcoming(enriched);
+  const calendarUpcoming = buildCalendarUpcomingItems(calendarEvents, enriched, nowMs);
+  const upcoming = mergeUpcoming(pipelineUpcoming, calendarUpcoming);
+  const topOpportunities = buildTopOpportunities(enriched);
 
   return {
     generatedAt: new Date().toISOString(),
     owner: { id: user.id, name: user.name },
-    morningBrief: buildMorningBriefHero(opportunities, needsDylanToday, waitingOn, upcoming),
+    morningBrief: buildMorningBriefHero(enriched, needsDylanToday, waitingOn, upcoming),
     executeNow: buildExecuteNow(needsDylanToday),
-    quickActions: buildQuickActions(opportunities),
-    careerMomentum: buildCareerMomentum(opportunities),
-    health: buildHealthSummary(opportunities),
+    quickActions: buildQuickActions(enriched),
+    careerMomentum: buildCareerMomentum(enriched),
+    health: buildHealthSummary(enriched),
     needsDylanToday,
     waitingOn,
     upcoming,
@@ -493,6 +539,12 @@ export function buildCareerBriefModel(
       lastIngestedAt: ingestionMeta?.lastIngestedAt ?? null,
       lastResult: ingestionMeta?.lastResult ?? null,
     },
+    calendar: buildCalendarBriefMeta(
+      calendarEvents,
+      calendar?.lastSyncedAt ?? null,
+      CALENDAR_STATUS_MESSAGE,
+      nowMs,
+    ),
   };
 }
 
