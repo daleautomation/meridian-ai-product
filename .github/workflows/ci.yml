@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: validate
+    runs-on: ubuntu-latest
+    # No secrets are provided to this job by design: every gated check is
+    # pure/fixture and must pass without Neon or Vercel. Live/Neon signals
+    # belong to the Operations Center, not the merge gate.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run crm-import:check
+      - run: npm run check-reimport-survival
+      - run: npm run column-mapping:check
+      - run: npm run phone-mapping:check
+      - run: npm run check-crm-integrity
+      - run: npm run relationship-classification:check
+      - run: npm run personal-workspace:check
+      - run: npm run check-opportunity-scoring
+      - run: npm run check-opportunity-pipeline
+      - run: npm run autonoma:nicole:check-spec
+      - run: npm run ops:check

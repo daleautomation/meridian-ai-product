@@ -20,6 +20,8 @@
     "phone-mapping:check": "tsx scripts/check-phone-mapping.ts",
     "column-mapping:check": "tsx scripts/check-column-mapping.ts",
     "relationship-classification:check": "tsx scripts/check-relationship-classification.ts",
+    "ops": "tsx scripts/ops-center.ts",
+    "ops:check": "tsx scripts/check-ops-center.ts",
     "founder:brief": "tsx scripts/founder-morning-brief.ts",
     "founder:brief:check": "tsx scripts/check-founder-brief.ts",
     "relationship-intelligence-ui:check": "tsx scripts/check-relationship-intelligence-ui.ts",

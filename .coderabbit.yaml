@@ -1,0 +1,46 @@
+# CodeRabbit configuration — Meridian
+# Focuses review on the highest-risk subsystems and enforces the trust
+# rules established by the operational audits. Advisory: CodeRabbit
+# comments; it never blocks on its own.
+reviews:
+  profile: assertive
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  auto_review:
+    enabled: true
+    drafts: false
+  path_filters:
+    - "lib/crm-import/**"
+    - "lib/enrichment/opportunity/**"
+    - "lib/personal-workspace/**"
+    - "lib/relationship-priority/**"
+    - "lib/ops/**"
+    - "scripts/**"
+  path_instructions:
+    - path: "lib/crm-import/**"
+      instructions: >
+        Flag any change to normalization/dedup thresholds or identity-key
+        derivation. Re-import must stay byte-stable; phone mapping must
+        prefer mobile; column mapping must not make false-positive field
+        claims (spouse/street/email).
+    - path: "lib/enrichment/opportunity/**"
+      instructions: >
+        Opportunity MED/HIGH tiers require market evidence (active_listing,
+        listed_by_another_agent, ownership, or public-record). Flag any
+        CRM-only path that could emit an opportunity label, and any change
+        to scoring weights or the market-evidence gate.
+    - path: "lib/personal-workspace/**"
+      instructions: >
+        Relationship classification labels are primary. No CRM-only numeric
+        score may be presented as a market/opportunity signal.
+    - path: "lib/relationship-priority/**"
+      instructions: >
+        Operator surface. Keep relationship labels primary; do not surface
+        CRM-only scores as "market fit" or "opportunity".
+    - path: "lib/ops/**"
+      instructions: >
+        Operations Center status model. BLOCKING is reserved for
+        trust/integrity/correctness. Flag any change that could let an
+        unverified signal read HEALTHY, or weaken the fail-safe-to-REVIEW
+        behavior.

@@ -179,10 +179,11 @@ async function main(): Promise<void> {
   console.log(`  business_domain_email${"".padEnd(0)} ${String(businessDomain).padStart(4)} / ${integrity.visible}   ${bar(businessDomain, integrity.visible)}  ${pct(businessDomain, integrity.visible)}`);
   console.log("");
 
-  console.log("Trust-killer checks (must be zero before paid customer)");
+  console.log("Trust-killer checks (integrity → BLOCKING; completeness → REVIEW)");
   const tkOk = (n: number) => (n === 0 ? "OK" : "BLOCKING");
+  const tkReview = (n: number) => (n === 0 ? "OK" : "REVIEW");
   console.log(`  company == contact name      ${String(gregGreg).padStart(4)}   ${tkOk(gregGreg)}   (Greg · Greg render)`);
-  console.log(`  no actionable channel        ${String(noChannel).padStart(4)}   ${tkOk(noChannel)}`);
+  console.log(`  no actionable channel        ${String(noChannel).padStart(4)}   ${tkReview(noChannel)}   (completeness gap; gated as Not Reachable)`);
   console.log(`  blank name                   ${String(blankNames).padStart(4)}   ${tkOk(blankNames)}`);
   console.log("");
 
@@ -431,11 +432,18 @@ async function main(): Promise<void> {
   // ── Founder verdict ─────────────────────────────────────────────
   console.log("Founder verdict");
   const verdicts: string[] = [];
+  // BLOCKING is reserved for trust / integrity / correctness failures.
   if (gregGreg > 0) {
     verdicts.push(`BLOCKING: ${gregGreg} contacts still render "Greg · Greg" (legacy normalizer corruption).`);
   }
+  if (blankNames > 0) {
+    verdicts.push(`BLOCKING: ${blankNames} contacts have a blank name — import-integrity violation (the pipeline guarantees a non-empty name).`);
+  }
+  // No actionable channel is a data-completeness gap, not a correctness
+  // failure — the relationship layer already gates these as "Not
+  // Reachable". Classified REVIEW, not BLOCKING (severity audit 2026-05).
   if (noChannel > 0) {
-    verdicts.push(`BLOCKING: ${noChannel} contacts have no actionable channel — these will show as untouchable on cards.`);
+    verdicts.push(`REVIEW: ${noChannel} contacts have no actionable channel — completeness gap; relationship layer gates these as "Not Reachable".`);
   }
   if (integrity.weak / Math.max(1, integrity.visible) > 0.5) {
     verdicts.push(`MAJORITY-WEAK workspace: ${integrity.weak} of ${integrity.visible} rows are WEAK tier. This workspace cannot carry a paid pricing conversation without a CRM rehab pass.`);

@@ -1,0 +1,118 @@
+{
+  "generatedAt": "2026-05-29T23:12:38.023Z",
+  "overall": "REVIEW",
+  "counts": {
+    "blocking": 0,
+    "review": 2,
+    "healthy": 10
+  },
+  "deployment": {
+    "branch": "clean/relationship-intelligence",
+    "head": "ccf8914",
+    "aheadOfMain": 64,
+    "ciConfigured": false,
+    "productionTracksMain": false,
+    "note": "no CI workflows; 64 commits ahead of main (production may run an unmerged branch)"
+  },
+  "checks": [
+    {
+      "id": "crm-import",
+      "label": "CRM import pipeline",
+      "category": "import",
+      "outcome": "PASS",
+      "status": "HEALTHY",
+      "detail": "crm-import:check passed",
+      "durationMs": 1067
+    },
+    {
+      "id": "reimport-survival",
+      "label": "Re-import dedupe survival",
+      "category": "import",
+      "outcome": "PASS",
+      "status": "HEALTHY",
+      "detail": "check-reimport-survival passed {",
+      "durationMs": 476
+    },
+    {
+      "id": "column-mapping",
+      "label": "Column mapping (no false claims)",
+      "category": "import",
+      "outcome": "PASS",
+      "status": "HEALTHY",
+      "detail": "✓ column-mapping check passed (no spouse/street/email false-positive claims)",
+      "durationMs": 481
+    },
+    {
+      "id": "phone-mapping",
+      "label": "Phone mapping (mobile preferred)",
+      "category": "import",
+      "outcome": "PASS",
+      "status": "HEALTHY",
+      "detail": "✓ phone-mapping check passed (mobile-preferred with per-row fallback, spouse excluded)",
+      "durationMs": 481
+    },
+    {
+      "id": "crm-integrity",
+      "label": "Workspace contamination & duplicates",
+      "category": "integrity",
+      "outcome": "PASS",
+      "status": "HEALTHY",
+      "detail": "check-crm-integrity passed {",
+      "durationMs": 501
+    },
+    {
+      "id": "workspace-truth",
+      "label": "Live workspace truth (crm:audit on Neon)",
+      "category": "integrity",
+      "outcome": "NEEDS_CONFIG",
+      "status": "REVIEW",
+      "detail": "REVIEW: 3 contacts have no actionable channel — completeness gap; relationship layer gates these as \"Not Reachable\".",
+      "durationMs": 4361
+    },
+    {
+      "id": "relationship-classification",
+      "label": "Relationship classification",
+      "category": "prioritization",
+      "outcome": "PASS",
+      "status": "HEALTHY",
+      "detail": "✓ relationship-classification check passed (5 labels, reachability gate, no market language)",
+      "durationMs": 447
+    },
+    {
+      "id": "personal-workspace",
+      "label": "Personal workspace model",
+      "category": "prioritization",
+      "outcome": "PASS",
+      "status": "HEALTHY",
+      "detail": "personal-workspace:check passed",
+      "durationMs": 509
+    },
+    {
+      "id": "opportunity-scoring",
+      "label": "Opportunity scoring gate",
+      "category": "opportunity",
+      "outcome": "PASS",
+      "status": "HEALTHY",
+      "detail": "'classifyRelationshipType: seller beats buyer (both tags present)',",
+      "durationMs": 459
+    },
+    {
+      "id": "opportunity-pipeline",
+      "label": "Opportunity pipeline",
+      "category": "opportunity",
+      "outcome": "PASS",
+      "status": "HEALTHY",
+      "detail": "check-opportunity-pipeline passed {",
+      "durationMs": 467
+    },
+    {
+      "id": "autonoma-spec",
+      "label": "Autonoma UI test spec present",
+      "category": "ui",
+      "outcome": "PASS",
+      "status": "HEALTHY",
+      "detail": "✓ autonoma Nicole spec: 7 tests present",
+      "durationMs": 448
+    }
+  ]
+}

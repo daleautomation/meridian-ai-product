@@ -676,7 +676,12 @@ function runPartialComponentsDegradeGracefully(): void {
 }
 
 function runDeterministicAssembly(): void {
-  // Same inputs → byte-identical output across calls.
+  // Same inputs → same ASSEMBLY across calls. dataTrust.*.lastVerifiedAt
+  // is an intentional wall-clock import stamp (set by buildDatumTrust via
+  // new Date()), so it legitimately varies between calls and is excluded
+  // from this byte-comparison. We assert the assembled output is stable,
+  // not that the verification timestamp is frozen. Test-only — production
+  // normalization / trust generation is unchanged.
   const headers = [
     "First Name", "Last Name", "Email", "Home Phone",
     "Home Street", "Home City", "Home State", "Home Postal Code",
@@ -692,11 +697,13 @@ function runDeterministicAssembly(): void {
     "Home State": "KS",
     "Home Postal Code": "66208",
   };
-  const a = JSON.stringify(normalizeCrmRow(row, 0, mapping, "wise_agent"));
-  const b = JSON.stringify(normalizeCrmRow(row, 0, mapping, "wise_agent"));
-  const c = JSON.stringify(normalizeCrmRow(row, 0, mapping, "wise_agent"));
+  const stableSerialize = (value: unknown): string =>
+    JSON.stringify(value, (key, val) => (key === "lastVerifiedAt" ? "<verified-at>" : val));
+  const a = stableSerialize(normalizeCrmRow(row, 0, mapping, "wise_agent"));
+  const b = stableSerialize(normalizeCrmRow(row, 0, mapping, "wise_agent"));
+  const c = stableSerialize(normalizeCrmRow(row, 0, mapping, "wise_agent"));
   if (a !== b || b !== c) {
-    fail("assembly determinism: 3 calls produced different output");
+    fail("assembly determinism: 3 calls produced different assembly (excluding lastVerifiedAt)");
   }
 }
 

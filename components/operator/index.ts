@@ -5,6 +5,7 @@
 // and `callMcp` closure, so extracting them in one pass is high-risk.
 // Pull components out one at a time as the styles get hoisted.
 
+export { default as OpsCenter } from "./OpsCenter";
 export { default as SourceReadinessBar } from "./SourceReadinessBar";
 export { default as RelationshipEngineOperatorPanel } from "./RelationshipEngineOperatorPanel";
 export { default as RelationshipPriorityWorkspace } from "./RelationshipPriorityWorkspace";
