@@ -4,6 +4,8 @@ import { INGESTION_CONTRACT_VERSION } from "./ingestion";
 import type {
   AeJobsWorkspaceModel,
   JobOpportunity,
+  NeedsDylanCategory,
+  NeedsDylanItem,
   Priority,
   RoleCategory,
   TodayAction,
@@ -15,15 +17,29 @@ const PRIORITY_ORDER: Record<Priority, number> = {
   low: 2,
 };
 
+export const NEEDS_DYLAN_LABELS: Record<NeedsDylanCategory, string> = {
+  loom_due: "Loom due",
+  follow_up_overdue: "Follow-up overdue",
+  waiting_on_reply: "Waiting on reply",
+  prep_required: "Prep required",
+};
+
+const INGESTION_STATUS =
+  "Claude/Gmail ingestion contract ready, not connected.";
+
 function isDueToday(isoDate: string | null): boolean {
   if (!isoDate) return false;
   const today = new Date().toISOString().slice(0, 10);
   return isoDate.slice(0, 10) <= today;
 }
 
+function isActive(opp: JobOpportunity): boolean {
+  return opp.stage !== "closed_lost" && opp.stage !== "on_hold";
+}
+
 function buildTodayActions(opportunities: JobOpportunity[]): TodayAction[] {
   return opportunities
-    .filter((o) => o.stage !== "closed_lost" && o.stage !== "on_hold")
+    .filter(isActive)
     .filter((o) => o.priority === "high" || isDueToday(o.followUpDate))
     .sort((a, b) => {
       const pa = PRIORITY_ORDER[a.priority];
@@ -42,6 +58,82 @@ function buildTodayActions(opportunities: JobOpportunity[]): TodayAction[] {
       priority: o.priority,
       roleCategory: o.roleCategory,
     }));
+}
+
+export function buildNeedsDylanItems(opportunities: JobOpportunity[]): NeedsDylanItem[] {
+  const items: NeedsDylanItem[] = [];
+  const today = new Date().toISOString().slice(0, 10);
+
+  for (const opp of opportunities) {
+    if (opp.stage === "closed_lost") continue;
+
+    const base = {
+      opportunityId: opp.id,
+      company: opp.company,
+      roleTitle: opp.roleTitle,
+      nextAction: opp.nextAction,
+      followUpDate: opp.followUpDate,
+      priority: opp.priority,
+      roleCategory: opp.roleCategory,
+    };
+
+    if (
+      opp.checklist.case_study_required &&
+      !opp.checklist.loom_recorded &&
+      opp.stage === "case_study"
+    ) {
+      items.push({
+        ...base,
+        category: "loom_due",
+        categoryLabel: NEEDS_DYLAN_LABELS.loom_due,
+      });
+    }
+
+    if (opp.followUpDate && opp.followUpDate.slice(0, 10) <= today && isActive(opp)) {
+      items.push({
+        ...base,
+        category: "follow_up_overdue",
+        categoryLabel: NEEDS_DYLAN_LABELS.follow_up_overdue,
+      });
+    }
+
+    if (opp.waitingOnReply) {
+      items.push({
+        ...base,
+        category: "waiting_on_reply",
+        categoryLabel: NEEDS_DYLAN_LABELS.waiting_on_reply,
+      });
+    }
+
+    if (
+      opp.prepRequired ||
+      ((opp.stage === "interview" || opp.stage === "hiring_manager") &&
+        !opp.checklist.interview_scheduled)
+    ) {
+      if (!opp.waitingOnReply) {
+        items.push({
+          ...base,
+          category: "prep_required",
+          categoryLabel: NEEDS_DYLAN_LABELS.prep_required,
+        });
+      }
+    }
+  }
+
+  const seen = new Set<string>();
+  return items
+    .filter((item) => {
+      const key = `${item.opportunityId}:${item.category}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => {
+      const pa = PRIORITY_ORDER[a.priority];
+      const pb = PRIORITY_ORDER[b.priority];
+      if (pa !== pb) return pa - pb;
+      return (a.followUpDate ?? "9999-12-31").localeCompare(b.followUpDate ?? "9999-12-31");
+    });
 }
 
 export function buildAeJobsWorkspaceModel(
@@ -68,6 +160,7 @@ export function buildAeJobsWorkspaceModel(
       return (a.followUpDate ?? "9999-12-31").localeCompare(b.followUpDate ?? "9999-12-31");
     }),
     todayActions: buildTodayActions(opportunities),
+    needsDylan: buildNeedsDylanItems(opportunities),
     summary: {
       total: opportunities.length,
       byCategory,
@@ -79,10 +172,12 @@ export function buildAeJobsWorkspaceModel(
     roleLabels: ROLE_LABELS,
     stageLabels: STAGE_LABELS,
     checklistLabels: CHECKLIST_LABELS,
+    needsDylanLabels: NEEDS_DYLAN_LABELS,
     ingestion: {
       wired: false,
       contractVersion: INGESTION_CONTRACT_VERSION,
       lastIngestedAt,
+      statusMessage: INGESTION_STATUS,
     },
   };
 }

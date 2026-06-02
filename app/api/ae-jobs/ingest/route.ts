@@ -27,13 +27,14 @@ export async function POST(req: NextRequest) {
   }
 
   const store = await loadAeJobsStore(user.id);
-  const seen = new Set<string>();
+  const seen = new Set(store.seenEventIds ?? []);
   const { opportunities, result } = applyIngestionEvents(store.opportunities, batch, seen);
 
   const nextStore = {
     ...store,
     opportunities,
     lastIngestedAt: batch.ingestedAt ?? new Date().toISOString(),
+    seenEventIds: [...seen],
   };
   await saveAeJobsStore(nextStore);
 

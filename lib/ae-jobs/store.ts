@@ -6,8 +6,7 @@ import type { AeJobsStoreFile, JobOpportunity, OpportunityChecklist } from "./ty
 const DATA_PATH = path.join(process.cwd(), "data", "ae-jobs", "opportunities.json");
 const DEFAULT_OWNER = "dylan";
 
-export async function loadAeJobsStore(ownerId = DEFAULT_OWNER): Promise<AeJobsStoreFile> {
-  const file = await safeReadJson<AeJobsStoreFile>(DATA_PATH);
+function normalizeStore(file: AeJobsStoreFile | null, ownerId: string): AeJobsStoreFile {
   if (file?.version === 1 && Array.isArray(file.opportunities)) {
     const opportunities =
       file.opportunities.length > 0 ? file.opportunities : seedOpportunities();
@@ -15,6 +14,7 @@ export async function loadAeJobsStore(ownerId = DEFAULT_OWNER): Promise<AeJobsSt
       ...file,
       ownerId: file.ownerId || ownerId,
       opportunities,
+      seenEventIds: file.seenEventIds ?? [],
     };
   }
   return {
@@ -22,7 +22,13 @@ export async function loadAeJobsStore(ownerId = DEFAULT_OWNER): Promise<AeJobsSt
     ownerId,
     opportunities: seedOpportunities(),
     lastIngestedAt: null,
+    seenEventIds: [],
   };
+}
+
+export async function loadAeJobsStore(ownerId = DEFAULT_OWNER): Promise<AeJobsStoreFile> {
+  const file = await safeReadJson<AeJobsStoreFile>(DATA_PATH);
+  return normalizeStore(file, ownerId);
 }
 
 export async function saveAeJobsStore(store: AeJobsStoreFile): Promise<boolean> {
@@ -67,4 +73,43 @@ export async function updateOpportunityFields(
   };
   await saveAeJobsStore(store);
   return store.opportunities[idx];
+}
+
+export async function importOpportunities(
+  incoming: JobOpportunity[],
+  mode: "replace" | "merge",
+  ownerId = DEFAULT_OWNER,
+): Promise<AeJobsStoreFile> {
+  const store = await loadAeJobsStore(ownerId);
+  const now = new Date().toISOString();
+
+  const normalized = incoming.map((opp) => ({
+    ...opp,
+    updatedAt: opp.updatedAt ?? now,
+    source: opp.source ?? "json_import",
+  }));
+
+  const opportunities =
+    mode === "replace"
+      ? normalized
+      : mergeOpportunities(store.opportunities, normalized);
+
+  const nextStore: AeJobsStoreFile = {
+    ...store,
+    ownerId,
+    opportunities,
+  };
+  await saveAeJobsStore(nextStore);
+  return nextStore;
+}
+
+function mergeOpportunities(
+  existing: JobOpportunity[],
+  incoming: JobOpportunity[],
+): JobOpportunity[] {
+  const byId = new Map(existing.map((o) => [o.id, o]));
+  for (const opp of incoming) {
+    byId.set(opp.id, opp);
+  }
+  return [...byId.values()];
 }

@@ -1,13 +1,23 @@
 // Validates AE Job OS domain model without starting the dev server.
 import { buildAeJobsWorkspaceModel, groupByRoleCategory } from "../lib/ae-jobs/workspace";
 import { seedOpportunities } from "../lib/ae-jobs/seed";
+import { INGESTION_CONTRACT_VERSION } from "../lib/ae-jobs/ingestion";
 import { ROLE_CATEGORIES, CHECKLIST_KEYS } from "../lib/ae-jobs/types";
 
-const user = { id: "dylan", name: "Dylan", accessRole: "admin_operator" as const, modules: ["roofing" as const], geo: [], workspaces: [] };
+const user = {
+  id: "dylan",
+  name: "Dylan",
+  accessRole: "admin_operator" as const,
+  modules: ["roofing" as const],
+  geo: [],
+  workspaces: [],
+};
 
 const opportunities = seedOpportunities();
 const model = buildAeJobsWorkspaceModel(opportunities, user, null);
 const groups = groupByRoleCategory(opportunities);
+
+const REAL_COMPANIES = ["Clipboard", "SafetyCulture", "Ronco"];
 
 let failed = 0;
 function check(label: string, ok: boolean) {
@@ -19,11 +29,37 @@ function check(label: string, ok: boolean) {
   }
 }
 
-check("seed has opportunities", opportunities.length >= 5);
+check("seed has real pipeline opportunities", opportunities.length === 3);
 check("today actions surfaced", model.todayActions.length > 0);
+check("needs dylan items surfaced", model.needsDylan.length > 0);
 check("role grouping covers categories", groups.length >= 3);
 check("checklist keys defined", CHECKLIST_KEYS.length === 9);
 check("role categories defined", ROLE_CATEGORIES.length === 5);
+check("ingestion contract version set", model.ingestion.contractVersion === INGESTION_CONTRACT_VERSION);
+check("ingestion not wired", model.ingestion.wired === false);
+check("ingestion status honest", model.ingestion.statusMessage.includes("not connected"));
+
+for (const company of REAL_COMPANIES) {
+  check(`real pipeline includes ${company}`, opportunities.some((o) => o.company === company));
+}
+
+const clipboard = opportunities.find((o) => o.company === "Clipboard");
+check("clipboard loom due flagged", model.needsDylan.some((n) => n.company === "Clipboard" && n.category === "loom_due"));
+check("clipboard case study stage", clipboard?.stage === "case_study");
+
+const safetyCulture = opportunities.find((o) => o.company === "SafetyCulture");
+check(
+  "safetyculture follow-up or prep in needs dylan",
+  model.needsDylan.some((n) => n.company === "SafetyCulture"),
+);
+check("safetyculture PAM category", safetyCulture?.roleCategory === "partner_account_manager");
+
+const ronco = opportunities.find((o) => o.company === "Ronco");
+check(
+  "ronco waiting on reply",
+  model.needsDylan.some((n) => n.company === "Ronco" && n.category === "waiting_on_reply"),
+);
+check("ronco other category", ronco?.roleCategory === "other");
 
 for (const cat of ROLE_CATEGORIES) {
   check(`summary counts ${cat}`, typeof model.summary.byCategory[cat] === "number");

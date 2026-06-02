@@ -43,6 +43,17 @@ export type ChecklistKey = (typeof CHECKLIST_KEYS)[number];
 
 export type OpportunityChecklist = Record<ChecklistKey, boolean>;
 
+export type OpportunitySource = "manual" | "email_ingestion" | "json_import";
+
+export const NEEDS_DYLAN_CATEGORIES = [
+  "loom_due",
+  "follow_up_overdue",
+  "waiting_on_reply",
+  "prep_required",
+] as const;
+
+export type NeedsDylanCategory = (typeof NEEDS_DYLAN_CATEGORIES)[number];
+
 export interface JobOpportunity {
   id: string;
   company: string;
@@ -56,7 +67,17 @@ export interface JobOpportunity {
   notes: string;
   checklist: OpportunityChecklist;
   updatedAt: string;
-  source?: "manual" | "email_ingestion";
+  source?: OpportunitySource;
+  /** Last known email subject when ingested from Gmail/Claude. */
+  sourceEmailSubject?: string | null;
+  /** Last known sender when ingested from Gmail/Claude. */
+  sourceSender?: string | null;
+  /** Parser confidence 0–1; null for manual entries. */
+  confidence?: number | null;
+  /** Explicit flag: ball is in someone else's court. */
+  waitingOnReply?: boolean;
+  /** Explicit flag: interview or case prep still needed. */
+  prepRequired?: boolean;
 }
 
 export interface AeJobsStoreFile {
@@ -64,15 +85,30 @@ export interface AeJobsStoreFile {
   ownerId: string;
   opportunities: JobOpportunity[];
   lastIngestedAt: string | null;
+  /** Idempotency keys for ingested email events. */
+  seenEventIds?: string[];
 }
 
 export type AeJobsViewId = "today" | "pipeline" | "by_role";
+
+export interface NeedsDylanItem {
+  opportunityId: string;
+  company: string;
+  roleTitle: string;
+  category: NeedsDylanCategory;
+  categoryLabel: string;
+  nextAction: string;
+  followUpDate: string | null;
+  priority: Priority;
+  roleCategory: RoleCategory;
+}
 
 export interface AeJobsWorkspaceModel {
   generatedAt: string;
   owner: { id: string; name: string };
   opportunities: JobOpportunity[];
   todayActions: TodayAction[];
+  needsDylan: NeedsDylanItem[];
   summary: {
     total: number;
     byCategory: Record<RoleCategory, number>;
@@ -82,10 +118,12 @@ export interface AeJobsWorkspaceModel {
   roleLabels: Record<RoleCategory, string>;
   stageLabels: Record<PipelineStage, string>;
   checklistLabels: Record<ChecklistKey, string>;
+  needsDylanLabels: Record<NeedsDylanCategory, string>;
   ingestion: {
     wired: boolean;
     contractVersion: string;
     lastIngestedAt: string | null;
+    statusMessage: string;
   };
 }
 

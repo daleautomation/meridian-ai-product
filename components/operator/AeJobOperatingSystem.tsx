@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { useCallback, useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { groupByRoleCategory } from "@/lib/ae-jobs/workspace";
+import { groupByRoleCategory, buildNeedsDylanItems } from "@/lib/ae-jobs/workspace";
+import { seedOpportunities } from "@/lib/ae-jobs/seed";
 import { palette } from "@/lib/theme";
 import type {
   AeJobsViewId,
   AeJobsWorkspaceModel,
   ChecklistKey,
   JobOpportunity,
+  NeedsDylanItem,
   RoleCategory,
 } from "@/lib/ae-jobs/types";
 
@@ -22,6 +24,10 @@ export function AeJobOperatingSystem({ initialModel }: AeJobOperatingSystemProps
   const [roleFilter, setRoleFilter] = useState<RoleCategory | "all">("all");
   const [selectedId, setSelectedId] = useState(model.opportunities[0]?.id ?? "");
   const [saving, setSaving] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importJson, setImportJson] = useState("");
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
 
   const selected = useMemo(
     () => model.opportunities.find((o) => o.id === selectedId) ?? model.opportunities[0] ?? null,
@@ -60,6 +66,7 @@ export function AeJobOperatingSystem({ initialModel }: AeJobOperatingSystemProps
               ...prev,
               opportunities: data.opportunities,
               todayActions: rebuildToday(data.opportunities),
+              needsDylan: buildNeedsDylanItems(data.opportunities),
             }));
           }
         }
@@ -69,6 +76,53 @@ export function AeJobOperatingSystem({ initialModel }: AeJobOperatingSystemProps
     },
     [],
   );
+
+  const handleImport = useCallback(async (mode: "replace" | "merge") => {
+    setImportError(null);
+    setImporting(true);
+    try {
+      let opportunities: JobOpportunity[];
+      try {
+        const parsed = JSON.parse(importJson) as unknown;
+        if (Array.isArray(parsed)) {
+          opportunities = parsed as JobOpportunity[];
+        } else if (
+          parsed &&
+          typeof parsed === "object" &&
+          Array.isArray((parsed as { opportunities?: unknown }).opportunities)
+        ) {
+          opportunities = (parsed as { opportunities: JobOpportunity[] }).opportunities;
+        } else {
+          throw new Error("Expected an opportunities array or store object with opportunities");
+        }
+      } catch (e) {
+        setImportError(e instanceof Error ? e.message : "Invalid JSON");
+        return;
+      }
+
+      const res = await fetch("/api/ae-jobs/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode, opportunities }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.model) {
+        setImportError(data.error ?? "Import failed");
+        return;
+      }
+      setModel(data.model);
+      setSelectedId(data.model.opportunities[0]?.id ?? "");
+      setImportOpen(false);
+      setImportJson("");
+    } finally {
+      setImporting(false);
+    }
+  }, [importJson]);
+
+  const loadSeedTemplate = useCallback(() => {
+    setImportJson(JSON.stringify(seedOpportunities(), null, 2));
+    setImportError(null);
+  }, []);
 
   return (
     <main style={styles.shell}>
@@ -93,8 +147,19 @@ export function AeJobOperatingSystem({ initialModel }: AeJobOperatingSystemProps
 
       <IngestionBanner ingestion={model.ingestion} />
 
+      <ManualImportPanel
+        open={importOpen}
+        importing={importing}
+        importJson={importJson}
+        importError={importError}
+        onToggle={() => setImportOpen((v) => !v)}
+        onChange={setImportJson}
+        onLoadSeed={loadSeedTemplate}
+        onImport={handleImport}
+      />
+
       <nav aria-label="AE Job OS views" style={styles.nav}>
-        <NavTab id="today" label="Today" count={model.todayActions.length} active={view} onSelect={setView} />
+        <NavTab id="today" label="Today" count={model.todayActions.length + model.needsDylan.length} active={view} onSelect={setView} />
         <NavTab id="pipeline" label="Pipeline" count={model.opportunities.length} active={view} onSelect={setView} />
         <NavTab id="by_role" label="By role" count={roleGroups.length} active={view} onSelect={setView} />
       </nav>
@@ -131,6 +196,7 @@ export function AeJobOperatingSystem({ initialModel }: AeJobOperatingSystemProps
           {view === "today" ? (
             <TodayView
               actions={model.todayActions}
+              needsDylan={model.needsDylan}
               roleLabels={model.roleLabels}
               onSelect={(id) => {
                 setSelectedId(id);
@@ -202,12 +268,79 @@ function IngestionBanner({
     <div style={styles.ingestionBanner}>
       <div>
         <strong>Email ingestion</strong>
-        <span style={styles.ingestionMuted}>
-          {" "}
-          — Contract {ingestion.contractVersion}. Gmail + Claude parser not wired yet.
-        </span>
+        <span style={styles.ingestionMuted}> — {ingestion.statusMessage}</span>
+        {ingestion.lastIngestedAt ? (
+          <span style={styles.ingestionMuted}>
+            {" "}
+            Last ingest: {formatDate(ingestion.lastIngestedAt.slice(0, 10))}.
+          </span>
+        ) : null}
       </div>
       <code style={styles.ingestionCode}>POST /api/ae-jobs/ingest</code>
+    </div>
+  );
+}
+
+function ManualImportPanel({
+  open,
+  importing,
+  importJson,
+  importError,
+  onToggle,
+  onChange,
+  onLoadSeed,
+  onImport,
+}: {
+  open: boolean;
+  importing: boolean;
+  importJson: string;
+  importError: string | null;
+  onToggle: () => void;
+  onChange: (value: string) => void;
+  onLoadSeed: () => void;
+  onImport: (mode: "replace" | "merge") => void;
+}) {
+  return (
+    <div style={styles.importPanel}>
+      <button type="button" onClick={onToggle} style={styles.importToggle}>
+        {open ? "Hide manual import" : "Manual JSON import"}
+      </button>
+      {open ? (
+        <div style={styles.importBody}>
+          <p style={styles.importHint}>
+            Paste an opportunities array or full store JSON. Low-friction — session auth only, no DB.
+          </p>
+          <textarea
+            value={importJson}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder='[{ "id": "opp-...", "company": "...", ... }]'
+            style={styles.importTextarea}
+            rows={8}
+          />
+          {importError ? <p style={styles.importError}>{importError}</p> : null}
+          <div style={styles.importActions}>
+            <button type="button" onClick={onLoadSeed} style={styles.importSecondary}>
+              Load seed template
+            </button>
+            <button
+              type="button"
+              disabled={importing || !importJson.trim()}
+              onClick={() => onImport("merge")}
+              style={styles.importSecondary}
+            >
+              Merge
+            </button>
+            <button
+              type="button"
+              disabled={importing || !importJson.trim()}
+              onClick={() => onImport("replace")}
+              style={styles.importPrimary}
+            >
+              {importing ? "Importing…" : "Replace pipeline"}
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -249,14 +382,16 @@ function Metric({ label, value }: { label: string; value: string }) {
 
 function TodayView({
   actions,
+  needsDylan,
   roleLabels,
   onSelect,
 }: {
   actions: AeJobsWorkspaceModel["todayActions"];
+  needsDylan: NeedsDylanItem[];
   roleLabels: Record<RoleCategory, string>;
   onSelect: (id: string) => void;
 }) {
-  if (actions.length === 0) {
+  if (actions.length === 0 && needsDylan.length === 0) {
     return (
       <div style={styles.empty}>
         <h2 style={styles.sectionTitle}>Nothing urgent today</h2>
@@ -266,28 +401,60 @@ function TodayView({
   }
   return (
     <section>
-      <h2 style={styles.sectionTitle}>Today — highest leverage actions</h2>
-      <div style={styles.todayList}>
-        {actions.map((action, i) => (
-          <button
-            key={action.opportunityId}
-            type="button"
-            onClick={() => onSelect(action.opportunityId)}
-            style={{ ...styles.todayCard, ...(i === 0 ? styles.todayCardPrimary : {}) }}
-          >
-            <div style={styles.todayTop}>
-              <PriorityPill priority={action.priority} />
-              {action.followUpDate ? (
-                <span style={styles.dueDate}>Due {formatDate(action.followUpDate)}</span>
-              ) : null}
-            </div>
-            <strong style={styles.todayCompany}>{action.company}</strong>
-            <span style={styles.todayRole}>{action.roleTitle}</span>
-            <span style={styles.todayCategory}>{roleLabels[action.roleCategory]}</span>
-            <p style={styles.todayAction}>{action.nextAction}</p>
-          </button>
-        ))}
-      </div>
+      {needsDylan.length > 0 ? (
+        <>
+          <h2 style={styles.sectionTitle}>Needs Dylan</h2>
+          <div style={styles.needsDylanList}>
+            {needsDylan.map((item) => (
+              <button
+                key={`${item.opportunityId}-${item.category}`}
+                type="button"
+                onClick={() => onSelect(item.opportunityId)}
+                style={styles.needsDylanCard}
+              >
+                <div style={styles.todayTop}>
+                  <NeedsDylanPill label={item.categoryLabel} category={item.category} />
+                  {item.followUpDate ? (
+                    <span style={styles.dueDate}>Due {formatDate(item.followUpDate)}</span>
+                  ) : null}
+                </div>
+                <strong style={styles.todayCompany}>{item.company}</strong>
+                <span style={styles.todayRole}>{item.roleTitle}</span>
+                <p style={styles.todayAction}>{item.nextAction}</p>
+              </button>
+            ))}
+          </div>
+        </>
+      ) : null}
+
+      {actions.length > 0 ? (
+        <>
+          <h2 style={{ ...styles.sectionTitle, marginTop: needsDylan.length > 0 ? "24px" : 0 }}>
+            Today — highest leverage actions
+          </h2>
+          <div style={styles.todayList}>
+            {actions.map((action, i) => (
+              <button
+                key={action.opportunityId}
+                type="button"
+                onClick={() => onSelect(action.opportunityId)}
+                style={{ ...styles.todayCard, ...(i === 0 ? styles.todayCardPrimary : {}) }}
+              >
+                <div style={styles.todayTop}>
+                  <PriorityPill priority={action.priority} />
+                  {action.followUpDate ? (
+                    <span style={styles.dueDate}>Due {formatDate(action.followUpDate)}</span>
+                  ) : null}
+                </div>
+                <strong style={styles.todayCompany}>{action.company}</strong>
+                <span style={styles.todayRole}>{action.roleTitle}</span>
+                <span style={styles.todayCategory}>{roleLabels[action.roleCategory]}</span>
+                <p style={styles.todayAction}>{action.nextAction}</p>
+              </button>
+            ))}
+          </div>
+        </>
+      ) : null}
     </section>
   );
 }
@@ -429,6 +596,19 @@ function DetailPanel({
       </div>
 
       <div style={styles.detailBlock}>
+        <div style={styles.blockLabel}>Source & evidence</div>
+        <div style={styles.evidenceGrid}>
+          <MetaRow label="Source" value={formatSource(opportunity.source)} />
+          <MetaRow
+            label="Last email subject"
+            value={opportunity.sourceEmailSubject ?? "—"}
+          />
+          <MetaRow label="Last sender" value={opportunity.sourceSender ?? "—"} />
+          <MetaRow label="Confidence" value={formatConfidence(opportunity.confidence)} />
+        </div>
+      </div>
+
+      <div style={styles.detailBlock}>
         <div style={styles.blockLabel}>Next action</div>
         <p style={styles.nextActionText}>{opportunity.nextAction}</p>
       </div>
@@ -475,6 +655,44 @@ function MetaRow({ label, value }: { label: string; value: ReactNode }) {
       <span style={styles.metaLabel}>{label}</span>
       <span style={styles.metaValue}>{value}</span>
     </div>
+  );
+}
+
+function formatSource(source: JobOpportunity["source"]): string {
+  if (source === "email_ingestion") return "Email ingestion";
+  if (source === "json_import") return "JSON import";
+  return "Manual";
+}
+
+function formatConfidence(confidence: JobOpportunity["confidence"]): string {
+  if (confidence == null) return "— (manual)";
+  return `${Math.round(confidence * 100)}%`;
+}
+
+function NeedsDylanPill({
+  label,
+  category,
+}: {
+  label: string;
+  category: NeedsDylanItem["category"];
+}) {
+  const colors = {
+    loom_due: { bg: palette.orangePale, color: palette.orange, border: palette.orangeBorder },
+    follow_up_overdue: { bg: palette.orangePale, color: palette.orange, border: palette.orangeBorder },
+    waiting_on_reply: { bg: palette.bluePale, color: palette.blue, border: palette.blueBorder },
+    prep_required: { bg: palette.bluePale, color: palette.blue, border: palette.blueBorder },
+  }[category];
+  return (
+    <span
+      style={{
+        ...styles.pill,
+        background: colors.bg,
+        color: colors.color,
+        border: `1px solid ${colors.border}`,
+      }}
+    >
+      {label}
+    </span>
   );
 }
 
@@ -585,6 +803,58 @@ const styles: Record<string, CSSProperties> = {
     background: palette.surface,
     border: `1px solid ${palette.border}`,
   },
+  importPanel: {
+    marginBottom: "16px",
+    borderRadius: "14px",
+    border: `1px solid ${palette.border}`,
+    background: palette.surface,
+    overflow: "hidden",
+  },
+  importToggle: {
+    width: "100%",
+    padding: "10px 16px",
+    border: "none",
+    background: "transparent",
+    textAlign: "left",
+    fontWeight: 700,
+    fontSize: "13px",
+    cursor: "pointer",
+    color: palette.textSecondary,
+  },
+  importBody: { padding: "0 16px 16px" },
+  importHint: { margin: "0 0 8px", fontSize: "12px", color: palette.textSecondary },
+  importTextarea: {
+    width: "100%",
+    boxSizing: "border-box",
+    padding: "10px 12px",
+    borderRadius: "12px",
+    border: `1px solid ${palette.border}`,
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+    fontSize: "12px",
+    resize: "vertical",
+  },
+  importError: { margin: "8px 0 0", fontSize: "12px", color: palette.orange },
+  importActions: { display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "10px" },
+  importPrimary: {
+    padding: "8px 14px",
+    borderRadius: "10px",
+    border: `1px solid ${palette.blueBorder}`,
+    background: palette.bluePale,
+    color: palette.blue,
+    fontWeight: 700,
+    fontSize: "13px",
+    cursor: "pointer",
+  },
+  importSecondary: {
+    padding: "8px 14px",
+    borderRadius: "10px",
+    border: `1px solid ${palette.border}`,
+    background: palette.surfaceHover,
+    color: palette.textSecondary,
+    fontWeight: 700,
+    fontSize: "13px",
+    cursor: "pointer",
+  },
   nav: { display: "flex", gap: "8px", marginBottom: "16px", flexWrap: "wrap" },
   navTab: {
     display: "inline-flex",
@@ -667,6 +937,7 @@ const styles: Record<string, CSSProperties> = {
   metaRow: { display: "flex", justifyContent: "space-between", gap: "8px", fontSize: "13px" },
   metaLabel: { color: palette.textSecondary, fontWeight: 600 },
   metaValue: { fontWeight: 700, textAlign: "right" },
+  evidenceGrid: { display: "grid", gap: "8px" },
   detailBlock: { marginBottom: "16px" },
   blockLabel: { fontSize: "11px", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: palette.textSecondary, marginBottom: "6px" },
   nextActionText: { margin: 0, fontSize: "14px", lineHeight: 1.5 },
@@ -697,6 +968,17 @@ const styles: Record<string, CSSProperties> = {
   tr: { cursor: "pointer" },
   trSelected: { background: palette.surfaceSelected },
   todayList: { display: "grid", gap: "10px" },
+  needsDylanList: { display: "grid", gap: "10px" },
+  needsDylanCard: {
+    display: "grid",
+    gap: "4px",
+    padding: "16px",
+    borderRadius: "16px",
+    border: `1px solid ${palette.blueBorder}`,
+    background: palette.bluePale,
+    textAlign: "left",
+    cursor: "pointer",
+  },
   todayCard: {
     display: "grid",
     gap: "4px",
