@@ -74,6 +74,8 @@ data/raw/**/*.zip
 # Per-customer weekly snapshots written by scripts/generate-weekly-state.ts.
 # These belong on the founder's machine + production filesystem, not git.
 data/weekly-state/
+# Founder Morning Brief output (local-only prioritization reports).
+data/founder-brief/*.md
 # Append-only outcome capture history. Per-customer JSON, durable, never
 # committed (production reads/writes its own copy on disk).
 data/outcomes/
