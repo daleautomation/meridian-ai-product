@@ -117,6 +117,42 @@ export function CareerBrief({ model }: CareerBriefProps) {
         </div>
       </section>
 
+      <section style={styles.ingestionPanel} aria-label="Email ingestion">
+        <div style={styles.ingestionTop}>
+          <h2 style={styles.inlineTitle}>Email ingestion</h2>
+          <code style={styles.ingestionCode}>POST /api/ae-jobs/ingest</code>
+        </div>
+        <p style={styles.ingestionStatus}>{model.ingestion.statusMessage}</p>
+        <div style={styles.ingestionMetrics}>
+          <IngestionMetric
+            label="Last ingested"
+            value={
+              model.ingestion.lastIngestedAt
+                ? formatDateTime(model.ingestion.lastIngestedAt)
+                : "Never"
+            }
+          />
+          <IngestionMetric
+            label="Processed"
+            value={String(model.ingestion.lastResult?.processed ?? 0)}
+          />
+          <IngestionMetric
+            label="Skipped"
+            value={String(model.ingestion.lastResult?.skipped ?? 0)}
+          />
+          <IngestionMetric
+            label="Unmatched"
+            value={String(model.ingestion.lastResult?.unmatched ?? 0)}
+          />
+        </div>
+        {model.ingestion.lastResult && model.ingestion.lastResult.updated > 0 ? (
+          <p style={styles.ingestionNote}>
+            Last batch updated {model.ingestion.lastResult.updated} opportunit
+            {model.ingestion.lastResult.updated === 1 ? "y" : "ies"}.
+          </p>
+        ) : null}
+      </section>
+
       <BriefSection
         title="Execute now"
         count={model.executeNow.length}
@@ -341,6 +377,15 @@ export function CareerBrief({ model }: CareerBriefProps) {
         </Link>
       </footer>
     </main>
+  );
+}
+
+function IngestionMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={styles.ingestionMetric}>
+      <div style={styles.metricLabel}>{label}</div>
+      <div style={styles.ingestionMetricValue}>{value}</div>
+    </div>
   );
 }
 
@@ -588,6 +633,56 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: "-0.03em",
   },
   quickActions: { marginBottom: "20px" },
+  ingestionPanel: {
+    marginBottom: "20px",
+    padding: "14px 16px",
+    borderRadius: "14px",
+    border: `1px solid ${palette.border}`,
+    background: palette.surface,
+  },
+  ingestionTop: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "8px",
+    flexWrap: "wrap",
+    marginBottom: "6px",
+  },
+  ingestionStatus: {
+    margin: "0 0 10px",
+    fontSize: "13px",
+    color: palette.textSecondary,
+    lineHeight: 1.4,
+  },
+  ingestionMetrics: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+    gap: "8px",
+  },
+  ingestionMetric: {
+    padding: "10px 12px",
+    borderRadius: "10px",
+    border: `1px solid ${palette.borderLight}`,
+    background: palette.surfaceHover,
+  },
+  ingestionMetricValue: {
+    fontSize: "14px",
+    fontWeight: 800,
+    marginTop: "4px",
+    letterSpacing: "-0.02em",
+  },
+  ingestionNote: {
+    margin: "10px 0 0",
+    fontSize: "12px",
+    color: palette.textTertiary,
+  },
+  ingestionCode: {
+    fontSize: "11px",
+    padding: "4px 8px",
+    borderRadius: "6px",
+    background: palette.surfaceHover,
+    color: palette.textSecondary,
+  },
   inlineTitle: {
     margin: "0 0 10px",
     fontSize: "15px",

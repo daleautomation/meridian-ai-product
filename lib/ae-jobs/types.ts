@@ -80,6 +80,14 @@ export interface JobOpportunity {
   prepRequired?: boolean;
 }
 
+export interface IngestionResultCounts {
+  processed: number;
+  skipped: number;
+  updated: number;
+  unmatched: number;
+  errors: string[];
+}
+
 export interface AeJobsStoreFile {
   version: 1;
   ownerId: string;
@@ -87,6 +95,8 @@ export interface AeJobsStoreFile {
   lastIngestedAt: string | null;
   /** Idempotency keys for ingested email events. */
   seenEventIds?: string[];
+  /** Result counts from the most recent ingest batch. */
+  lastIngestionResult?: IngestionResultCounts | null;
 }
 
 export type AeJobsViewId = "today" | "pipeline" | "by_role";
@@ -228,6 +238,14 @@ export interface CareerMomentum {
   waitingOnResponse: number;
 }
 
+export interface CareerBriefIngestionMeta {
+  wired: false;
+  contractVersion: string;
+  statusMessage: string;
+  lastIngestedAt: string | null;
+  lastResult: IngestionResultCounts | null;
+}
+
 export interface CareerBriefModel {
   generatedAt: string;
   owner: { id: string; name: string };
@@ -243,4 +261,5 @@ export interface CareerBriefModel {
   suggestedNextMove: SuggestedNextMove;
   roleLabels: Record<RoleCategory, string>;
   stageLabels: Record<PipelineStage, string>;
+  ingestion: CareerBriefIngestionMeta;
 }

@@ -1,8 +1,10 @@
 import type { PublicUser } from "@/config/tenants";
 import { ROLE_LABELS, STAGE_LABELS } from "./labels";
+import { INGESTION_CONTRACT_VERSION, INGESTION_STATUS_MESSAGE } from "./ingestion";
 import { buildNeedsDylanItems } from "./workspace";
 import type {
   CareerBriefModel,
+  CareerBriefIngestionMeta,
   CareerHealthSummary,
   CareerMomentum,
   ExecuteNowItem,
@@ -461,6 +463,7 @@ function buildCareerMomentum(opportunities: JobOpportunity[]): CareerMomentum {
 export function buildCareerBriefModel(
   opportunities: JobOpportunity[],
   user: PublicUser,
+  ingestionMeta?: Pick<CareerBriefIngestionMeta, "lastIngestedAt" | "lastResult">,
 ): CareerBriefModel {
   const allNeedsDylan = buildNeedsDylanItems(opportunities);
   const needsDylanToday = buildNeedsDylanToday(opportunities, allNeedsDylan);
@@ -483,6 +486,13 @@ export function buildCareerBriefModel(
     suggestedNextMove: buildSuggestedNextMove(needsDylanToday, topOpportunities),
     roleLabels: ROLE_LABELS,
     stageLabels: STAGE_LABELS,
+    ingestion: {
+      wired: false,
+      contractVersion: INGESTION_CONTRACT_VERSION,
+      statusMessage: INGESTION_STATUS_MESSAGE,
+      lastIngestedAt: ingestionMeta?.lastIngestedAt ?? null,
+      lastResult: ingestionMeta?.lastResult ?? null,
+    },
   };
 }
 

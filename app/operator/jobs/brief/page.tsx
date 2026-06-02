@@ -11,7 +11,10 @@ export default async function CareerBriefPage() {
   if (!user) redirect("/login?next=/operator/jobs/brief");
 
   const store = await loadAeJobsStore(user.id);
-  const model = buildCareerBriefModel(store.opportunities, user);
+  const model = buildCareerBriefModel(store.opportunities, user, {
+    lastIngestedAt: store.lastIngestedAt,
+    lastResult: store.lastIngestionResult ?? null,
+  });
 
   return <CareerBrief model={model} />;
 }

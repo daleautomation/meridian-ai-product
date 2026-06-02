@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * POST /api/ae-jobs/ingest
- * Accepts IngestionBatch from future Claude/Gmail parser. Admin-only for now.
+ * Accepts IngestionBatch from Claude/Gmail parser (manual/demo mode for now).
  */
 export async function POST(req: NextRequest) {
   const user = await getSession();
@@ -30,10 +30,12 @@ export async function POST(req: NextRequest) {
   const seen = new Set(store.seenEventIds ?? []);
   const { opportunities, result } = applyIngestionEvents(store.opportunities, batch, seen);
 
+  const ingestedAt = batch.ingestedAt ?? new Date().toISOString();
   const nextStore = {
     ...store,
     opportunities,
-    lastIngestedAt: batch.ingestedAt ?? new Date().toISOString(),
+    lastIngestedAt: ingestedAt,
+    lastIngestionResult: result,
     seenEventIds: [...seen],
   };
   await saveAeJobsStore(nextStore);

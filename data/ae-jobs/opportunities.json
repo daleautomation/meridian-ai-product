@@ -1,7 +1,108 @@
 {
   "version": 1,
   "ownerId": "dylan",
-  "opportunities": [],
-  "lastIngestedAt": null,
-  "seenEventIds": []
+  "opportunities": [
+    {
+      "id": "opp-clipboard-ae",
+      "company": "Clipboard",
+      "roleTitle": "Territory Account Executive",
+      "roleCategory": "account_executive",
+      "stage": "case_study",
+      "lastTouchpoint": "2026-06-02",
+      "nextAction": "Record and submit Loom case study (recruiter confirmed deadline)",
+      "followUpDate": "2026-06-03",
+      "priority": "high",
+      "notes": "Case study / Loom stage. Territory AE focus — finish draft then record Loom.\n—\nRecruiter confirmed Loom is the next gate before panel review.",
+      "checklist": {
+        "resume_tailored": true,
+        "applied": true,
+        "recruiter_contacted": true,
+        "follow_up_sent": false,
+        "interview_scheduled": true,
+        "case_study_required": true,
+        "case_study_drafted": true,
+        "loom_recorded": false,
+        "thank_you_sent": false
+      },
+      "updatedAt": "2026-06-02T16:28:09.276Z",
+      "source": "email_ingestion",
+      "sourceEmailSubject": "Re: Territory AE — case study next steps",
+      "sourceSender": "recruiter@clipboard.com",
+      "confidence": 0.94,
+      "prepRequired": true
+    },
+    {
+      "id": "opp-safetyculture-pam",
+      "company": "SafetyCulture",
+      "roleTitle": "Partner Account Manager",
+      "roleCategory": "partner_account_manager",
+      "stage": "prospecting",
+      "lastTouchpoint": "2026-06-02",
+      "nextAction": "Reply with partner ecosystem research and schedule intro call",
+      "followUpDate": "2026-06-04",
+      "priority": "high",
+      "notes": "Evaluating / outreach stage. Research partner ecosystem before first touch.\n—\nThey acknowledged outreach and asked for a short partner-motion summary.",
+      "checklist": {
+        "resume_tailored": true,
+        "applied": false,
+        "recruiter_contacted": false,
+        "follow_up_sent": false,
+        "interview_scheduled": false,
+        "case_study_required": false,
+        "case_study_drafted": false,
+        "loom_recorded": false,
+        "thank_you_sent": false
+      },
+      "updatedAt": "2026-06-02T16:28:09.276Z",
+      "source": "email_ingestion",
+      "sourceEmailSubject": "Partner Account Manager — follow-up on your outreach",
+      "sourceSender": "hiring@partners.safetyculture.com",
+      "confidence": 0.88,
+      "prepRequired": true,
+      "waitingOnReply": false
+    },
+    {
+      "id": "opp-ronco-pe",
+      "company": "Ronco",
+      "roleTitle": "Project Engineer",
+      "roleCategory": "other",
+      "stage": "on_hold",
+      "lastTouchpoint": "2026-06-02",
+      "nextAction": "Wait for Rachel / operations response on referral",
+      "followUpDate": "2026-06-07",
+      "priority": "medium",
+      "notes": "Referred in — exploratory. Ball with Rachel / ops; follow up if no reply by end of week.\n—\nRachel said ops is reviewing the referral; no interview scheduled yet.",
+      "checklist": {
+        "resume_tailored": false,
+        "applied": false,
+        "recruiter_contacted": true,
+        "follow_up_sent": false,
+        "interview_scheduled": false,
+        "case_study_required": false,
+        "case_study_drafted": false,
+        "loom_recorded": false,
+        "thank_you_sent": false
+      },
+      "updatedAt": "2026-06-02T16:28:09.276Z",
+      "source": "email_ingestion",
+      "sourceEmailSubject": "Re: Project Engineer referral — checking in",
+      "sourceSender": "rachel@ronco.com",
+      "confidence": 0.81,
+      "waitingOnReply": true,
+      "prepRequired": false
+    }
+  ],
+  "lastIngestedAt": "2026-06-02T16:28:09.276Z",
+  "seenEventIds": [
+    "demo-clipboard-case-study-001",
+    "demo-safetyculture-outreach-001",
+    "demo-ronco-waiting-reply-001"
+  ],
+  "lastIngestionResult": {
+    "processed": 3,
+    "skipped": 0,
+    "updated": 3,
+    "unmatched": 0,
+    "errors": []
+  }
 }

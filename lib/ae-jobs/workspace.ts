@@ -1,6 +1,6 @@
 import type { PublicUser } from "@/config/tenants";
 import { CHECKLIST_LABELS, ROLE_LABELS, STAGE_LABELS } from "./labels";
-import { INGESTION_CONTRACT_VERSION } from "./ingestion";
+import { INGESTION_CONTRACT_VERSION, INGESTION_STATUS_MESSAGE } from "./ingestion";
 import type {
   AeJobsWorkspaceModel,
   JobOpportunity,
@@ -24,8 +24,7 @@ export const NEEDS_DYLAN_LABELS: Record<NeedsDylanCategory, string> = {
   prep_required: "Prep required",
 };
 
-const INGESTION_STATUS =
-  "Claude/Gmail ingestion contract ready, not connected.";
+const INGESTION_STATUS = INGESTION_STATUS_MESSAGE;
 
 function isDueToday(isoDate: string | null): boolean {
   if (!isoDate) return false;

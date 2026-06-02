@@ -3,7 +3,13 @@ import { resolveBriefActionPatch, resolveMarkDonePatch } from "../lib/ae-jobs/br
 import { buildCareerBriefModel } from "../lib/ae-jobs/career-brief";
 import { buildAeJobsWorkspaceModel, groupByRoleCategory } from "../lib/ae-jobs/workspace";
 import { seedOpportunities } from "../lib/ae-jobs/seed";
-import { INGESTION_CONTRACT_VERSION } from "../lib/ae-jobs/ingestion";
+import {
+  applyIngestionEvents,
+  buildDemoIngestionBatch,
+  findMatchingOpportunity,
+  INGESTION_CONTRACT_VERSION,
+  INGESTION_STATUS_MESSAGE,
+} from "../lib/ae-jobs/ingestion";
 import { ROLE_CATEGORIES, CHECKLIST_KEYS } from "../lib/ae-jobs/types";
 
 const user = {
@@ -67,7 +73,28 @@ check("checklist keys defined", CHECKLIST_KEYS.length === 9);
 check("role categories defined", ROLE_CATEGORIES.length === 5);
 check("ingestion contract version set", model.ingestion.contractVersion === INGESTION_CONTRACT_VERSION);
 check("ingestion not wired", model.ingestion.wired === false);
-check("ingestion status honest", model.ingestion.statusMessage.includes("not connected"));
+check(
+  "ingestion status manual demo mode",
+  model.ingestion.statusMessage === INGESTION_STATUS_MESSAGE,
+);
+check("career brief ingestion meta", brief.ingestion.statusMessage === INGESTION_STATUS_MESSAGE);
+check("career brief ingestion not wired", brief.ingestion.wired === false);
+
+const demoBatch = buildDemoIngestionBatch();
+const seen = new Set<string>();
+const ingestFirst = applyIngestionEvents([...opportunities], demoBatch, seen);
+check("ingestion demo updates three", ingestFirst.result.updated === 3);
+check("ingestion demo no unmatched", ingestFirst.result.unmatched === 0);
+check(
+  "ingestion match by company and role",
+  findMatchingOpportunity(opportunities, demoBatch.events[0])?.id === "opp-clipboard-ae",
+);
+check(
+  "ingestion match by company fallback",
+  findMatchingOpportunity(opportunities, { ...demoBatch.events[2], roleTitle: "" })?.company === "Ronco",
+);
+const ingestSecond = applyIngestionEvents(ingestFirst.opportunities, demoBatch, seen);
+check("ingestion idempotency skips duplicates", ingestSecond.result.skipped === demoBatch.events.length);
 
 for (const company of REAL_COMPANIES) {
   check(`real pipeline includes ${company}`, opportunities.some((o) => o.company === company));
