@@ -8,3 +8,4 @@
 export { default as SourceReadinessBar } from "./SourceReadinessBar";
 export { default as RelationshipEngineOperatorPanel } from "./RelationshipEngineOperatorPanel";
 export { default as RelationshipPriorityWorkspace } from "./RelationshipPriorityWorkspace";
+export { AeJobOperatingSystem } from "./AeJobOperatingSystem";
