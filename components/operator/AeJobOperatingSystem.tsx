@@ -135,6 +135,9 @@ export function AeJobOperatingSystem({ initialModel }: AeJobOperatingSystemProps
           </p>
         </div>
         <div style={styles.headerActions}>
+          <Link href="/operator/jobs/brief" style={styles.backLink}>
+            Career Brief
+          </Link>
           <Link href="/workspace-select" style={styles.backLink}>
             Workspaces
           </Link>

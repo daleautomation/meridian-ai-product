@@ -1,4 +1,5 @@
 // Validates AE Job OS domain model without starting the dev server.
+import { buildCareerBriefModel } from "../lib/ae-jobs/career-brief";
 import { buildAeJobsWorkspaceModel, groupByRoleCategory } from "../lib/ae-jobs/workspace";
 import { seedOpportunities } from "../lib/ae-jobs/seed";
 import { INGESTION_CONTRACT_VERSION } from "../lib/ae-jobs/ingestion";
@@ -15,6 +16,7 @@ const user = {
 
 const opportunities = seedOpportunities();
 const model = buildAeJobsWorkspaceModel(opportunities, user, null);
+const brief = buildCareerBriefModel(opportunities, user);
 const groups = groupByRoleCategory(opportunities);
 
 const REAL_COMPANIES = ["Clipboard", "SafetyCulture", "Ronco"];
@@ -32,6 +34,16 @@ function check(label: string, ok: boolean) {
 check("seed has real pipeline opportunities", opportunities.length === 3);
 check("today actions surfaced", model.todayActions.length > 0);
 check("needs dylan items surfaced", model.needsDylan.length > 0);
+check("career brief needs dylan today", brief.needsDylanToday.length > 0);
+check("career brief waiting on ronco", brief.waitingOn.some((w) => w.company === "Ronco"));
+check("career brief suggested next move", brief.suggestedNextMove.headline.length > 0);
+check(
+  "career brief clipboard loom recommendation",
+  brief.suggestedNextMove.headline.toLowerCase().includes("clipboard") &&
+    brief.suggestedNextMove.headline.toLowerCase().includes("loom"),
+);
+check("career brief top opportunities", brief.topOpportunities.length === 3);
+check("career brief health total", brief.health.total === 3);
 check("role grouping covers categories", groups.length >= 3);
 check("checklist keys defined", CHECKLIST_KEYS.length === 9);
 check("role categories defined", ROLE_CATEGORIES.length === 5);

@@ -136,3 +136,75 @@ export interface TodayAction {
   priority: Priority;
   roleCategory: RoleCategory;
 }
+
+export interface CareerHealthSummary {
+  total: number;
+  byCategory: Record<RoleCategory, number>;
+  activeInterviews: number;
+  caseStudiesInProgress: number;
+  waitingOnReplyCount: number;
+  followUpsDueCount: number;
+}
+
+export type WaitingOnReason =
+  | "waiting_on_recruiter"
+  | "waiting_on_hiring_manager"
+  | "waiting_on_interview_scheduling"
+  | "waiting_on_offer_decision"
+  | "waiting_on_reply";
+
+export interface WaitingOnItem {
+  opportunityId: string;
+  company: string;
+  roleTitle: string;
+  reason: WaitingOnReason;
+  reasonLabel: string;
+  lastTouchpoint: string;
+  daysWaiting: number;
+}
+
+export type UpcomingItemKind =
+  | "interview"
+  | "follow_up"
+  | "case_study_deadline"
+  | "loom_deadline";
+
+export interface UpcomingItem {
+  date: string;
+  company: string;
+  roleTitle: string;
+  actionRequired: string;
+  kind: UpcomingItemKind;
+  kindLabel: string;
+  opportunityId: string;
+}
+
+export interface TopOpportunityItem {
+  opportunityId: string;
+  company: string;
+  roleTitle: string;
+  stage: PipelineStage;
+  stageLabel: string;
+  priority: Priority;
+  recommendedNextAction: string;
+  rank: number;
+}
+
+export interface SuggestedNextMove {
+  headline: string;
+  explanation: string;
+  opportunityId: string | null;
+}
+
+export interface CareerBriefModel {
+  generatedAt: string;
+  owner: { id: string; name: string };
+  health: CareerHealthSummary;
+  needsDylanToday: NeedsDylanItem[];
+  waitingOn: WaitingOnItem[];
+  upcoming: UpcomingItem[];
+  topOpportunities: TopOpportunityItem[];
+  suggestedNextMove: SuggestedNextMove;
+  roleLabels: Record<RoleCategory, string>;
+  stageLabels: Record<PipelineStage, string>;
+}
