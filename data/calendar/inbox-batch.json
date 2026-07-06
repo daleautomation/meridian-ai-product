@@ -1,0 +1,36 @@
+{
+  "fetchedAt": "2026-07-06T16:00:00.000Z",
+  "ownerEmails": ["dylandinkc@gmail.com"],
+  "events": [
+    {
+      "id": "cal-clue-jul2",
+      "summary": "Chandler <> Dylan",
+      "start": "2026-07-02T19:00:00Z",
+      "end": "2026-07-02T19:45:00Z",
+      "status": "confirmed",
+      "attendees": ["chandler@getclue.com", "dylandinkc@gmail.com"],
+      "organizer": "chandler@getclue.com",
+      "notes": "Clue AE / Customer Success conversation."
+    },
+    {
+      "id": "cal-blake-jun30",
+      "summary": "Dylan / Blake — OwnerLM",
+      "start": "2026-06-30T20:00:00Z",
+      "end": "2026-06-30T21:00:00Z",
+      "status": "confirmed",
+      "attendees": ["blake.miller@onequext.com", "dylandinkc@gmail.com"],
+      "organizer": "blake.miller@onequext.com",
+      "notes": "OwnerLM walkthrough at 1612 Grand."
+    },
+    {
+      "id": "cal-contactloop-jul13",
+      "summary": "ContactLoop Referral Program Zoom",
+      "start": "2026-07-13T17:00:00Z",
+      "end": "2026-07-13T17:30:00Z",
+      "status": "confirmed",
+      "attendees": ["chris.feng@onramplab.com", "dylandinkc@gmail.com"],
+      "organizer": "chris.feng@onramplab.com",
+      "notes": "Referral program onboarding, Monday 1pm EST."
+    }
+  ]
+}

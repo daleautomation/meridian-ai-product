@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "ownerHandle": "dylan-dale",
+  "observations": [
+    {
+      "id": "ln-chandler-msg",
+      "type": "linkedin_message_received",
+      "timestamp": "2026-06-30T18:00:00Z",
+      "person": "Chandler Barr",
+      "company": "Clue Insights",
+      "direction": "inbound",
+      "note": "Chandler messaged me on LinkedIn to set up a time to talk about Clue."
+    },
+    {
+      "id": "ln-clue-job",
+      "type": "linkedin_job_signal",
+      "timestamp": "2026-06-24T12:00:00Z",
+      "company": "Clue Insights",
+      "note": "Clue Insights posted a new Account Executive / Customer Success opening."
+    },
+    {
+      "id": "ln-josh-intro",
+      "type": "linkedin_manual_note",
+      "timestamp": "2026-07-05T15:00:00Z",
+      "person": "Josh McDonald",
+      "company": "Clue Insights",
+      "note": "Connected with Josh McDonald on LinkedIn; he offered to put in a good word at Clue."
+    },
+    {
+      "id": "ln-blake-view",
+      "type": "linkedin_profile_viewed",
+      "timestamp": "2026-07-06T09:00:00Z",
+      "person": "Blake Miller",
+      "company": "Quext",
+      "note": "Blake viewed my profile again after our OwnerLM conversation."
+    }
+  ]
+}

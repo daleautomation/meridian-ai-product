@@ -1,0 +1,28 @@
+{
+  "contacts": [
+    {
+      "id": "c-blake", "workspaceId": "dylan", "importJobId": null,
+      "name": "Blake Miller", "company": "Quext", "phone": null, "email": "blake.miller@onequext.com",
+      "address": null, "notes": null, "tags": ["partnership"], "lastInteractionAt": "2026-07-06T15:26:27Z",
+      "sourceCrm": "manual", "normalizedPhone": null, "normalizedEmail": "blake.miller@onequext.com",
+      "normalizedCompany": "quext", "normalizedName": "blake miller",
+      "dataTrust": {}, "relationshipScore": 82, "createdAt": "2026-06-11T00:00:00Z", "updatedAt": "2026-07-06T15:26:27Z"
+    },
+    {
+      "id": "c-chandler", "workspaceId": "dylan", "importJobId": null,
+      "name": "Chandler Barr", "company": "Clue Insights", "phone": null, "email": "chandler@getclue.com",
+      "address": null, "notes": null, "tags": ["recruiter"], "lastInteractionAt": "2026-07-06T15:16:32Z",
+      "sourceCrm": "manual", "normalizedPhone": null, "normalizedEmail": "chandler@getclue.com",
+      "normalizedCompany": "clue insights", "normalizedName": "chandler barr",
+      "dataTrust": {}, "relationshipScore": 75, "createdAt": "2026-06-30T00:00:00Z", "updatedAt": "2026-06-30T00:00:00Z"
+    },
+    {
+      "id": "c-chandler-dup", "workspaceId": "dylan", "importJobId": null,
+      "name": "Chandler B", "company": "getclue", "phone": null, "email": "chandler@getclue.com",
+      "address": null, "notes": null, "tags": [], "lastInteractionAt": null,
+      "sourceCrm": "linkedin", "normalizedPhone": null, "normalizedEmail": "chandler@getclue.com",
+      "normalizedCompany": "getclue", "normalizedName": "chandler b",
+      "dataTrust": {}, "relationshipScore": null, "createdAt": "2026-06-28T00:00:00Z", "updatedAt": "2026-06-28T00:00:00Z"
+    }
+  ]
+}

@@ -61,3 +61,6 @@ data/crm-contacts/
 data/crm-import-jobs/
 data/crmImportRollbacks/
 
+
+# Reality Layer runtime outputs (brief/beliefs/feedback are regenerated).
+data/reality/

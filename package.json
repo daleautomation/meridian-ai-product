@@ -23,7 +23,16 @@
     "heartbeat:run": "tsx scripts/heartbeat/run.ts",
     "heartbeat:notify": "node scripts/heartbeat/notify-local.mjs",
     "ae-jobs:ingest:demo": "tsx scripts/ae-jobs-ingest-demo.ts",
-    "ae-jobs:calendar:demo": "tsx scripts/ae-jobs-calendar-sync-demo.ts"
+    "ae-jobs:calendar:demo": "tsx scripts/ae-jobs-calendar-sync-demo.ts",
+    "graph:check": "tsx scripts/check-graph.ts",
+    "graph:schema:apply": "tsx scripts/apply-graph-schema.ts",
+    "graph:backfill:dry": "tsx scripts/backfill-graph.ts --dry-run",
+    "graph:backfill": "tsx scripts/backfill-graph.ts --execute",
+    "gmail:scan:check": "tsx scripts/check-gmail-scan.ts",
+    "gmail:opportunities:scan": "tsx scripts/gmail-opportunities-scan.ts",
+    "reality:check": "tsx scripts/check-reality.ts",
+    "reality:scan": "tsx scripts/reality-scan.ts",
+    "linkedin:observations:check": "tsx scripts/check-linkedin.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

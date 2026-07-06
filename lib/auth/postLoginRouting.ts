@@ -10,13 +10,15 @@ import { listAccessibleWorkspacesForPrincipal } from "@/lib/workspaceAccess";
 
 export { WORKSPACE_SELECT_PATH };
 
-/** Dylan's personal AE pipeline — default operating surface after login. */
+/** Meridian Home — the Daily Command Brief. Dylan's default landing after login. */
+export const MERIDIAN_HOME_PATH = "/home";
+/** Kept for the AE pipeline drill-down (still reachable, no longer the landing). */
 export const CAREER_BRIEF_HOME_PATH = "/operator/jobs/brief";
 
 const AE_JOBS_OPERATOR_ID = "dylan";
 
 export function careerBriefHomeForUser(user: PublicUser): string | null {
-  return user.id === AE_JOBS_OPERATOR_ID ? CAREER_BRIEF_HOME_PATH : null;
+  return user.id === AE_JOBS_OPERATOR_ID ? MERIDIAN_HOME_PATH : null;
 }
 
 /** Sanitize internal redirect paths from login `next` params. */
@@ -50,6 +52,9 @@ function pathKind(path: string): "operator" | "personal" | "relationship" | "adm
 export function isPostLoginPathAllowed(user: PublicUser, path: string): boolean {
   const safe = sanitizeInternalPath(path);
   if (!safe) return false;
+
+  // Meridian Home is the personal daily brief — always allowed for a signed-in user.
+  if (safe === MERIDIAN_HOME_PATH || safe.startsWith(`${MERIDIAN_HOME_PATH}?`)) return true;
 
   const assigned = listAccessibleWorkspacesForPrincipal(user);
   if (assigned.length === 0) return false;

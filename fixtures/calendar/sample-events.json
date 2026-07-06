@@ -1,0 +1,36 @@
+{
+  "fetchedAt": "2026-07-07T00:00:00.000Z",
+  "ownerEmails": ["dylandinkc@gmail.com"],
+  "events": [
+    {
+      "id": "cal-clue-hm",
+      "summary": "Chandler <> Dylan",
+      "start": "2026-07-02T19:00:00Z",
+      "end": "2026-07-02T19:45:00Z",
+      "status": "confirmed",
+      "attendees": ["chandler@getclue.com", "dylandinkc@gmail.com"],
+      "organizer": "chandler@getclue.com",
+      "notes": "Intro / hiring conversation for Clue AE + CS."
+    },
+    {
+      "id": "cal-contactloop",
+      "summary": "ContactLoop Referral Program Zoom",
+      "start": "2026-07-13T17:00:00Z",
+      "end": "2026-07-13T17:30:00Z",
+      "status": "confirmed",
+      "attendees": ["chris.feng@onramplab.com", "dylandinkc@gmail.com"],
+      "organizer": "chris.feng@onramplab.com",
+      "notes": "Referral program onboarding."
+    },
+    {
+      "id": "cal-softdoes",
+      "summary": "Dylan Dale and SoftDoes",
+      "start": "2026-06-09T18:30:00Z",
+      "end": "2026-06-09T19:00:00Z",
+      "status": "confirmed",
+      "attendees": ["info@softdoes.com", "dylandinkc@gmail.com"],
+      "organizer": "info@softdoes.com",
+      "notes": "Intro call."
+    }
+  ]
+}

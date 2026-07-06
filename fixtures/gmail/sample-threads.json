@@ -1,0 +1,128 @@
+{
+  "fetchedAt": "2026-07-07T00:00:00.000Z",
+  "ownerEmails": ["dylandinkc@gmail.com"],
+  "queries": ["fixture"],
+  "threads": [
+    {
+      "id": "clue-application",
+      "messages": [
+        {
+          "id": "m-clue-appl",
+          "date": "2026-06-25T20:17:25Z",
+          "sender": "noreply@recruiterflowmail.com",
+          "toRecipients": ["dylandinkc@gmail.com"],
+          "subject": "Thank you for applying!",
+          "snippet": "Hi Dylan, Thank you for applying to the Account Executive role. We will review your application and get back to you shortly. Regards, Team Clue Insights",
+          "labelIds": ["INBOX"]
+        }
+      ]
+    },
+    {
+      "id": "clue-availability",
+      "messages": [
+        {
+          "id": "m-clue-avail",
+          "date": "2026-06-30T21:29:08Z",
+          "sender": "dylandinkc@gmail.com",
+          "toRecipients": ["chandler@getclue.com"],
+          "subject": "Thursday Availability",
+          "snippet": "Hi Chandler, Thanks for getting back to me! I completely understand—end of quarter can get hectic. I'd love to get something on the schedule for Thursday. I'm available anytime after 1pm.",
+          "labelIds": ["SENT"]
+        }
+      ]
+    },
+    {
+      "id": "clue-invite",
+      "messages": [
+        {
+          "id": "m-clue-invite",
+          "date": "2026-06-30T22:04:44Z",
+          "sender": "chandler@getclue.com",
+          "toRecipients": ["dylandinkc@gmail.com"],
+          "subject": "Invitation: Chandler <> Dylan @ Thu Jul 2, 2026 2pm - 2:45pm (CDT)",
+          "snippet": "You have been invited by Chandler Barr to attend Chandler <> Dylan on Thursday Jul 2, 2026, 2pm - 2:45pm (Central Time). Join with Google Meet.",
+          "labelIds": ["INBOX", "IMPORTANT"]
+        }
+      ]
+    },
+    {
+      "id": "clue-followup",
+      "messages": [
+        {
+          "id": "m-clue-followup",
+          "date": "2026-07-06T15:16:32Z",
+          "sender": "dylandinkc@gmail.com",
+          "toRecipients": ["chandler@getclue.com"],
+          "subject": "Following Up & Connected with Josh",
+          "snippet": "Hi Chandler, Hope you had a great weekend. I've spent the last few days digging deeper into Clue and researching the Customer Success team, and the more I learn, the more excited I am about the opportunity.",
+          "labelIds": ["SENT"]
+        }
+      ]
+    },
+    {
+      "id": "safetyculture-stalled",
+      "messages": [
+        {
+          "id": "m-sc-1",
+          "date": "2026-05-20T16:00:00Z",
+          "sender": "dylandinkc@gmail.com",
+          "toRecipients": ["recruiter@safetyculture.com"],
+          "subject": "Re: Account Executive role at SafetyCulture",
+          "snippet": "Thanks for the intro call — really enjoyed learning about the team. Following up on next steps for the AE role whenever you have a moment.",
+          "labelIds": ["SENT"]
+        },
+        {
+          "id": "m-sc-2",
+          "date": "2026-05-18T14:00:00Z",
+          "sender": "recruiter@safetyculture.com",
+          "toRecipients": ["dylandinkc@gmail.com"],
+          "subject": "Re: Account Executive role at SafetyCulture",
+          "snippet": "Great chatting today Dylan. Let me sync with the hiring manager and circle back on next steps.",
+          "labelIds": ["INBOX"]
+        }
+      ]
+    },
+    {
+      "id": "preston-bid",
+      "messages": [
+        {
+          "id": "m-preston-1",
+          "date": "2026-07-04T18:30:00Z",
+          "sender": "preston@example.com",
+          "toRecipients": ["dylandinkc@gmail.com"],
+          "subject": "Re: Exterior painting bid — Maple St duplex",
+          "snippet": "Dylan, can you send over the estimate for the Maple St job? Owner wants to move this month if the bid works.",
+          "labelIds": ["INBOX"]
+        }
+      ]
+    },
+    {
+      "id": "oracle-reject",
+      "messages": [
+        {
+          "id": "m-oracle-1",
+          "date": "2026-06-28T18:00:00Z",
+          "sender": "recruiting@oracle.com",
+          "toRecipients": ["dylandinkc@gmail.com"],
+          "subject": "Update on your Oracle application",
+          "snippet": "Thank you for your interest. After careful review we've decided to move forward with other candidates who are a stronger fit for this role.",
+          "labelIds": ["INBOX"]
+        }
+      ]
+    },
+    {
+      "id": "newsletter-noise",
+      "messages": [
+        {
+          "id": "m-noise-1",
+          "date": "2026-06-12T13:00:38Z",
+          "sender": "no-reply@mail.coinbase.com",
+          "toRecipients": ["dylandinkc@gmail.com"],
+          "subject": "Weekly: Decoupled and De-rated",
+          "snippet": "The hawkish Fed shift and whether the SpaceX IPO pulls crypto liquidity.",
+          "labelIds": ["INBOX", "UNREAD"]
+        }
+      ]
+    }
+  ]
+}

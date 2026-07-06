@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/operator/morning-brief",
+      "schedule": "0 12 * * *"
+    }
+  ],
+  "functions": {
+    "app/api/operator/morning-brief/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}

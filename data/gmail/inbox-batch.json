@@ -1,0 +1,53 @@
+{
+  "fetchedAt": "2026-07-06T16:00:00.000Z",
+  "ownerEmails": ["dylandinkc@gmail.com"],
+  "queries": ["seeds", "sent_no_reply", "career", "founders"],
+  "threads": [
+    { "id": "clue-appl", "messages": [
+      { "id": "m1", "date": "2026-06-25T20:17:25Z", "sender": "noreply@recruiterflowmail.com", "toRecipients": ["dylandinkc@gmail.com"], "subject": "Thank you for applying!", "snippet": "Thank you for applying to the Account Executive role. Team Clue Insights.", "labelIds": ["INBOX"] }
+    ]},
+    { "id": "clue-avail", "messages": [
+      { "id": "m2", "date": "2026-06-30T21:29:08Z", "sender": "dylandinkc@gmail.com", "toRecipients": ["chandler@getclue.com"], "subject": "Thursday Availability", "snippet": "Hi Chandler, I'd love to get something on the schedule for Thursday. Available anytime after 1pm.", "labelIds": ["SENT"] }
+    ]},
+    { "id": "clue-invite", "messages": [
+      { "id": "m3", "date": "2026-06-30T22:04:44Z", "sender": "chandler@getclue.com", "toRecipients": ["dylandinkc@gmail.com"], "subject": "Invitation: Chandler <> Dylan @ Thu Jul 2, 2026 2pm - 2:45pm (CDT)", "snippet": "You have been invited by Chandler Barr to attend Chandler <> Dylan on Thursday Jul 2, 2026. Join with Google Meet.", "labelIds": ["INBOX", "IMPORTANT"] }
+    ]},
+    { "id": "clue-followup", "messages": [
+      { "id": "m4", "date": "2026-07-06T15:16:32Z", "sender": "dylandinkc@gmail.com", "toRecipients": ["chandler@getclue.com"], "subject": "Following Up & Connected with Josh", "snippet": "Hi Chandler, I've spent the last few days digging deeper into Clue and researching the Customer Success team, and the more I learn the more excited I am.", "labelIds": ["SENT"] }
+    ]},
+    { "id": "blake-context", "messages": [
+      { "id": "m5", "date": "2026-06-23T19:53:37Z", "sender": "dylandinkc@gmail.com", "toRecipients": ["blake.miller@onequext.com"], "subject": "Little Context Before Thursday", "snippet": "Hi Blake, ahead of our meeting I wanted to send over a short case study I put together.", "labelIds": ["SENT"] },
+      { "id": "m6", "date": "2026-06-24T14:30:01Z", "sender": "blake.miller@onequext.com", "toRecipients": ["dylandinkc@gmail.com"], "subject": "Re: Little Context Before Thursday", "snippet": "looking forward to it. This is awesome. NO ONE does this.", "labelIds": ["INBOX", "IMPORTANT"] },
+      { "id": "m7", "date": "2026-06-25T14:32:42Z", "sender": "blake.miller@onequext.com", "toRecipients": ["dylandinkc@gmail.com"], "subject": "Re: Little Context Before Thursday", "snippet": "Let's do Tues. I'm wide open. 3 or 4 works.", "labelIds": ["INBOX", "IMPORTANT"] }
+    ]},
+    { "id": "blake-ownerlm", "messages": [
+      { "id": "m8", "date": "2026-07-06T15:26:27Z", "sender": "dylandinkc@gmail.com", "toRecipients": ["blake.miller@onequext.com"], "subject": "OwnerLM + Meeting This Week", "snippet": "Hey Blake, I'm ready to get the ball rolling on OwnerLM. I don't think the platform invite ever came through.", "labelIds": ["SENT"] }
+    ]},
+    { "id": "clipboard-next", "messages": [
+      { "id": "m9", "date": "2026-05-29T17:58:48Z", "sender": "brian.wittrup@clipboardhealth.com", "toRecipients": ["dylandinkc@gmail.com"], "subject": "Clipboard: Please Read Next Steps for the Account Executive role!", "snippet": "We're excited to move you forward to the next step. The next step is a Sales case study.", "labelIds": ["INBOX", "IMPORTANT"] },
+      { "id": "m10", "date": "2026-06-04T16:39:04Z", "sender": "dylandinkc@gmail.com", "toRecipients": ["brian.wittrup@clipboardhealth.com"], "subject": "Re: Clipboard: Please Read Next Steps", "snippet": "I've just submitted my Territory Account Executive case study through the Ashby portal: a Loom walkthrough of Sunrise Terrace.", "labelIds": ["SENT"] },
+      { "id": "m11", "date": "2026-06-09T17:52:53Z", "sender": "dylandinkc@gmail.com", "toRecipients": ["brian.wittrup@clipboardhealth.com", "lauren.cuny@clipboardhealth.com"], "subject": "Re: Clipboard: Please Read Next Steps", "snippet": "I wanted to follow up regarding my Territory AE application and the case study I submitted last week.", "labelIds": ["SENT"] }
+    ]},
+    { "id": "safetyculture-reject", "messages": [
+      { "id": "m12", "date": "2026-06-05T16:15:31Z", "sender": "mail@hire.lever.co", "toRecipients": ["dylandinkc@gmail.com"], "subject": "SafetyCulture - We've Got Your Application", "snippet": "We've received your application for the Account Executive position at SafetyCulture.", "labelIds": ["INBOX", "IMPORTANT"] },
+      { "id": "m13", "date": "2026-06-10T03:34:33Z", "sender": "mail@hire.lever.co", "toRecipients": ["dylandinkc@gmail.com"], "subject": "Thanks for your interest in SafetyCulture, Dylan", "snippet": "For the Account Executive role, we've decided to proceed with other candidates who we feel are a stronger fit.", "labelIds": ["INBOX", "IMPORTANT"] }
+    ]},
+    { "id": "softdoes-invite", "messages": [
+      { "id": "m14", "date": "2026-06-09T14:26:53Z", "sender": "info@softdoes.com", "toRecipients": ["dylandinkc@gmail.com"], "subject": "Invitation from an unknown sender: Dylan Dale and SoftDoes @ Tue Jun 9, 2026 1:30pm - 2pm (CDT)", "snippet": "Dylan Dale and SoftDoes. This event isn't in your calendar yet.", "labelIds": ["INBOX"] }
+    ]},
+    { "id": "contactloop-referral", "messages": [
+      { "id": "m15", "date": "2026-07-03T03:02:55Z", "sender": "chris.feng@onramplab.com", "toRecipients": ["dylandinkc@gmail.com"], "subject": "ContactLoop Referral Program: Join Us for a Quick Zoom", "snippet": "When you chatted with Alex about our Junior Account Executive role, you said sure to joining our referral program at ContactLoop.", "labelIds": ["INBOX"] },
+      { "id": "m16", "date": "2026-07-06T15:59:59Z", "sender": "dylandinkc@gmail.com", "toRecipients": ["chris.feng@onramplab.com"], "subject": "Re: ContactLoop Referral Program", "snippet": "Thanks for reaching out. I'll be joining the Zoom session on Monday at 1:00 PM EST.", "labelIds": ["SENT"] }
+    ]},
+    { "id": "epoxy-pe", "messages": [
+      { "id": "m17", "date": "2026-06-01T14:24:01Z", "sender": "tweber@epoxyspecialists.com", "toRecipients": ["dylandinkc@gmail.com"], "subject": "Dylan Dale - Interview", "snippet": "Microsoft Teams meeting. Join the interview for the PE role.", "labelIds": ["INBOX"] },
+      { "id": "m18", "date": "2026-06-03T19:13:31Z", "sender": "tweber@epoxyspecialists.com", "toRecipients": ["dylandinkc@gmail.com"], "subject": "Re: Dylan Dale - Interview", "snippet": "Really nice meeting you. We were impressed with your background. We've got a couple interviews that finish this week and we will be in touch.", "labelIds": ["INBOX", "IMPORTANT"] }
+    ]},
+    { "id": "wade-apartment", "messages": [
+      { "id": "m19", "date": "2026-06-24T21:37:17Z", "sender": "jules@epc-leasing.com", "toRecipients": ["dylandinkc@gmail.com"], "subject": "Re: Apartment Inquiry at The Wade", "snippet": "Below are the quotes for the apartment homes that we toured.", "labelIds": ["INBOX", "IMPORTANT"] }
+    ]},
+    { "id": "newsletter", "messages": [
+      { "id": "m20", "date": "2026-06-17T15:01:14Z", "sender": "daniel@mail.modemobile.com", "toRecipients": ["dylandinkc@gmail.com"], "subject": "Warsh's first Fed decision lands today", "snippet": "Plus: the Iran deal lets Tehran sell oil again.", "labelIds": ["INBOX", "UNREAD"] }
+    ]}
+  ]
+}

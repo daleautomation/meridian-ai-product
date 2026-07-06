@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "ownerHandle": "dylan-dale",
+  "_instructions": "Optional. Paste LinkedIn DM threads here. Each thread has `with` (their name), optional `company`, and messages with from: 'me' | 'them'. Copy/paste only your own conversations; do not scrape.",
+  "threads": [
+    {
+      "with": "Chandler Barr",
+      "company": "Clue Insights",
+      "messages": [
+        { "from": "them", "date": "2026-06-30T18:00:00Z", "text": "Hey Dylan — saw your background, would love to chat about a role at Clue. Any time Thursday?" },
+        { "from": "me", "date": "2026-06-30T18:20:00Z", "text": "Absolutely — Thursday afternoon works. I'll follow up over email with availability." }
+      ]
+    }
+  ]
+}

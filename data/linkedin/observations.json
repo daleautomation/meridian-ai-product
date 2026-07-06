@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "ownerHandle": "dylan-dale",
+  "_instructions": "Manually maintained. Add one entry per LinkedIn signal. type = linkedin_message_received | linkedin_message_sent | linkedin_connection_added | linkedin_profile_viewed | linkedin_job_signal | linkedin_company_signal | linkedin_manual_note. Set company to a known entity (Clue Insights, Quext, etc.) so it fuses with email/calendar. Never paste anything you scraped in a way that risks your account.",
+  "observations": [
+    {
+      "id": "ln-chandler-linkedin",
+      "type": "linkedin_message_received",
+      "timestamp": "2026-06-30T18:27:00Z",
+      "person": "Chandler Barr",
+      "company": "Clue Insights",
+      "direction": "inbound",
+      "note": "Chandler messaged me on LinkedIn (referenced in our email thread) to schedule the Clue conversation."
+    },
+    {
+      "id": "ln-josh-mcdonald",
+      "type": "linkedin_manual_note",
+      "timestamp": "2026-07-05T15:00:00Z",
+      "person": "Josh McDonald",
+      "company": "Clue Insights",
+      "note": "Connected with Josh McDonald re: Clue — mentioned in my July 6 follow-up to Chandler."
+    }
+  ]
+}
