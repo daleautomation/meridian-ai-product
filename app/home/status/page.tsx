@@ -3,6 +3,7 @@
 
 import { getLatestRun } from "@/lib/operator/store";
 import { envPresence } from "@/lib/operator/health";
+import { getLatestDailyReview } from "@/lib/review/store";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ function dot(ok: boolean) {
 
 export default async function OperatorStatus() {
   const run = await getLatestRun("dylan").catch(() => null);
+  const review = await getLatestDailyReview("dylan").catch(() => null);
   const env = envPresence();
 
   return (
@@ -51,6 +53,16 @@ export default async function OperatorStatus() {
           {run.incompleteConnectors.length > 0 && (
             <p style={{ color: "#d9a441", fontSize: 13 }}>Incomplete: {run.incompleteConnectors.join(", ")}</p>
           )}
+        </>
+      )}
+
+      {review && (
+        <>
+          <h2 style={{ fontSize: 13, ...muted, textTransform: "uppercase", letterSpacing: 1.5, marginTop: 20 }}>Last nightly review ({review.date})</h2>
+          <div style={row}><span style={muted}>Recommendation accuracy</span><span>{review.accuracy.accuracyPct === null ? "unknown (no feedback)" : `${review.accuracy.accuracyPct}% of ${review.accuracy.scored} scored`}</span></div>
+          <div style={row}><span style={muted}>Produced value</span><span>{review.narrative.producedValue.join(", ") || "—"}</span></div>
+          <div style={row}><span style={muted}>Failed</span><span>{review.narrative.failed.join(", ") || "—"}</span></div>
+          <div style={{ padding: "6px 0", ...muted, fontSize: 13 }}>Believe differently: {review.narrative.believeDifferently.join(" · ")}</div>
         </>
       )}
 

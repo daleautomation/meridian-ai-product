@@ -33,7 +33,8 @@
     "reality:check": "tsx scripts/check-reality.ts",
     "reality:scan": "tsx scripts/reality-scan.ts",
     "linkedin:observations:check": "tsx scripts/check-linkedin.ts",
-    "operator:check": "tsx scripts/check-operator.ts"
+    "operator:check": "tsx scripts/check-operator.ts",
+    "operator:review:check": "tsx scripts/check-review.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
