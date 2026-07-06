@@ -32,7 +32,8 @@
     "gmail:opportunities:scan": "tsx scripts/gmail-opportunities-scan.ts",
     "reality:check": "tsx scripts/check-reality.ts",
     "reality:scan": "tsx scripts/reality-scan.ts",
-    "linkedin:observations:check": "tsx scripts/check-linkedin.ts"
+    "linkedin:observations:check": "tsx scripts/check-linkedin.ts",
+    "operator:check": "tsx scripts/check-operator.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

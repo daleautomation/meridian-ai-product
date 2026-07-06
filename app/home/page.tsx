@@ -67,6 +67,7 @@ export default async function MeridianHome() {
           {freshness.gmail ? ` · inbox synced ${freshness.gmail.slice(0, 10)}` : ""}
         </span>
         <ManualRefresh />
+        <a href="/home/status" style={{ ...muted, fontSize: 12, color: "#7fb2ff" }}>operator status</a>
       </div>
 
       <Section title="Highest-leverage actions">
