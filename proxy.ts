@@ -34,9 +34,9 @@ export function proxy(req: NextRequest) {
     pathname.startsWith("/api/intake") ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/mcp") ||
-    // The morning-brief operator authenticates itself (CRON_SECRET bearer for the
-    // Vercel cron, or an admin session for the manual refresh button).
-    pathname.startsWith("/api/operator/morning-brief") ||
+    // The operator routes authenticate themselves (CRON_SECRET bearer for the
+    // Vercel cron, or an admin session for the manual refresh / status view).
+    pathname.startsWith("/api/operator/") ||
     // /api/outcomes is gated by the route handler itself: the
     // recovery_brief source is publicly capturable (briefs are shared
     // by direct link); operator_console writes require a session +
