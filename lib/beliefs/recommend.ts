@@ -60,8 +60,21 @@ const TERMINAL = new Set<OpportunityStage>(["rejected", "closed_won", "closed_lo
 // Only engaged relationships may be recommended (trust-model permission gate).
 const ACTIONABLE_ENGAGEMENT = new Set(["two_way", "owner_initiated", "inbound_qualified"]);
 
+/** Time pressure from the Temporal Intelligence Engine. A missed meeting and
+ *  accumulating overdue days lift a belief up "Do this now" — inaction is itself
+ *  a signal, so decay and missed commitments outrank a merely-warm thread. */
+function temporalUrgency(b: Belief): number {
+  const t = b.temporal;
+  let u = 0;
+  if (t.missedMeeting) u += 60; // a missed commitment is the most urgent thing there is
+  u += Math.min(45, t.daysOverdue * 3); // overdue pressure, capped
+  if (t.daysUntilDeadline === 0) u += 12; // something is due today
+  if (t.decayRisk === "high") u += 8;
+  return u;
+}
+
 function leverageOf(b: Belief): number {
-  return (STAGE_URGENCY[b.stage] ?? 0) + MOMENTUM_RANK[b.momentum] * 4 + CONFIDENCE_BONUS[b.confidence];
+  return (STAGE_URGENCY[b.stage] ?? 0) + MOMENTUM_RANK[b.momentum] * 4 + CONFIDENCE_BONUS[b.confidence] + temporalUrgency(b);
 }
 
 /** Apply memory to one belief's leverage, transparently. Returns the adjustment,

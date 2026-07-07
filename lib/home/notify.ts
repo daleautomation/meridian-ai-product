@@ -20,19 +20,24 @@ export function baseUrl(): string {
 export interface NotifyMeta {
   /** How many meaningful changes since the last scan (drives the headline). */
   changeCount?: number;
+  /** The single most urgent temporal event ("SoftDoes is 28 days overdue…"). */
+  topUrgency?: string;
+  /** Count of overdue relationships, surfaced in the push. */
+  overdueCount?: number;
 }
 
-/** Short push: "Meridian scan complete", change count, top action, link. */
+/** Short push: "Meridian scan complete", most-urgent change, top action, link. */
 export function buildNotification(brief: DailyBrief, meta: NotifyMeta = {}): { title: string; body: string; url: string } {
   const url = `${baseUrl()}/home`;
   const top = brief.topActions[0];
   const n = meta.changeCount;
-  const changePhrase = n === undefined ? "" : n === 0 ? "No changes." : `${n} change${n === 1 ? "" : "s"}.`;
   const title = n && n > 0 ? `Meridian scan complete — ${n} change${n === 1 ? "" : "s"}` : "Meridian scan complete";
   const lines: string[] = [];
-  if (changePhrase) lines.push(changePhrase);
+  if (meta.topUrgency) lines.push(`⏰ ${meta.topUrgency}`);
+  if (meta.overdueCount && meta.overdueCount > 0) lines.push(`${meta.overdueCount} overdue.`);
+  else if (n !== undefined) lines.push(n === 0 ? "No changes." : `${n} change${n === 1 ? "" : "s"}.`);
   if (top) lines.push(`▶ Do first: ${top.action}`);
-  else lines.push("Nothing clears the bar right now.");
+  else if (!meta.topUrgency) lines.push("Nothing clears the bar right now.");
   lines.push(`Open: ${url}`);
   return { title, body: lines.join("\n"), url };
 }

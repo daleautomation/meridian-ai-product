@@ -13,6 +13,8 @@ import { detectChanges } from "@/lib/operator/changeDetection";
 import type { ChangeReport, DailySnapshot } from "@/lib/operator/types";
 import RecommendationFeedback from "@/components/home/RecommendationFeedback";
 import ManualRefresh from "@/components/home/ManualRefresh";
+import type { AgingBand, OverdueItem, UpcomingRiskItem, UrgencyEvent } from "@/lib/temporal/types";
+import type { TemporalSections, TemporalRow } from "@/lib/temporal/centers";
 
 export const dynamic = "force-dynamic";
 
@@ -28,9 +30,27 @@ const HEAT: Record<OpportunityCard["heat"], { bg: string; fg: string }> = {
   WATCH: { bg: "#1c1f26", fg: "#a7b0bf" },
 };
 
+// Aging band → the traffic-light dot Meridian uses for "how alive is this".
+const AGING: Record<AgingBand, { fg: string; label: string }> = {
+  green: { fg: "#3ba55d", label: "0–3d healthy" },
+  yellow: { fg: "#d9c441", label: "4–7d needs attention" },
+  orange: { fg: "#e08b41", label: "8–14d losing momentum" },
+  red: { fg: "#e05b5b", label: "15d+ decaying" },
+  black: { fg: "#8a94a6", label: "30d+ likely dead" },
+};
+
 function HeatBadge({ heat }: { heat: OpportunityCard["heat"] }) {
   const c = HEAT[heat];
   return <span className="mh-badge" style={{ background: c.bg, color: c.fg }}>{heat}</span>;
+}
+
+function AgingDot({ band, days }: { band: AgingBand; days: number | null }) {
+  const a = AGING[band];
+  return (
+    <span className="mh-aging" title={a.label} style={{ color: a.fg }}>
+      ● {days === null ? "—" : `${days}d`}
+    </span>
+  );
 }
 
 // ── One relationship card ─────────────────────────────────────────────────────
@@ -44,7 +64,12 @@ function OppCard({ c }: { c: OpportunityCard }) {
     <div className="mh-card">
       <div className="mh-card-top">
         <span className="mh-card-title">{c.label}</span>
-        <HeatBadge heat={c.heat} />
+        <span className="mh-card-badges">
+          {c.missed && <span className="mh-chip-missed">MISSED</span>}
+          {!c.missed && c.daysOverdue > 0 && <span className="mh-chip-overdue">{c.daysOverdue}d overdue</span>}
+          <AgingDot band={c.aging} days={c.daysSinceActivity} />
+          <HeatBadge heat={c.heat} />
+        </span>
       </div>
       <div className="mh-card-stage">
         {c.stage.replace(/_/g, " ")}{c.domain ? ` · ${c.domain}` : ""} · confidence {c.confidence}
@@ -54,6 +79,12 @@ function OppCard({ c }: { c: OpportunityCard }) {
         <span style={{ color: owes.fg }}>{owes.text}</span>
         {c.followUpDate && <span className="mh-dot">·</span>}
         {c.followUpDate && <span>{c.waitingOn === "me" ? "due" : "follow up by"} {c.followUpDate}</span>}
+        {c.daysUntilDeadline !== null && c.daysUntilDeadline >= 0 && c.daysOverdue === 0 && (
+          <><span className="mh-dot">·</span><span>next deadline in {c.daysUntilDeadline}d</span></>
+        )}
+        {c.recoveryProbability !== null && (
+          <><span className="mh-dot">·</span><span>est. recovery {Math.round(c.recoveryProbability * 100)}%</span></>
+        )}
       </div>
       <div className="mh-card-touch">
         {c.latestInboundAt && <span>in {c.latestInboundAt}</span>}
@@ -107,6 +138,104 @@ function ChangeBanner({ change }: { change: ChangeReport }) {
           ))}
         </div>
       )}
+    </section>
+  );
+}
+
+// ── "What became more urgent" — the temporal lede, shown before everything ─────
+function UrgencyLede({ urgency }: { urgency: UrgencyEvent[] }) {
+  if (urgency.length === 0) return null;
+  const tone: Record<UrgencyEvent["kind"], string> = {
+    missed_meeting: "#ff5c5c", overdue: "#ff8a5c", prep_due: "#f0a441",
+    response_window_closing: "#e0c341", follow_up_window: "#7fb2ff", inactivity: "#b985e6", decay: "#b985e6",
+  };
+  return (
+    <section className="mh-urgent">
+      <div className="mh-panel-head"><span>⏰ What became more urgent</span><span className="mh-count">{urgency.length}</span></div>
+      {urgency.map((u) => (
+        <div key={u.subjectKey + u.kind} className="mh-urgent-row">
+          <span className="mh-urgent-bar" style={{ background: tone[u.kind] }} />
+          <span className="mh-urgent-msg">{u.message}</span>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+// ── Overdue Center — everything past due, sorted by expected impact ────────────
+function OverdueCenter({ items }: { items: OverdueItem[] }) {
+  const impactColor = { high: "#ff6b6b", medium: "#f0a441", low: "#8a94a6" } as const;
+  return (
+    <section className="mh-overdue">
+      <div className="mh-panel-head"><span style={{ color: "#ff7a7a" }}>Overdue center</span><span className="mh-count">{items.length}</span></div>
+      {items.length === 0
+        ? <div className="mh-empty">Nothing overdue. You&apos;re current.</div>
+        : items.map((o) => (
+          <div key={o.subjectKey} className="mh-od-row">
+            <div className="mh-od-top">
+              <span className="mh-od-reason">{o.reason}</span>
+              <span className="mh-od-days">{o.daysOverdue}d overdue</span>
+            </div>
+            <div className="mh-od-label">{o.label}
+              <span className="mh-od-impact" style={{ color: impactColor[o.impactBand] }}> · {o.impactBand} impact</span>
+              {o.recoveryProbability !== null && <span className="mh-od-rec"> · est. recovery {Math.round(o.recoveryProbability * 100)}%</span>}
+            </div>
+            <div className="mh-od-action">→ {o.expectedAction}</div>
+          </div>
+        ))}
+    </section>
+  );
+}
+
+// ── Upcoming Risk Center — what will become overdue soon ───────────────────────
+function UpcomingRisk({ items }: { items: UpcomingRiskItem[] }) {
+  return (
+    <section className="mh-upcoming">
+      <div className="mh-panel-head"><span>Upcoming risk</span><span className="mh-count">{items.length}</span></div>
+      {items.length === 0
+        ? <div className="mh-empty">No deadlines closing in the next few days.</div>
+        : items.map((r, i) => (
+          <div key={r.subjectKey + i} className="mh-up-row">
+            <span className="mh-up-when">{r.whenLabel}</span>
+            <span className="mh-up-pred">{r.prediction}</span>
+          </div>
+        ))}
+    </section>
+  );
+}
+
+// ── The eight time-based sections ──────────────────────────────────────────────
+function TimeSection({ title, rows, accent }: { title: string; rows: TemporalRow[]; accent?: string }) {
+  if (rows.length === 0) return null;
+  return (
+    <div className="mh-ts">
+      <div className="mh-ts-head" style={accent ? { color: accent } : undefined}>{title} <span className="mh-count">{rows.length}</span></div>
+      {rows.map((row) => (
+        <div key={row.subjectKey} className="mh-ts-row">
+          <span className="mh-ts-label">{row.label}</span>
+          <span className="mh-ts-metric">{row.metric}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TemporalSectionsGrid({ s }: { s: TemporalSections }) {
+  const any = Object.values(s).some((rows) => rows.length > 0);
+  if (!any) return null;
+  return (
+    <section className="mh-panel" style={{ marginTop: 16 }}>
+      <div className="mh-panel-head"><span>Time-based sections</span></div>
+      <div className="mh-tsgrid">
+        <TimeSection title="Today's deadlines" rows={s.todaysDeadlines} accent="#f0a441" />
+        <TimeSection title="Overdue" rows={s.overdue} accent="#ff7a7a" />
+        <TimeSection title="Recently missed" rows={s.recentlyMissed} accent="#ff5c5c" />
+        <TimeSection title="Upcoming deadlines" rows={s.upcomingDeadlines} />
+        <TimeSection title="Waiting too long" rows={s.waitingTooLong} accent="#b985e6" />
+        <TimeSection title="Needs scheduling" rows={s.needsScheduling} accent="#5fd18a" />
+        <TimeSection title="Expected replies this week" rows={s.expectedRepliesThisWeek} />
+        <TimeSection title="Expected meetings this week" rows={s.expectedMeetingsThisWeek} accent="#7fb2ff" />
+      </div>
     </section>
   );
 }
@@ -167,6 +296,15 @@ export default async function MeridianHome() {
         {freshness.gmail ? ` · inbox synced ${freshness.gmail.slice(0, 10)}` : ""}
       </p>
 
+      {/* Temporal lede — what became more urgent, before everything else. */}
+      <UrgencyLede urgency={brief.urgency} />
+
+      {/* Overdue + Upcoming risk, side by side on wide screens. */}
+      <div className="mh-centers">
+        <OverdueCenter items={brief.overdueCenter} />
+        <UpcomingRisk items={brief.upcomingRisk} />
+      </div>
+
       {change && <ChangeBanner change={change} />}
 
       {/* Do this now — the 1–3 highest-leverage moves. */}
@@ -205,6 +343,8 @@ export default async function MeridianHome() {
         <CardSection title="Risks / stalled" cards={brief.risks} accent="#ff6b6b" />
       </div>
 
+      <TemporalSectionsGrid s={brief.temporalSections} />
+
       <details className="mh-details">
         <summary>Revenue outlook &amp; professional capital</summary>
         <p className="mh-outlook">{brief.revenueOutlook}</p>
@@ -239,6 +379,43 @@ function Style() {
         margin-bottom: 8px; font-weight: 600; }
       .mh-count { background: #1c1f26; color: #a7b0bf; border-radius: 999px; padding: 1px 8px; font-size: 11px; letter-spacing: 0; }
       .mh-empty { color: #5b6472; font-size: 13px; padding: 4px 0; }
+
+      /* Temporal lede */
+      .mh-urgent { background: #16101a; border: 1px solid #33223a; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
+      .mh-urgent-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+      .mh-urgent-bar { flex: 0 0 4px; height: 16px; border-radius: 2px; }
+      .mh-urgent-msg { font-size: 14px; color: #e6dff0; }
+
+      /* Overdue + upcoming centers */
+      .mh-centers { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 20px; }
+      .mh-overdue { background: #1a1113; border: 1px solid #43242a; border-radius: 12px; padding: 14px 16px; }
+      .mh-od-row { border-top: 1px solid #2a1a1d; padding: 8px 0; }
+      .mh-od-row:first-of-type { border-top: none; }
+      .mh-od-top { display: flex; justify-content: space-between; gap: 8px; }
+      .mh-od-reason { font-size: 12px; font-weight: 700; color: #ff9a8a; text-transform: uppercase; letter-spacing: 0.5px; }
+      .mh-od-days { font-size: 12px; color: #ff7a7a; font-weight: 600; white-space: nowrap; }
+      .mh-od-label { font-size: 14px; font-weight: 600; margin: 1px 0; }
+      .mh-od-impact { font-size: 12px; font-weight: 500; }
+      .mh-od-rec { font-size: 12px; color: #8a94a6; }
+      .mh-od-action { font-size: 13px; color: #d5c0bb; }
+      .mh-upcoming { background: #101319; border: 1px solid #232a36; border-radius: 12px; padding: 14px 16px; }
+      .mh-up-row { display: flex; gap: 10px; padding: 6px 0; border-top: 1px solid #1a1e27; align-items: baseline; }
+      .mh-up-row:first-of-type { border-top: none; }
+      .mh-up-when { flex: 0 0 84px; font-size: 12px; color: #f0a441; font-weight: 600; }
+      .mh-up-pred { font-size: 13px; color: #cdd6e4; }
+
+      /* Time-based sections grid */
+      .mh-tsgrid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+      .mh-ts-head { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #8a94a6; font-weight: 600; margin-bottom: 4px; }
+      .mh-ts-row { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; padding: 2px 0; }
+      .mh-ts-label { color: #dbe3ef; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .mh-ts-metric { color: #8a94a6; font-size: 12px; white-space: nowrap; }
+
+      /* Card temporal badges */
+      .mh-card-badges { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+      .mh-aging { font-size: 11px; white-space: nowrap; }
+      .mh-chip-missed { font-size: 10px; font-weight: 700; background: #3a1518; color: #ff5c5c; border-radius: 5px; padding: 2px 6px; }
+      .mh-chip-overdue { font-size: 10px; font-weight: 700; background: #2a1a12; color: #ff8a5c; border-radius: 5px; padding: 2px 6px; }
 
       .mh-changed { background: #101722; border: 1px solid #1e2a3a; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
       .mh-headline { font-size: 14px; color: #cdd6e4; }
@@ -283,6 +460,8 @@ function Style() {
       @media (min-width: 900px) {
         .mh-wrap { padding: 40px 28px 80px; }
         .mh-cats { grid-template-columns: 1fr 1fr; align-items: start; }
+        .mh-centers { grid-template-columns: 3fr 2fr; align-items: start; }
+        .mh-tsgrid { grid-template-columns: 1fr 1fr; }
       }
     `}</style>
   );

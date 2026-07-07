@@ -5,6 +5,7 @@
 // recommendation uses memory invisibly.
 
 import type { Belief } from "../lib/beliefs/types";
+import { defaultTemporalProfile } from "../lib/temporal/engine";
 import { recommendFromBeliefs } from "../lib/beliefs/recommend";
 import { MEMORY_SEEDS } from "../lib/memory/seeds";
 import { memoriesToObservations } from "../lib/memory/observations";
@@ -24,7 +25,7 @@ function belief(subjectKey: string, subjectLabel: string, company: string | null
     firstActivityAt: "2026-07-01T00:00:00Z", lastActivityAt: "2026-07-06T00:00:00Z", observationCount: 3,
     latestInboundAt: null, latestOutboundAt: null, latestMeetingAt: null, nextAction: "", followUpDate: null,
     connectors: ["gmail"], claim: `${subjectLabel} active`, falsifier: "", changeLog: "",
-    statusHistory: [], lastScanAt: "2026-07-06T00:00:00Z", evidence: [],
+    statusHistory: [], lastScanAt: "2026-07-06T00:00:00Z", temporal: defaultTemporalProfile(Date.parse("2026-07-06T00:00:00Z")), evidence: [],
   };
 }
 

@@ -35,7 +35,8 @@
     "linkedin:observations:check": "tsx scripts/check-linkedin.ts",
     "operator:check": "tsx scripts/check-operator.ts",
     "operator:review:check": "tsx scripts/check-review.ts",
-    "memory:check": "tsx scripts/check-memory.ts"
+    "memory:check": "tsx scripts/check-memory.ts",
+    "temporal:check": "tsx scripts/check-temporal.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

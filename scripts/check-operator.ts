@@ -5,6 +5,7 @@
 // live run; here we prove the brains are correct and stable.
 
 import type { Belief } from "../lib/beliefs/types";
+import { defaultTemporalProfile } from "../lib/temporal/engine";
 import type { Recommendation } from "../lib/beliefs/recommend";
 import type { RealityResult } from "../lib/home/pipeline";
 import type { DailySnapshot } from "../lib/operator/types";
@@ -26,7 +27,7 @@ function belief(p: Partial<Belief> & Pick<Belief, "subjectKey" | "subjectLabel" 
     latestInboundAt: null, latestOutboundAt: null, latestMeetingAt: null,
     nextAction: "", followUpDate: null,
     observationCount: 3, connectors: ["gmail"], claim: "", falsifier: "", changeLog: "",
-    statusHistory: [], lastScanAt: "2026-07-06T00:00:00Z", evidence: [],
+    statusHistory: [], lastScanAt: "2026-07-06T00:00:00Z", temporal: defaultTemporalProfile(Date.parse("2026-07-06T00:00:00Z")), evidence: [],
     ...p,
   };
 }

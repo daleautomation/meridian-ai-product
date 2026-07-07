@@ -13,6 +13,14 @@
 import type { Belief, BeliefEvidenceRef, Confidence, HeatLabel } from "@/lib/beliefs/types";
 import type { OpportunityStage, WaitingOn } from "@/lib/beliefs/types";
 import type { Recommendation } from "@/lib/beliefs/recommend";
+import type { AgingBand, TimeHeat, OverdueItem, UpcomingRiskItem, UrgencyEvent } from "@/lib/temporal/types";
+import {
+  buildUrgencyLede,
+  buildOverdueCenter,
+  buildUpcomingRiskCenter,
+  buildTemporalSections,
+  type TemporalSections,
+} from "@/lib/temporal/centers";
 
 /** The one shape every dashboard card renders from. */
 export interface OpportunityCard {
@@ -34,12 +42,28 @@ export interface OpportunityCard {
   followUpDate: string | null; // deadline / follow-up (YYYY-MM-DD)
   confidence: Confidence;
   evidence: BeliefEvidenceRef[]; // source evidence
+  // ── Temporal (from the Temporal Intelligence Engine) ──
+  aging: AgingBand;
+  timeHeat: TimeHeat;
+  daysSinceActivity: number | null;
+  daysUntilDeadline: number | null;
+  daysOverdue: number;
+  missed: boolean;
+  recoveryProbability: number | null;
 }
 
 export interface DailyBrief {
   generatedAt: string;
   owner: string;
   realitySummary: { totalBeliefs: number; changed: number; newlyFormed: number };
+  /** "What became more urgent" — the temporal lede, shown before everything. */
+  urgency: UrgencyEvent[];
+  /** Overdue Center — everything past due, sorted by expected impact. */
+  overdueCenter: OverdueItem[];
+  /** Upcoming Risk Center — what will become overdue in the next few days. */
+  upcomingRisk: UpcomingRiskItem[];
+  /** The eight time-based dashboard sections. */
+  temporalSections: TemporalSections;
   topActions: Recommendation[]; // up to 3
   momentumRising: OpportunityCard[];
   momentumFalling: OpportunityCard[];
@@ -77,6 +101,13 @@ export function toCard(b: Belief): OpportunityCard {
     followUpDate: b.followUpDate,
     confidence: b.confidence,
     evidence: b.evidence,
+    aging: b.temporal.aging,
+    timeHeat: b.temporal.heat,
+    daysSinceActivity: b.temporal.daysSinceActivity,
+    daysUntilDeadline: b.temporal.daysUntilDeadline,
+    daysOverdue: b.temporal.daysOverdue,
+    missed: b.temporal.missedMeeting !== null,
+    recoveryProbability: b.temporal.recoveryProbability,
   };
 }
 
@@ -120,6 +151,10 @@ export function buildDailyBrief(allBeliefs: Belief[], recs: Recommendation[], ow
     generatedAt,
     owner,
     realitySummary: { totalBeliefs: beliefs.length, changed, newlyFormed },
+    urgency: buildUrgencyLede(allBeliefs),
+    overdueCenter: buildOverdueCenter(allBeliefs),
+    upcomingRisk: buildUpcomingRiskCenter(allBeliefs),
+    temporalSections: buildTemporalSections(allBeliefs),
     topActions: recs.slice(0, 3),
     momentumRising: rising.map(toCard),
     momentumFalling: falling.map(toCard),
@@ -163,6 +198,10 @@ export function renderBrief(brief: DailyBrief): string {
   L.push("");
   L.push(`Reality changed overnight. ${brief.realitySummary.newlyFormed} new, ${brief.realitySummary.changed} updated, ${brief.realitySummary.totalBeliefs} tracked.`);
   L.push("");
+  section(L, "WHAT BECAME MORE URGENT", brief.urgency.map((u) => `• ${u.message}`));
+  section(L, "OVERDUE (by impact)", brief.overdueCenter.map((o) =>
+    `• ${o.reason}: ${o.label} — ${o.daysOverdue}d overdue → ${o.expectedAction}${o.recoveryProbability !== null ? ` (est. recovery ${Math.round(o.recoveryProbability * 100)}%)` : ""}`));
+  section(L, "UPCOMING RISK", brief.upcomingRisk.map((r) => `• ${r.whenLabel}: ${r.prediction}`));
   section(L, "HIGHEST-LEVERAGE ACTIONS", brief.topActions.map((r, i) =>
     `${i + 1}. ${r.action}\n     why: ${r.why}\n     opportunity cost: ${r.opportunityCost}\n     confidence: ${r.confidence} · ${r.changeLog}`));
   section(L, "MOMENTUM RISING", brief.momentumRising.map(cardLine));

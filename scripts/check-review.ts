@@ -4,6 +4,7 @@
 // honest (unknown when no feedback; no fabricated dollars), and deterministic.
 
 import type { Belief } from "../lib/beliefs/types";
+import { defaultTemporalProfile } from "../lib/temporal/engine";
 import type { Recommendation } from "../lib/beliefs/recommend";
 import type { DailySnapshot } from "../lib/operator/types";
 import type { FeedbackEntry } from "../lib/review/types";
@@ -25,7 +26,7 @@ function belief(subjectKey: string, subjectLabel: string, stage: Belief["stage"]
     firstActivityAt: "2026-07-01T00:00:00Z", lastActivityAt: "2026-07-06T00:00:00Z", observationCount: 3,
     latestInboundAt: null, latestOutboundAt: null, latestMeetingAt: null, nextAction: "", followUpDate: null,
     connectors: ["gmail"], claim: `${subjectLabel}: ${stage} / ${momentum}`, falsifier: "", changeLog: "",
-    statusHistory: [], lastScanAt: "2026-07-06T00:00:00Z", evidence: [],
+    statusHistory: [], lastScanAt: "2026-07-06T00:00:00Z", temporal: defaultTemporalProfile(Date.parse("2026-07-06T00:00:00Z")), evidence: [],
   };
 }
 function rec(subjectKey: string, subjectLabel: string, rank: number): Recommendation {

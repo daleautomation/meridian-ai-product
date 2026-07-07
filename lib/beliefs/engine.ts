@@ -9,6 +9,8 @@ import { classifyStatus } from "@/lib/gmail/classify";
 import { matchSeed } from "@/lib/gmail/seeds";
 import { parseEmail } from "@/lib/gmail/normalize";
 import type { Observation } from "@/lib/connectors/types";
+import { computeTemporalProfile } from "@/lib/temporal/engine";
+import type { MeetingInput } from "@/lib/temporal/meetings";
 import type {
   Belief,
   BeliefEvidenceRef,
@@ -159,27 +161,27 @@ export function nextActionFor(stage: OpportunityStage, label: string, lastActivi
   }
 }
 
-/** When to act by. Owner-owed moves are due now (returns the last-activity date
- *  so the UI reads "overdue"); their-court threads get a short grace window; dead
- *  ends return null so nothing fake shows as "due". */
-function followUpDateOf(stage: OpportunityStage, lastActivityMs: number): string | null {
-  const iso = (ms: number) => new Date(ms).toISOString().slice(0, 10);
-  switch (stage) {
-    case "waiting_on_me":
-    case "follow_up_due":
-      return iso(lastActivityMs); // due now / overdue
-    case "waiting_on_them":
-    case "meeting_completed":
-      return iso(lastActivityMs + 4 * DAY);
-    case "meeting_scheduled":
-    case "contacted":
-    case "discovered":
-      return iso(lastActivityMs + 3 * DAY);
-    case "stalled":
-      return iso(lastActivityMs + 7 * DAY);
-    default:
-      return null; // closed / rejected / watch — nothing due
+/** Build the deduped meeting inputs the temporal engine reasons over, from every
+ *  meeting_* observation (Gmail-parsed invites + calendar events). Dedup by start
+ *  time (within an hour) so the same meeting from two sources counts once. */
+function toMeetingInputs(meetingObs: Observation[]): MeetingInput[] {
+  const byHour = new Map<number, MeetingInput>();
+  for (const o of meetingObs) {
+    const startMs = Date.parse(o.timestamp);
+    if (!Number.isFinite(startMs)) continue;
+    const endRaw = o.metadata.end;
+    const endMs = typeof endRaw === "string" ? Date.parse(endRaw) : null;
+    const status = o.type === "meeting_canceled"
+      ? "cancelled"
+      : (typeof o.metadata.status === "string" ? o.metadata.status : "confirmed");
+    const bucket = Math.round(startMs / 3_600_000);
+    const existing = byHour.get(bucket);
+    // Prefer the calendar source (authoritative) when two sources collide.
+    if (!existing || (existing.source !== "google-calendar" && o.connector === "google-calendar")) {
+      byHour.set(bucket, { id: o.evidence.nativeId || o.id, startMs, endMs: Number.isFinite(endMs as number) ? (endMs as number) : null, status, source: o.connector });
+    }
   }
+  return [...byHour.values()];
 }
 
 /** Append the current stage to the prior status history when it changed. */
@@ -303,6 +305,31 @@ export function deriveBeliefs(observations: Observation[], opts: DeriveOptions):
     const lastActivityAt = new Date(lastActivityMs).toISOString();
     const nowIso = new Date(nowMs).toISOString();
 
+    // ── Temporal profile — the single source of truth for time ──
+    const statusChangedAtMs = prev
+      ? (prev.stage !== stage ? nowMs : (prev.temporal?.statusChangedAt ? Date.parse(prev.temporal.statusChangedAt) : lastActivityMs))
+      : firstActivityMs;
+    const temporal = computeTemporalProfile({
+      createdAtMs: firstActivityMs,
+      lastInboundMs: inboundComms.length ? Date.parse(inboundComms[inboundComms.length - 1].timestamp) : null,
+      lastOutboundMs: outboundComms.length ? Date.parse(outboundComms[outboundComms.length - 1].timestamp) : null,
+      comms: comms.map((o) => ({
+        ts: Date.parse(o.timestamp),
+        direction: o.direction as "inbound" | "outbound" | null,
+        text: `${o.evidence.subject ?? ""} ${o.evidence.excerpt ?? ""}`.trim(),
+      })),
+      meetings: toMeetingInputs(meetingObs),
+      stage, momentum, kind, confidence, waitingOn, engagement,
+      statusChangedAtMs,
+      lastReminderSentMs: prev?.temporal?.lastReminderSent ? Date.parse(prev.temporal.lastReminderSent) : null,
+    }, nowMs);
+
+    // A missed meeting rewrites the next move: an honest recovery reach-out
+    // outranks any stage-derived suggestion.
+    const nextAction = temporal.missedMeeting
+      ? `Reach out to ${label} with an honest explanation — the ${temporal.missedMeeting.scheduledFor.slice(0, 10)} meeting was missed (${temporal.daysOverdue}d ago).`
+      : nextActionFor(stage, label, lastActivityAt);
+
     beliefs.push({
       subjectKey: key, subjectLabel: label, kind, company, people,
       stage, status, momentum, momentumDelta, waitingOn, confidence, engagement,
@@ -313,12 +340,13 @@ export function deriveBeliefs(observations: Observation[], opts: DeriveOptions):
       latestInboundAt: latestOf(inboundComms),
       latestOutboundAt: latestOf(outboundComms),
       latestMeetingAt: latestOf(meetingObs),
-      nextAction: nextActionFor(stage, label, lastActivityAt),
-      followUpDate: followUpDateOf(stage, lastActivityMs),
+      nextAction,
+      followUpDate: temporal.followUpDue ? temporal.followUpDue.slice(0, 10) : null,
       observationCount: obs.length, connectors,
       claim, falsifier, changeLog,
       statusHistory: buildStatusHistory(prev, stage, lastActivityAt, nowIso),
       lastScanAt: nowIso,
+      temporal,
       evidence,
     });
   }

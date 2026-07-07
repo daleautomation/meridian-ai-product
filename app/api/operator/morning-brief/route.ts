@@ -81,10 +81,16 @@ async function handle(req: NextRequest): Promise<NextResponse> {
       change.newBeliefs.length + change.stageChanges.length +
       change.strengthened.length + change.cooled.length + change.droppedBeliefs.length;
 
-    // 4) Notify (only when something meaningful moved, or on the first run) + health.
-    const shouldNotify = !previous || changeCount > 0;
+    // 4) Notify (when something moved, on the first run, or when anything is
+    //    overdue — an overdue commitment must never wait for a "change") + health.
+    const overdueCount = result.brief.overdueCenter.length;
+    const shouldNotify = !previous || changeCount > 0 || overdueCount > 0;
     const notification = shouldNotify
-      ? await sendBriefNotification(result.brief, { changeCount })
+      ? await sendBriefNotification(result.brief, {
+          changeCount,
+          overdueCount,
+          topUrgency: result.brief.urgency[0]?.message,
+        })
       : { sent: false as const, channel: "none" as const, detail: "no meaningful change — notification suppressed" };
     const run = buildRun({ ownerId: OWNER, trigger, runAtMs, result, notification, freshness, storage, changeHeadline: change.headline });
     await saveRun(run);

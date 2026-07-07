@@ -13,6 +13,7 @@ import type {
   OpportunityStatus,
   WaitingOn,
 } from "@/lib/gmail/types";
+import type { TemporalProfile } from "@/lib/temporal/types";
 
 export type { Confidence, MomentumState, OpportunityKind, OpportunityStage, OpportunityStatus, WaitingOn };
 
@@ -84,6 +85,9 @@ export interface Belief {
   statusHistory: StatusHistoryEntry[];
   /** When this belief was last recomputed (ISO). */
   lastScanAt: string;
+  /** Full temporal understanding — aging, deadlines, missed meetings, decay.
+   *  The single source of truth for time; all date reasoning derives from here. */
+  temporal: TemporalProfile;
   evidence: BeliefEvidenceRef[];
 }
 

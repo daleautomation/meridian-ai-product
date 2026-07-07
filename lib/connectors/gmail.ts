@@ -7,6 +7,7 @@
 
 import { decodeExcerpt, isNoiseThread, normalizeThread, parseEmail } from "@/lib/gmail/normalize";
 import { hasAnySignal } from "@/lib/gmail/seeds";
+import { parseMeetingTime } from "@/lib/temporal/meetings";
 import type { GmailThreadBatch } from "@/lib/gmail/types";
 import { runConnector } from "./base";
 import {
@@ -74,7 +75,19 @@ export class GmailConnector implements Connector<GmailThreadBatch> {
       // Derived lifecycle observations (facts, not stages).
       const text = sig.combinedText;
       const lastTs = sig.lastAt;
-      if (sig.isCalendarInvite) {
+      // Meeting datetime, parsed from the invite text ("… @ Tue Jun 9, 2026
+      // 1:30pm - 2pm (CDT)"). This is the fix for the missed SoftDoes interview:
+      // that invite never matched the naive "^invitation:" check, so no meeting
+      // was ever recorded and the temporal layer couldn't flag it MISSED.
+      const meetingText = (thread.messages ?? []).map((m) => `${m.subject ?? ""} ${m.snippet ?? ""}`).join(" ");
+      const parsed = parseMeetingTime(meetingText);
+      if (parsed) {
+        const future = parsed.startMs > nowMs;
+        out.push(mk(future ? "meeting_scheduled" : "meeting_invited", `${thread.id}:mtg`, thread.id, parsed.startMs,
+          people, company, "inbound",
+          { subject: sig.subject, excerpt: `meeting ${new Date(parsed.startMs).toISOString().slice(0, 16).replace("T", " ")}${parsed.tz ? ` ${parsed.tz}` : ""}` },
+          { end: parsed.endMs ? new Date(parsed.endMs).toISOString() : null, parsedFromEmail: true }));
+      } else if (sig.isCalendarInvite) {
         out.push(mk("meeting_invited", `${thread.id}:invite`, thread.id, lastTs, people, company, "inbound",
           { subject: sig.subject, excerpt: "calendar invitation present in thread" }, {}));
       }
