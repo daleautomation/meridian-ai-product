@@ -12,10 +12,12 @@ import type { Observation } from "@/lib/connectors/types";
 import type {
   Belief,
   BeliefEvidenceRef,
+  HeatLabel,
   MomentumDelta,
   MomentumState,
   OpportunityKind,
   OpportunityStage,
+  StatusHistoryEntry,
   WaitingOn,
 } from "./types";
 
@@ -24,6 +26,9 @@ const days = (ms: number) => Math.floor(ms / DAY);
 
 const COMM_TYPES = new Set(["message_sent", "message_received", "linkedin_message_sent", "linkedin_message_received"]);
 const CONTACT_ONLY = new Set(["contact_added", "contact_updated", "duplicate_identity"]);
+// Memory is strategic CONTEXT, never activity: it must never move momentum/stage.
+const MEMORY_TYPES = new Set(["strategic_memory_active", "preference_active", "fact_active", "memory_updated", "memory_conflict_detected", "memory_stale"]);
+const NON_ACTIVITY = new Set([...CONTACT_ONLY, ...MEMORY_TYPES]);
 const LINKEDIN_SIGNAL = new Set(["linkedin_connection_added", "linkedin_profile_viewed",
   "linkedin_job_signal", "linkedin_company_signal", "linkedin_manual_note",
   "linkedin_message_received", "linkedin_message_sent"]);
@@ -99,6 +104,97 @@ function waitingOnOf(lastCommDir: "inbound" | "outbound" | null): WaitingOn {
   return "none";
 }
 
+const CLOSED_STAGES = new Set<OpportunityStage>(["closed_won", "closed_lost", "rejected"]);
+
+/** The single scannable heat label. Stage takes precedence over momentum so a
+ *  closed/stalled/watch relationship is never mislabelled "HOT" by recency. */
+function heatOf(stage: OpportunityStage, momentum: MomentumState): HeatLabel {
+  if (CLOSED_STAGES.has(stage)) return "CLOSED";
+  if (stage === "stalled") return "STALLED";
+  if (stage === "watch") return "WATCH";
+  if (momentum === "accelerating") return "HOT";
+  if (momentum === "warm") return "WARM";
+  return "COLD"; // cooling / cold / dead
+}
+
+/** Canonical domain: prefer a company value that already looks like a domain,
+ *  else derive from the first business email's host. Generic hosts → null. */
+function domainOf(company: string | null, people: string[]): string | null {
+  if (company && company.includes(".") && !company.includes(" ")) return company.toLowerCase();
+  const generic = new Set(["gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "icloud.com"]);
+  for (const p of people) {
+    const host = p.split("@")[1]?.toLowerCase();
+    if (host && !generic.has(host)) return host;
+  }
+  return null;
+}
+
+/** The evidence-backed next move for a relationship. Never tells the owner to
+ *  chase too early: a healthy waiting_on_them thread gets "hold", not "follow up". */
+export function nextActionFor(stage: OpportunityStage, label: string, lastActivityAt: string): string {
+  const since = lastActivityAt.slice(0, 10);
+  switch (stage) {
+    case "waiting_on_me":
+    case "follow_up_due":
+      return `Reply to ${label} — you owe the next move (since ${since}).`;
+    case "meeting_scheduled":
+      return `Prepare for the scheduled meeting with ${label}.`;
+    case "meeting_completed":
+      return `Follow-up to ${label} is out — hold; nudge once if silent ~3 days.`;
+    case "waiting_on_them":
+      return `Ball is in ${label}'s court — give it a short window before nudging.`;
+    case "stalled":
+      return `Send ${label} a light re-engagement nudge.`;
+    case "contacted":
+      return `Follow up with ${label} — no reply yet.`;
+    case "discovered":
+      return `Reply to ${label} and qualify the opportunity.`;
+    case "closed_won":
+      return `Closed won with ${label} — keep the relationship warm for future chains.`;
+    case "closed_lost":
+    case "rejected":
+      return `Closed with ${label} — archive; revisit only on a new signal.`;
+    default:
+      return `Review the ${label} thread and decide the next step.`;
+  }
+}
+
+/** When to act by. Owner-owed moves are due now (returns the last-activity date
+ *  so the UI reads "overdue"); their-court threads get a short grace window; dead
+ *  ends return null so nothing fake shows as "due". */
+function followUpDateOf(stage: OpportunityStage, lastActivityMs: number): string | null {
+  const iso = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+  switch (stage) {
+    case "waiting_on_me":
+    case "follow_up_due":
+      return iso(lastActivityMs); // due now / overdue
+    case "waiting_on_them":
+    case "meeting_completed":
+      return iso(lastActivityMs + 4 * DAY);
+    case "meeting_scheduled":
+    case "contacted":
+    case "discovered":
+      return iso(lastActivityMs + 3 * DAY);
+    case "stalled":
+      return iso(lastActivityMs + 7 * DAY);
+    default:
+      return null; // closed / rejected / watch — nothing due
+  }
+}
+
+/** Append the current stage to the prior status history when it changed. */
+function buildStatusHistory(
+  prev: Belief | undefined,
+  stage: OpportunityStage,
+  lastActivityAt: string,
+  nowIso: string,
+): StatusHistoryEntry[] {
+  const prior = prev?.statusHistory ?? (prev ? [{ stage: prev.stage, at: prev.lastActivityAt }] : []);
+  const last = prior[prior.length - 1];
+  const history = last?.stage === stage ? prior : [...prior, { stage, at: prev ? nowIso : lastActivityAt }];
+  return history.slice(-6);
+}
+
 export interface DeriveOptions {
   nowMs: number;
   previous?: Belief[];
@@ -119,10 +215,13 @@ export function deriveBeliefs(observations: Observation[], opts: DeriveOptions):
 
   for (const [key, obs] of groups) {
     const types = new Set(obs.map((o) => o.type));
-    // Contact-only subjects are enrichment, not relationships-in-motion — no belief.
-    if ([...types].every((t) => CONTACT_ONLY.has(t))) continue;
+    // Subjects with no real activity (memory-only or contact-only) are context, not
+    // relationships-in-motion — no belief is formed. Memory never creates a belief.
+    const activity = obs.filter((o) => !NON_ACTIVITY.has(o.type));
+    if (activity.length === 0) continue;
 
     const sorted = [...obs].sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
+    const sortedActivity = [...activity].sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
     const comms = sorted.filter((o) => COMM_TYPES.has(o.type));
     const lastComm = comms[comms.length - 1] ?? null;
     const lastCommDir = (lastComm?.direction ?? null) as "inbound" | "outbound" | null;
@@ -134,10 +233,11 @@ export function deriveBeliefs(observations: Observation[], opts: DeriveOptions):
       (o) => o.type === "meeting_completed" || (o.type === "meeting_invited" && Date.parse(o.timestamp) < nowMs),
     );
 
-    const lastActivityMs = Date.parse(sorted[sorted.length - 1].timestamp);
-    const firstActivityMs = Date.parse(sorted[0].timestamp);
+    // Momentum + recency come from ACTIVITY only — memory context never ages a thread.
+    const lastActivityMs = Date.parse(sortedActivity[sortedActivity.length - 1].timestamp);
+    const firstActivityMs = Date.parse(sortedActivity[0].timestamp);
     const gapDays = days(nowMs - lastActivityMs);
-    const momentum = momentumOf(sorted.map((o) => Date.parse(o.timestamp)), nowMs);
+    const momentum = momentumOf(sortedActivity.map((o) => Date.parse(o.timestamp)), nowMs);
     const { stage, reason } = stageOf({ types, lastCommDir, hasInbound, hasFutureMeeting, hasPastMeeting, gapDays });
     const status = classifyStatus(stage, momentum);
     const waitingOn = waitingOnOf(lastCommDir);
@@ -193,13 +293,33 @@ export function deriveBeliefs(observations: Observation[], opts: DeriveOptions):
     const claim = buildClaim(label, stage, momentum, waitingOn);
     const falsifier = buildFalsifier(label, stage, lastActivityMs);
 
+    // Directional touch timestamps + latest meeting — the raw "who owes whom"
+    // signal the dashboard cards surface. Derived from ACTIVITY only.
+    const inboundComms = comms.filter((o) => o.direction === "inbound");
+    const outboundComms = comms.filter((o) => o.direction === "outbound");
+    const meetingObs = sorted.filter((o) => o.type.startsWith("meeting_"));
+    const latestOf = (list: Observation[]): string | null =>
+      list.length ? list[list.length - 1].timestamp : null;
+    const lastActivityAt = new Date(lastActivityMs).toISOString();
+    const nowIso = new Date(nowMs).toISOString();
+
     beliefs.push({
       subjectKey: key, subjectLabel: label, kind, company, people,
       stage, status, momentum, momentumDelta, waitingOn, confidence, engagement,
+      heat: heatOf(stage, momentum),
+      domain: domainOf(company, people),
       firstActivityAt: new Date(firstActivityMs).toISOString(),
-      lastActivityAt: new Date(lastActivityMs).toISOString(),
+      lastActivityAt,
+      latestInboundAt: latestOf(inboundComms),
+      latestOutboundAt: latestOf(outboundComms),
+      latestMeetingAt: latestOf(meetingObs),
+      nextAction: nextActionFor(stage, label, lastActivityAt),
+      followUpDate: followUpDateOf(stage, lastActivityMs),
       observationCount: obs.length, connectors,
-      claim, falsifier, changeLog, evidence,
+      claim, falsifier, changeLog,
+      statusHistory: buildStatusHistory(prev, stage, lastActivityAt, nowIso),
+      lastScanAt: nowIso,
+      evidence,
     });
   }
 

@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/operator/morning-brief",
-      "schedule": "0 12 * * *"
+      "schedule": "0 13,14,18,19 * * *"
     },
     {
       "path": "/api/operator/nightly-review",

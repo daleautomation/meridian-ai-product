@@ -17,26 +17,28 @@ export function baseUrl(): string {
   return (process.env.MERIDIAN_BASE_URL ?? process.env.BASE_URL ?? "https://meridianai.work").replace(/\/$/, "");
 }
 
-/** Build the notification text from the brief (top action + waiting + link). */
-export function buildNotification(brief: DailyBrief): { title: string; body: string; url: string } {
+export interface NotifyMeta {
+  /** How many meaningful changes since the last scan (drives the headline). */
+  changeCount?: number;
+}
+
+/** Short push: "Meridian scan complete", change count, top action, link. */
+export function buildNotification(brief: DailyBrief, meta: NotifyMeta = {}): { title: string; body: string; url: string } {
   const url = `${baseUrl()}/home`;
   const top = brief.topActions[0];
-  const title = top ? `Meridian: ${top.action}` : "Meridian — your morning brief";
+  const n = meta.changeCount;
+  const changePhrase = n === undefined ? "" : n === 0 ? "No changes." : `${n} change${n === 1 ? "" : "s"}.`;
+  const title = n && n > 0 ? `Meridian scan complete — ${n} change${n === 1 ? "" : "s"}` : "Meridian scan complete";
   const lines: string[] = [];
-  if (top) {
-    lines.push(`▶ DO FIRST: ${top.action}`);
-    lines.push(`   why: ${top.why}`);
-  } else {
-    lines.push("No action clears the bar today — here's what you're watching.");
-  }
-  if (brief.waitingOnMe.length) lines.push(`\nWaiting on you: ${brief.waitingOnMe.map((w) => w.label).join(", ")}`);
-  if (brief.waitingOnThem.length) lines.push(`Waiting on them: ${brief.waitingOnThem.map((w) => w.label).join(", ")}`);
-  lines.push(`\nOpen Meridian: ${url}`);
+  if (changePhrase) lines.push(changePhrase);
+  if (top) lines.push(`▶ Do first: ${top.action}`);
+  else lines.push("Nothing clears the bar right now.");
+  lines.push(`Open: ${url}`);
   return { title, body: lines.join("\n"), url };
 }
 
-export async function sendBriefNotification(brief: DailyBrief): Promise<NotifyResult> {
-  const { title, body, url } = buildNotification(brief);
+export async function sendBriefNotification(brief: DailyBrief, meta: NotifyMeta = {}): Promise<NotifyResult> {
+  const { title, body, url } = buildNotification(brief, meta);
 
   // 1) ntfy — phone push, free, no account. Subscribe to the topic in the ntfy app.
   const ntfyTopic = process.env.NTFY_TOPIC?.trim();

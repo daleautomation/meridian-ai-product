@@ -22,6 +22,53 @@ export function envPresence(): EnvPresence {
   };
 }
 
+export interface EnvCheckItem {
+  key: string; // display label
+  ok: boolean;
+  vars: string[]; // the exact env var name(s) this check reads
+  required: boolean; // hands-off operation requires it
+  howTo: string; // exact setup instruction when red
+}
+
+/** Every env check the operator needs, with the EXACT var names + setup steps so
+ *  the status page can tell the owner precisely what to paste into Vercel. */
+export function envChecklist(): EnvCheckItem[] {
+  const has = (v?: string | null) => !!v?.trim();
+  const ntfy = has(process.env.NTFY_TOPIC);
+  const webhook = has(process.env.NOTIFY_WEBHOOK_URL);
+  const email = has(process.env.RESEND_API_KEY) && has(process.env.NOTIFY_EMAIL_TO) && has(process.env.NOTIFY_EMAIL_FROM);
+  return [
+    {
+      key: "Cron auth (CRON_SECRET)",
+      ok: has(process.env.CRON_SECRET),
+      vars: ["CRON_SECRET"],
+      required: true,
+      howTo: "Vercel → Settings → Environment Variables → add CRON_SECRET = a long random string. Vercel Cron sends it as `Authorization: Bearer …` automatically. Redeploy.",
+    },
+    {
+      key: "Notification channel",
+      ok: ntfy || webhook || email,
+      vars: ["NTFY_TOPIC", "NOTIFY_WEBHOOK_URL", "RESEND_API_KEY+NOTIFY_EMAIL_TO+NOTIFY_EMAIL_FROM"],
+      required: true,
+      howTo: "Pick ONE. Easiest: install the ntfy app, subscribe to a topic, set NTFY_TOPIC=<that topic>. Or NOTIFY_WEBHOOK_URL=<Slack/Discord incoming webhook>. Or Resend email: RESEND_API_KEY + NOTIFY_EMAIL_TO + NOTIFY_EMAIL_FROM.",
+    },
+    {
+      key: "Durable snapshots (DATABASE_URL)",
+      ok: has(process.env.DATABASE_URL),
+      vars: ["DATABASE_URL"],
+      required: true,
+      howTo: "Set DATABASE_URL to your Neon Postgres connection string (Vercel → Storage → your Neon DB → .env). Without it, snapshots fall back to ephemeral /tmp and 'what changed' resets on cold start.",
+    },
+    {
+      key: "Base URL for links",
+      ok: has(process.env.MERIDIAN_BASE_URL) || has(process.env.BASE_URL),
+      vars: ["MERIDIAN_BASE_URL"],
+      required: false,
+      howTo: "Set MERIDIAN_BASE_URL=https://meridianai.work so notification links point at production (defaults to that already).",
+    },
+  ];
+}
+
 export function buildRun(args: {
   ownerId: string;
   trigger: "cron" | "manual";

@@ -6,6 +6,7 @@ import type { DailySnapshot } from "@/lib/operator/types";
 import { buildDailyReview } from "@/lib/review/nightly";
 import { buildWeeklyReview } from "@/lib/review/weekly";
 import { getFeedbackForDate, getRecentDailyReviews, saveDailyReview, saveWeeklyReview } from "@/lib/review/store";
+import { proposeMemory } from "@/lib/memory/store";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -47,6 +48,11 @@ async function handle(req: NextRequest): Promise<NextResponse> {
 
     const review = buildDailyReview({ today: snapshot, yesterday, feedback, latestRun, generatedAt });
     await saveDailyReview(review);
+
+    // Lessons → proposed memories, saved as PENDING (never auto-accepted).
+    for (const pm of review.proposedMemories) {
+      await proposeMemory(OWNER, pm).catch(() => {});
+    }
 
     // Weekly review on Sundays (UTC day 0).
     let weekly = null;

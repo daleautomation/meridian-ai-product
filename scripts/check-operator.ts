@@ -21,8 +21,12 @@ function belief(p: Partial<Belief> & Pick<Belief, "subjectKey" | "subjectLabel" 
   return {
     kind: "career", company: null, people: [], status: "warm", momentumDelta: "flat",
     waitingOn: "them", confidence: "medium", engagement: "two_way",
+    heat: "WARM", domain: null,
     firstActivityAt: "2026-07-01T00:00:00Z", lastActivityAt: "2026-07-06T00:00:00Z",
-    observationCount: 3, connectors: ["gmail"], claim: "", falsifier: "", changeLog: "", evidence: [],
+    latestInboundAt: null, latestOutboundAt: null, latestMeetingAt: null,
+    nextAction: "", followUpDate: null,
+    observationCount: 3, connectors: ["gmail"], claim: "", falsifier: "", changeLog: "",
+    statusHistory: [], lastScanAt: "2026-07-06T00:00:00Z", evidence: [],
     ...p,
   };
 }
@@ -30,7 +34,7 @@ function rec(subjectKey: string, subjectLabel: string, rank: number): Recommenda
   return {
     rank, subjectKey, subjectLabel, kind: "career", action: "", why: "", waitingOn: "them",
     stage: "waiting_on_them", momentum: "warm", confidence: "medium", changeLog: "", falsifier: "",
-    evidence: [], opportunityCost: "", leverage: 100 - rank,
+    evidence: [], opportunityCost: "", leverage: 100 - rank, memoryUsed: [], memoryBoost: 0, memoryConflict: null,
   };
 }
 function snap(date: string, beliefs: Belief[], recommendations: Recommendation[]): DailySnapshot {

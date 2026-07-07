@@ -12,6 +12,9 @@ import { GmailConnector } from "@/lib/connectors/gmail";
 import { GoogleCalendarConnector, type CalendarBatch } from "@/lib/connectors/googleCalendar";
 import { GoogleContactsConnector } from "@/lib/connectors/googleContacts";
 import { LinkedInConnector, type LinkedInInput } from "@/lib/connectors/linkedin";
+import { MemoryConnector } from "@/lib/connectors/memory";
+import { getAllMemories } from "@/lib/memory/store";
+import { isActive } from "@/lib/memory/types";
 import type { Observation, SyncResult } from "@/lib/connectors/types";
 import type { GmailThreadBatch } from "@/lib/gmail/types";
 import { deriveBeliefs } from "@/lib/beliefs/engine";
@@ -57,9 +60,15 @@ export async function runRealityPipeline(inputs: RealityInputs, opts: RunOptions
     registry.register(new LinkedInConnector(), inputs.linkedinInput ?? {});
   }
 
+  // Memory as a sensor: load once, feed the connector (visibility) AND the ranker
+  // (transparent influence). Falls back to empty on any store error — never blocks.
+  const allMemories = await getAllMemories("dylan").catch(() => []);
+  const activeMemories = allMemories.filter((m) => isActive(m, opts.nowMs));
+  registry.register(new MemoryConnector(), { memories: allMemories });
+
   const { observations, results } = await registry.runAll(opts.nowMs);
   const beliefs = deriveBeliefs(observations, { nowMs: opts.nowMs, previous: opts.previousBeliefs });
-  const recommendations = recommendFromBeliefs(beliefs);
+  const recommendations = recommendFromBeliefs(beliefs, activeMemories);
   const brief = buildDailyBrief(beliefs, recommendations, owner, new Date(opts.nowMs).toISOString());
 
   return { observations, results, beliefs, recommendations, brief };

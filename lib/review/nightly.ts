@@ -9,7 +9,24 @@ import type { OperatorRun } from "@/lib/operator/types";
 import type { DailySnapshot } from "@/lib/operator/types";
 import { detectChanges } from "@/lib/operator/changeDetection";
 import { accuracyOf, scoreRecommendations } from "./calibrate";
-import type { BeliefUpdate, DailyReview, FeedbackEntry, OperatorMetrics } from "./types";
+import type { BeliefUpdate, DailyReview, FeedbackEntry, OperatorMetrics, ProposedMemory } from "./types";
+
+/** Propose (never auto-accept) strategic memories from the day's belief updates. */
+function proposeMemories(updates: BeliefUpdate[], date: string, generatedAt: string): ProposedMemory[] {
+  return updates.map((u) => ({
+    id: `prop-${date}-${u.subjectKey}`.replace(/\s+/g, "-"),
+    type: "strategic_knowledge",
+    subject: u.subjectLabel,
+    statement: `Consider updating belief on ${u.subjectLabel}: ${u.newBelief}`,
+    confidence: "low",
+    source: "daily_review",
+    evidence: `${u.evidence} (${u.reason}, ${date})`,
+    tags: [u.subjectKey],
+    impactAreas: ["relationships", "revenue"],
+    createdAt: generatedAt,
+    updatedAt: generatedAt,
+  }));
+}
 
 const MOMENTUM_RANK: Record<MomentumState, number> = { accelerating: 5, warm: 4, cooling: 3, cold: 2, dead: 1 };
 const REGRESSED = new Set(["stalled", "rejected", "closed_lost"]);
@@ -88,6 +105,7 @@ export function buildDailyReview(args: {
     date: today.date,
     ownerId: today.ownerId,
     generatedAt: args.generatedAt,
+    proposedMemories: proposeMemories(beliefUpdates, today.date, args.generatedAt),
     summary: { observations: today.observationCount, beliefs: today.beliefs.length, recommendations: today.recommendations.length, feedbackCount: feedback.length },
     narrative: {
       whatHappened,

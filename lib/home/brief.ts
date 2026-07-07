@@ -1,32 +1,84 @@
 // Meridian Command — the Daily Command Brief (Meridian Home).
 //
-// Assembles Beliefs + Recommendations into ONE page. No graphs, no widgets, no
-// fabricated numbers. Revenue "forecast" and capital summary are ordinal/honest
+// Assembles Beliefs + Recommendations into ONE dashboard-ready model. No graphs,
+// no fabricated numbers. Revenue "forecast" and capital summary are ordinal/honest
 // per MERIDIAN_TRUST_MODEL.md — they say "insufficient calibrated evidence" rather
-// than inventing dollars. Every line traces to observed reality.
+// than inventing dollars. Every card traces to observed reality.
+//
+// Each surfaced relationship is projected into a single OpportunityCard carrying
+// everything a card needs to render — company, stage, last touch, who owes the
+// next move, next action, follow-up date, confidence, evidence, heat label — so
+// the UI never has to reach back into the raw belief.
 
-import type { Belief } from "@/lib/beliefs/types";
+import type { Belief, BeliefEvidenceRef, Confidence, HeatLabel } from "@/lib/beliefs/types";
+import type { OpportunityStage, WaitingOn } from "@/lib/beliefs/types";
 import type { Recommendation } from "@/lib/beliefs/recommend";
+
+/** The one shape every dashboard card renders from. */
+export interface OpportunityCard {
+  subjectKey: string;
+  label: string; // company / person
+  company: string | null;
+  domain: string | null;
+  kind: string;
+  stage: OpportunityStage;
+  heat: HeatLabel;
+  waitingOn: WaitingOn; // who owes the next move
+  nextAction: string;
+  claim: string;
+  changeLog: string;
+  lastTouch: string | null; // most recent activity date (YYYY-MM-DD)
+  latestInboundAt: string | null;
+  latestOutboundAt: string | null;
+  latestMeetingAt: string | null;
+  followUpDate: string | null; // deadline / follow-up (YYYY-MM-DD)
+  confidence: Confidence;
+  evidence: BeliefEvidenceRef[]; // source evidence
+}
 
 export interface DailyBrief {
   generatedAt: string;
   owner: string;
   realitySummary: { totalBeliefs: number; changed: number; newlyFormed: number };
   topActions: Recommendation[]; // up to 3
-  momentumRising: Array<{ label: string; claim: string }>;
-  momentumFalling: Array<{ label: string; claim: string }>;
+  momentumRising: OpportunityCard[];
+  momentumFalling: OpportunityCard[];
   companiesToWatch: Array<{ company: string; reason: string }>;
-  meetingsRequiringAction: Array<{ label: string; detail: string }>;
-  waitingOnMe: Array<{ label: string; since: string }>;
-  waitingOnThem: Array<{ label: string; since: string }>;
-  newOpportunities: Array<{ label: string; claim: string }>;
-  risks: Array<{ label: string; detail: string }>;
-  blocked: Array<{ label: string; detail: string }>;
+  meetingsRequiringAction: OpportunityCard[];
+  waitingOnMe: OpportunityCard[];
+  waitingOnThem: OpportunityCard[];
+  newOpportunities: OpportunityCard[];
+  risks: OpportunityCard[];
+  blocked: OpportunityCard[];
   revenueOutlook: string; // ordinal + honest
   capitalSummary: string[]; // qualitative
 }
 
 const ACTIVE_KINDS = new Set(["career", "sales", "consulting", "partnership", "referral"]);
+
+/** Belief → OpportunityCard. Pure projection; all fields already live on the belief. */
+export function toCard(b: Belief): OpportunityCard {
+  return {
+    subjectKey: b.subjectKey,
+    label: b.subjectLabel,
+    company: b.company,
+    domain: b.domain,
+    kind: b.kind,
+    stage: b.stage,
+    heat: b.heat,
+    waitingOn: b.waitingOn,
+    nextAction: b.nextAction,
+    claim: b.claim,
+    changeLog: b.changeLog,
+    lastTouch: b.lastActivityAt ? b.lastActivityAt.slice(0, 10) : null,
+    latestInboundAt: b.latestInboundAt ? b.latestInboundAt.slice(0, 10) : null,
+    latestOutboundAt: b.latestOutboundAt ? b.latestOutboundAt.slice(0, 10) : null,
+    latestMeetingAt: b.latestMeetingAt ? b.latestMeetingAt.slice(0, 10) : null,
+    followUpDate: b.followUpDate,
+    confidence: b.confidence,
+    evidence: b.evidence,
+  };
+}
 
 export function buildDailyBrief(allBeliefs: Belief[], recs: Recommendation[], owner: string, generatedAt: string): DailyBrief {
   // Cold one-way inbound (newsletters, cold blasts, leasing agents) is observed and
@@ -69,15 +121,15 @@ export function buildDailyBrief(allBeliefs: Belief[], recs: Recommendation[], ow
     owner,
     realitySummary: { totalBeliefs: beliefs.length, changed, newlyFormed },
     topActions: recs.slice(0, 3),
-    momentumRising: rising.map((b) => ({ label: b.subjectLabel, claim: b.claim })),
-    momentumFalling: falling.map((b) => ({ label: b.subjectLabel, claim: b.claim })),
+    momentumRising: rising.map(toCard),
+    momentumFalling: falling.map(toCard),
     companiesToWatch: dedupeByCompany(beliefs).map((b) => ({ company: b.company ?? b.subjectLabel, reason: b.claim })),
-    meetingsRequiringAction: meetings.map((b) => ({ label: b.subjectLabel, detail: `${b.stage.replace(/_/g, " ")} — ${b.claim}` })),
-    waitingOnMe: waitingMe.map((b) => ({ label: b.subjectLabel, since: b.lastActivityAt.slice(0, 10) })),
-    waitingOnThem: waitingThem.map((b) => ({ label: b.subjectLabel, since: b.lastActivityAt.slice(0, 10) })),
-    newOpportunities: newOpps.map((b) => ({ label: b.subjectLabel, claim: b.claim })),
-    risks: risks.map((b) => ({ label: b.subjectLabel, detail: b.claim })),
-    blocked: beliefs.filter((b) => b.status === "blocked").map((b) => ({ label: b.subjectLabel, detail: b.claim })),
+    meetingsRequiringAction: meetings.map(toCard),
+    waitingOnMe: waitingMe.map(toCard),
+    waitingOnThem: waitingThem.map(toCard),
+    newOpportunities: newOpps.map(toCard),
+    risks: risks.map(toCard),
+    blocked: beliefs.filter((b) => b.status === "blocked").map(toCard),
     revenueOutlook,
     capitalSummary,
   };
@@ -102,7 +154,7 @@ function dedupeByCompany(beliefs: Belief[]): Belief[] {
   return out.slice(0, 6);
 }
 
-/** Render the one-page brief as plain text (the same model backs the Home page). */
+/** Render the one-page brief as plain text (backs notifications + nightly logs). */
 export function renderBrief(brief: DailyBrief): string {
   const L: string[] = [];
   const bar = "━".repeat(52);
@@ -113,13 +165,13 @@ export function renderBrief(brief: DailyBrief): string {
   L.push("");
   section(L, "HIGHEST-LEVERAGE ACTIONS", brief.topActions.map((r, i) =>
     `${i + 1}. ${r.action}\n     why: ${r.why}\n     opportunity cost: ${r.opportunityCost}\n     confidence: ${r.confidence} · ${r.changeLog}`));
-  section(L, "MOMENTUM RISING", brief.momentumRising.map((m) => `• ${m.label} — ${m.claim}`));
-  section(L, "MOMENTUM FADING (perishable — act or lose)", brief.momentumFalling.map((m) => `• ${m.label} — ${m.claim}`));
-  section(L, "MEETINGS REQUIRING ACTION", brief.meetingsRequiringAction.map((m) => `• ${m.label} — ${m.detail}`));
-  section(L, "WAITING ON ME", brief.waitingOnMe.map((w) => `• ${w.label} (since ${w.since})`));
-  section(L, "WAITING ON THEM", brief.waitingOnThem.map((w) => `• ${w.label} (since ${w.since})`));
-  section(L, "NEW OPPORTUNITIES", brief.newOpportunities.map((o) => `• ${o.label} — ${o.claim}`));
-  section(L, "RISKS / STALLED", brief.risks.map((r) => `• ${r.label} — ${r.detail}`));
+  section(L, "MOMENTUM RISING", brief.momentumRising.map(cardLine));
+  section(L, "MOMENTUM FADING (perishable — act or lose)", brief.momentumFalling.map(cardLine));
+  section(L, "MEETINGS REQUIRING ACTION", brief.meetingsRequiringAction.map(cardLine));
+  section(L, "WAITING ON ME", brief.waitingOnMe.map(cardLine));
+  section(L, "WAITING ON THEM", brief.waitingOnThem.map(cardLine));
+  section(L, "NEW OPPORTUNITIES", brief.newOpportunities.map(cardLine));
+  section(L, "RISKS / STALLED", brief.risks.map(cardLine));
   section(L, "COMPANIES TO WATCH", brief.companiesToWatch.map((c) => `• ${c.company}`));
   L.push("");
   L.push("REVENUE OUTLOOK");
@@ -129,6 +181,12 @@ export function renderBrief(brief: DailyBrief): string {
   brief.capitalSummary.forEach((c) => L.push(`  • ${c}`));
   L.push(bar);
   return L.join("\n");
+}
+
+function cardLine(c: OpportunityCard): string {
+  const owes = c.waitingOn === "me" ? "you owe" : c.waitingOn === "them" ? "their court" : "—";
+  const due = c.followUpDate ? ` · by ${c.followUpDate}` : "";
+  return `• [${c.heat}] ${c.label} — ${c.stage.replace(/_/g, " ")} (${owes}${due}) → ${c.nextAction}`;
 }
 
 function section(L: string[], title: string, lines: string[]): void {

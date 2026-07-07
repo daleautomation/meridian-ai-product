@@ -90,6 +90,35 @@ export async function saveSnapshot(s: DailySnapshot): Promise<StorageMode> {
   return writeFileSafe(path.join(DIR, `${s.ownerId}-${s.date}.json`), JSON.stringify(s));
 }
 
+/** The single most recent snapshot on record (any date) — i.e. "the last scan".
+ *  Used for the intraday "what changed since last scan" diff, which day-keyed
+ *  getPreviousSnapshot can't answer (8am and 1pm share today's date row). Read
+ *  this BEFORE saving the current scan so it returns the prior run. */
+export async function getLatestSnapshot(ownerId: string): Promise<DailySnapshot | null> {
+  if (neonEnabled()) {
+    try {
+      await ensureTables();
+      const sql = getNeonSql();
+      const rows = (await sql`
+        select payload from operator_snapshots
+        where owner_id = ${ownerId}
+        order by generated_at desc limit 1`) as Array<{ payload: DailySnapshot }>;
+      return rows[0]?.payload ?? null;
+    } catch (err) {
+      console.error("[operator-store] neon latest-snapshot failed, trying file", err);
+    }
+  }
+  try {
+    const files = (await fs.readdir(DIR)).filter((f) => f.startsWith(`${ownerId}-`) && f.endsWith(".json"));
+    const dates = files.map((f) => f.slice(ownerId.length + 1, -5)).sort();
+    const latest = dates[dates.length - 1];
+    if (!latest) return null;
+    return JSON.parse(await fs.readFile(path.join(DIR, `${ownerId}-${latest}.json`), "utf8")) as DailySnapshot;
+  } catch {
+    return null;
+  }
+}
+
 /** Most recent snapshot strictly BEFORE `date` — i.e. "yesterday", for the diff. */
 export async function getPreviousSnapshot(ownerId: string, date: string): Promise<DailySnapshot | null> {
   if (neonEnabled()) {

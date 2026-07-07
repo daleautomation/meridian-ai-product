@@ -41,10 +41,27 @@ export interface OperatorMetrics {
   recommendationAccuracy: number | null; // correct / scored(non-unknown); null if none scored
 }
 
+/** A memory the nightly review proposes from a lesson. Saved as `pending` +
+ *  low confidence — never auto-accepted into active memory. */
+export interface ProposedMemory {
+  id: string;
+  type: "strategic_knowledge";
+  subject: string;
+  statement: string;
+  confidence: "low";
+  source: "daily_review";
+  evidence: string;
+  tags: string[];
+  impactAreas: Array<"revenue" | "career" | "relationships" | "product" | "cashflow" | "learning" | "health" | "housing">;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface DailyReview {
   date: string; // YYYY-MM-DD
   ownerId: string;
   generatedAt: string;
+  proposedMemories: ProposedMemory[];
   summary: { observations: number; beliefs: number; recommendations: number; feedbackCount: number };
   narrative: {
     whatHappened: string;

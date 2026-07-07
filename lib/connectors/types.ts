@@ -52,6 +52,13 @@ export const OBSERVATION_TYPES = [
   "linkedin_job_signal",
   "linkedin_company_signal",
   "linkedin_manual_note",
+  // memory (strategic context — a sensor, but never affects momentum/stage)
+  "strategic_memory_active",
+  "preference_active",
+  "fact_active",
+  "memory_updated",
+  "memory_conflict_detected",
+  "memory_stale",
   // work (future GitHub etc.)
   "commit",
   "pr_merged",

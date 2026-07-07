@@ -7,9 +7,10 @@ import {
   runRealityPipeline,
 } from "@/lib/home/pipeline";
 import { sendBriefNotification } from "@/lib/home/notify";
-import { getPreviousSnapshot, saveRun, saveSnapshot } from "@/lib/operator/store";
+import { getLatestSnapshot, saveRun, saveSnapshot } from "@/lib/operator/store";
 import { detectChanges } from "@/lib/operator/changeDetection";
 import { buildRun } from "@/lib/operator/health";
+import { shouldCronScanRun } from "@/lib/operator/schedule";
 import type { DailySnapshot } from "@/lib/operator/types";
 
 export const dynamic = "force-dynamic";
@@ -39,9 +40,22 @@ async function handle(req: NextRequest): Promise<NextResponse> {
   const runAtMs = Date.now();
   const today = new Date(runAtMs).toISOString().slice(0, 10);
 
+  // DST-proof scan guard: the cron fires at the union of both DST offsets
+  // (13,14,18,19 UTC); only the fire that lands on 8am or 1pm Central proceeds.
+  // Manual admin runs always proceed.
+  if (isCron) {
+    const gate = shouldCronScanRun(runAtMs);
+    if (!gate.run) {
+      console.log(`[morning-brief] skipped — not a scan hour (Central ${gate.centralHour}:00)`);
+      return NextResponse.json({ ok: true, skipped: true, reason: `not a scan hour (Central ${gate.centralHour}:00)` });
+    }
+    console.log(`[morning-brief] scan slot=${gate.slot} (Central ${gate.centralHour}:00)`);
+  }
+
   try {
-    // 1) Yesterday, for day-over-day change logs + diff.
-    const previous = await getPreviousSnapshot(OWNER, today).catch(() => null);
+    // 1) The last scan on record — for the "what changed since last scan" diff.
+    //    getLatestSnapshot is intraday-aware (8am vs 1pm), unlike a day-keyed read.
+    const previous = await getLatestSnapshot(OWNER).catch(() => null);
 
     // 2) Observe reality → beliefs → recommendations → brief.
     const inputs = await loadLiveRealityInputs();
@@ -62,8 +76,16 @@ async function handle(req: NextRequest): Promise<NextResponse> {
     const change = detectChanges(snapshot, previous);
     const storage = await saveSnapshot(snapshot);
 
-    // 4) Notify + self-health record.
-    const notification = await sendBriefNotification(result.brief);
+    // Meaningful changes = new + stage moves + momentum shifts + resolved.
+    const changeCount =
+      change.newBeliefs.length + change.stageChanges.length +
+      change.strengthened.length + change.cooled.length + change.droppedBeliefs.length;
+
+    // 4) Notify (only when something meaningful moved, or on the first run) + health.
+    const shouldNotify = !previous || changeCount > 0;
+    const notification = shouldNotify
+      ? await sendBriefNotification(result.brief, { changeCount })
+      : { sent: false as const, channel: "none" as const, detail: "no meaningful change — notification suppressed" };
     const run = buildRun({ ownerId: OWNER, trigger, runAtMs, result, notification, freshness, storage, changeHeadline: change.headline });
     await saveRun(run);
     await persistReality(result).catch(() => false); // best-effort brief cache for /home

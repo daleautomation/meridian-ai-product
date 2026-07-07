@@ -43,9 +43,10 @@ async function main(): Promise<void> {
   const obsKeys = new Set(result.observations.flatMap((o) => Object.keys(o)));
   check("observations carry no stage/score/opportunity fields",
     !obsKeys.has("stage") && !obsKeys.has("score") && !obsKeys.has("opportunity") && !obsKeys.has("recommendation"), [...obsKeys]);
-  check("all three connectors produced observations",
-    result.results.filter((r) => r.collected > 0).length === 3, result.results.map((r) => `${r.connector}:${r.collected}`));
-  check("observations came from >1 connector", new Set(result.observations.map((o) => o.connector)).size >= 3);
+  check("all four connectors produced observations (incl. memory sensor)",
+    result.results.filter((r) => r.collected > 0).length === 4, result.results.map((r) => `${r.connector}:${r.collected}`));
+  check("observations came from multiple connectors", new Set(result.observations.map((o) => o.connector)).size >= 4);
+  check("memory participates as a sensor", result.results.some((r) => r.connector === "memory" && r.collected > 0));
 
   // Belief engine unifies Gmail + Calendar into ONE Clue belief.
   const clue = result.beliefs.find((b) => b.subjectKey.includes("clue"));
