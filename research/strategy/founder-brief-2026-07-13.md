@@ -88,16 +88,16 @@ The repeated recommendation has survived multiple daily briefs because the evide
 
 ## Founder Contradictions
 
-Stated priority: revenue before architecture.  
+Stated priority: revenue before architecture.
 Observed activity: active-branch history is dominated by command infrastructure, review loops, heartbeat, and operator self-health; fetched July 7 refs add Temporal Intelligence and daily command dashboard work.
 
-Stated priority: customer value before technical elegance.  
+Stated priority: customer value before technical elegance.
 Observed activity: the customer-facing outreach tracker is still headers only.
 
-Stated priority: shipping before planning.  
+Stated priority: shipping before planning.
 Observed activity: 23 daily Founder Brief PRs remain open as drafts with empty review decisions.
 
-Stated priority: evidence before opinion.  
+Stated priority: evidence before opinion.
 Observed activity: the evidence base still lacks the one fact that matters most: what Lisa Gonzales or any comparable buyer said after receiving a paid-pilot offer.
 
 This is not a tooling shortage. The repo already contains enough to make the next buyer contact specific.
