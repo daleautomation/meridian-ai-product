@@ -86,19 +86,24 @@ Additional risks:
 
 ## Founder Contradictions
 
-**Stated priority: Revenue before architecture.**  
+**Stated priority: Revenue before architecture.**
+
 Observed activity: approximately 9,000 lines of Command, Reality Layer, operator, and review infrastructure landed on July 6. The sales tracker remains empty.
 
-**Stated priority: Customer value before technical elegance.**  
+**Stated priority: Customer value before technical elegance.**
+
 Observed activity: the repository has deterministic recommendation and review systems, but no recorded customer conversation about whether the Recovery Brief is valuable.
 
-**Stated priority: Shipping before planning.**  
+**Stated priority: Shipping before planning.**
+
 Observed activity: 24 Founder Brief PRs remain open as drafts without a review decision.
 
-**Stated priority: Evidence before opinion.**  
+**Stated priority: Evidence before opinion.**
+
 Observed activity: repeated internal recommendations exist; the buyer response needed to validate them does not.
 
-**Stated objective: rank work by commercial opportunity.**  
+**Stated objective: rank work by commercial opportunity.**
+
 Observed activity: the heartbeat's top priority is an internal auth expectation, while Revenue health is not covered and the prospect tracker is blank.
 
 ## Opportunity Cost
