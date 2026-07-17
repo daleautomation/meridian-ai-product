@@ -13,7 +13,7 @@ This brief audits repository evidence, not bank accounts, private messages, call
 - Main has no commit after July 6. The four latest commits built Meridian Command, morning automation, health checks, and nightly/weekly review infrastructure (`58f8033` through `ac64489`).
 - GitHub has 32 open pull requests. Twenty-seven are dated Founder Brief PRs from June 10 through July 16. The current checkout contains no prior dated brief; `research/strategy/` contains only `.gitkeep` on main.
 - Yesterday's brief exists on unmerged PR #100, not in the product's main history. It prescribed the same ELKALYNE outreach that prior briefs have prescribed.
-- The only local runtime change from today's audit is ignored Heartbeat output. Its report shows 6/7 checks passing, 0 revenue opportunities, and Revenue health not covered ([generated/heartbeat/brief-today.md](../../generated/heartbeat/brief-today.md#L54-L98)).
+- The only local runtime change from today's audit is ignored Heartbeat output at `generated/heartbeat/brief-today.md`. Its report shows 6/7 checks passing, 0 revenue opportunities, and Revenue health not covered. Because `generated/heartbeat/` is gitignored, this runtime evidence is not presented as a committed artifact.
 - Persisted review evidence is empty: [`data/reviews.json`](../../data/reviews.json#L1) is `{}`. No tracked weekly-state, reality-review, or CRM contact-health artifact exists.
 - The CRM audit surface has one test import in `previewing`, with one row and zero imported contacts ([data/crmImportJobs.json](../../data/crmImportJobs.json#L4-L14)).
 
