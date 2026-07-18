@@ -15,6 +15,7 @@ This brief audits repository and GitHub evidence. It cannot see bank accounts, p
 - GitHub has 32 open pull requests with no review decision. Twenty-eight are dated Founder Brief PRs from June 10 through July 17. Yesterday's brief is isolated on PR #101 rather than present on main.
 - The current checkout has no prior Founder Brief: [`research/strategy/`](./) contains only `.gitkeep` before this file.
 - Persisted review evidence is empty: [`data/reviews.json`](../../data/reviews.json#L1) is `{}`. No tracked weekly-state, reality-review, or current heartbeat report exists.
+- Today's runtime Heartbeat passed 6 of 7 checks and reported one approval, two priorities, one blocked item, and zero revenue opportunities. Its only failing check expects Dylan to land on `/operator/jobs/brief`; the application intentionally lands him on `/home`. The runtime report is gitignored, so it is diagnostic evidence rather than a durable operating artifact.
 - The CRM audit surface contains one May 21 test import in `previewing`, with one row and zero imported contacts ([`data/crmImportJobs.json`](../../data/crmImportJobs.json#L4-L14)).
 
 ## What Makes Money Today
@@ -44,8 +45,9 @@ No repository artifact exposes a real buyer to a price. Without that event, Meri
 2. **The operating system cannot observe commercial reality.** Outreach may have happened privately, but no tracked evidence exists. Meridian cannot distinguish unrecorded work from no work.
 3. **The proof is stale.** The public sample is from `2026-W20`, generated in May. No artifact shows a prospect reviewed it or found it useful.
 4. **Revenue monitoring does not exist.** Heartbeat explicitly excludes Revenue health ([`scripts/heartbeat/manifest.ts`](../../scripts/heartbeat/manifest.ts#L49-L57)). System health cannot substitute for pipeline evidence.
-5. **A sold workflow could lose data.** The canonical audit says production file writes can fail on Vercel while errors are swallowed. This is a delivery risk after a buyer commits; it is not a reason to postpone the first offer.
-6. **Decision artifacts are accumulating without consumption.** Twenty-eight open Founder Brief PRs create more advice while the prescribed commercial action remains unobserved.
+5. **The observer creates false decision pressure.** Heartbeat escalates the stale `/operator/jobs/brief` expectation as a CEO approval and both of today's priorities. That displaces the unattempted revenue action without identifying a customer impact.
+6. **A sold workflow could lose data.** The canonical audit says production file writes can fail on Vercel while errors are swallowed. This is a delivery risk after a buyer commits; it is not a reason to postpone the first offer.
+7. **Decision artifacts are accumulating without consumption.** Twenty-eight open Founder Brief PRs create more advice while the prescribed commercial action remains unobserved.
 
 ## Founder Contradictions
 
@@ -84,7 +86,7 @@ Architecture cannot produce those facts.
 
 One founder decision blocks progress: choose a pilot price Dylan will honor and expose it to Lisa Gonzales.
 
-No CEO decision is needed on the stale auth-test expectation, the next graph phase, or broader CRM architecture. No customer is recorded as waiting on those decisions. The commercial decision is whether Dylan is willing to ask one buyer to pay now.
+No CEO decision is needed on the stale auth-test expectation, despite Heartbeat escalating it as one approval and two priorities. The route mismatch is already explained by code intent, and no customer is recorded as affected. The next graph phase and broader CRM architecture also do not need CEO attention. The commercial decision is whether Dylan is willing to ask one buyer to pay now.
 
 If Dylan will not choose and send a price, "revenue before architecture" is a stated preference contradicted by observed behavior.
 
