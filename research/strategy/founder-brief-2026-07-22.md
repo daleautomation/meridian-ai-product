@@ -51,16 +51,16 @@ Do not use the persistence risk to delay the first sales conversation. It is a d
 
 ## Founder Contradictions
 
-1. **Stated:** revenue governs what belongs in Meridian ([`MERIDIAN_REVENUE_OS.md`](../../MERIDIAN_REVENUE_OS.md#L9-L18)).  
+1. **Stated:** revenue governs what belongs in Meridian ([`MERIDIAN_REVENUE_OS.md`](../../MERIDIAN_REVENUE_OS.md#L9-L18)).
    **Observed:** the July 6 work added thousands of lines for the personal Command surface, Reality Layer, operator health, and review loops. The outreach tracker still has zero rows.
 
-2. **Stated:** build the unified daily read model and durable persistence first; do not start with new UI, AI, or relationship-engine work ([`MERIDIAN_AUDIT.md`](../../MERIDIAN_AUDIT.md#L671-L680)).  
+2. **Stated:** build the unified daily read model and durable persistence first; do not start with new UI, AI, or relationship-engine work ([`MERIDIAN_AUDIT.md`](../../MERIDIAN_AUDIT.md#L671-L680)).
    **Observed:** `lib/command/dailyReadModel.ts` does not exist, persistence remains file-backed by default, and more Command/review infrastructure shipped instead.
 
-3. **Stated:** the public product is a founder-led Recovery Brief for boutique firms.  
+3. **Stated:** the public product is a founder-led Recovery Brief for boutique firms.
    **Observed:** Dylan's default logged-in surface is the personal `/home` Command brief, while the B2B commercial funnel has no recorded offer.
 
-4. **Stated:** shipping beats planning.  
+4. **Stated:** shipping beats planning.
    **Observed:** 32 Founder Briefs remain open as drafts. Repeating the same commercial warning without a founder decision has become another planning loop.
 
 ## Stated Priorities vs Observed Activity
