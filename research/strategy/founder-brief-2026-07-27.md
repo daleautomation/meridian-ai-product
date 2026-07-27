@@ -4,7 +4,7 @@ Dylan, the hard thing you are probably avoiding is naming a price and asking one
 
 ## Audit Snapshot
 
-- Active branch: `cursor/founder-challenge-brief-ae15` at `ac64489`, equal to `main` and `origin/main` when audited.
+- Active branch: `cursor/bc-d5ba8221-b89d-4fa9-b904-4f10bd4b2a3f-ae15` at `ac64489`, equal to `main` and `origin/main` when audited.
 - `main` has had no commit since July 6 — twenty-one days. The last four merged commits built Meridian Command, operator health, and nightly/weekly review infrastructure.
 - A July 7 branch, `origin/feat/operator-command-dashboard`, adds 2,634 lines across 35 files for a command dashboard, memory, scheduling, and temporal intelligence. It remains unmerged.
 - The only pre-existing uncommitted work is unrelated `package-lock.json` optional SWC dependency churn: 105 deleted lines. It is not part of this brief.
