@@ -1,37 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Meridian AI
 
-## Getting Started
+Meridian is an operator-focused relationship and revenue workflow system. It turns fragmented lead, CRM, scheduling, and activity data into a prioritized daily execution surface while keeping source evidence, workspace boundaries, and human approval visible.
 
-First, run the development server:
+**Live product:** [meridianai.work](https://www.meridianai.work)  
+**Safe demo entry:** [meridianai.work/demo/public](https://www.meridianai.work/demo/public)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## What to demo
+
+Use the public demo profile for a read-only walkthrough. It signs into the isolated `advisor-demo` workspace; mutation controls remain disabled and the session cannot enter the LaborTech client workspace.
+
+A focused five-minute walkthrough:
+
+1. Open the public site and explain the recovery-brief workflow.
+2. Enter `/demo/public` and show the prioritized operator surface.
+3. Move through Calendar, Scheduling, History, and Relationships.
+4. Open a lead's assist panel to show context and next-action support.
+5. Point out that writes are blocked in demo mode and workspace access is enforced server-side.
+
+More access details are documented in [DEMO_ACCESS.md](DEMO_ACCESS.md).
+
+## Product surfaces
+
+- **Relationship intelligence:** relationship summaries, timelines, queues, and resurfacing signals.
+- **Operator workspace:** daily priorities, scheduling, execution history, and guided lead actions.
+- **Recovery briefs:** deterministic, source-traceable customer briefs with explicit evidence.
+- **CRM ingestion:** preview, execute, status, and rollback paths for controlled imports.
+- **Workspace isolation:** signed sessions, role checks, demo-safe workspaces, and blocked writes.
+- **Showcase workflows:** vertical-specific demo routes without exposing customer runtime data.
+
+## Architecture
+
+Meridian is a Next.js 16 application using React 19 and TypeScript. Product logic is split across route handlers, deterministic domain modules, and server-rendered operator surfaces.
+
+```text
+app/           pages, server routes, demo and showcase entry points
+components/    operator, public, brief, and relationship UI
+lib/           auth, scoring, ingestion, CRM, relationship, and workflow logic
+scripts/       deterministic checks, data utilities, and demo smoke tests
+config/        tenant and workspace policy
+fixtures/      synthetic demo and validation inputs
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Real customer exports and local runtime state are excluded from source control. Demo routes use isolated data and server-side authorization rules.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Run locally
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Requirements: Node.js 20+ and npm.
 
-## Learn More
+```bash
+npm ci
+cp .env.example .env.local
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Set `SESSION_SECRET` in `.env.local` to a stable value with at least 16 characters before testing authenticated routes.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Validation
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The repository's baseline demo gate is a clean dependency install followed by a production build:
 
-## Deploy on Vercel
+```bash
+npm ci
+npm run build
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+For the browser smoke test, start the application with `SESSION_SECRET` configured, then run:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# Meridian-AI
+```bash
+npm run smoke:demo -- --base-url=http://localhost:3000
+```
+
+The smoke test verifies isolated demo login, navigation, blocked mutation controls, write rejection, and workspace access boundaries.
+
+## Current status
+
+- Production build passes on `main`.
+- The public site and controlled demo routes are deployed.
+- The full repository lint backlog is not yet clean; CI intentionally gates the production build while lint debt is reduced in scoped follow-up work.
+- Durable production CRM imports require Postgres configuration; local development can use filesystem-backed storage.
+- Live provider integrations degrade to deterministic or skipped-source behavior when their credentials are absent.
+
+This repository is an actively developed product prototype. Demo-safe behavior is not a substitute for a production security or compliance review.
